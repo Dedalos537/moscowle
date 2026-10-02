@@ -145,7 +145,7 @@
       <div class="setting-item">
         <div class="setting-item__left">
           <div class="setting-item__icon setting-item__icon--primary">
-            <fa-icon [icon]="['fas', 'th-large']"></fa-icon>
+            <fa-icon [icon]="['fas', 'table-cells-large']"></fa-icon>
           </div>
           <div class="setting-item__text">
             <span class="setting-item__label">Barra lateral</span>
@@ -219,7 +219,7 @@
         <div class="setting-item">
           <div class="setting-item__left">
             <div class="setting-item__icon setting-item__icon--blue">
-              <fa-icon [icon]="['fas', 'calendar-alt']"></fa-icon>
+              <fa-icon [icon]="['fas', 'calendar-days']"></fa-icon>
             </div>
             <span class="setting-item__label">Actividad</span>
           </div>
@@ -231,7 +231,7 @@
         <div class="setting-item">
           <div class="setting-item__left">
             <div class="setting-item__icon setting-item__icon--blue">
-              <fa-icon [icon]="['fas', 'cog']"></fa-icon>
+              <fa-icon [icon]="['fas', 'gear']"></fa-icon>
             </div>
             <span class="setting-item__label">Sistema</span>
           </div>
@@ -243,7 +243,7 @@
         <div class="setting-item">
           <div class="setting-item__left">
             <div class="setting-item__icon setting-item__icon--red">
-              <fa-icon [icon]="['fas', 'exclamation-triangle']"></fa-icon>
+              <fa-icon [icon]="['fas', 'triangle-exclamation']"></fa-icon>
             </div>
             <span class="setting-item__label">Alertas</span>
           </div>
@@ -292,7 +292,7 @@
         <div class="setting-item">
           <div class="setting-item__left">
             <div class="setting-item__icon setting-item__icon--primary">
-              <fa-icon [icon]="['fas', 'volume-up']"></fa-icon>
+              <fa-icon [icon]="['fas', 'volume-high']"></fa-icon>
             </div>
             <span class="setting-item__label">Sonido</span>
           </div>
@@ -354,7 +354,7 @@
         <div class="setting-item">
           <div class="setting-item__left">
             <div class="setting-item__icon setting-item__icon--primary">
-              <fa-icon [icon]="['fas', 'mobile-alt']"></fa-icon>
+              <fa-icon [icon]="['fas', 'mobile-screen-button']"></fa-icon>
             </div>
             <div class="setting-item__text">
               <span class="setting-item__label">Nombre del dispositivo</span>
@@ -384,7 +384,7 @@
             @for (cred of wfCredentials; track cred.id) {
               <div class="flex items-center justify-between rounded-lg px-3 py-2.5 bg-surface-container-low border border-border/50">
                 <div class="flex items-center gap-3">
-                  <fa-icon [icon]="['fas', 'mobile-alt']" class="text-outline"></fa-icon>
+                  <fa-icon [icon]="['fas', 'mobile-screen-button']" class="text-outline"></fa-icon>
                   <div>
                     <div class="text-sm font-semibold text-on-surface">{{ cred.device_name || 'Dispositivo' }}</div>
                     <div class="text-xs text-outline">{{ cred.created_at | date: 'dd/MM/yyyy' }}</div>
@@ -414,7 +414,7 @@
         <fa-icon [icon]="['fas', 'check']"></fa-icon>
         <span>Guardado</span>
       } @else {
-        <fa-icon [icon]="['fas', 'save']"></fa-icon>
+        <fa-icon [icon]="['fas', 'floppy-disk']"></fa-icon>
         <span>Guardar cambios</span>
       }
     </button>

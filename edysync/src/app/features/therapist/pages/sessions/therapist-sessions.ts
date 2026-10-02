@@ -97,7 +97,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
     this.headerService.setConfig({
       title: 'Mis Sesiones',
       subtitle: 'Gestiona tus sesiones con pacientes',
-      icon: ['fas', 'calendar-alt'],
+      icon: ['fas', 'calendar-days'],
     });
     this.generarDias();
     this.loadStats();

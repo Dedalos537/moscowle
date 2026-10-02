@@ -31,7 +31,7 @@ export class ConfirmService {
           confirmText: 'Confirmar',
           cancelText: 'Cancelar',
           variant: 'danger',
-          icon: ['fas', 'exclamation-triangle'],
+          icon: ['fas', 'triangle-exclamation'],
           ...options,
         },
         resolve: (result: boolean) => {

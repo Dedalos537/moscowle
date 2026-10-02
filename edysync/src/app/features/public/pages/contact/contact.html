@@ -3,11 +3,11 @@
     <div>
       <h1 class="text-3xl font-extrabold text-on-surface mb-4">Contáctanos</h1>
       <p class="text-on-surface-variant mb-8">Estamos aquí para resolver tus dudas y mostrarte cómo EduSync AI puede transformar tu centro terapéutico.</p>
-      
+
       <div class="space-y-6">
         <div class="flex items-start gap-4">
           <div class="w-10 h-10 rounded-xl bg-primary-container/15 flex items-center justify-center flex-shrink-0">
-            <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-primary"></fa-icon>
+            <fa-icon [icon]="['fas', 'location-dot']" class="text-primary"></fa-icon>
           </div>
           <div>
             <p class="font-bold text-on-surface">Dirección</p>
@@ -38,7 +38,7 @@
     <div class="bg-surface-container-lowest rounded-lg shadow-soft p-8 border border-border/20">
       @if (success) {
         <div class="text-center py-8">
-          <fa-icon [icon]="['fas', 'check-circle']" class="text-4xl text-success mb-3"></fa-icon>
+          <fa-icon [icon]="['fas', 'circle-check']" class="text-4xl text-success mb-3"></fa-icon>
           <p class="text-lg font-bold text-on-surface">¡Mensaje enviado!</p>
           <p class="text-sm text-on-surface-variant">Te contactaremos pronto.</p>
           <button (click)="success = false" class="mt-4 text-sm font-bold text-primary hover:underline">Enviar otro mensaje</button>

@@ -108,7 +108,7 @@ export class TherapistAnalytics implements OnInit, AfterViewInit, OnDestroy {
       },
       {
         icon: '',
-        iconFa: ['fas', 'check-circle'] as IconProp,
+        iconFa: ['fas', 'circle-check'] as IconProp,
         label: 'Tasa de Éxito',
         value: d.kpi.success_rate.toFixed(1),
         suffix: '%',
@@ -117,7 +117,7 @@ export class TherapistAnalytics implements OnInit, AfterViewInit, OnDestroy {
       },
       {
         icon: '',
-        iconFa: ['fas', 'cogs'] as IconProp,
+        iconFa: ['fas', 'gears'] as IconProp,
         label: 'Modelos Activos',
         value: d.kpi.active_models.toString(),
         suffix: '',

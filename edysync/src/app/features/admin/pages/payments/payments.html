@@ -2,7 +2,7 @@
   <div class="flex items-center gap-1 sm:gap-2">
     <button (click)="showHelp()"
       class="flex items-center gap-1 px-2 py-1 text-[10px] sm:text-sm font-semibold rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer">
-      <fa-icon [icon]="['fas', 'question-circle']" class="text-[10px] sm:text-xs"></fa-icon>
+      <fa-icon [icon]="['fas', 'circle-question']" class="text-[10px] sm:text-xs"></fa-icon>
       <span class="hidden sm:inline">Ayuda</span>
     </button>
     <button (click)="generateReport()"
@@ -24,7 +24,7 @@
 
         @if (incompletePlanPatients.length > 0) {
       <div class="flex items-start gap-4 p-4 bg-warning-container border border-warning-container rounded-xl">
-        <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-warning text-2xl shrink-0"></fa-icon>
+        <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-warning text-2xl shrink-0"></fa-icon>
         <div class="flex-1 min-w-0">
           <p class="text-sm font-bold text-warning">
             {{ incompletePlanPatients.length }} pacientes sin configuración de pago
@@ -32,7 +32,7 @@
           <p class="text-xs text-warning mt-0.5">Configura el monto, plan, y fecha de vencimiento para estos pacientes.</p>
         </div>
         <a routerLink="/admin/payments" class="btn-primary text-xs !px-4 !py-2 shrink-0">
-          <fa-icon [icon]="['fas', 'cog']" class="text-[16px]"></fa-icon>
+          <fa-icon [icon]="['fas', 'gear']" class="text-[16px]"></fa-icon>
           Configurar Ahora
         </a>
       </div>
@@ -67,7 +67,7 @@
       <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex items-start justify-between mb-3">
            <span class="text-label-caps text-error">Total Deuda</span>
-           <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-error text-xl"></fa-icon>
+           <fa-icon [icon]="['fas', 'triangle-exclamation']" class="text-error text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ totalDebt.toFixed(2) }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
@@ -79,11 +79,11 @@
       <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-primary">Pacientes Registrados</span>
-          <fa-icon [icon]="['fas', 'heartbeat']" class="text-primary text-xl"></fa-icon>
+          <fa-icon [icon]="['fas', 'heart-pulse']" class="text-primary text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">{{ totalPatients }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'check-circle']" class="text-[14px] text-primary"></fa-icon>
+          <fa-icon [icon]="['fas', 'circle-check']" class="text-[14px] text-primary"></fa-icon>
           En el sistema de pagos
         </p>
       </div>
@@ -104,7 +104,7 @@
 
       <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
-          <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-[16px]"></fa-icon>
+          <fa-icon [icon]="['fas', 'location-dot']" class="text-[16px]"></fa-icon>
           Deuda por Sede
         </h4>
         <div class="relative" style="height: 220px">
@@ -146,7 +146,7 @@
 
       <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
-          <fa-icon [icon]="['fas', 'exchange-alt']" class="text-[16px]"></fa-icon>
+          <fa-icon [icon]="['fas', 'right-left']" class="text-[16px]"></fa-icon>
           Proyección vs Real
         </h4>
         <div class="relative" style="height: 220px">
@@ -188,7 +188,7 @@
         [class.shadow-soft]="activeTab === 'historial'"
         (click)="activeTab = 'historial'"
       >
-        <fa-icon [icon]="['fas', 'history']" class="text-[18px]"></fa-icon>
+        <fa-icon [icon]="['fas', 'clock-rotate-left']" class="text-[18px]"></fa-icon>
         Historial
         @if (paymentHistory.length > 0) {
           <span class="text-[10px] bg-primary-container/15 text-primary-container font-black px-1.5 py-0.5 rounded-full">{{ paymentHistory.length }}</span>
@@ -202,7 +202,7 @@
         <div class="flex flex-col gap-3 mb-6">
           <div class="flex flex-col md:flex-row gap-3">
             <div class="relative flex-1">
-              <fa-icon [icon]="['fas', 'search']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]"></fa-icon>
+              <fa-icon [icon]="['fas', 'magnifying-glass']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]"></fa-icon>
               <input
                 (input)="searchQuery = $any($event.target).value"
                 [value]="searchQuery"
@@ -351,14 +351,14 @@
                         title="Configurar Plan"
                         (click)="openSettingsModal(p)"
                       >
-                        <fa-icon [icon]="['fas', 'cog']" class="text-[16px]"></fa-icon>
+                        <fa-icon [icon]="['fas', 'gear']" class="text-[16px]"></fa-icon>
                       </button>
                       <button
                         class="btn-ghost !px-2.5 !py-1.5 text-xs"
                         title="Ver Historial"
                         (click)="viewPatientHistory(p)"
                       >
-<fa-icon [icon]="['fas', 'history']" class="text-[16px]"></fa-icon>
+<fa-icon [icon]="['fas', 'clock-rotate-left']" class="text-[16px]"></fa-icon>
                       </button>
                     </div>
                   </td>
@@ -442,7 +442,7 @@
 
               @if (p.next_due_date) {
                 <div class="flex items-center gap-2 mb-3 text-xs">
-                  <fa-icon [icon]="['fas', 'calendar-alt']" class="text-[14px] text-on-surface-variant"></fa-icon>
+                  <fa-icon [icon]="['fas', 'calendar-days']" class="text-[14px] text-on-surface-variant"></fa-icon>
                   <span class="text-on-surface-variant">Próx. venc.:</span>
                   <span class="font-semibold text-on-surface">{{ p.next_due_date | date:'dd/MM/yyyy' }}</span>
                   @if (isOverdue(p)) {
@@ -453,9 +453,9 @@
 
               <div class="flex gap-2 pt-2 border-t border-border/20">
                 <app-button variant="primary" label="Pagar" [icon]="['fas', 'money-bill-wave']" (clicked)="openRegisterModal(p)"></app-button>
-                <app-button variant="secondary" label="Plan" [icon]="['fas', 'cog']" (clicked)="openSettingsModal(p)"></app-button>
+                <app-button variant="secondary" label="Plan" [icon]="['fas', 'gear']" (clicked)="openSettingsModal(p)"></app-button>
                 <button class="btn-ghost !px-3 !py-2" (click)="viewPatientHistory(p)" title="Ver Historial">
-                  <fa-icon [icon]="['fas', 'history']" class="text-[16px]"></fa-icon>
+                  <fa-icon [icon]="['fas', 'clock-rotate-left']" class="text-[16px]"></fa-icon>
                 </button>
               </div>
             </div>
@@ -518,9 +518,9 @@
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
                       [class]="getMethodBadgeClass(p.method)">
                       @switch (p.method) {
-                        @case ('yape') { <fa-icon [icon]="['fas', 'mobile-alt']" class="text-[12px]"></fa-icon> }
-                        @case ('plin') { <fa-icon [icon]="['fas', 'mobile-alt']" class="text-[12px]"></fa-icon> }
-                        @case ('transfer') { <fa-icon [icon]="['fas', 'university']" class="text-[12px]"></fa-icon> }
+                        @case ('yape') { <fa-icon [icon]="['fas', 'mobile-screen-button']" class="text-[12px]"></fa-icon> }
+                        @case ('plin') { <fa-icon [icon]="['fas', 'mobile-screen-button']" class="text-[12px]"></fa-icon> }
+                        @case ('transfer') { <fa-icon [icon]="['fas', 'building-columns']" class="text-[12px]"></fa-icon> }
                         @case ('cash') { <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-[12px]"></fa-icon> }
                         @case ('card') { <fa-icon [icon]="['fas', 'credit-card']" class="text-[12px]"></fa-icon> }
                         @default { <fa-icon [icon]="['fas', 'receipt']" class="text-[12px]"></fa-icon> }
@@ -549,7 +549,7 @@
                   <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.date | date:'dd/MM/yyyy' }}</td>
                   <td class="px-4 py-3.5 text-right">
                       <button (click)="deletePayment(p.id)" class="btn-ghost !px-2 !py-1 text-xs text-error hover:bg-error-container" title="Eliminar">
-                      <fa-icon [icon]="['fas', 'trash-alt']" class="text-[16px]"></fa-icon>
+                      <fa-icon [icon]="['fas', 'trash-can']" class="text-[16px]"></fa-icon>
                     </button>
                   </td>
                 </tr>
@@ -616,7 +616,7 @@
 
     @if (needsRecalculation) {
       <div class="flex items-start gap-3 p-3 bg-info-container border border-info-container rounded-lg">
-        <fa-icon [icon]="['fas', 'info-circle']" class="text-info text-lg shrink-0"></fa-icon>
+        <fa-icon [icon]="['fas', 'circle-info']" class="text-info text-lg shrink-0"></fa-icon>
         <p class="text-xs text-info">
           <strong>Recálculo:</strong> El monto final considera el descuento aplicado. Total neto: S/ {{ (registerForm.amount - registerForm.discount).toFixed(2) }}
         </p>
@@ -625,7 +625,7 @@
 
     @if (hasMissingData) {
       <div class="flex items-start gap-3 p-3 bg-warning-container border border-warning-container rounded-lg">
-        <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-warning text-lg shrink-0"></fa-icon>
+        <fa-icon [icon]="['fas', 'triangle-exclamation']" class="text-warning text-lg shrink-0"></fa-icon>
         <div>
           <p class="text-xs font-bold text-warning">Datos faltantes</p>
           <p class="text-xs text-warning mt-0.5">
@@ -655,7 +655,7 @@
       @if (analyzeResult && !analyzingReceipt) {
         @if (analyzeResult.warning) {
           <div class="flex items-start gap-3 p-3 bg-warning-container border border-warning-container rounded-lg">
-            <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-warning text-lg shrink-0"></fa-icon>
+            <fa-icon [icon]="['fas', 'triangle-exclamation']" class="text-warning text-lg shrink-0"></fa-icon>
             <div>
               <p class="text-xs font-bold text-warning">OCR no disponible</p>
               <p class="text-xs text-warning mt-0.5">{{ analyzeResult.warning }}</p>
@@ -663,7 +663,7 @@
           </div>
         } @else {
           <div class="flex items-start gap-3 p-3 bg-success-container border border-success-container rounded-lg">
-            <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-lg shrink-0"></fa-icon>
+            <fa-icon [icon]="['fas', 'circle-check']" class="text-success text-lg shrink-0"></fa-icon>
             <div>
               <p class="text-xs font-bold text-success">OCR Completado</p>
               <p class="text-xs text-success mt-0.5">
@@ -676,7 +676,7 @@
 
     @if (lastPaymentReceiptUrl) {
       <div class="flex items-start gap-3 p-3 bg-success-container border border-success-container rounded-lg">
-        <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-lg shrink-0"></fa-icon>
+        <fa-icon [icon]="['fas', 'circle-check']" class="text-success text-lg shrink-0"></fa-icon>
         <div class="flex-1">
           <p class="text-xs font-bold text-success">Pago registrado</p>
           <a [href]="lastPaymentReceiptUrl" target="_blank" class="text-xs text-success underline inline-flex items-center gap-1 mt-0.5">
@@ -692,7 +692,7 @@
       <span class="text-xs text-on-surface-variant">{{ registerStatus }}</span>
       <div class="flex gap-2">
         <app-button variant="ghost" label="Cancelar" (clicked)="closeRegisterModal()"></app-button>
-        <app-button variant="primary" label="Registrar" [icon]="['fas', 'save']" [disabled]="!registerForm.amount" (clicked)="submitPayment()"></app-button>
+        <app-button variant="primary" label="Registrar" [icon]="['fas', 'floppy-disk']" [disabled]="!registerForm.amount" (clicked)="submitPayment()"></app-button>
       </div>
     </div>
   </div>
@@ -719,7 +719,7 @@
       <span class="text-xs text-on-surface-variant">{{ settingsStatus }}</span>
       <div class="flex gap-2">
         <app-button variant="ghost" label="Cancelar" (clicked)="closeSettingsModal()"></app-button>
-        <app-button variant="primary" label="Guardar Configuración" [icon]="['fas', 'save']" [disabled]="!settingsForm.payment_amount" (clicked)="submitSettings()"></app-button>
+        <app-button variant="primary" label="Guardar Configuración" [icon]="['fas', 'floppy-disk']" [disabled]="!settingsForm.payment_amount" (clicked)="submitSettings()"></app-button>
       </div>
     </div>
   </div>
@@ -730,7 +730,7 @@
     <div class="relative max-w-[90vw] max-h-[90vh] animate-fade-in" (click)="$event.stopPropagation()">
       <img [src]="previewImageUrl" alt="Voucher" class="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain">
       <button (click)="closePreview()" class="absolute -top-3 -right-3 w-8 h-8 bg-surface-container-lowest rounded-full flex items-center justify-center shadow-lg hover:bg-surface-container-high transition-colors cursor-pointer">
-        <fa-icon [icon]="['fas', 'times']" class="text-sm text-on-surface"></fa-icon>
+        <fa-icon [icon]="['fas', 'xmark']" class="text-sm text-on-surface"></fa-icon>
       </button>
     </div>
   </div>

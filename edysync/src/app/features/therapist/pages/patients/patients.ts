@@ -34,7 +34,7 @@ export class TherapistPatients implements OnInit, OnDestroy {
     this.headerService.setConfig({
       title: 'Mis Pacientes',
       subtitle: 'Gestiona tus pacientes asignados',
-      icon: ['fas', 'user-friends'],
+      icon: ['fas', 'user-group'],
     });
     this.loadPatients();
   }

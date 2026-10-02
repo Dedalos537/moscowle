@@ -4,7 +4,7 @@ export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent';
 export const CATEGORY_ICONS: Record<string, [string, string]> = {
   debt: ['fas', 'money-bill-wave'],
   activity: ['fas', 'calendar-check'],
-  system: ['fas', 'cog'],
+  system: ['fas', 'gear'],
   alert: ['fas', 'triangle-exclamation'],
   payment: ['fas', 'credit-card'],
   audit: ['fas', 'clipboard-check'],
@@ -12,7 +12,7 @@ export const CATEGORY_ICONS: Record<string, [string, string]> = {
   security: ['fas', 'shield-halved'],
   report: ['fas', 'chart-bar'],
   message: ['fas', 'envelope'],
-  session: ['fas', 'calendar-alt'],
+  session: ['fas', 'calendar-days'],
   game: ['fas', 'gamepad'],
   contact: ['fas', 'phone'],
   user_mgmt: ['fas', 'users'],

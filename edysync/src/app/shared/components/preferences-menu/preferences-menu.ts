@@ -31,7 +31,7 @@ import { NotificationPreferences } from '../../../core/models/notification';
         title="Configuración"
         aria-label="Configuración"
       >
-        <fa-icon [icon]="['fas', 'sliders-h']"></fa-icon>
+        <fa-icon [icon]="['fas', 'sliders']"></fa-icon>
       </button>
 
       @if (open) {
@@ -47,7 +47,7 @@ import { NotificationPreferences } from '../../../core/models/notification';
               class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors"
               aria-label="Cerrar configuración"
             >
-              <fa-icon [icon]="['fas', 'times']" class="text-sm"></fa-icon>
+              <fa-icon [icon]="['fas', 'xmark']" class="text-sm"></fa-icon>
             </button>
           </div>
 
@@ -136,7 +136,7 @@ import { NotificationPreferences } from '../../../core/models/notification';
               <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-3 min-w-0">
                   <div class="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0">
-                    <fa-icon [icon]="['fas', 'th-large']" class="text-on-surface-variant text-sm"></fa-icon>
+                    <fa-icon [icon]="['fas', 'table-cells-large']" class="text-on-surface-variant text-sm"></fa-icon>
                   </div>
                   <div class="min-w-0">
                     <p class="text-sm font-semibold text-on-surface">Barra lateral</p>
@@ -210,7 +210,7 @@ import { NotificationPreferences } from '../../../core/models/notification';
                 <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
                   <div class="flex items-center gap-3 min-w-0">
                     <div class="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center shrink-0">
-                      <fa-icon [icon]="['fas', 'calendar-alt']" class="text-info text-sm"></fa-icon>
+                      <fa-icon [icon]="['fas', 'calendar-days']" class="text-info text-sm"></fa-icon>
                     </div>
                     <p class="text-sm font-semibold text-on-surface">Actividad</p>
                   </div>
@@ -227,7 +227,7 @@ import { NotificationPreferences } from '../../../core/models/notification';
                 <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
                   <div class="flex items-center gap-3 min-w-0">
                     <div class="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0">
-                      <fa-icon [icon]="['fas', 'cog']" class="text-primary text-sm"></fa-icon>
+                      <fa-icon [icon]="['fas', 'gear']" class="text-primary text-sm"></fa-icon>
                     </div>
                     <p class="text-sm font-semibold text-on-surface">Sistema</p>
                   </div>
@@ -244,7 +244,7 @@ import { NotificationPreferences } from '../../../core/models/notification';
                 <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
                   <div class="flex items-center gap-3 min-w-0">
                     <div class="w-8 h-8 rounded-lg bg-error-container flex items-center justify-center shrink-0">
-                      <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-error text-sm"></fa-icon>
+                      <fa-icon [icon]="['fas', 'triangle-exclamation']" class="text-error text-sm"></fa-icon>
                     </div>
                     <p class="text-sm font-semibold text-on-surface">Alertas</p>
                   </div>
@@ -305,7 +305,7 @@ import { NotificationPreferences } from '../../../core/models/notification';
                   <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
                     <div class="flex items-center gap-3 min-w-0">
                       <div class="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0">
-                        <fa-icon [icon]="['fas', 'volume-up']" class="text-on-surface-variant text-sm"></fa-icon>
+                        <fa-icon [icon]="['fas', 'volume-high']" class="text-on-surface-variant text-sm"></fa-icon>
                       </div>
                       <p class="text-sm font-semibold text-on-surface">Sonido</p>
                     </div>

@@ -46,7 +46,7 @@ export class TherapistProfile implements OnInit, OnDestroy {
     this.headerService.setConfig({
       title: 'Mi Perfil',
       subtitle: 'Información personal y configuración',
-      icon: ['fas', 'user-circle'],
+      icon: ['fas', 'circle-user'],
     });
 
     this.subs.add(this.therapistService.getProfile().subscribe({

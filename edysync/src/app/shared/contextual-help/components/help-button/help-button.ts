@@ -17,7 +17,7 @@ import { FloatingUiService } from '../../../../core/services/floating-ui.service
       [style.bottom.px]="floating.leftStackOffset(0)"
       title="Ayuda contextual"
       aria-label="Abrir ayuda">
-      <fa-icon [icon]="state.panelOpen() ? ['fas', 'times'] : ['fas', 'question']" class="help-fab__icon"></fa-icon>
+      <fa-icon [icon]="state.panelOpen() ? ['fas', 'xmark'] : ['fas', 'question']" class="help-fab__icon"></fa-icon>
     </button>
   `,
   styles: [`

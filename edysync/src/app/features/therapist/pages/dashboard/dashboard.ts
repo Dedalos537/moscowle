@@ -290,8 +290,8 @@ export class TherapistDashboard implements OnInit, OnDestroy {
 
   getTopicIcon(status: string): any {
     switch (status) {
-      case 'LOGRADO': return ['fas', 'check-circle'];
-      case 'PARCIAL': return ['fas', 'exclamation-circle'];
+      case 'LOGRADO': return ['fas', 'circle-check'];
+      case 'PARCIAL': return ['fas', 'circle-exclamation'];
       default: return ['far', 'circle'];
     }
   }

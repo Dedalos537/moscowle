@@ -345,7 +345,7 @@
               <audio [src]="selectedFilePreviewUrl" controls preload="metadata" class="h-7 w-28"></audio>
             }
             <button (click)="clearFile()" class="shrink-0 w-6 h-6 flex items-center justify-center rounded-full hover:bg-surface-container-highest">
-              <fa-icon [icon]="['fas', 'times']" class="text-[10px]"></fa-icon>
+              <fa-icon [icon]="['fas', 'xmark']" class="text-[10px]"></fa-icon>
             </button>
           </div>
         }
@@ -414,7 +414,7 @@
 @if (lightboxUrl) {
   <div class="chat-lightbox" (click)="closeLightbox()">
     <button class="chat-lightbox__close" aria-label="Cerrar">
-      <fa-icon [icon]="['fas', 'times']"></fa-icon>
+      <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
     </button>
     @if (lightboxTitle) {
       <span class="chat-lightbox__title">{{ lightboxTitle }}</span>
@@ -430,7 +430,7 @@
         <span class="chat-ai-preview__name">{{ fileName(aiPreview.msg?.file_url ?? null) || 'Archivo' }}</span>
         <span class="chat-ai-preview__cat">{{ aiPreview.data?.category }}</span>
         <button type="button" class="chat-ai-preview__close" aria-label="Cerrar" (click)="closeAiPreview()">
-          <fa-icon [icon]="['fas', 'times']"></fa-icon>
+          <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
         </button>
       </div>
       <div class="chat-ai-preview__media">

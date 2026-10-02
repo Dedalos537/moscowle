@@ -66,7 +66,7 @@ export class Sedes implements OnInit, OnDestroy {
     this.headerService.setConfig({
       title: 'Sedes',
       subtitle: 'Administra y analiza tus puntos de atención',
-      icon: ['fas', 'map-marker-alt'],
+      icon: ['fas', 'location-dot'],
       actionTemplate: this.headerActions
     });
     this.loadSedes();

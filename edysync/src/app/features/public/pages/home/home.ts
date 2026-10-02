@@ -40,7 +40,7 @@ export class Home implements OnInit, AfterViewInit, OnDestroy {
       description: 'Evaluaciones automatizadas con IA que analizan el progreso del paciente y sugieren intervenciones personalizadas en tiempo real.',
     },
     {
-      icon: ['fas', 'heartbeat'],
+      icon: ['fas', 'heart-pulse'],
       title: 'Terapia Personalizada',
       description: 'Planes de tratamiento adaptados a las necesidades únicas de cada paciente con herramientas interactivas y seguimiento continuo.',
     },
@@ -55,7 +55,7 @@ export class Home implements OnInit, AfterViewInit, OnDestroy {
       description: 'Actividades lúdico-terapéuticas diseñadas por especialistas para estimular el desarrollo cognitivo y emocional.',
     },
     {
-      icon: ['fas', 'file-alt'],
+      icon: ['fas', 'file-lines'],
       title: 'Reportes Automatizados',
       description: 'Genera informes detallados del progreso terapéutico con un solo clic, listos para compartir con pacientes y colegas.',
     },
@@ -69,7 +69,7 @@ export class Home implements OnInit, AfterViewInit, OnDestroy {
   stats: Stat[] = [
     { value: 150, suffix: '+', label: 'Pacientes Activos', icon: ['fas', 'users'] },
     { value: 20, suffix: '+', label: 'Terapeutas Certificados', icon: ['fas', 'certificate'] },
-    { value: 5000, suffix: '+', label: 'Sesiones Completadas', icon: ['fas', 'calendar-alt'] },
+    { value: 5000, suffix: '+', label: 'Sesiones Completadas', icon: ['fas', 'calendar-days'] },
     { value: 95, suffix: '%', label: 'Satisfacción', icon: ['fas', 'star'] },
   ];
 
@@ -110,7 +110,7 @@ export class Home implements OnInit, AfterViewInit, OnDestroy {
     this.headerService.setConfig({
       title: 'EdySync',
       subtitle: 'Centro de Terapias',
-      icon: ['fas', 'home'],
+      icon: ['fas', 'house'],
     });
     this.displayedStats = this.stats.map(() => 0);
   }

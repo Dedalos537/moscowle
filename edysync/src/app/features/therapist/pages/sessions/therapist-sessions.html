@@ -7,7 +7,7 @@
         <div [class.view-active]="!showCalendar" [class.view-hidden]="showCalendar">
           <div class="flex items-center justify-between mb-6">
             <div class="flex items-center gap-2">
-              <fa-icon [icon]="['fas', 'calendar-alt']" class="text-primary"></fa-icon>
+              <fa-icon [icon]="['fas', 'calendar-days']" class="text-primary"></fa-icon>
               <h3 class="font-bold">{{ monthYearLabel }}</h3>
             </div>
             <div class="flex items-center gap-2">
@@ -142,7 +142,7 @@
       @if (!loading && agendaEvents.length === 0) {
         <div class="flex flex-col items-center justify-center py-24 text-center">
           <div class="w-32 h-32 bg-surface-container-low rounded-full flex items-center justify-center mb-6">
-            <fa-icon [icon]="['fas', 'calendar-times']" class="text-5xl text-on-surface-variant/30"></fa-icon>
+            <fa-icon [icon]="['fas', 'calendar-xmark']" class="text-5xl text-on-surface-variant/30"></fa-icon>
           </div>
           <h3 class="text-xl font-bold text-on-surface mb-1">Sin sesiones para esta fecha</h3>
           <p class="text-on-surface-variant/70 max-w-md mb-6">Parece que tienes el día libre o aún no has agendado actividades.</p>
@@ -193,7 +193,7 @@
                   {{ statusLabel(e.status) }}
                 </span>
                 <div class="flex gap-1">
-                  <button class="p-2 hover:bg-surface-container-low rounded-full transition-colors"><fa-icon [icon]="['fas', 'ellipsis-v']" class="text-on-surface-variant"></fa-icon></button>
+                  <button class="p-2 hover:bg-surface-container-low rounded-full transition-colors"><fa-icon [icon]="['fas', 'ellipsis-vertical']" class="text-on-surface-variant"></fa-icon></button>
                 </div>
               </div>
             </div>
@@ -201,12 +201,12 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 border-y border-border/30">
               @if (e.location) {
                 <div class="flex items-center gap-2">
-                  <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-sm text-on-surface-variant/70"></fa-icon>
+                  <fa-icon [icon]="['fas', 'location-dot']" class="text-sm text-on-surface-variant/70"></fa-icon>
                   <span class="text-sm text-on-surface-variant/70">{{ e.location }}</span>
                 </div>
               }
               <div class="flex items-center gap-2">
-                <fa-icon [icon]="['fas', 'magic']" class="text-sm text-on-surface-variant/70"></fa-icon>
+                <fa-icon [icon]="['fas', 'wand-magic']" class="text-sm text-on-surface-variant/70"></fa-icon>
                 @if (e.audit_score != null) {
                   <span class="text-sm font-bold"
                         [style.color]="e.audit_score >= 70 ? 'var(--color-success)' : e.audit_score >= 40 ? 'var(--color-warning)' : 'var(--color-error)'">
@@ -222,7 +222,7 @@
                 }
               </div>
               <div class="flex items-center gap-2">
-                <fa-icon [icon]="['fas', 'sticky-note']" class="text-sm text-on-surface-variant/70"></fa-icon>
+                <fa-icon [icon]="['fas', 'note-sticky']" class="text-sm text-on-surface-variant/70"></fa-icon>
                 @if (e.notes) {
                   <span class="text-sm italic text-on-surface-variant/70 truncate">"{{ e.notes }}"</span>
                 } @else if (e.extendedProps?.feedback_notes) {
@@ -262,10 +262,10 @@
         </div>
         <div class="flex items-center gap-1">
           <button (click)="irSesionDesdeBriefing()" class="text-xs font-bold text-primary hover:text-primary/80 px-2 py-1 rounded-lg hover:bg-primary/5 transition-colors" title="Ir a revisión">
-            <fa-icon [icon]="['fas', 'external-link-alt']" class="text-xs"></fa-icon>
+            <fa-icon [icon]="['fas', 'up-right-from-square']" class="text-xs"></fa-icon>
           </button>
           <button (click)="dismissActiveBriefing()" class="text-on-surface-variant/50 hover:text-on-surface transition-colors p-1" title="Cerrar">
-            <fa-icon [icon]="['fas', 'times']" class="text-xs"></fa-icon>
+            <fa-icon [icon]="['fas', 'xmark']" class="text-xs"></fa-icon>
           </button>
         </div>
       </div>
@@ -281,7 +281,7 @@
             <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Temas de la sesión</span>
             @for (obj of activeBriefing.program.objectives; track $index) {
               <div class="flex items-start gap-2 p-2 rounded-lg bg-surface-container-low text-xs">
-                <fa-icon [icon]="obj.status === 'completado' ? ['fas', 'check-circle'] : obj.status === 'parcial' ? ['fas', 'exclamation-circle'] : ['far', 'circle']"
+                <fa-icon [icon]="obj.status === 'completado' ? ['fas', 'circle-check'] : obj.status === 'parcial' ? ['fas', 'circle-exclamation'] : ['far', 'circle']"
                          [class.text-success]="obj.status === 'completado'"
                          [class.text-warning]="obj.status === 'parcial'"
                          [class.text-on-surface-variant]="obj.status !== 'completado' && obj.status !== 'parcial'">
@@ -297,7 +297,7 @@
         @if (!activeBriefingLoading && activeBriefing.recording?.has_transcript) {
           <div class="p-3 rounded-xl bg-success-container/15 border border-success-container/25">
             <div class="flex items-center gap-1.5 mb-1.5">
-              <fa-icon [icon]="['fas', 'microphone-alt']" class="text-success text-[10px]"></fa-icon>
+              <fa-icon [icon]="['fas', 'microphone-lines']" class="text-success text-[10px]"></fa-icon>
               <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Transcripción</span>
             </div>
             <p class="text-xs text-on-surface leading-relaxed whitespace-pre-wrap line-clamp-3">{{ activeBriefing.recording.transcript_preview }}</p>
@@ -313,7 +313,7 @@
         }
         @if (activeBriefing.session?.location) {
           <div class="text-[10px] text-on-surface-variant/60">
-            <fa-icon [icon]="['fas', 'map-marker-alt']" class="mr-1"></fa-icon>
+            <fa-icon [icon]="['fas', 'location-dot']" class="mr-1"></fa-icon>
             {{ activeBriefing.session.location }}
           </div>
         }
@@ -365,7 +365,7 @@
             @if (briefing.program?.has_program) {
               <div class="p-3 rounded-xl bg-info-container/20 border border-info-container/30">
                 <div class="flex items-center gap-2 mb-2">
-                  <fa-icon [icon]="['fas', 'file-alt']" class="text-info text-sm"></fa-icon>
+                  <fa-icon [icon]="['fas', 'file-lines']" class="text-info text-sm"></fa-icon>
                   <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Programación</span>
                 </div>
                 <p class="text-xs text-on-surface leading-relaxed whitespace-pre-wrap line-clamp-6">{{ briefing.program.planned_text }}</p>
@@ -376,14 +376,14 @@
             }
             @if (!briefing.program?.has_program) {
               <div class="p-3 rounded-xl bg-surface-container-low text-sm text-on-surface-variant/70">
-                <fa-icon [icon]="['fas', 'info-circle']" class="mr-1"></fa-icon>
+                <fa-icon [icon]="['fas', 'circle-info']" class="mr-1"></fa-icon>
                 Sin programación subida para esta sesión.
               </div>
             }
             @if (briefing.recording?.has_transcript) {
               <div class="p-3 rounded-xl bg-success-container/20 border border-success-container/30">
                 <div class="flex items-center gap-2 mb-2">
-                  <fa-icon [icon]="['fas', 'microphone-alt']" class="text-success text-sm"></fa-icon>
+                  <fa-icon [icon]="['fas', 'microphone-lines']" class="text-success text-sm"></fa-icon>
                   <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Transcripción</span>
                 </div>
                 <p class="text-xs text-on-surface leading-relaxed whitespace-pre-wrap line-clamp-4">{{ briefing.recording.transcript_preview }}</p>
@@ -414,7 +414,7 @@
   </div>
   <div modal-footer>
     <div class="flex gap-2">
-      <app-button variant="danger" [label]="deleting ? 'Eliminando...' : 'Eliminar'" [icon]="deleting ? ['fas', 'spinner'] : ['fas', 'trash-alt']" [disabled]="deleting" (clicked)="deleteSession()"></app-button>
+      <app-button variant="danger" [label]="deleting ? 'Eliminando...' : 'Eliminar'" [icon]="deleting ? ['fas', 'spinner'] : ['fas', 'trash-can']" [disabled]="deleting" (clicked)="deleteSession()"></app-button>
       <app-button variant="secondary" label="Revisar Sesión" [icon]="['fas', 'clipboard-check']" (clicked)="navigateToReview()"></app-button>
     </div>
     <div class="flex gap-3">

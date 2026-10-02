@@ -4,7 +4,7 @@
       [class.confirm-icon--danger]="state().options.variant === 'danger'"
       [class.confirm-icon--warning]="state().options.variant === 'warning'"
       [class.confirm-icon--primary]="state().options.variant === 'primary'">
-      <fa-icon [icon]="state().options.icon || ['fas', 'exclamation-triangle']" class="text-2xl"></fa-icon>
+      <fa-icon [icon]="state().options.icon || ['fas', 'triangle-exclamation']" class="text-2xl"></fa-icon>
     </div>
     <h3 class="confirm-title">{{ state().options.title }}</h3>
     <p class="confirm-message">{{ state().options.message }}</p>

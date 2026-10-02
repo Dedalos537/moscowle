@@ -2,7 +2,7 @@
   <div class="flex gap-2 w-full">
     <div class="flex-grow relative">
       <div class="relative">
-        <fa-icon [icon]="['fas', 'search']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-primary/60 text-sm"></fa-icon>
+        <fa-icon [icon]="['fas', 'magnifying-glass']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-primary/60 text-sm"></fa-icon>
         <input
           [(ngModel)]="searchQuery"
           (input)="onSearchInput($any($event.target).value)"
@@ -14,7 +14,7 @@
         >
         @if (searchQuery && !searching) {
           <button (click)="clearSearch()" class="absolute right-3 top-1/2 -translate-y-1/2 text-on-primary/60 hover:text-on-primary">
-            <fa-icon [icon]="['fas', 'times']" class="text-sm"></fa-icon>
+            <fa-icon [icon]="['fas', 'xmark']" class="text-sm"></fa-icon>
           </button>
         }
         @if (searching) {
@@ -70,7 +70,7 @@
           }
         </div>
         <button (click)="closePaymentForm()" class="w-8 h-8 rounded-full hover:bg-surface-container-high flex items-center justify-center transition-colors">
-          <fa-icon [icon]="['fas', 'times']" class="text-on-surface-variant"></fa-icon>
+          <fa-icon [icon]="['fas', 'xmark']" class="text-on-surface-variant"></fa-icon>
         </button>
       </div>
 
@@ -113,7 +113,7 @@
 
         @if (needsRecalculation) {
           <div class="flex items-start gap-3 p-3 bg-info-container border border-info-container rounded-lg">
-            <fa-icon [icon]="['fas', 'info-circle']" class="text-info text-lg shrink-0"></fa-icon>
+            <fa-icon [icon]="['fas', 'circle-info']" class="text-info text-lg shrink-0"></fa-icon>
             <p class="text-xs text-info">
               <strong>Recalculo:</strong> Monto final neto: S/ {{ (registerForm.amount - registerForm.discount).toFixed(2) }}
             </p>
@@ -122,7 +122,7 @@
 
         @if (hasMissingData) {
           <div class="flex items-start gap-3 p-3 bg-warning-container border border-warning-container rounded-lg">
-            <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-warning text-lg shrink-0"></fa-icon>
+            <fa-icon [icon]="['fas', 'triangle-exclamation']" class="text-warning text-lg shrink-0"></fa-icon>
             <div>
               <p class="text-xs font-bold text-warning">Datos faltantes</p>
               <p class="text-xs text-warning mt-0.5">
@@ -151,7 +151,7 @@
       @if (analyzeResult && !analyzingReceipt) {
         @if (analyzeResult.warning) {
           <div class="flex items-start gap-3 p-3 bg-warning-container border border-warning-container rounded-lg">
-            <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-warning text-lg shrink-0"></fa-icon>
+            <fa-icon [icon]="['fas', 'triangle-exclamation']" class="text-warning text-lg shrink-0"></fa-icon>
             <div>
               <p class="text-xs font-bold text-warning">OCR no disponible</p>
               <p class="text-xs text-warning mt-0.5">{{ analyzeResult.warning }}</p>
@@ -159,7 +159,7 @@
           </div>
         } @else {
           <div class="flex items-start gap-3 p-3 bg-success-container border border-success-container rounded-lg">
-            <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-lg shrink-0"></fa-icon>
+            <fa-icon [icon]="['fas', 'circle-check']" class="text-success text-lg shrink-0"></fa-icon>
             <div>
               <p class="text-xs font-bold text-success">OCR Completado</p>
               <p class="text-xs text-success mt-0.5">
@@ -172,7 +172,7 @@
 
         @if (lastPaymentReceiptUrl) {
           <div class="flex items-start gap-3 p-3 bg-success-container border border-success-container rounded-lg">
-            <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-lg shrink-0"></fa-icon>
+            <fa-icon [icon]="['fas', 'circle-check']" class="text-success text-lg shrink-0"></fa-icon>
             <div class="flex-1">
               <p class="text-xs font-bold text-success">Pago registrado</p>
               <a [href]="getReceiptUrl()" target="_blank" class="text-xs text-success underline inline-flex items-center gap-1 mt-0.5">
@@ -187,7 +187,7 @@
         <span class="text-xs text-on-surface-variant">{{ registerStatus }}</span>
         <div class="flex gap-2">
           <app-button variant="ghost" label="Cancelar" (clicked)="closePaymentForm()"></app-button>
-          <app-button variant="primary" label="Registrar" [icon]="['fas', 'save']" [loading]="registering" [disabled]="!registerForm.amount || registering" (clicked)="submitPayment()"></app-button>
+          <app-button variant="primary" label="Registrar" [icon]="['fas', 'floppy-disk']" [loading]="registering" [disabled]="!registerForm.amount || registering" (clicked)="submitPayment()"></app-button>
         </div>
       </div>
     </div>

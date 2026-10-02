@@ -44,12 +44,12 @@
     <nav class="flex-1 overflow-y-auto px-3 space-y-0.5 custom-scrollbar">
       <a routerLink="/patient/dashboard" routerLinkActive="active" #rld="routerLinkActive"
          class="nav-link" [class.active]="rld.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'home']" [class.!text-primary-container]="rld.isActive"></fa-icon>
+        <fa-icon [icon]="['fas', 'house']" [class.!text-primary-container]="rld.isActive"></fa-icon>
         <span>Mi Panel</span>
       </a>
       <a routerLink="/patient/sessions" routerLinkActive="active" #rls="routerLinkActive"
          class="nav-link" [class.active]="rls.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'calendar-alt']" [class.!text-primary-container]="rls.isActive"></fa-icon>
+        <fa-icon [icon]="['fas', 'calendar-days']" [class.!text-primary-container]="rls.isActive"></fa-icon>
         <span>Mis Sesiones</span>
       </a>
       <a routerLink="/patient/calendar" routerLinkActive="active" #rlc="routerLinkActive"
@@ -69,7 +69,7 @@
       </a>
       <a routerLink="/patient/my-therapist" routerLinkActive="active" #rlt="routerLinkActive"
          class="nav-link" [class.active]="rlt.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'user-md']" [class.!text-primary-container]="rlt.isActive"></fa-icon>
+        <fa-icon [icon]="['fas', 'user-doctor']" [class.!text-primary-container]="rlt.isActive"></fa-icon>
         <span>Mi Terapeuta</span>
       </a>
       <a routerLink="/patient/incidents" routerLinkActive="active" #rli="routerLinkActive"
@@ -79,7 +79,7 @@
       </a>
       <a routerLink="/patient/kanban" routerLinkActive="active" #rlk="routerLinkActive"
          class="nav-link" [class.active]="rlk.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'columns']" [class.!text-primary-container]="rlk.isActive"></fa-icon>
+        <fa-icon [icon]="['fas', 'table-columns']" [class.!text-primary-container]="rlk.isActive"></fa-icon>
         <span>Mis Tareas</span>
       </a>
       <a routerLink="/patient/messages" routerLinkActive="active" #rlmg="routerLinkActive"

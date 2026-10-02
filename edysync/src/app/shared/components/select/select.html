@@ -16,7 +16,7 @@
     <div class="select__trigger-actions">
       @if (clearable() && selectedLabel) {
         <button class="select__clear" (click)="clear($event)" tabindex="-1" aria-label="Limpiar selección">
-          <fa-icon [icon]="['fas', 'times']" size="sm"></fa-icon>
+          <fa-icon [icon]="['fas', 'xmark']" size="sm"></fa-icon>
         </button>
       }
       <fa-icon [icon]="['fas', 'chevron-down']" class="select__chevron" [class.select__chevron--open]="isOpen"></fa-icon>
@@ -26,7 +26,7 @@
     <div class="select__dropdown" #dropdownPanel>
       @if (searchable() && options().length > 5) {
         <div class="select__search">
-          <fa-icon [icon]="['fas', 'search']" class="select__search-icon"></fa-icon>
+          <fa-icon [icon]="['fas', 'magnifying-glass']" class="select__search-icon"></fa-icon>
           <input #searchInput [(ngModel)]="searchQuery" [ngModelOptions]="{standalone: true}" (keydown)="$event.stopPropagation()" type="text" class="select__search-input" placeholder="Buscar..." autocomplete="off">
         </div>
       }
@@ -64,7 +64,7 @@
           </div>
         } @empty {
           <div class="select__empty">
-            <fa-icon [icon]="['fas', 'search-minus']" size="lg"></fa-icon>
+            <fa-icon [icon]="['fas', 'magnifying-glass-minus']" size="lg"></fa-icon>
             <span>Sin resultados</span>
           </div>
         }

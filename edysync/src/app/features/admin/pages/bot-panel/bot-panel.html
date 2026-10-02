@@ -4,9 +4,9 @@
     <div class="flex justify-center py-20"><app-spinner size="md" colorClass="text-primary"></app-spinner></div>
   } @else if (error) {
     <div class="flex flex-col items-center justify-center py-20 text-center">
-      <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error text-4xl mb-4"></fa-icon>
+      <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-error text-4xl mb-4"></fa-icon>
       <p class="text-error font-semibold text-lg mb-4">{{ error }}</p>
-      <app-button variant="primary" label="Reintentar" [icon]="['fas', 'sync']" (clicked)="loadDashboard()"></app-button>
+      <app-button variant="primary" label="Reintentar" [icon]="['fas', 'arrows-rotate']" (clicked)="loadDashboard()"></app-button>
     </div>
   } @else {
 
@@ -232,10 +232,10 @@
                             <textarea [(ngModel)]="replyText" rows="2" placeholder="Escribe tu respuesta como el bot..."
                               class="bot-config-input bot-config-textarea"></textarea>
                             @if (replyMsg) {
-                              <div class="text-xs text-success mt-1"><fa-icon [icon]="['fas', 'check-circle']" class="mr-1"></fa-icon>{{ replyMsg }}</div>
+                              <div class="text-xs text-success mt-1"><fa-icon [icon]="['fas', 'circle-check']" class="mr-1"></fa-icon>{{ replyMsg }}</div>
                             }
                             @if (replyErr) {
-                              <div class="text-xs text-error mt-1"><fa-icon [icon]="['fas', 'exclamation-triangle']" class="mr-1"></fa-icon>{{ replyErr }}</div>
+                              <div class="text-xs text-error mt-1"><fa-icon [icon]="['fas', 'triangle-exclamation']" class="mr-1"></fa-icon>{{ replyErr }}</div>
                             }
                             <div class="flex gap-2 mt-2">
                               <app-button variant="primary" label="Enviar" [icon]="['fas', 'paper-plane']"
@@ -250,7 +250,7 @@
                                   class="bot-reply-btn"
                                   [class.bot-reply-btn--active]="replyOpen === conv.chat_id"
                                   title="Responder como el bot">
-                            <fa-icon [icon]="replyOpen === conv.chat_id ? ['fas', 'times'] : ['fas', 'reply']"></fa-icon>
+                            <fa-icon [icon]="replyOpen === conv.chat_id ? ['fas', 'xmark'] : ['fas', 'reply']"></fa-icon>
                             <span>{{ replyOpen === conv.chat_id ? 'Cerrar' : 'Responder' }}</span>
                           </button>
                         </div>
@@ -373,7 +373,7 @@
                   <p class="bot-config-hint">Caracteres: {{ (editForm.system_prompt || '').length }}</p>
                 </div>
                 <div class="flex items-center gap-3 mt-4">
-                  <app-button variant="primary" label="Guardar" [icon]="['fas', 'save']" [loading]="saving" (clicked)="saveConfig()"></app-button>
+                  <app-button variant="primary" label="Guardar" [icon]="['fas', 'floppy-disk']" [loading]="saving" (clicked)="saveConfig()"></app-button>
                   <app-button variant="ghost" label="Cancelar" (clicked)="cancelEdit()"></app-button>
                 </div>
               }
@@ -444,7 +444,7 @@
               </div>
 
               <div class="mt-4">
-                <app-button variant="primary" label="Guardar Opciones" [icon]="['fas', 'save']" [loading]="saving" (clicked)="saveConfigToggles()"></app-button>
+                <app-button variant="primary" label="Guardar Opciones" [icon]="['fas', 'floppy-disk']" [loading]="saving" (clicked)="saveConfigToggles()"></app-button>
               </div>
             </div>
           </div>
@@ -495,7 +495,7 @@
                             <fa-icon [icon]="account.notifications_enabled ? ['fas', 'bell'] : ['fas', 'bell-slash']" class="text-sm"></fa-icon>
                           </button>
                         }
-                        <app-button variant="danger" label="Desvincular" [icon]="['fas', 'unlink']"
+                        <app-button variant="danger" label="Desvincular" [icon]="['fas', 'link-slash']"
                           [loading]="unlinking === account.telegram_chat_id"
                           (clicked)="unlinkTelegram(account.telegram_chat_id)">
                         </app-button>
@@ -518,7 +518,7 @@
                       <fa-icon [icon]="['fas', 'link']" class="text-primary"></fa-icon> Vincular Nuevo
                     </h4>
                     <button (click)="showLinkForm = false" class="text-on-surface-variant hover:text-on-surface">
-                      <fa-icon [icon]="['fas', 'times']"></fa-icon>
+                      <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
                     </button>
                   </div>
                   <p class="text-sm text-on-surface-variant mb-3">Envía <code class="px-1.5 py-0.5 bg-surface-container-high rounded text-xs font-mono font-bold">/start</code> al bot y pega el código aquí.</p>
@@ -567,7 +567,7 @@
                 <div class="bot-section bot-section--inline">
                   <div class="flex items-center justify-between">
                     <span class="text-sm font-bold text-on-surface">{{ faqEditing ? 'Editar FAQ' : 'Nueva FAQ' }}</span>
-                    <button (click)="cancelFaqEdit()" class="text-on-surface-variant hover:text-on-surface"><fa-icon [icon]="['fas', 'times']"></fa-icon></button>
+                    <button (click)="cancelFaqEdit()" class="text-on-surface-variant hover:text-on-surface"><fa-icon [icon]="['fas', 'xmark']"></fa-icon></button>
                   </div>
                   <input type="text" [(ngModel)]="faqForm.question" placeholder="Pregunta" class="bot-config-input mt-3" />
                   <textarea [(ngModel)]="faqForm.answer" rows="2" placeholder="Respuesta" class="bot-config-input bot-config-textarea"></textarea>
@@ -575,7 +575,7 @@
                     <input type="text" [(ngModel)]="faqForm.category" placeholder="Categoría" class="bot-config-input" />
                     <input type="text" [(ngModel)]="faqForm.keywords" placeholder="Keywords (separadas por coma)" class="bot-config-input" />
                   </div>
-                  <app-button variant="primary" [label]="faqEditing ? 'Actualizar' : 'Crear'" [icon]="['fas', 'save']" [loading]="faqSaving" (clicked)="saveFaq()" class="mt-3"></app-button>
+                  <app-button variant="primary" [label]="faqEditing ? 'Actualizar' : 'Crear'" [icon]="['fas', 'floppy-disk']" [loading]="faqSaving" (clicked)="saveFaq()" class="mt-3"></app-button>
                 </div>
               }
 
@@ -623,8 +623,8 @@
                   <span class="bot-section__count">{{ proposedFaqs.length }}</span>
                 </h3>
                 <div class="flex items-center gap-2">
-                  <app-button variant="ghost" label="Actualizar" [icon]="['fas', 'sync']" (clicked)="loadProposedFaqs()"></app-button>
-                  <app-button variant="primary" label="Generar" [icon]="['fas', 'magic']" (clicked)="triggerAutoGrow()"></app-button>
+                  <app-button variant="ghost" label="Actualizar" [icon]="['fas', 'arrows-rotate']" (clicked)="loadProposedFaqs()"></app-button>
+                  <app-button variant="primary" label="Generar" [icon]="['fas', 'wand-magic']" (clicked)="triggerAutoGrow()"></app-button>
                 </div>
               </div>
               <p class="text-sm text-on-surface-variant mb-4">
@@ -638,7 +638,7 @@
                 <div class="flex justify-center py-6"><app-spinner size="sm" colorClass="text-primary"></app-spinner></div>
               } @else if (proposedFaqs.length === 0) {
                 <div class="bot-empty">
-                  <fa-icon [icon]="['fas', 'magic']" class="text-3xl mb-2"></fa-icon>
+                  <fa-icon [icon]="['fas', 'wand-magic']" class="text-3xl mb-2"></fa-icon>
                   <p>No hay propuestas pendientes</p>
                   <p class="text-xs text-on-surface-variant">Genera propuestas para auto-detectar preguntas que el bot no responde.</p>
                 </div>
@@ -655,7 +655,7 @@
                       </div>
                       <div class="flex gap-1 shrink-0">
                         <button (click)="approveFaq(faq.id)" class="p-2 rounded-lg hover:bg-success/10 text-on-surface-variant hover:text-success transition-colors" title="Aprobar y activar">
-                          <fa-icon [icon]="['fas', 'check-circle']" class="text-xs"></fa-icon>
+                          <fa-icon [icon]="['fas', 'circle-check']" class="text-xs"></fa-icon>
                         </button>
                         <button (click)="rejectFaq(faq.id)" class="p-2 rounded-lg hover:bg-error/10 text-on-surface-variant hover:text-error transition-colors" title="Rechazar">
                           <fa-icon [icon]="['fas', 'trash']" class="text-xs"></fa-icon>
@@ -693,7 +693,7 @@
                   </div>
                   @if (webhookStatus.last_error_message) {
                     <div class="p-4 bg-error/10 border border-error/30 rounded-xl text-sm text-error">
-                      <fa-icon [icon]="['fas', 'exclamation-triangle']" class="mr-1"></fa-icon>{{ webhookStatus.last_error_message }}
+                      <fa-icon [icon]="['fas', 'triangle-exclamation']" class="mr-1"></fa-icon>{{ webhookStatus.last_error_message }}
                     </div>
                   }
                   <div class="bg-surface-container-high/50 rounded-xl p-4 border border-border/20">
@@ -741,12 +741,12 @@
 
               @if (testResponse) {
                 <div class="mt-4 p-4 bg-success/10 border border-success/30 rounded-xl text-sm text-success">
-                  <fa-icon [icon]="['fas', 'check-circle']" class="mr-1"></fa-icon>{{ testResponse }}
+                  <fa-icon [icon]="['fas', 'circle-check']" class="mr-1"></fa-icon>{{ testResponse }}
                 </div>
               }
               @if (testError) {
                 <div class="mt-4 p-4 bg-error/10 border border-error/30 rounded-xl text-sm text-error">
-                  <fa-icon [icon]="['fas', 'exclamation-triangle']" class="mr-1"></fa-icon>{{ testError }}
+                  <fa-icon [icon]="['fas', 'triangle-exclamation']" class="mr-1"></fa-icon>{{ testError }}
                 </div>
               }
 

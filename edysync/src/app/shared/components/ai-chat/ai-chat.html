@@ -3,7 +3,7 @@
     <span class="notif-dot"></span>
   }
   @if (isOpen) {
-    <fa-icon [icon]="['fas', 'times']"></fa-icon>
+    <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
   } @else {
     <fa-icon [icon]="['fas', 'brain']"></fa-icon>
   }
@@ -16,11 +16,11 @@
         [class.toast--error]="actionFeedback.type === 'error'"
         [class.toast--info]="actionFeedback.type === 'info'">
         @if (actionFeedback.type === 'success') {
-          <fa-icon [icon]="['fas', 'check-circle']"></fa-icon>
+          <fa-icon [icon]="['fas', 'circle-check']"></fa-icon>
         } @else if (actionFeedback.type === 'error') {
-          <fa-icon [icon]="['fas', 'exclamation-circle']"></fa-icon>
+          <fa-icon [icon]="['fas', 'circle-exclamation']"></fa-icon>
         } @else {
-          <fa-icon [icon]="['fas', 'info-circle']"></fa-icon>
+          <fa-icon [icon]="['fas', 'circle-info']"></fa-icon>
         }
         <span>{{ actionFeedback.message }}</span>
       </div>
@@ -30,7 +30,7 @@
       <div class="chat-header-left">
         <div class="chat-header-icon">
           @if (fullScreen) {
-            <fa-icon [icon]="['fas', 'magic']"></fa-icon>
+            <fa-icon [icon]="['fas', 'wand-magic']"></fa-icon>
           } @else {
             <fa-icon [icon]="['fas', 'brain']"></fa-icon>
           }
@@ -51,7 +51,7 @@
           <fa-icon [icon]="['fas', fullScreen ? 'compress' : 'expand']"></fa-icon>
         </button>
         <button class="chat-close" (click)="togglePanel()">
-          <fa-icon [icon]="['fas', 'times']"></fa-icon>
+          <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
         </button>
       </div>
     </div>
@@ -95,7 +95,7 @@
       <div class="chat-messages" #scrollContainer>
         @if (messages.length === 0 && !loading) {
           <div class="welcome-msg">
-            <div class="icon"><fa-icon [icon]="['fas', 'magic']" class="text-3xl text-primary"></fa-icon></div>
+            <div class="icon"><fa-icon [icon]="['fas', 'wand-magic']" class="text-3xl text-primary"></fa-icon></div>
             <h4>{{ welcomeMessage }}</h4>
             <p>{{ fullScreen ? 'Estoy aquí para gestionar todo el sistema. Puedes pedirme cualquier cosa:' : 'Pregúntame sobre finanzas, sesiones, o gestiona el centro' }}</p>
             @if (fullScreen) {
@@ -107,7 +107,7 @@
                 <div class="capability"><fa-icon [icon]="['fas', 'envelope']"></fa-icon> Enviar mensajes</div>
                 <div class="capability"><fa-icon [icon]="['fas', 'chart-line']"></fa-icon> Reportes al instante</div>
                 <div class="capability"><fa-icon [icon]="['fas', 'ban']"></fa-icon> Desactivar usuarios</div>
-                <div class="capability"><fa-icon [icon]="['fas', 'file-alt']"></fa-icon> Subir archivos</div>
+                <div class="capability"><fa-icon [icon]="['fas', 'file-lines']"></fa-icon> Subir archivos</div>
               </div>
             }
             @if (suggestions.length > 0) {
@@ -124,7 +124,7 @@
           <div class="message {{ msg.role }}" [style.animation-delay]="'0.05s'">
             @if (msg.error) {
               <div class="error-msg">
-                <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error"></fa-icon>
+                <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-error"></fa-icon>
                 <span>{{ msg.content }}</span>
               </div>
             } @else {

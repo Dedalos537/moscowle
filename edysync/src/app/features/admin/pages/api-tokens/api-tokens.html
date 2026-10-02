@@ -16,7 +16,7 @@
     </div>
   } @else if (error) {
     <div class="flex flex-col items-center justify-center py-16 text-center" role="alert">
-      <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error text-4xl mb-4"></fa-icon>
+      <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-error text-4xl mb-4"></fa-icon>
       <p class="text-error font-semibold text-lg">{{ error }}</p>
       <button class="mt-4 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-opacity" (click)="loadTokens()">
         Reintentar

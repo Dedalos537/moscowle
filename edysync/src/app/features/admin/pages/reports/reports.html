@@ -21,7 +21,7 @@
       <div class="flex gap-2 flex-wrap">
         <app-button variant="primary" label="Análisis Llama AI" [icon]="['fas', 'brain']" [disabled]="aiGenerating" (clicked)="generateAIReport()"></app-button>
         <app-button variant="primary" label="Reporte Semanal" [icon]="['fas', 'envelope']" [disabled]="reportSending" (clicked)="sendWeeklyReport()"></app-button>
-        <app-button variant="secondary" label="Exportar CSV" [icon]="['fas', 'file-download']" (clicked)="exportCSV()"></app-button>
+        <app-button variant="secondary" label="Exportar CSV" [icon]="['fas', 'file-arrow-down']" (clicked)="exportCSV()"></app-button>
       </div>
     </div>
 
@@ -48,7 +48,7 @@
         <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
           <div class="flex items-start justify-between mb-3">
             <span class="text-label-caps text-warning">Sesiones Totales</span>
-            <fa-icon [icon]="['fas', 'calendar-alt']" class="text-warning text-xl"></fa-icon>
+            <fa-icon [icon]="['fas', 'calendar-days']" class="text-warning text-xl"></fa-icon>
           </div>
           <p class="text-3xl font-black text-on-surface tracking-tight">{{ overview.sessions_total }}</p>
           <p class="text-xs text-on-surface-variant mt-1">Histórico acumulado</p>
@@ -82,7 +82,7 @@
       <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-info">Proyección</span>
-          <fa-icon [icon]="['fas', 'university']" class="text-info text-xl"></fa-icon>
+          <fa-icon [icon]="['fas', 'building-columns']" class="text-info text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ financials.income_expected.toFixed(2) }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
@@ -94,7 +94,7 @@
       <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-error">Morosidad Acumulada</span>
-          <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-error text-xl"></fa-icon>
+          <fa-icon [icon]="['fas', 'triangle-exclamation']" class="text-error text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ financials.overdue_amount.toFixed(2) }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
@@ -110,7 +110,7 @@
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">{{ executionPercent.toFixed(1) }}%</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'check-circle']" class="text-[14px] text-primary"></fa-icon>
+          <fa-icon [icon]="['fas', 'circle-check']" class="text-[14px] text-primary"></fa-icon>
           Progreso de cobro
         </p>
       </div>
@@ -265,7 +265,7 @@
       <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'heartbeat']" class="text-primary text-lg"></fa-icon>
+            <fa-icon [icon]="['fas', 'heart-pulse']" class="text-primary text-lg"></fa-icon>
             Pacientes
           </h3>
           <span class="text-xs text-on-surface-variant font-medium">{{ patients.length }} registros</span>
@@ -331,7 +331,7 @@
               <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'" class="text-[18px]"></fa-icon>
               Generando Reporte...
             } @else {
-              <fa-icon [icon]="['fas', 'magic']" class="text-[18px]"></fa-icon>
+              <fa-icon [icon]="['fas', 'wand-magic']" class="text-[18px]"></fa-icon>
               Generar Reporte Llama
             }
           </app-button>
@@ -340,7 +340,7 @@
       @if (aiReport) {
         <div class="mb-6 p-5 bg-gradient-to-r from-accent-container to-accent-container rounded-xl border border-primary-container/30 animate-fade-in">
           <h3 class="text-sm font-bold text-primary mb-3 flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'th-large']" class="text-lg text-primary"></fa-icon>
+            <fa-icon [icon]="['fas', 'table-cells-large']" class="text-lg text-primary"></fa-icon>
             Informe Llama
           </h3>
           <div class="prose prose-sm max-w-none text-on-surface" [innerHTML]="aiReport"></div>
@@ -388,7 +388,7 @@
 
         <div class="lg:col-span-2 bg-surface-container-low rounded-xl border border-border/30 overflow-hidden">
           <h3 class="text-sm font-bold text-on-surface p-3 border-b border-border/30 flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'history']" class="text-lg text-primary"></fa-icon>
+            <fa-icon [icon]="['fas', 'clock-rotate-left']" class="text-lg text-primary"></fa-icon>
             Últimas Auditorías
           </h3>
           <table class="w-full text-left text-sm">
@@ -431,7 +431,7 @@
                 [class.text-secondary]="activeReportTab === 'weekly'"
                 [class.text-on-surface-variant]="activeReportTab !== 'weekly'"
                 (click)="setReportTab('weekly')">
-          <fa-icon [icon]="['fas', 'calendar-alt']" class="text-[16px] align-text-bottom mr-1"></fa-icon>
+          <fa-icon [icon]="['fas', 'calendar-days']" class="text-[16px] align-text-bottom mr-1"></fa-icon>
           Semanal
         </button>
         <button class="px-4 py-2 text-sm font-bold rounded-lg transition-colors"
@@ -439,7 +439,7 @@
                 [class.text-info]="activeReportTab === 'monthly'"
                 [class.text-on-surface-variant]="activeReportTab !== 'monthly'"
                 (click)="setReportTab('monthly')">
-          <fa-icon [icon]="['fas', 'calendar-alt']" class="text-[16px] align-text-bottom mr-1"></fa-icon>
+          <fa-icon [icon]="['fas', 'calendar-days']" class="text-[16px] align-text-bottom mr-1"></fa-icon>
           Mensual
         </button>
         <button class="px-4 py-2 text-sm font-bold rounded-lg transition-colors"
@@ -460,13 +460,13 @@
               <input type="date" [(ngModel)]="selectedWeekStart" (change)="loadWeeklySummary()"
                      class="h-9 px-3 bg-surface border border-outline rounded-lg text-sm text-on-surface">
               <button class="btn-secondary" (click)="loadWeeklySummary()" [disabled]="weeklySummaryLoading">
-                <fa-icon [icon]="['fas', 'sync-alt']" class="text-[18px]"></fa-icon>
+                <fa-icon [icon]="['fas', 'rotate']" class="text-[18px]"></fa-icon>
               </button>
               <app-button variant="primary" [disabled]="reportsAccumulating" (clicked)="accumulateReports()">
                 <fa-icon [icon]="['fas', 'layer-group']" class="text-[18px]" [animation]="reportsAccumulating ? 'spin' : undefined"></fa-icon>
                 {{ reportsAccumulating ? 'Acumulando...' : 'Acumular Reportes' }}
               </app-button>
-              <app-button variant="primary" label="Generar Todos" [icon]="['fas', 'magic']" [disabled]="weeklySummaryLoading" (clicked)="generateAllWeeklyReports()"></app-button>
+              <app-button variant="primary" label="Generar Todos" [icon]="['fas', 'wand-magic']" [disabled]="weeklySummaryLoading" (clicked)="generateAllWeeklyReports()"></app-button>
             </div>
           </div>
 
@@ -571,9 +571,9 @@
               <app-select [(ngModel)]="selectedMonth" (valueChange)="loadMonthlySummary()" [options]="monthOptions" class="w-20"></app-select>
               <app-select [(ngModel)]="selectedYear" (valueChange)="loadMonthlySummary()" [options]="yearOptions" class="w-24"></app-select>
               <button class="btn-secondary" (click)="loadMonthlySummary()" [disabled]="monthlyLoading">
-                <fa-icon [icon]="['fas', 'sync-alt']" class="text-[18px]"></fa-icon>
+                <fa-icon [icon]="['fas', 'rotate']" class="text-[18px]"></fa-icon>
               </button>
-              <app-button variant="primary" label="Generar Mensuales" [icon]="['fas', 'magic']" [disabled]="monthlyLoading" (clicked)="generateMonthlyReports()"></app-button>
+              <app-button variant="primary" label="Generar Mensuales" [icon]="['fas', 'wand-magic']" [disabled]="monthlyLoading" (clicked)="generateMonthlyReports()"></app-button>
             </div>
           </div>
 
@@ -662,9 +662,9 @@
               <app-select [(ngModel)]="selectedQuarter" (valueChange)="loadQuarterlySummary()" [options]="quarterOptions" class="w-20"></app-select>
               <app-select [(ngModel)]="selectedYear" (valueChange)="loadQuarterlySummary()" [options]="yearOptions" class="w-24"></app-select>
               <button class="btn-secondary" (click)="loadQuarterlySummary()" [disabled]="quarterlyLoading">
-                <fa-icon [icon]="['fas', 'sync-alt']" class="text-[18px]"></fa-icon>
+                <fa-icon [icon]="['fas', 'rotate']" class="text-[18px]"></fa-icon>
               </button>
-              <app-button variant="primary" label="Generar Trimestrales" [icon]="['fas', 'magic']" [disabled]="quarterlyLoading" (clicked)="generateQuarterlyReports()"></app-button>
+              <app-button variant="primary" label="Generar Trimestrales" [icon]="['fas', 'wand-magic']" [disabled]="quarterlyLoading" (clicked)="generateQuarterlyReports()"></app-button>
             </div>
           </div>
 
@@ -758,7 +758,7 @@
             <span class="text-xs text-on-surface-variant">a</span>
             <input type="date" [(ngModel)]="dailyEndDate" class="h-8 px-2 bg-surface border border-outline rounded text-xs text-on-surface">
             <button class="btn-secondary h-8 text-xs" (click)="loadDailyReports()" [disabled]="dailyReportsLoading">
-              <fa-icon [icon]="['fas', 'search']" class="text-[16px]"></fa-icon>
+              <fa-icon [icon]="['fas', 'magnifying-glass']" class="text-[16px]"></fa-icon>
             </button>
           </div>
         </div>
@@ -808,11 +808,11 @@
       <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'tachometer-alt']" class="text-lg text-success"></fa-icon>
+            <fa-icon [icon]="['fas', 'gauge-high']" class="text-lg text-success"></fa-icon>
             Eficiencia de Terapeutas
           </h3>
           <button class="btn-secondary h-8 text-xs" (click)="loadEfficiency()" [disabled]="efficiencyLoading">
-            <fa-icon [icon]="['fas', 'sync-alt']" class="text-[16px]"></fa-icon>
+            <fa-icon [icon]="['fas', 'rotate']" class="text-[16px]"></fa-icon>
           </button>
         </div>
         @if (efficiencyLoading) {

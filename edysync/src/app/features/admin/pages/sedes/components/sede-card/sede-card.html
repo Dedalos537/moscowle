@@ -4,7 +4,7 @@
     <div class="flex items-start justify-between mb-4">
       <div class="flex items-center gap-3">
         <div class="w-12 h-12 rounded-full bg-primary-container/15 flex items-center justify-center">
-          <fa-icon [icon]="['fas', 'home']" class="text-primary text-xl"></fa-icon>
+          <fa-icon [icon]="['fas', 'house']" class="text-primary text-xl"></fa-icon>
         </div>
         <app-pill-status
           [status]="sede().active ? 'completed' : 'error'"
@@ -42,7 +42,7 @@
 
     <div class="flex justify-between items-center text-sm">
       <span class="flex items-center gap-3 text-on-surface-variant font-medium">
-        <fa-icon [icon]="['fas', 'calendar-alt']" class="text-success"></fa-icon> Sesiones
+        <fa-icon [icon]="['fas', 'calendar-days']" class="text-success"></fa-icon> Sesiones
       </span>
       <span class="font-bold text-on-surface">
         {{ sede().stats?.sessions?.total_completed != null ? sede().stats?.sessions?.total_completed : '—' }}

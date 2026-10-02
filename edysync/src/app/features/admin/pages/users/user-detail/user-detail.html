@@ -6,7 +6,7 @@
     </div>
   } @else if (error) {
     <div class="flex flex-col items-center justify-center py-20 text-center" role="alert">
-      <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error text-4xl mb-4"></fa-icon>
+      <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-error text-4xl mb-4"></fa-icon>
       <p class="text-error font-semibold text-lg">{{ error }}</p>
       <button class="mt-4 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-opacity" (click)="loadUser()">
         Reintentar
@@ -37,7 +37,7 @@
         @if (user.role === 'jugador') {
           <app-button variant="primary" label="Ver Detalle Paciente" [icon]="['fas', 'eye']" (clicked)="viewPatientDetail()"></app-button>
         }
-        <app-button variant="primary" label="Editar Usuario" [icon]="['fas', 'edit']" (clicked)="openEditModal()"></app-button>
+        <app-button variant="primary" label="Editar Usuario" [icon]="['fas', 'pen-to-square']" (clicked)="openEditModal()"></app-button>
       </div>
     </div>
 
@@ -111,14 +111,14 @@
           <h3 class="text-sm font-semibold text-on-surface-variant uppercase tracking-wider mb-4">Acciones Rápidas</h3>
           <div class="flex flex-row gap-2">
             <app-button variant="ghost" label="Resetear Contraseña" [icon]="['fas', 'key']" (clicked)="resetPassword()"></app-button>
-            <app-button variant="danger" label="Eliminar Usuario" [icon]="['fas', 'trash-alt']" (clicked)="deleteUser()"></app-button>
+            <app-button variant="danger" label="Eliminar Usuario" [icon]="['fas', 'trash-can']" (clicked)="deleteUser()"></app-button>
           </div>
         </div>
       </div>
     </div>
   } @else {
     <div class="text-center py-20 text-on-surface-variant/60">
-      <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-3xl mb-2"></fa-icon>
+      <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-3xl mb-2"></fa-icon>
       <p class="text-sm font-medium">Usuario no encontrado</p>
       <a routerLink="/admin/users" class="text-primary text-sm mt-2 inline-block">Volver al listado</a>
     </div>

@@ -18,7 +18,7 @@ export class About implements OnInit {
     this.headerService.setConfig({
       title: 'Nosotros',
       subtitle: 'Conoce más sobre EduSync',
-      icon: ['fas', 'info-circle'],
+      icon: ['fas', 'circle-info'],
     });
   }
 }

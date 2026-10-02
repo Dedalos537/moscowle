@@ -48,7 +48,7 @@
                   </div>
                   @if (msg.phone) {
                     <div class="text-xs text-on-surface-variant mt-0.5 flex items-center gap-1">
-                      <fa-icon [icon]="['fas', 'phone-alt']" class="text-[10px]"></fa-icon> {{ msg.phone }}
+                      <fa-icon [icon]="['fas', 'phone-flip']" class="text-[10px]"></fa-icon> {{ msg.phone }}
                     </div>
                   }
                 </td>
@@ -139,7 +139,7 @@
               Análisis IA del Mensaje
             </h4>
             <button (click)="closeAnalysis()" class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center hover:bg-surface-container-highest transition-colors">
-              <fa-icon [icon]="['fas', 'times']" class="text-on-surface-variant"></fa-icon>
+              <fa-icon [icon]="['fas', 'xmark']" class="text-on-surface-variant"></fa-icon>
             </button>
           </div>
 

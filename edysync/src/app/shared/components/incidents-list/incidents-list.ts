@@ -31,7 +31,7 @@ import { Alert } from '../alert/alert';
 
         @if (incidents.length === 0) {
           <div class="text-center py-12 text-on-surface-variant">
-            <fa-icon [icon]="['fas', 'check-circle']" class="text-4xl text-success mb-3"></fa-icon>
+            <fa-icon [icon]="['fas', 'circle-check']" class="text-4xl text-success mb-3"></fa-icon>
             <p>No tienes incidencias registradas</p>
           </div>
         } @else {
@@ -68,7 +68,7 @@ import { Alert } from '../alert/alert';
             <h3 class="text-lg font-bold text-on-surface mb-4">Reportar Incidencia</h3>
             @if (error) {
               <div class="mb-4 p-3 rounded-lg bg-error-container text-on-error-container text-sm font-medium flex items-center gap-2">
-                <fa-icon [icon]="['fas', 'exclamation-circle']"></fa-icon> {{ error }}
+                <fa-icon [icon]="['fas', 'circle-exclamation']"></fa-icon> {{ error }}
               </div>
             }
             <div class="space-y-4">

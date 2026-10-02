@@ -35,7 +35,7 @@
       }
       @if (financials && incompletePatients.length > 0) {
       <app-summary-card [@cardEnter] label="Sin Configurar" [value]="incompletePatients.length"
-        [icon]="['fas', 'exclamation-triangle']" variant="error"
+        [icon]="['fas', 'triangle-exclamation']" variant="error"
         subtitle="Pacientes sin plan de pago" />
       }
       @if (financials && financials.overdue_amount > 0) {
@@ -46,7 +46,7 @@
       }
       @if (!dailyPendings.length && !incompletePatients.length && (!financials || financials.overdue_amount <= 0)) {
         <div class="empty-state lg\:col-span-4">
-        <fa-icon [icon]="['fas', 'check-circle']" class="text-4xl mb-3"
+        <fa-icon [icon]="['fas', 'circle-check']" class="text-4xl mb-3"
           style="color: var(--color-outline); opacity: 0.3;"></fa-icon>
         <p class="label-caps" style="color: var(--color-on-surface-variant); opacity: 0.5;">Todas las operaciones al día
         </p>
@@ -73,7 +73,7 @@
   <h3 class="section-label">Resumen General</h3>
   <div class="grid-4">
     <app-summary-card label="Terapeutas" [value]="summary.therapists" [loading]="loading" [subtitle]=""
-      [icon]="['fas', 'user-md']" variant="primary" />
+      [icon]="['fas', 'user-doctor']" variant="primary" />
 
     <app-summary-card label="Pacientes" [value]="summary.patients" [loading]="loading" [subtitle]=""
       [icon]="['fas', 'users']" variant="secondary" />
@@ -137,7 +137,7 @@
     </div>
     <div class="card flex-1">
       <div class="card__header">
-        <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-sm" style="color: var(--color-error);"></fa-icon>
+        <fa-icon [icon]="['fas', 'location-dot']" class="text-sm" style="color: var(--color-error);"></fa-icon>
         <span class="label-caps">Usuarios por Sede</span>
       </div>
       <div class="card__body">
@@ -178,7 +178,7 @@
 
   <div class="card card--center">
     <h3 class="label-caps" style="margin-bottom: 0.75rem;">
-      <fa-icon [icon]="['far', 'calendar-alt']" class="text-info mr-2"></fa-icon> Disponibilidad y Horarios
+      <fa-icon [icon]="['far', 'calendar-days']" class="text-info mr-2"></fa-icon> Disponibilidad y Horarios
     </h3>
     <p class="text-sm" style="color: var(--color-on-surface-variant); margin-bottom: 1rem;">Consulta la carga de trabajo
       y espacios libres en tiempo real.</p>
@@ -207,7 +207,7 @@
         <h3 class="link-card__title">CSP Reports</h3>
         <p class="link-card__desc">Monitoreo de seguridad y violaciones de contenido.</p>
       </div>
-      <fa-icon [icon]="['fas', 'external-link-alt']" class="link-card__arrow"></fa-icon>
+      <fa-icon [icon]="['fas', 'up-right-from-square']" class="link-card__arrow"></fa-icon>
     </a>
 
     <a routerLink="/admin/api-tokens" class="link-card">
@@ -218,7 +218,7 @@
         <h3 class="link-card__title">API Tokens</h3>
         <p class="link-card__desc">Gestión de credenciales para integraciones externas.</p>
       </div>
-      <fa-icon [icon]="['fas', 'external-link-alt']" class="link-card__arrow"></fa-icon>
+      <fa-icon [icon]="['fas', 'up-right-from-square']" class="link-card__arrow"></fa-icon>
     </a>
   </div>
 </section>
@@ -238,7 +238,7 @@
         </div>
       </div>
       <button (click)="showGuidanceModal = false" class="modal-close-btn">
-        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+        <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
       </button>
     </div>
     <div class="modal-body">
@@ -249,7 +249,7 @@
           <div>
             <p class="font-bold text-sm" style="color: var(--color-on-surface);">{{ p.paciente }}</p>
             <p class="text-xs" style="color: var(--color-on-surface-variant); margin-top: 0.125rem;">
-              <fa-icon [icon]="['fas', 'map-marker-alt']" class="mr-1" style="font-size: 0.75rem;"></fa-icon>{{ p.sede
+              <fa-icon [icon]="['fas', 'location-dot']" class="mr-1" style="font-size: 0.75rem;"></fa-icon>{{ p.sede
               }}
             </p>
           </div>
@@ -281,7 +281,7 @@
         </div>
       </div>
       <button (click)="showDailyModal = false" class="modal-close-btn modal-close-btn--light">
-        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+        <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
       </button>
     </div>
     <div class="modal-body">
@@ -310,7 +310,7 @@
         </div>
         } @empty {
         <div class="modal-empty">
-          <fa-icon [icon]="['fas', 'check-circle']" class="text-3xl mb-2"></fa-icon>
+          <fa-icon [icon]="['fas', 'circle-check']" class="text-3xl mb-2"></fa-icon>
           <p class="font-bold" style="color: var(--color-on-surface-variant);">No hay cobros pendientes para hoy</p>
         </div>
         }

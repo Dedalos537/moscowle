@@ -46,7 +46,7 @@
             <app-button variant="secondary" label="Reintentar micrófono" (clicked)="retryMic()"></app-button>
           }
           <app-button variant="ghost" (clicked)="goToSession()">
-            <fa-icon [icon]="['fas', 'external-link-alt']"></fa-icon>
+            <fa-icon [icon]="['fas', 'up-right-from-square']"></fa-icon>
             Abrir sesión
           </app-button>
           <app-button variant="danger" label="Inasistencia" (clicked)="markAbsent()"></app-button>
@@ -58,7 +58,7 @@
   @if ((state | async) === 'completed') {
     <div class="fixed top-0 left-0 right-0 z-[60] bg-success text-white">
       <div class="max-w-6xl mx-auto px-4 md:px-8 h-14 flex items-center gap-3">
-        <fa-icon [icon]="['fas', 'check-circle']" class="text-white"></fa-icon>
+        <fa-icon [icon]="['fas', 'circle-check']" class="text-white"></fa-icon>
         <span class="text-sm font-bold flex-1">Sesión completada — generando auditoría</span>
         @if ((auditScore | async); as score) {
           <span class="h-7 px-3 rounded-full bg-white/20 text-white text-xs font-bold flex items-center gap-1.5">
@@ -74,7 +74,7 @@
     <div class="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div class="bg-surface rounded-xl border border-border/30 max-w-sm w-full p-6 animate-fade-in">
         <div class="w-14 h-14 rounded-full bg-warning-container flex items-center justify-center mx-auto mb-4">
-          <fa-icon [icon]="['fas', 'question-circle']" class="text-warning text-3xl"></fa-icon>
+          <fa-icon [icon]="['fas', 'circle-question']" class="text-warning text-3xl"></fa-icon>
         </div>
 
         <h3 class="text-lg font-bold text-on-surface text-center mb-2">¿El paciente asistió?</h3>

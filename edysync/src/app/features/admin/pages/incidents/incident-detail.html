@@ -38,7 +38,7 @@
               </div>
             </div>
             @if (incident.estado !== 'CERRADO' && incident.estado !== 'RESUELTO') {
-              <app-button variant="primary" label="Cambiar Estado" [icon]="['fas', 'exchange-alt']" (clicked)="openStatusModal()"></app-button>
+              <app-button variant="primary" label="Cambiar Estado" [icon]="['fas', 'right-left']" (clicked)="openStatusModal()"></app-button>
             }
           </div>
 

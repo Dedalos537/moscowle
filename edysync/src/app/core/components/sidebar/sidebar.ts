@@ -43,18 +43,18 @@ export class Sidebar implements OnInit, OnDestroy {
   private subs = new Subscription();
 
   readonly allItems: NavItem[] = [
-    { path: '/admin/dashboard', label: 'Panel Admin', subtitle: 'Resumen general', icon: ['fas', 'tachometer-alt'], supervisor: true },
-    { path: '/admin/sessions', label: 'Sesiones Globales', subtitle: 'Todas las sesiones', icon: ['fas', 'calendar-alt'], supervisor: true },
+    { path: '/admin/dashboard', label: 'Panel Admin', subtitle: 'Resumen general', icon: ['fas', 'gauge-high'], supervisor: true },
+    { path: '/admin/sessions', label: 'Sesiones Globales', subtitle: 'Todas las sesiones', icon: ['fas', 'calendar-days'], supervisor: true },
     { path: '/admin/users', label: 'Admin Usuarios', subtitle: 'Gestión de usuarios', icon: ['fas', 'users'] },
     { path: '/admin/sedes', label: 'Sedes', subtitle: 'Sucursales', icon: ['fas', 'building'], supervisor: true },
-    { path: '/admin/finanzas', label: 'Finanzas', subtitle: 'Ingresos y gastos', icon: ['fas', 'university'], supervisor: true },
+    { path: '/admin/finanzas', label: 'Finanzas', subtitle: 'Ingresos y gastos', icon: ['fas', 'building-columns'], supervisor: true },
 
     { path: '/admin/games', label: 'Admin Juegos', subtitle: 'Terapia recreativa', icon: ['fas', 'gamepad'] },
     { path: '/admin/reports', label: 'Admin Reportes', subtitle: 'Estadísticas', icon: ['fas', 'chart-bar'], supervisor: true },
     { path: '/admin/messages', label: 'Admin Mensajes', subtitle: 'Comunicación', icon: ['fas', 'envelope'], supervisor: true },
     { path: '/admin/visor-funcionamiento', label: 'Centro de Operaciones', subtitle: 'Monitoreo', icon: ['fas', 'desktop'], supervisor: true },
-    { path: '/admin/kanban', label: 'Kanban', subtitle: 'Tablero de tareas', icon: ['fas', 'columns'], supervisor: true },
-    { path: '/admin/settings', label: 'Configuración', subtitle: 'Preferencias', icon: ['fas', 'cog'] },
+    { path: '/admin/kanban', label: 'Kanban', subtitle: 'Tablero de tareas', icon: ['fas', 'table-columns'], supervisor: true },
+    { path: '/admin/settings', label: 'Configuración', subtitle: 'Preferencias', icon: ['fas', 'gear'] },
   ];
 
   get navItems(): NavItem[] {

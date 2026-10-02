@@ -18,7 +18,7 @@
 
   @if (!loading && sedes.length > 1) {
     <div class="relative max-w-md">
-      <fa-icon [icon]="['fas', 'search']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm"></fa-icon>
+      <fa-icon [icon]="['fas', 'magnifying-glass']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm"></fa-icon>
       <input [(ngModel)]="searchQuery" type="text" class="input-field text-sm pl-9" placeholder="Buscar sede...">
     </div>
   }
@@ -76,7 +76,7 @@
   <div drawer-footer>
     <div class="buttons_footer_drawer">
       <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateDrawer()"></app-button>
-      <app-button variant="primary" label="Crear Sede" [icon]="['fas', 'save']" (clicked)="createSede()"></app-button>
+      <app-button variant="primary" label="Crear Sede" [icon]="['fas', 'floppy-disk']" (clicked)="createSede()"></app-button>
     </div>
     @if (createStatus) {
       <span class="text-right text-sm text-on-surface-variant font-medium">{{ createStatus }}</span>
@@ -98,7 +98,7 @@
   <div drawer-footer>
     <div class="buttons_footer_drawer">
       <app-button variant="ghost" label="Cancelar" (clicked)="closeEditDrawer()"></app-button>
-      <app-button variant="primary" label="Guardar Cambios" [icon]="['fas', 'save']" (clicked)="updateSede()"></app-button>
+      <app-button variant="primary" label="Guardar Cambios" [icon]="['fas', 'floppy-disk']" (clicked)="updateSede()"></app-button>
     </div>
     @if (editStatus) {
       <span class="text-right text-sm text-on-surface-variant font-medium">{{ editStatus }}</span>

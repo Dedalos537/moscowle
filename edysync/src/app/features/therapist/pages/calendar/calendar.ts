@@ -35,7 +35,7 @@ export class TherapistCalendarPage implements OnInit, OnDestroy {
     this.headerService.setConfig({
       title: 'Calendario',
       subtitle: 'Vista general de tus sesiones',
-      icon: ['fas', 'calendar-alt'],
+      icon: ['fas', 'calendar-days'],
     });
     this.loadSessions();
   }

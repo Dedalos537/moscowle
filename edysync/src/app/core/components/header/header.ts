@@ -228,7 +228,7 @@ export class Header implements OnInit, OnDestroy {
       confirmText: 'Cerrar Sesion',
       cancelText: 'Cancelar',
       variant: 'danger',
-      icon: ['fas', 'sign-out-alt'],
+      icon: ['fas', 'right-from-bracket'],
     }));
 
     if (!confirmed) return;

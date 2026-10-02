@@ -365,7 +365,7 @@ export class Finanzas implements OnInit, OnDestroy {
     });
     this.headerService.setConfig({
       title: 'Finanzas', subtitle: 'Gestión integrada de finanzas del centro',
-      icon: ['fas', 'university'], actionTemplate: this.headerActions,
+      icon: ['fas', 'building-columns'], actionTemplate: this.headerActions,
     });
     this.loadSummaryData();
     this.checkDeepLinks();

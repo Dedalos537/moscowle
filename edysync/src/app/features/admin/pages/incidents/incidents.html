@@ -23,7 +23,7 @@
       </div>
       <div class="kpi-card" @cardEnter>
         <div class="kpi-icon bg-green-100 text-green-600">
-          <fa-icon [icon]="['fas', 'check-circle']"></fa-icon>
+          <fa-icon [icon]="['fas', 'circle-check']"></fa-icon>
         </div>
         <div class="kpi-content">
           <span class="kpi-label">Resueltos Hoy</span>
@@ -74,8 +74,8 @@
           <option [value]="c">{{ c }}</option>
         }
       </select>
-      <app-button variant="primary" label="Filtrar" [icon]="['fas', 'search']" size="sm" (clicked)="applyFilters()"></app-button>
-      <app-button variant="ghost" label="Limpiar" [icon]="['fas', 'times']" size="sm" (clicked)="clearFilters()"></app-button>
+      <app-button variant="primary" label="Filtrar" [icon]="['fas', 'magnifying-glass']" size="sm" (clicked)="applyFilters()"></app-button>
+      <app-button variant="ghost" label="Limpiar" [icon]="['fas', 'xmark']" size="sm" (clicked)="clearFilters()"></app-button>
     </div>
   </div>
 
@@ -151,7 +151,7 @@
                   </a>
                   @if (inc.estado !== 'CERRADO' && inc.estado !== 'RESUELTO') {
                     <button class="action-btn" title="Cambiar estado" (click)="openStatusModal(inc)">
-                      <fa-icon [icon]="['fas', 'exchange-alt']"></fa-icon>
+                      <fa-icon [icon]="['fas', 'right-left']"></fa-icon>
                     </button>
                   }
                 </div>
@@ -226,7 +226,7 @@
             @if (inc.estado !== 'CERRADO' && inc.estado !== 'RESUELTO') {
               <button (click)="openStatusModal(inc)"
                       class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-warning/10 text-warning rounded-lg text-xs font-semibold hover:bg-warning/20 transition-colors">
-                <fa-icon [icon]="['fas', 'exchange-alt']"></fa-icon> Estado
+                <fa-icon [icon]="['fas', 'right-left']"></fa-icon> Estado
               </button>
             }
           </div>

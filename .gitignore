@@ -144,3 +144,6 @@ edysync/dist/
 app/whatsapp_bridge/.bridge.pid
 app/whatsapp_bridge/.bridge.lock
 app/whatsapp_bridge/node_modules/
+
+# Sesión Baileys (credenciales del dispositivo vinculado): nunca al repo
+whatsapp_sessions/

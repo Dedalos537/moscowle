@@ -3,7 +3,7 @@
   <div class="flex items-center justify-between">
     <div>
       <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
-        <fa-icon [icon]="['fas', 'mobile-alt']" class="text-primary"></fa-icon> Importar Yape
+        <fa-icon [icon]="['fas', 'mobile-screen-button']" class="text-primary"></fa-icon> Importar Yape
       </h2>
       <p class="text-sm text-on-surface-variant">Importa transacciones Yape desde archivos CSV o Excel</p>
     </div>
@@ -59,7 +59,7 @@
 
   <div class="bg-surface-container-lowest rounded-xl shadow-soft border-border/20 p-6">
     <h3 class="text-lg font-bold text-on-surface mb-6 flex items-center gap-2">
-      <fa-icon [icon]="['fas', 'history']" class="text-primary"></fa-icon> Historial de Importaciones
+      <fa-icon [icon]="['fas', 'clock-rotate-left']" class="text-primary"></fa-icon> Historial de Importaciones
     </h3>
     @if (loading) {
       <div class="flex justify-center py-12">
@@ -91,7 +91,7 @@
             } @empty {
               <tr>
                 <td colspan="5" class="px-5 py-16 text-center text-on-surface-variant/60">
-                  <fa-icon [icon]="['fas', 'mobile-alt']" class="text-3xl mb-2"></fa-icon>
+                  <fa-icon [icon]="['fas', 'mobile-screen-button']" class="text-3xl mb-2"></fa-icon>
                   <p class="text-sm font-medium">No hay importaciones</p>
                 </td>
               </tr>

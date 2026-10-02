@@ -86,7 +86,7 @@ export class Dashboard implements OnInit, OnDestroy {
     this.headerService.setConfig({
       title: 'Panel de Administración',
       subtitle: 'Control integral de terapeutas y pacientes',
-      icon: ['fas', 'shield-alt'],
+      icon: ['fas', 'shield-halved'],
       actionTemplate: this.headerActions,
     });
     this.loadData();

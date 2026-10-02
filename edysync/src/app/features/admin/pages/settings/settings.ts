@@ -60,7 +60,7 @@ export class Settings implements OnInit, OnDestroy {
     this.headerService.setConfig({
       title: 'Configuración',
       subtitle: 'Personaliza tu experiencia en la plataforma',
-      icon: ['fas', 'cog'],
+      icon: ['fas', 'gear'],
     });
     // Re-fetch schedule from API now that user is authenticated
     this.theme.refreshScheduleFromAPI();

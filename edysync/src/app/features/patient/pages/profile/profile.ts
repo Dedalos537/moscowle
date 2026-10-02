@@ -52,7 +52,7 @@ export class PatientProfile implements OnInit, OnDestroy {
     this.headerService.setConfig({
       title: 'Mi Perfil',
       subtitle: 'Gestiona tu información personal',
-      icon: ['fas', 'user-circle'],
+      icon: ['fas', 'circle-user'],
     });
     this.subs.add(this.authService.currentUser$.subscribe((u) => {
       this.user = u;

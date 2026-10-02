@@ -240,14 +240,14 @@
   [class.text-error]="toastType === 'error'"
   style="backdrop-filter: blur(12px); border-radius: 12px; padding: 12px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
   <div class="flex items-center gap-2 text-sm font-medium">
-    <fa-icon [icon]="toastType === 'success' ? ['fas', 'check-circle'] : ['fas', 'exclamation-circle']"></fa-icon>
+    <fa-icon [icon]="toastType === 'success' ? ['fas', 'circle-check'] : ['fas', 'circle-exclamation']"></fa-icon>
     {{ toastMessage }}
   </div>
 </div>
 }
 
 <!-- Edit Drawer -->
-<app-drawer [isOpen]="showEditDrawer" title="Editar Usuario" [icon]="['fas', 'user-cog']" (close)="closeEditDrawer()"
+<app-drawer [isOpen]="showEditDrawer" title="Editar Usuario" [icon]="['fas', 'user-gear']" (close)="closeEditDrawer()"
   size="lg">
   <div class="grid grid-cols-2 gap-4">
     <div>
@@ -432,7 +432,7 @@
   <div drawer-footer>
     <div class="buttons_footer_drawer">
       <app-button variant="ghost" label="Cancelar" (clicked)="closeEditDrawer()"></app-button>
-      <app-button variant="primary" label="Guardar Cambios" [icon]="['fas', 'save']"
+      <app-button variant="primary" label="Guardar Cambios" [icon]="['fas', 'floppy-disk']"
         (clicked)="saveEditUser()"></app-button>
     </div>
   </div>
@@ -444,7 +444,7 @@
   @if (resetData.firstTime) {
   <div>
     <div class="bg-tertiary-container/15 text-tertiary-container p-4 rounded-xl mb-5 text-sm flex gap-3">
-      <fa-icon [icon]="['fas', 'info-circle']" class="text-lg shrink-0"></fa-icon>
+      <fa-icon [icon]="['fas', 'circle-info']" class="text-lg shrink-0"></fa-icon>
       <p>
         Este usuario nunca ha iniciado sesion. Ingrese una
         <strong>contrasena manual</strong> inicial (min. 6 caracteres).
@@ -487,7 +487,7 @@
   <div drawer-footer>
     <div class="buttons_footer_drawer">
       <app-button variant="ghost" label="Cancelar" (clicked)="closeResetDrawer()"></app-button>
-      <app-button variant="primary" label="Confirmar Reseteo" [icon]="['fas', 'exchange-alt']"
+      <app-button variant="primary" label="Confirmar Reseteo" [icon]="['fas', 'right-left']"
         (clicked)="confirmResetPassword()"></app-button>
     </div>
   </div>
@@ -574,7 +574,7 @@
     @if (newUser.generate_schedule) {
     <div class="bg-surface-container-lowest p-4 rounded-xl border border-border/20 space-y-4">
       <h5 class="text-label-caps text-on-surface-variant flex items-center gap-1.5">
-        <fa-icon [icon]="['fas', 'calendar-alt']" class="text-sm"></fa-icon>
+        <fa-icon [icon]="['fas', 'calendar-days']" class="text-sm"></fa-icon>
         Programacion de Sesiones
       </h5>
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -652,7 +652,7 @@
   <div drawer-footer>
     <div class="buttons_footer_drawer">
       <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateDrawer()"></app-button>
-      <app-button variant="primary" label="Crear Usuario" [icon]="['fas', 'save']"
+      <app-button variant="primary" label="Crear Usuario" [icon]="['fas', 'floppy-disk']"
         (clicked)="createUser()"></app-button>
     </div>
     @if (createStatus) {
@@ -695,7 +695,7 @@
       </div>
 
       <div class="rounded-xl bg-primary-container/10 border border-primary/20 p-3 text-xs text-on-surface">
-        <fa-icon [icon]="['fas', 'info-circle']" class="text-primary-container mr-1"></fa-icon>
+        <fa-icon [icon]="['fas', 'circle-info']" class="text-primary-container mr-1"></fa-icon>
         Se va a cambiar el estado de <strong>{{ statusModalUser.username }}</strong> de
         <strong>{{ getStatusLabel(statusModalUser.account_status) }}</strong> a
         <strong>{{ getStatusLabel(statusModalStatus) }}</strong>.
@@ -812,7 +812,7 @@
               [class.bg-surface-container-high]="!groupRangeMode"
               [class.text-on-surface-variant]="!groupRangeMode"
               [class.border-border/30]="!groupRangeMode">
-              <fa-icon [icon]="['fas', 'arrows-alt-h']" class="mr-1"></fa-icon>Rango
+              <fa-icon [icon]="['fas', 'left-right']" class="mr-1"></fa-icon>Rango
             </button>
             @if (groupRangeMode) {
               <button (click)="clearGroupRangeSelection()" class="px-2 py-1 text-[10px] font-bold rounded-lg bg-error/10 text-error border border-error/30 transition-all cursor-pointer min-h-11 inline-flex items-center">
@@ -861,7 +861,7 @@
             <button type="button" (click)="removeGroupDate(d)"
               class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors cursor-pointer">
               {{ d }}
-              <fa-icon [icon]="['fas', 'times']" class="text-[10px]"></fa-icon>
+              <fa-icon [icon]="['fas', 'xmark']" class="text-[10px]"></fa-icon>
             </button>
           }
         </div>
@@ -882,7 +882,7 @@
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Pacientes del Grupo</label>
       <div class="relative mb-2">
-        <fa-icon [icon]="['fas', 'search']" class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-on-surface-variant/50"></fa-icon>
+        <fa-icon [icon]="['fas', 'magnifying-glass']" class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-on-surface-variant/50"></fa-icon>
         <input type="text" [(ngModel)]="groupSearchQuery" placeholder="Buscar paciente..."
           class="input-field text-sm w-full pl-9">
       </div>
@@ -918,7 +918,7 @@
 
   <div modal-footer>
     <app-button variant="ghost" label="Cancelar" (clicked)="closeGroupModal()"></app-button>
-    <app-button variant="primary" [label]="editingGroupId ? 'Guardar Cambios' : 'Crear Grupo'" [icon]="['fas', 'save']" (clicked)="saveGroup()"></app-button>
+    <app-button variant="primary" [label]="editingGroupId ? 'Guardar Cambios' : 'Crear Grupo'" [icon]="['fas', 'floppy-disk']" (clicked)="saveGroup()"></app-button>
   </div>
 </app-modal>
 
@@ -947,17 +947,17 @@
           </div>
           <div class="space-y-1 text-xs text-on-surface-variant">
             @if (g.therapist_name) {
-              <p><fa-icon [icon]="['fas', 'user-md']" class="mr-1"></fa-icon>{{ g.therapist_name }}</p>
+              <p><fa-icon [icon]="['fas', 'user-doctor']" class="mr-1"></fa-icon>{{ g.therapist_name }}</p>
             }
             @if (g.sede_name) {
-              <p><fa-icon [icon]="['fas', 'map-marker-alt']" class="mr-1"></fa-icon>{{ g.sede_name }}</p>
+              <p><fa-icon [icon]="['fas', 'location-dot']" class="mr-1"></fa-icon>{{ g.sede_name }}</p>
             }
             @if (g.start_time && g.end_time) {
               <p><fa-icon [icon]="['fas', 'clock']" class="mr-1"></fa-icon>{{ g.start_time }} - {{ g.end_time }}</p>
             }
             <p><fa-icon [icon]="['fas', 'users']" class="mr-1"></fa-icon>{{ g.member_count }} paciente(s)</p>
             @if (g.session_dates && g.session_dates.length > 0) {
-              <p><fa-icon [icon]="['fas', 'calendar-alt']" class="mr-1"></fa-icon>{{ (g.session_dates.slice(0, 4).join(', ')) }}{{ g.session_dates.length > 4 ? ' ...' : '' }}</p>
+              <p><fa-icon [icon]="['fas', 'calendar-days']" class="mr-1"></fa-icon>{{ (g.session_dates.slice(0, 4).join(', ')) }}{{ g.session_dates.length > 4 ? ' ...' : '' }}</p>
             }
           </div>
         </div>
@@ -1036,7 +1036,7 @@
     }
     <div modal-footer>
       <app-button variant="ghost" label="Cancelar" size="sm" (clicked)="cancelEditPatientDetails()"></app-button>
-      <app-button variant="primary" label="Guardar Datos" [icon]="['fas', 'save']" size="sm"
+      <app-button variant="primary" label="Guardar Datos" [icon]="['fas', 'floppy-disk']" size="sm"
         (clicked)="savePatientDetails()" [loading]="patientDetailSaving"></app-button>
     </div>
   }

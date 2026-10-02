@@ -6,7 +6,7 @@
 
 @if (!loading && error) {
 <div class="flex flex-col items-center justify-center h-96 text-on-surface-variant">
-  <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-4xl mb-4 text-error opacity-50"></fa-icon>
+  <fa-icon [icon]="['fas', 'triangle-exclamation']" class="text-4xl mb-4 text-error opacity-50"></fa-icon>
   <p class="text-sm font-medium">{{ error }}</p>
   <p class="text-xs mt-1 opacity-60">Verifica tu conexión o contacta al administrador.</p>
 </div>
@@ -54,7 +54,7 @@
           @if (patients.length === 0) {
             <tr>
               <td colspan="4" class="px-6 py-12 text-center text-on-surface-variant">
-                <fa-icon [icon]="['fas', 'user-friends']" class="text-3xl mb-2 opacity-30"></fa-icon>
+                <fa-icon [icon]="['fas', 'user-group']" class="text-3xl mb-2 opacity-30"></fa-icon>
                 <p class="text-sm">No tienes pacientes asignados</p>
               </td>
             </tr>

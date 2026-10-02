@@ -57,7 +57,7 @@
     <app-card title="Sesiones de Hoy" [icon]="['fas', 'calendar-day']">
       @if (data.today_sessions.length === 0) {
         <div class="text-center py-8 text-on-surface-variant">
-          <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-3xl mb-2"></fa-icon>
+          <fa-icon [icon]="['fas', 'circle-check']" class="text-success text-3xl mb-2"></fa-icon>
           <p class="text-sm">No tienes sesiones programadas para hoy</p>
         </div>
       }
@@ -83,7 +83,7 @@
       <div class="flex flex-col items-center justify-center py-6">
         <div class="w-20 h-20 rounded-full flex items-center justify-center mb-4"
              [class]="data.payment_status.is_overdue ? 'bg-error-container' : 'bg-success-container'">
-           <fa-icon [icon]="data.payment_status.is_overdue ? ['fas', 'exclamation-circle'] : ['fas', 'check-circle']"
+           <fa-icon [icon]="data.payment_status.is_overdue ? ['fas', 'circle-exclamation'] : ['fas', 'circle-check']"
                     [class]="data.payment_status.is_overdue ? 'text-error' : 'text-success'"
                    class="text-3xl"></fa-icon>
         </div>

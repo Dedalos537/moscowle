@@ -135,7 +135,7 @@
           @if (patient.notes) {
             <div class="pt-4 border-t border-border">
               <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <fa-icon [icon]="['fas', 'sticky-note']" class="text-[10px]"></fa-icon> Notas
+                <fa-icon [icon]="['fas', 'note-sticky']" class="text-[10px]"></fa-icon> Notas
               </h4>
               <p class="text-sm text-on-surface whitespace-pre-wrap">{{ patient.notes }}</p>
             </div>
@@ -150,7 +150,7 @@
             <h3 class="text-lg font-bold text-on-surface">Sesiones Recientes</h3>
             <app-button
               [label]="weeklyReportGenerating ? 'Generando...' : 'Generar Reporte Semanal'"
-              [icon]="weeklyReportGenerating ? ['fas', 'spinner'] : ['fas', 'file-alt']"
+              [icon]="weeklyReportGenerating ? ['fas', 'spinner'] : ['fas', 'file-lines']"
               [disabled]="weeklyReportGenerating"
               (clicked)="generateWeeklyReport()"
               variant="secondary">
@@ -201,7 +201,7 @@
           @if (weeklyReport) {
             <div class="mt-4 p-4 bg-info-container rounded-xl border border-info-container">
               <h4 class="text-sm font-bold text-info mb-3 flex items-center gap-2">
-                <fa-icon [icon]="['fas', 'file-alt']" class="text-info"></fa-icon>
+                <fa-icon [icon]="['fas', 'file-lines']" class="text-info"></fa-icon>
                 Reporte Semanal {{ weeklyReport.week_start | date:'dd/MM/yyyy' }} - {{ weeklyReport.week_end | date:'dd/MM/yyyy' }}
               </h4>
               <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
@@ -237,7 +237,7 @@
 
 @if (!loading && !patient) {
   <div class="text-center py-20 text-on-surface-variant/60">
-    <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-3xl mb-2"></fa-icon>
+    <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-3xl mb-2"></fa-icon>
     <p class="text-sm font-medium">Paciente no encontrado</p>
     <a routerLink="/admin/users" class="text-primary text-sm mt-2 inline-block">Volver al listado</a>
   </div>
@@ -298,7 +298,7 @@
     @if (selectedSession) {
       <a [routerLink]="['/therapist/sessions', selectedSession.id, 'review']"
          class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors">
-        <fa-icon [icon]="['fas', 'external-link-alt']" class="text-xs"></fa-icon> Ir a Revisión
+        <fa-icon [icon]="['fas', 'up-right-from-square']" class="text-xs"></fa-icon> Ir a Revisión
       </a>
     }
   </div>
@@ -377,7 +377,7 @@
     }
     <div modal-footer>
       <app-button variant="ghost" label="Cancelar" size="sm" (clicked)="cancelEditPatientDetails()"></app-button>
-      <app-button variant="primary" label="Guardar Datos" [icon]="['fas', 'save']" size="sm"
+      <app-button variant="primary" label="Guardar Datos" [icon]="['fas', 'floppy-disk']" size="sm"
         (clicked)="savePatientDetails()" [loading]="patientDetailSaving"></app-button>
     </div>
   }

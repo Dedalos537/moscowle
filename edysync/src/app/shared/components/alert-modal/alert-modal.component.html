@@ -3,7 +3,7 @@
     <div class="alert-modal-card">
       @if (config.isHelp) {
         <div class="alert-modal-header">
-          <fa-icon [icon]="['fas', 'info-circle']" class="text-primary text-xl"></fa-icon>
+          <fa-icon [icon]="['fas', 'circle-info']" class="text-primary text-xl"></fa-icon>
           <h3>{{ config.helpTitle || 'Ayuda' }}</h3>
         </div>
         <div class="alert-modal-body">
@@ -17,22 +17,22 @@
           @switch (config.type) {
             @case ('success') {
               <span class="w-10 h-10 rounded-full bg-success-container flex items-center justify-center">
-                <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-xl"></fa-icon>
+                <fa-icon [icon]="['fas', 'circle-check']" class="text-success text-xl"></fa-icon>
               </span>
             }
             @case ('error') {
               <span class="w-10 h-10 rounded-full bg-error-container flex items-center justify-center">
-                <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error text-xl"></fa-icon>
+                <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-error text-xl"></fa-icon>
               </span>
             }
             @case ('warning') {
               <span class="w-10 h-10 rounded-full bg-warning-container flex items-center justify-center">
-                <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-warning text-xl"></fa-icon>
+                <fa-icon [icon]="['fas', 'triangle-exclamation']" class="text-warning text-xl"></fa-icon>
               </span>
             }
             @default {
               <span class="w-10 h-10 rounded-full bg-info-container flex items-center justify-center">
-                <fa-icon [icon]="['fas', 'info-circle']" class="text-info text-xl"></fa-icon>
+                <fa-icon [icon]="['fas', 'circle-info']" class="text-info text-xl"></fa-icon>
               </span>
             }
           }

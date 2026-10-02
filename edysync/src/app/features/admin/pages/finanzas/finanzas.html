@@ -2,7 +2,7 @@
   <div class="flex items-center gap-1 sm:gap-2">
     <button (click)="showHelp()"
       class="flex items-center gap-1 px-2 py-1 text-[10px] sm:text-sm font-semibold rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer">
-      <fa-icon [icon]="['fas', 'question-circle']" class="text-[10px] sm:text-xs"></fa-icon>
+      <fa-icon [icon]="['fas', 'circle-question']" class="text-[10px] sm:text-xs"></fa-icon>
       <span class="hidden sm:inline">Ayuda</span>
     </button>
     <button (click)="generateReport()"
@@ -16,7 +16,7 @@
 
 <div class="chrome-tab-bar">
   <button class="chrome-tab" [class.active]="activeTab === 'resumen'" (click)="switchTab('resumen')">
-    <fa-icon [icon]="['fas', 'th-large']"></fa-icon>
+    <fa-icon [icon]="['fas', 'table-cells-large']"></fa-icon>
     <span>Dashboard</span>
     <div class="chrome-tab-indicator"></div>
   </button>
@@ -26,7 +26,7 @@
     <div class="chrome-tab-indicator"></div>
   </button>
   <button class="chrome-tab" [class.active]="activeTab === 'yape'" (click)="switchTab('yape')">
-    <fa-icon [icon]="['fas', 'mobile-alt']"></fa-icon>
+    <fa-icon [icon]="['fas', 'mobile-screen-button']"></fa-icon>
     <span>Yape</span>
     <div class="chrome-tab-indicator"></div>
   </button>
@@ -57,7 +57,7 @@
   </div>
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
     <app-summary-card [border]="false" label="Deuda Total" [value]="summaryTotalDeuda.toFixed(2)" prefix="S/ "
-      [icon]="['fas', 'exclamation-triangle']" variant="error"
+      [icon]="['fas', 'triangle-exclamation']" variant="error"
       [trend]="{ icon: ['fas', 'arrow-up'], label: 'Pendiente', subtitle: 'de cobro', color: 'error' }" />
 
     <app-summary-card [border]="false" label="Ingresos Reales" [value]="summaryIngresos.toFixed(2)" prefix="S/ "
@@ -69,7 +69,7 @@
       [trend]="{ icon: ['fas', 'arrow-down'], label: 'Operativos', subtitle: 'y terapeutas', color: 'warning' }" />
 
     <app-summary-card [border]="false" label="Balance Neto" [value]="summaryBalance.toFixed(2)" prefix="S/ "
-      [icon]="['fas', 'university']" variant="info"
+      [icon]="['fas', 'building-columns']" variant="info"
       [valueColor]="summaryBalance >= 0 ? 'success' : 'error'"
       [trend]="{ icon: summaryBalance >= 0 ? ['fas', 'arrow-up'] : ['fas', 'arrow-down'], label: summaryBalance >= 0 ? 'Positivo' : 'Negativo', subtitle: 'Ingresos - Gastos', color: summaryBalance >= 0 ? 'success' : 'error' }" />
   </div>
@@ -138,7 +138,7 @@
       <div class="flex-1">
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2 font-accent">
-            <fa-icon [icon]="['fas', 'tachometer-alt']" class="text-primary text-lg"></fa-icon>
+            <fa-icon [icon]="['fas', 'gauge-high']" class="text-primary text-lg"></fa-icon>
             Eficiencia de Cobranza
           </h3>
           <span class="text-2xl font-black text-on-surface">{{ dashCollectionRate.toFixed(0) }}%</span>
@@ -183,7 +183,7 @@
   <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-sm font-bold text-on-surface flex items-center gap-2 font-accent">
-        <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-warning text-lg"></fa-icon>
+        <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-warning text-lg"></fa-icon>
         Alertas de Contratos
       </h3>
       <span class="text-xs font-bold text-primary">{{ contractAlerts.length }}</span>
@@ -201,7 +201,7 @@
           [class.bg-error/15]="alert.type === 'overdue'"
           [class.bg-warning/15]="alert.type === 'upcoming'"
           [class.bg-primary/15]="alert.type === 'due_today'">
-          <fa-icon [icon]="alert.type === 'overdue' ? ['fas', 'exclamation-triangle'] : alert.type === 'upcoming' ? ['fas', 'clock'] : ['fas', 'check-circle']"
+          <fa-icon [icon]="alert.type === 'overdue' ? ['fas', 'triangle-exclamation'] : alert.type === 'upcoming' ? ['fas', 'clock'] : ['fas', 'circle-check']"
             class="text-[14px]"
             [class.text-error]="alert.type === 'overdue'"
             [class.text-warning]="alert.type === 'upcoming'"
@@ -246,11 +246,11 @@
           [class.bg-info-container]="t.method === 'card'"
           [class.bg-surface-container-high]="!['yape','plin','transfer','cash','card'].includes(t.method)">
           @switch (t.method) { @case ('yape') {
-          <fa-icon [icon]="['fas', 'mobile-alt']" class="text-lg"></fa-icon> }
+          <fa-icon [icon]="['fas', 'mobile-screen-button']" class="text-lg"></fa-icon> }
           @case ('plin') {
-          <fa-icon [icon]="['fas', 'mobile-alt']" class="text-lg"></fa-icon> }
+          <fa-icon [icon]="['fas', 'mobile-screen-button']" class="text-lg"></fa-icon> }
           @case ('transfer') {
-          <fa-icon [icon]="['fas', 'university']" class="text-lg"></fa-icon> }
+          <fa-icon [icon]="['fas', 'building-columns']" class="text-lg"></fa-icon> }
           @case ('cash') {
           <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-lg"></fa-icon>
           } @case ('card') {
@@ -302,7 +302,7 @@
     </div>
     <div class="bg-surface-container-lowest rounded-xl border border-border/30 p-3">
       <h4 class="text-[10px] font-bold text-on-surface-variant mb-2 flex items-center gap-1.5 uppercase tracking-wide">
-        <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-primary text-[12px]"></fa-icon> Deuda por Sede
+        <fa-icon [icon]="['fas', 'location-dot']" class="text-primary text-[12px]"></fa-icon> Deuda por Sede
       </h4>
       <div style="height: 170px"><canvas baseChart [data]="chartDebtByLocation" [options]="chartDebtByLocationOpt" [type]="chartDebtByLocationType"></canvas></div>
     </div>
@@ -328,7 +328,7 @@
     </div>
     <div class="bg-surface-container-lowest rounded-xl border border-border/30 p-3">
       <h4 class="text-[10px] font-bold text-on-surface-variant mb-2 flex items-center gap-1.5 uppercase tracking-wide">
-        <fa-icon [icon]="['fas', 'exchange-alt']" class="text-primary text-[12px]"></fa-icon> Proyección vs Real
+        <fa-icon [icon]="['fas', 'right-left']" class="text-primary text-[12px]"></fa-icon> Proyección vs Real
       </h4>
       <div style="height: 170px"><canvas baseChart [data]="chartProjVsReal" [options]="chartProjVsRealOpt" [type]="chartProjVsRealType"></canvas></div>
     </div>
@@ -345,7 +345,7 @@
 <div class="finanzas-body animate-fade-in" [@fadeInUp]>
   @if (patientsWithoutContractCount > 0) {
   <div class="flex items-start gap-4 p-4 bg-warning-container border border-warning-container rounded-xl">
-    <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-warning text-2xl shrink-0"></fa-icon>
+    <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-warning text-2xl shrink-0"></fa-icon>
     <div class="flex-1 min-w-0">
       <p class="text-sm font-bold text-warning">
         {{ patientsWithoutContractCount }} pacientes sin contrato activo
@@ -369,7 +369,7 @@
       [class.bg-surface-container-lowest]="pagosTab === 'historial'" [class.text-on-surface]="pagosTab === 'historial'"
       [class.text-on-surface-variant]="pagosTab !== 'historial'" [class.shadow-soft]="pagosTab === 'historial'"
       (click)="pagosTab = 'historial'">
-      <fa-icon [icon]="['fas', 'history']" class="text-[18px]"></fa-icon>
+      <fa-icon [icon]="['fas', 'clock-rotate-left']" class="text-[18px]"></fa-icon>
       Historial @if (paymentHistory.length > 0) {
       <span class="text-[10px] bg-primary-container/15 text-primary-container font-black px-1.5 py-0.5 rounded-full">{{
         paymentHistory.length }}</span>
@@ -435,7 +435,7 @@
     <div class="flex flex-col gap-4 mb-6">
       <div class="flex flex-col md:flex-row gap-3">
         <div class="relative flex-1">
-          <fa-icon [icon]="['fas', 'search']"
+          <fa-icon [icon]="['fas', 'magnifying-glass']"
             class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]"></fa-icon>
           <input (input)="searchQuery = $any($event.target).value" [value]="searchQuery" type="text"
             placeholder="Buscar paciente..." class="input-field !pl-10" />
@@ -490,7 +490,7 @@
           activo{{ activeFilterCount > 1 ? 's' : '' }}
           <button (click)="clearFilters()"
             class="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors cursor-pointer">
-            <fa-icon [icon]="['fas', 'times']" class="text-[14px]"></fa-icon>
+            <fa-icon [icon]="['fas', 'xmark']" class="text-[14px]"></fa-icon>
           </button>
         </div>
         }
@@ -662,7 +662,7 @@
                         <app-button variant="danger" label="Cancelar" [icon]="['fas', 'ban']" size="sm"
                           (clicked)="openCancelContractModal(selectedPatientContract)"></app-button>
                         } @else {
-                        <app-button variant="primary" label="Reactivar" [icon]="['fas', 'redo']" size="sm"
+                        <app-button variant="primary" label="Reactivar" [icon]="['fas', 'arrow-rotate-right']" size="sm"
                           (clicked)="showReactivateContractModal = true"></app-button>
                         }
                       </div>
@@ -714,7 +714,7 @@
                           <app-button variant="ghost" label="Pagar" [icon]="['fas', 'money-bill-wave']" size="sm"
                             (clicked)="openPayInstallmentModal(inst, selectedPatientContract!); $event.stopPropagation()"></app-button>
                           } @else if (inst.status === 'paid') {
-                          <app-button variant="ghost" label="Editar" [icon]="['fas', 'edit']" size="sm"
+                          <app-button variant="ghost" label="Editar" [icon]="['fas', 'pen-to-square']" size="sm"
                             (clicked)="editPaymentFromInstallment(inst); $event.stopPropagation()"></app-button>
                           }
                         </div>
@@ -844,7 +844,7 @@
             </div>
             @if (p.next_due_date) {
             <div class="flex items-center gap-1.5 mt-1.5 text-[10px] sm:text-xs">
-              <fa-icon [icon]="['fas', 'calendar-alt']" class="text-on-surface-variant"></fa-icon>
+              <fa-icon [icon]="['fas', 'calendar-days']" class="text-on-surface-variant"></fa-icon>
               <span class="text-on-surface-variant">Prox. venc.:</span>
               <span class="font-semibold text-on-surface">{{ p.next_due_date | date:'dd/MM/yyyy' }}</span>
               @if (isOverdue(p)) {
@@ -923,7 +923,7 @@
                 }
               </div>
               <div class="flex gap-2 pt-1">
-                <app-button variant="primary" label="Editar" [icon]="['fas', 'edit']" size="sm"
+                <app-button variant="primary" label="Editar" [icon]="['fas', 'pen-to-square']" size="sm"
                   (clicked)="openEditContractModal()"></app-button>
                 <app-button variant="ghost" label="Pagar" [icon]="['fas', 'money-bill-wave']" size="sm"
                   (clicked)="openPayFirstUnpaidInstallment()"></app-button>
@@ -947,7 +947,7 @@
             <app-button variant="primary" label="Crear Contrato" [icon]="['fas', 'plus']" size="sm"
               (clicked)="openCreateContractForPatient(p)"></app-button>
             <button class="btn-ghost !px-3 !py-2" (click)="viewPatientHistory(p); $event.stopPropagation()" title="Ver Historial">
-              <fa-icon [icon]="['fas', 'history']" class="text-[16px]"></fa-icon>
+              <fa-icon [icon]="['fas', 'clock-rotate-left']" class="text-[16px]"></fa-icon>
             </button>
           </div>
           }
@@ -1049,11 +1049,11 @@
               <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
                 [class]="getMethodBadgeClass(p.method)">
                 @switch (p.method) { @case ('yape') {
-                <fa-icon [icon]="['fas', 'mobile-alt']" class="text-[12px]"></fa-icon>
+                <fa-icon [icon]="['fas', 'mobile-screen-button']" class="text-[12px]"></fa-icon>
                 } @case ('plin') {
-                <fa-icon [icon]="['fas', 'mobile-alt']" class="text-[12px]"></fa-icon>
+                <fa-icon [icon]="['fas', 'mobile-screen-button']" class="text-[12px]"></fa-icon>
                 } @case ('transfer') {
-                <fa-icon [icon]="['fas', 'university']" class="text-[12px]"></fa-icon>
+                <fa-icon [icon]="['fas', 'building-columns']" class="text-[12px]"></fa-icon>
                 } @case ('cash') {
                 <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-[12px]"></fa-icon>
                 } @case ('card') {
@@ -1089,11 +1089,11 @@
               <div class="flex items-center justify-end gap-1">
                 <button (click)="editPayment(p.id)"
                   class="btn-ghost !px-2 !py-1 text-xs text-primary hover:bg-primary-container/40" title="Editar">
-                  <fa-icon [icon]="['fas', 'edit']" class="text-[16px]"></fa-icon>
+                  <fa-icon [icon]="['fas', 'pen-to-square']" class="text-[16px]"></fa-icon>
                 </button>
                 <button (click)="deletePayment(p.id)"
                   class="btn-ghost !px-2 !py-1 text-xs text-error hover:bg-error-container" title="Eliminar">
-                  <fa-icon [icon]="['fas', 'trash-alt']" class="text-[16px]"></fa-icon>
+                  <fa-icon [icon]="['fas', 'trash-can']" class="text-[16px]"></fa-icon>
                 </button>
               </div>
             </td>
@@ -1124,11 +1124,11 @@
 <div class="finanzas-body animate-fade-in" [@fadeInUp]>
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     <app-summary-card [border]="false" label="Total Yape / Plin" [value]="yapeTotal.toFixed(2)" prefix="S/ "
-      [icon]="['fas', 'mobile-alt']" variant="accent"
+      [icon]="['fas', 'mobile-screen-button']" variant="accent"
       subtitle="Recaudado por Yape y Plin" />
 
     <app-summary-card [border]="false" label="Este Mes" [value]="yapeMonthlyTotal.toFixed(2)" prefix="S/ "
-      [icon]="['fas', 'calendar-alt']" variant="accent"
+      [icon]="['fas', 'calendar-days']" variant="accent"
       subtitle="Recaudado vía Yape en el mes actual" />
 
     <app-summary-card [border]="false" label="Transacciones" [value]="yapeCount"
@@ -1138,7 +1138,7 @@
 
   <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 md:p-6">
     <h3 class="text-sm font-bold text-on-surface flex items-center gap-2 mb-4 font-accent">
-      <fa-icon [icon]="['fas', 'mobile-alt']" class="text-accent text-lg"></fa-icon>
+      <fa-icon [icon]="['fas', 'mobile-screen-button']" class="text-accent text-lg"></fa-icon>
       Transacciones Yape / Plin
     </h3>
     @if (yapeTransactions.length > 0) {
@@ -1175,7 +1175,7 @@
             <td class="px-4 py-3.5 text-center">
               <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
                 [class]="getMethodBadgeClass(t.method)">
-                <fa-icon [icon]="['fas', 'mobile-alt']" class="text-[12px]"></fa-icon>
+                <fa-icon [icon]="['fas', 'mobile-screen-button']" class="text-[12px]"></fa-icon>
                 {{ getMethodLabel(t.method) }}
               </span>
             </td>
@@ -1192,7 +1192,7 @@
     </div>
     } @else {
     <div class="text-center py-16">
-      <fa-icon [icon]="['fas', 'mobile-alt']" class="text-4xl text-on-surface-variant/40 mb-2 block"></fa-icon>
+      <fa-icon [icon]="['fas', 'mobile-screen-button']" class="text-4xl text-on-surface-variant/40 mb-2 block"></fa-icon>
       <p class="text-sm font-medium text-on-surface-variant">
         No hay transacciones Yape / Plin
       </p>
@@ -1275,7 +1275,7 @@
             </td>
             <td class="px-6 py-4 text-right">
               @if (t.balance > 0) {
-              <app-button variant="primary" label="Pagar" [icon]="['fas', 'hand-holding-usd']"
+              <app-button variant="primary" label="Pagar" [icon]="['fas', 'hand-holding-dollar']"
                 (clicked)="openTherapistPaymentModal(t)"></app-button>
               }
             </td>
@@ -1504,7 +1504,7 @@
     }
     <div class="flex gap-2 justify-end">
       <app-button variant="ghost" label="Cancelar" (clicked)="showCreateContractModal = false"></app-button>
-      <app-button variant="primary" [label]="isEditingContract ? 'Guardar Cambios' : 'Crear Contrato'" [icon]="['fas', 'save']" (clicked)="submitCreateContract()"></app-button>
+      <app-button variant="primary" [label]="isEditingContract ? 'Guardar Cambios' : 'Crear Contrato'" [icon]="['fas', 'floppy-disk']" (clicked)="submitCreateContract()"></app-button>
     </div>
   </div>
 </app-modal>
@@ -1560,7 +1560,7 @@
         <app-spinner size="sm" colorClass="text-primary"></app-spinner>
         } @else {
         <button (click)="removePayReceipt()" class="btn-ghost !px-2 !py-1 text-xs text-error shrink-0" title="Quitar voucher">
-          <fa-icon [icon]="['fas', 'times']"></fa-icon>
+          <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
         </button>
         }
       </div>
@@ -1577,7 +1577,7 @@
   </div>
   <div modal-footer>
     <app-button variant="ghost" label="Cancelar" size="sm" (clicked)="showPayInstallmentModal = false"></app-button>
-    <app-button variant="primary" label="Registrar Pago" [icon]="['fas', 'save']" size="sm"
+    <app-button variant="primary" label="Registrar Pago" [icon]="['fas', 'floppy-disk']" size="sm"
       [disabled]="payInstallmentForm.amount <= 0" (clicked)="submitPayInstallment()"></app-button>
   </div>
 </app-modal>
@@ -1705,7 +1705,7 @@
         <img [src]="previewBlobUrl" [alt]="previewTitle" class="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain">
       }
       <button (click)="closePreview()" class="absolute -top-3 -right-3 w-8 h-8 bg-surface-container-lowest rounded-full flex items-center justify-center shadow-lg hover:bg-surface-container-high transition-colors cursor-pointer">
-        <fa-icon [icon]="['fas', 'times']" class="text-sm text-on-surface"></fa-icon>
+        <fa-icon [icon]="['fas', 'xmark']" class="text-sm text-on-surface"></fa-icon>
       </button>
     </div>
   </div>
@@ -1720,7 +1720,7 @@
           <p class="text-xs text-on-surface-variant">Modifica el pago #{{ editPaymentId }}</p>
         </div>
         <button (click)="showEditPaymentModal = false" class="w-8 h-8 bg-surface-container-high rounded-full flex items-center justify-center hover:bg-surface-container-highest transition-colors cursor-pointer">
-          <fa-icon [icon]="['fas', 'times']" class="text-sm text-on-surface"></fa-icon>
+          <fa-icon [icon]="['fas', 'xmark']" class="text-sm text-on-surface"></fa-icon>
         </button>
       </div>
       <div class="space-y-4">
@@ -1768,7 +1768,7 @@
               @if (editReceiptFile) { {{ editReceiptFile.name }} } @else { Voucher actual }
             </span>
             <button (click)="removeEditReceipt()" class="btn-ghost !px-2 !py-1 text-xs text-error shrink-0" title="Quitar voucher">
-              <fa-icon [icon]="['fas', 'times']"></fa-icon>
+              <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
             </button>
           </div>
           }

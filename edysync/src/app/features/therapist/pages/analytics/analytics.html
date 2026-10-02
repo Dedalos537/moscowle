@@ -81,7 +81,7 @@
     </app-card>
   </div>
 
-  <app-card title="Adaptaciones Recientes" [icon]="['fas', 'sliders-h']">
+  <app-card title="Adaptaciones Recientes" [icon]="['fas', 'sliders']">
     @if (adaptations?.length) {
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
@@ -118,7 +118,7 @@
     }
     @if (!adaptations?.length) {
       <div class="text-center py-8 text-on-surface-variant">
-        <fa-icon [icon]="['fas', 'sliders-h']" class="text-3xl mb-2 opacity-30"></fa-icon>
+        <fa-icon [icon]="['fas', 'sliders']" class="text-3xl mb-2 opacity-30"></fa-icon>
         <p class="text-sm">No hay adaptaciones recientes</p>
       </div>
     }

@@ -22,7 +22,7 @@
       <div class="chrome-tab-indicator"></div>
     </button>
     <button class="chrome-tab" [class.active]="activeTab === 'incidents'" (click)="switchTab('incidents')">
-      <fa-icon [icon]="['fas', 'exclamation-triangle']"></fa-icon>
+      <fa-icon [icon]="['fas', 'triangle-exclamation']"></fa-icon>
       <span>Incidencias</span>
       <div class="chrome-tab-indicator"></div>
     </button>
@@ -54,7 +54,7 @@
             <p class="text-sm text-on-surface-variant">Estado del servidor Gunicorn y gestión de contraseñas</p>
           </div>
           <div class="flex items-center gap-2">
-            <app-button variant="ghost" label="Refrescar" [icon]="['fas', 'sync']" (clicked)="loadServerStatus()"></app-button>
+            <app-button variant="ghost" label="Refrescar" [icon]="['fas', 'arrows-rotate']" (clicked)="loadServerStatus()"></app-button>
             @if (serverStatus !== 'running') {
               <app-button variant="primary" label="Iniciar Backend" [icon]="['fas', 'play']" [loading]="restarting" (clicked)="restartServer()"></app-button>
             }
@@ -101,12 +101,12 @@
 
           @if (restartMessage) {
             <div class="mt-4 p-3 bg-success/10 border border-success/30 rounded-lg text-sm text-success flex items-center gap-2">
-              <fa-icon [icon]="['fas', 'check-circle']"></fa-icon> {{ restartMessage }}
+              <fa-icon [icon]="['fas', 'circle-check']"></fa-icon> {{ restartMessage }}
             </div>
           }
           @if (restartError) {
             <div class="mt-4 p-3 bg-error/10 border border-error/30 rounded-lg text-sm text-error flex items-center gap-2">
-              <fa-icon [icon]="['fas', 'exclamation-circle']"></fa-icon> {{ restartError }}
+              <fa-icon [icon]="['fas', 'circle-exclamation']"></fa-icon> {{ restartError }}
             </div>
           }
         </div>
@@ -171,7 +171,7 @@
                           <fa-icon [icon]="['fas', 'check']"></fa-icon> Aprobar
                         </button>
                         <button (click)="rejectReset(item)" class="px-3 py-1.5 rounded-lg bg-error/10 text-error border border-error/30 text-xs font-bold hover:bg-error/20 transition-colors flex items-center gap-1.5">
-                          <fa-icon [icon]="['fas', 'times']"></fa-icon> Rechazar
+                          <fa-icon [icon]="['fas', 'xmark']"></fa-icon> Rechazar
                         </button>
                       }
                       @if (item.status === 'approved' && item.temp_password) {
@@ -208,7 +208,7 @@
           </div>
           <div class="logs__actions">
             <div class="logs__search">
-              <fa-icon [icon]="['fas', 'search']" size="sm"></fa-icon>
+              <fa-icon [icon]="['fas', 'magnifying-glass']" size="sm"></fa-icon>
               <input
                 type="text"
                 placeholder="Buscar en logs..."
@@ -217,14 +217,14 @@
               />
             </div>
             <button class="logs__refresh-btn" (click)="loadLogs()" [title]="'Refrescar'">
-              <fa-icon [icon]="['fas', 'sync']" [class.fa-spin]="logsLoading"></fa-icon>
+              <fa-icon [icon]="['fas', 'arrows-rotate']" [class.fa-spin]="logsLoading"></fa-icon>
             </button>
             <button
               class="logs__auto-btn"
               [class.logs__auto-btn--active]="logsAutoRefresh"
               (click)="toggleLogsAutoRefresh()"
             >
-              <fa-icon [icon]="['fas', 'play-circle']"></fa-icon>
+              <fa-icon [icon]="['fas', 'circle-play']"></fa-icon>
               Auto
             </button>
           </div>
@@ -250,7 +250,7 @@
           </div>
         } @else if (logsError) {
           <div class="flex flex-col items-center justify-center py-16 text-center" role="alert">
-            <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error text-4xl mb-4"></fa-icon>
+            <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-error text-4xl mb-4"></fa-icon>
             <p class="text-error font-semibold text-lg">{{ logsError }}</p>
             <button class="mt-4 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-opacity" (click)="loadLogs()">
               Reintentar
@@ -286,7 +286,7 @@
               </div>
             } @empty {
               <div class="logs__empty">
-                <fa-icon [icon]="['fas', 'check-circle']" size="3x"></fa-icon>
+                <fa-icon [icon]="['fas', 'circle-check']" size="3x"></fa-icon>
                 <p>Sin registros</p>
               </div>
             }
@@ -316,7 +316,7 @@
           </div>
           <div class="logs__actions">
             <button class="logs__refresh-btn" (click)="loadCspReports()" [title]="'Refrescar'">
-              <fa-icon [icon]="['fas', 'sync']" [class.fa-spin]="cspLoading"></fa-icon>
+              <fa-icon [icon]="['fas', 'arrows-rotate']" [class.fa-spin]="cspLoading"></fa-icon>
             </button>
             <button class="logs__auto-btn" (click)="exportCspCsv()">
               <fa-icon [icon]="['fas', 'file-csv']"></fa-icon>
@@ -335,7 +335,7 @@
           </div>
         } @else if (cspError) {
           <div class="flex flex-col items-center justify-center py-16 text-center" role="alert">
-            <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error text-4xl mb-4"></fa-icon>
+            <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-error text-4xl mb-4"></fa-icon>
             <p class="text-error font-semibold text-lg">{{ cspError }}</p>
             <button class="mt-4 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-opacity" (click)="loadCspReports()">
               Reintentar
@@ -366,7 +366,7 @@
                   } @empty {
                     <tr>
                       <td colspan="4" class="px-4 py-16 text-center text-on-surface-variant/60">
-                        <fa-icon [icon]="['fas', 'shield-alt']" class="text-3xl mb-2"></fa-icon>
+                        <fa-icon [icon]="['fas', 'shield-halved']" class="text-3xl mb-2"></fa-icon>
                         <p class="text-sm font-medium">No hay reportes CSP</p>
                       </td>
                     </tr>
@@ -414,7 +414,7 @@
           </div>
         } @else if (tokensError) {
           <div class="flex flex-col items-center justify-center py-16 text-center">
-            <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error text-4xl mb-4"></fa-icon>
+            <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-error text-4xl mb-4"></fa-icon>
             <p class="text-error font-semibold text-lg">{{ tokensError }}</p>
             <app-button variant="primary" label="Reintentar" (clicked)="loadTokens()" class="mt-4"></app-button>
           </div>
@@ -503,11 +503,11 @@
               <div class="flex items-center gap-3 mb-3">
                 <div class="w-10 h-10 rounded-lg flex items-center justify-center" [style.background]="providerStatusColor(llmProviders[key]?.status) + '20'">
                   @if (llmProviders[key]?.status === 'ok') {
-                    <fa-icon [icon]="['fas', 'check-circle']" [style.color]="providerStatusColor(llmProviders[key]?.status)"></fa-icon>
+                    <fa-icon [icon]="['fas', 'circle-check']" [style.color]="providerStatusColor(llmProviders[key]?.status)"></fa-icon>
                   } @else if (llmProviders[key]?.status === 'client_null') {
-                    <fa-icon [icon]="['fas', 'minus-circle']" [style.color]="providerStatusColor(llmProviders[key]?.status)"></fa-icon>
+                    <fa-icon [icon]="['fas', 'circle-minus']" [style.color]="providerStatusColor(llmProviders[key]?.status)"></fa-icon>
                   } @else {
-                    <fa-icon [icon]="['fas', 'times-circle']" [style.color]="providerStatusColor(llmProviders[key]?.status)"></fa-icon>
+                    <fa-icon [icon]="['fas', 'circle-xmark']" [style.color]="providerStatusColor(llmProviders[key]?.status)"></fa-icon>
                   }
                 </div>
                 <div>
@@ -532,9 +532,9 @@
             <div class="flex items-center gap-3 mb-3">
               <div class="w-10 h-10 rounded-lg flex items-center justify-center" [style.background]="providerStatusColor(llmProviders?.chain?.status) + '20'">
                 @if (llmProviders?.chain?.status === 'ok') {
-                  <fa-icon [icon]="['fas', 'check-circle']" [style.color]="providerStatusColor(llmProviders?.chain?.status)"></fa-icon>
+                  <fa-icon [icon]="['fas', 'circle-check']" [style.color]="providerStatusColor(llmProviders?.chain?.status)"></fa-icon>
                 } @else {
-                  <fa-icon [icon]="['fas', 'times-circle']" [style.color]="providerStatusColor(llmProviders?.chain?.status)"></fa-icon>
+                  <fa-icon [icon]="['fas', 'circle-xmark']" [style.color]="providerStatusColor(llmProviders?.chain?.status)"></fa-icon>
                 }
               </div>
               <div>
@@ -698,7 +698,7 @@
         <div class="flex items-start justify-between gap-4 flex-wrap mb-4">
           <div>
             <h3 class="font-bold text-on-surface flex items-center gap-2">
-              <fa-icon [icon]="['fas', 'whatsapp']" class="text-primary"></fa-icon>
+              <fa-icon [icon]="['fab', 'whatsapp']" class="text-primary"></fa-icon>
               Numero emisor de WhatsApp
             </h3>
             <p class="text-sm text-on-surface-variant">
@@ -815,7 +815,7 @@
           </div>
           <div class="flex gap-2 mt-4">
             <app-button variant="ghost" label="Cancelar" (clicked)="cancelEditNotification()"></app-button>
-            <app-button variant="primary" label="Guardar y Provar" [icon]="['fas', 'save']" (clicked)="saveNotificationConfig()"></app-button>
+            <app-button variant="primary" label="Guardar y Provar" [icon]="['fas', 'floppy-disk']" (clicked)="saveNotificationConfig()"></app-button>
           </div>
         </div>
       }
@@ -925,7 +925,7 @@
 
   <div modal-footer>
     <app-button variant="ghost" label="Cancelar" (clicked)="closeProviderModal()"></app-button>
-    <app-button variant="primary" [label]="editingProviderId ? 'Guardar cambios' : 'Crear provider'" [icon]="['fas', 'save']"
+    <app-button variant="primary" [label]="editingProviderId ? 'Guardar cambios' : 'Crear provider'" [icon]="['fas', 'floppy-disk']"
       [loading]="providerSaving" (clicked)="saveProvider()"></app-button>
   </div>
 </app-modal>

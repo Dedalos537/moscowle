@@ -171,7 +171,7 @@ export class Sessions implements OnInit, OnDestroy {
     this.headerService.setConfig({
       title: 'Calendario Global de Sesiones',
       subtitle: 'Gestiona las sesiones de todos los terapeutas',
-      icon: ['fas', 'calendar-alt'],
+      icon: ['fas', 'calendar-days'],
       actionTemplate: this.headerActions,
     });
     this.loadTherapists();

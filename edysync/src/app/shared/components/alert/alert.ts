@@ -30,10 +30,10 @@ export class Alert {
 
   get icon(): IconProp {
     switch(this.type()) {
-      case 'success': return ['fas', 'check-circle'];
-      case 'error': return ['fas', 'exclamation-circle'];
-      case 'warning': return ['fas', 'exclamation-triangle'];
-      case 'info': return ['fas', 'info-circle'];
+      case 'success': return ['fas', 'circle-check'];
+      case 'error': return ['fas', 'circle-exclamation'];
+      case 'warning': return ['fas', 'triangle-exclamation'];
+      case 'info': return ['fas', 'circle-info'];
     }
   }
 

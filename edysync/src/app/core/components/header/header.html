@@ -57,7 +57,7 @@
                   </button>
                 }
                 <button (click)="showNotifications = false" class="w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors">
-                  <fa-icon [icon]="['fas', 'times']" class="text-xs"></fa-icon>
+                  <fa-icon [icon]="['fas', 'xmark']" class="text-xs"></fa-icon>
                 </button>
               </div>
             </div>
@@ -129,7 +129,7 @@
                       <button (click)="deleteGroup(group.id, $event)"
                         class="w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant/40 hover:text-error hover:bg-error/10 transition-all opacity-0 group-hover:opacity-100"
                         title="Eliminar notificación">
-                        <fa-icon [icon]="['fas', 'times']" class="text-[10px]"></fa-icon>
+                        <fa-icon [icon]="['fas', 'xmark']" class="text-[10px]"></fa-icon>
                       </button>
                       <fa-icon [icon]="expandedGroupId() === group.id ? ['fas', 'chevron-up'] : ['fas', 'chevron-down']"
                                class="text-xs text-on-surface-variant"></fa-icon>
@@ -205,7 +205,7 @@
             <p class="text-xs text-on-surface-variant mt-1">{{ user?.timezone || 'America/Lima' }}</p>
           </div>
           <button class="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-on-surface hover:bg-surface-container-high transition-colors rounded-lg" (click)="$event.stopPropagation(); logout()">
-            <fa-icon [icon]="['fas', 'sign-out-alt']" class="text-on-surface-variant text-sm shrink-0"></fa-icon>
+            <fa-icon [icon]="['fas', 'right-from-bracket']" class="text-on-surface-variant text-sm shrink-0"></fa-icon>
             <span>Cerrar Sesion</span>
           </button>
         </div>

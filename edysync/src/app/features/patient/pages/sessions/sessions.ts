@@ -33,7 +33,7 @@ export class PatientSessions implements OnInit, OnDestroy {
     this.headerService.setConfig({
       title: 'Mis Sesiones',
       subtitle: 'Historial de tus sesiones de terapia',
-      icon: ['fas', 'calendar-alt'],
+      icon: ['fas', 'calendar-days'],
     });
     this.loadSessions();
   }

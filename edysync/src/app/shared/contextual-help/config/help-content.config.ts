@@ -53,7 +53,7 @@ export const HELP_CONTENT: RoleHelp[] = [
         content: {
           title: 'Usuarios',
           description: 'Gestión completa de terapeutas, pacientes y personal.',
-          icon: ['fas', 'users-cog'],
+          icon: ['fas', 'users-gear'],
           sections: [
             {
               title: 'Listado de Usuarios',
@@ -129,7 +129,7 @@ export const HELP_CONTENT: RoleHelp[] = [
               content: {
                 title: 'Importar Yape',
                 description: 'Importa pagos desde la app Yape.',
-                icon: ['fas', 'mobile-alt'],
+                icon: ['fas', 'mobile-screen-button'],
                 sections: [
                   {
                     title: 'Proceso',
@@ -205,7 +205,7 @@ export const HELP_CONTENT: RoleHelp[] = [
         content: {
           title: 'Reportes',
           description: 'Genera reportes del centro en PDF.',
-          icon: ['fas', 'file-alt'],
+          icon: ['fas', 'file-lines'],
           sections: [
             {
               title: 'Reportes',
@@ -238,7 +238,7 @@ export const HELP_CONTENT: RoleHelp[] = [
         content: {
           title: 'Mi Perfil',
           description: 'Tu información personal y configuración de cuenta.',
-          icon: ['fas', 'user-circle'],
+          icon: ['fas', 'circle-user'],
           sections: [
             {
               title: 'Perfil',
@@ -327,7 +327,7 @@ export const HELP_CONTENT: RoleHelp[] = [
         content: {
           title: 'Mis Sesiones',
           description: 'Programa y gestiona tus sesiones de terapia.',
-          icon: ['fas', 'calendar-alt'],
+          icon: ['fas', 'calendar-days'],
           sections: [
             {
               title: 'Sesiones',
@@ -346,7 +346,7 @@ export const HELP_CONTENT: RoleHelp[] = [
               content: {
                 title: 'Programar Sesión',
                 description: 'Agenda una nueva sesión con un paciente.',
-                icon: ['fas', 'plus-circle'],
+                icon: ['fas', 'circle-plus'],
                 sections: [
                   {
                     title: 'Programar',
@@ -360,7 +360,7 @@ export const HELP_CONTENT: RoleHelp[] = [
               content: {
                 title: 'Historial',
                 description: 'Sesiones completadas anteriormente.',
-                icon: ['fas', 'history'],
+                icon: ['fas', 'clock-rotate-left'],
                 sections: [
                   {
                     title: 'Historial',
@@ -412,7 +412,7 @@ export const HELP_CONTENT: RoleHelp[] = [
         content: {
           title: 'Reportes',
           description: 'Genera reportes de tu actividad terapéutica.',
-          icon: ['fas', 'file-alt'],
+          icon: ['fas', 'file-lines'],
           sections: [
             {
               title: 'Reportes',
@@ -476,7 +476,7 @@ export const HELP_CONTENT: RoleHelp[] = [
         content: {
           title: 'Mi Perfil',
           description: 'Tu información personal.',
-          icon: ['fas', 'user-circle'],
+          icon: ['fas', 'circle-user'],
           sections: [
             {
               title: 'Perfil',
@@ -497,7 +497,7 @@ export const HELP_CONTENT: RoleHelp[] = [
         content: {
           title: 'Mi Panel',
           description: 'Bienvenido a tu espacio personal.',
-          icon: ['fas', 'home'],
+          icon: ['fas', 'house'],
           sections: [
             {
               title: 'Tu Panel',
@@ -519,7 +519,7 @@ export const HELP_CONTENT: RoleHelp[] = [
         content: {
           title: 'Mis Sesiones',
           description: 'Historial y próximas sesiones de terapia.',
-          icon: ['fas', 'calendar-alt'],
+          icon: ['fas', 'calendar-days'],
           sections: [
             {
               title: 'Sesiones',
@@ -605,7 +605,7 @@ export const HELP_CONTENT: RoleHelp[] = [
         content: {
           title: 'Mi Perfil',
           description: 'Tus datos personales.',
-          icon: ['fas', 'user-circle'],
+          icon: ['fas', 'circle-user'],
           sections: [
             {
               title: 'Perfil',
@@ -619,7 +619,7 @@ export const HELP_CONTENT: RoleHelp[] = [
         content: {
           title: 'Mi Terapeuta',
           description: 'Información de tu terapeuta asignado.',
-          icon: ['fas', 'user-md'],
+          icon: ['fas', 'user-doctor'],
           sections: [
             {
               title: 'Terapeuta',

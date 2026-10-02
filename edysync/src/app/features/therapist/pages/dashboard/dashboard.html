@@ -21,7 +21,7 @@
     </div>
     <div class="bg-surface-container-lowest rounded-2xl p-4 text-center min-w-[110px] signature-shadow shrink-0">
       <div class="w-10 h-10 rounded-full bg-success-container flex items-center justify-center mx-auto mb-2">
-        <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-lg"></fa-icon>
+        <fa-icon [icon]="['fas', 'circle-check']" class="text-success text-lg"></fa-icon>
       </div>
       <div class="text-3xl font-black text-on-surface">{{ compliancePercent }}%</div>
       <div class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/50">Cumplimiento Global</div>
@@ -147,7 +147,7 @@
       }
     } @else if (topicsEmptyState) {
       <div class="rounded-2xl border border-dashed border-border/50 bg-surface p-5 text-center">
-        <fa-icon [icon]="['fas', 'file-upload']" class="text-2xl text-on-surface-variant/30 mb-2"></fa-icon>
+        <fa-icon [icon]="['fas', 'file-arrow-up']" class="text-2xl text-on-surface-variant/30 mb-2"></fa-icon>
         @if (topicsEmptyState.message) {
           <p class="font-semibold text-on-surface mb-1">{{ topicsEmptyState.message }}</p>
         }
@@ -164,7 +164,7 @@
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4" @fadeInUp>
     <div class="bg-surface-container-lowest rounded-2xl p-4 flex items-center gap-3 signature-shadow">
       <div class="w-10 h-10 rounded-xl bg-warning-container flex items-center justify-center shrink-0">
-        <fa-icon [icon]="['fas', 'file-alt']" class="text-warning"></fa-icon>
+        <fa-icon [icon]="['fas', 'file-lines']" class="text-warning"></fa-icon>
       </div>
       <div>
         <p class="text-xl font-black text-on-surface">{{ reportesCount }}</p>

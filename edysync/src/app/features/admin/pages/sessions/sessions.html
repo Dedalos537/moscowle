@@ -119,7 +119,7 @@
               [class.bg-surface-container-high]="!rangeMode"
               [class.text-on-surface-variant]="!rangeMode"
               [class.border-border/30]="!rangeMode">
-              <fa-icon [icon]="['fas', 'arrows-alt-h']" class="mr-1"></fa-icon>Rango
+              <fa-icon [icon]="['fas', 'left-right']" class="mr-1"></fa-icon>Rango
             </button>
             @if (rangeMode) {
               <button (click)="clearRangeSelection()" class="px-2 py-1 text-[10px] font-bold rounded-lg bg-error/10 text-error border border-error/30 transition-all cursor-pointer min-h-11 inline-flex items-center">
@@ -195,7 +195,7 @@
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Programación (.docx opcional)</label>
       <label for="createProgramFileInput" class="flex items-center gap-3 p-3 border-2 border-dashed border-border/40 rounded-xl cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all">
-        <fa-icon [icon]="['fas', 'cloud-upload-alt']" class="text-2xl text-on-surface-variant/50"></fa-icon>
+        <fa-icon [icon]="['fas', 'cloud-arrow-up']" class="text-2xl text-on-surface-variant/50"></fa-icon>
         <div class="text-left">
           <p class="text-sm font-medium text-on-surface">{{ createProgramFile ? createProgramFile.name : 'Subir documento Word' }}</p>
           <p class="text-xs text-on-surface-variant/70">Se asignará a todas las sesiones seleccionadas</p>
@@ -206,7 +206,7 @@
 
     <div class="rounded-xl border p-4" style="background:var(--color-info-container);border-color:var(--color-info)">
       <div class="flex items-center gap-2 mb-2">
-        <fa-icon [icon]="['fas', 'info-circle']" style="color:var(--color-info)"></fa-icon>
+        <fa-icon [icon]="['fas', 'circle-info']" style="color:var(--color-info)"></fa-icon>
         <span class="text-sm font-bold" style="color:var(--color-on-info-container)">Requisitos de Grabación</span>
       </div>
       <ul class="text-xs space-y-1.5" style="color:var(--color-on-info-container)">
@@ -223,7 +223,7 @@
           <span>Los fragmentos se transcriben cada 5 minutos en segundo plano</span>
         </li>
         <li class="flex items-start gap-2">
-          <fa-icon [icon]="['fas', 'search']" class="mt-0.5 shrink-0"></fa-icon>
+          <fa-icon [icon]="['fas', 'magnifying-glass']" class="mt-0.5 shrink-0"></fa-icon>
           <span>La auditoría IA se ejecuta periódicamente y al finalizar</span>
         </li>
       </ul>
@@ -254,7 +254,7 @@
 <app-modal [isOpen]="showEditModal" title="Editar Sesión" (close)="closeEditModal()">
   <div class="flex items-center gap-3 px-4 py-3 bg-surface-container-low rounded-xl border border-outline mb-4">
     <div class="w-9 h-9 rounded-full bg-primary-container/15 flex items-center justify-center shrink-0">
-      <fa-icon [icon]="['fas', 'calendar-alt']" class="text-primary text-lg"></fa-icon>
+      <fa-icon [icon]="['fas', 'calendar-days']" class="text-primary text-lg"></fa-icon>
     </div>
     <div class="min-w-0">
       <p class="text-sm font-bold text-on-surface truncate">{{ editForm.title || 'Sin título' }}</p>
@@ -274,7 +274,7 @@
   <div class="flex gap-2 mb-4">
     <button (click)="closeEditModal(); openMoveModal({id: editForm.id, title: editForm.title, date: toDateStr(editForm.date), time: editForm.start_time, endTime: editForm.end_time, status: editForm.status, therapist: editForm.therapist, patient: editForm.patient})"
       class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border/30 hover:bg-surface-container-high transition-colors cursor-pointer">
-      <fa-icon [icon]="['fas', 'arrows-alt']" class="text-on-surface-variant"></fa-icon> Mover Fecha
+      <fa-icon [icon]="['fas', 'up-down-left-right']" class="text-on-surface-variant"></fa-icon> Mover Fecha
     </button>
     <button (click)="closeEditModal(); openDetailModal({id: editForm.id, title: editForm.title, date: toDateStr(editForm.date), time: editForm.start_time, endTime: editForm.end_time, status: editForm.status, therapist: editForm.therapist, patient: editForm.patient})"
       class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border/30 hover:bg-surface-container-high transition-colors cursor-pointer">
@@ -316,14 +316,14 @@
 
       @if (auditState) {
         <div class="flex items-start gap-3 p-3 rounded-xl bg-success-container border border-success-container">
-          <fa-icon [icon]="['fas', 'check-circle']" class="text-success shrink-0 mt-0.5"></fa-icon>
+          <fa-icon [icon]="['fas', 'circle-check']" class="text-success shrink-0 mt-0.5"></fa-icon>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-bold text-on-success-container">Programación subida</p>
             <p class="text-xs text-success mt-0.5 truncate">{{ auditState.planned_text_preview || 'Documento adjunto exitosamente' }}</p>
           </div>
           <app-button variant="danger" [disabled]="programDeleting" (clicked)="deleteProgram()">
             @if (!programDeleting) {
-              <fa-icon [icon]="['fas', 'trash-alt']" class="text-lg"></fa-icon>
+              <fa-icon [icon]="['fas', 'trash-can']" class="text-lg"></fa-icon>
             }
             @if (programDeleting) {
               <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'" class="text-lg"></fa-icon>
@@ -335,7 +335,7 @@
       @if (!auditState) {
         <div class="mt-1">
           <label for="programFileInput" class="flex flex-col items-center justify-center gap-2 p-5 border-2 border-dashed border-border/40 rounded-xl cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all">
-            <fa-icon [icon]="['fas', 'cloud-upload-alt']" class="text-3xl text-on-surface-variant/50"></fa-icon>
+            <fa-icon [icon]="['fas', 'cloud-arrow-up']" class="text-3xl text-on-surface-variant/50"></fa-icon>
             <div class="text-center">
               <p class="text-sm font-medium text-on-surface">Subir documento Word</p>
               <p class="text-xs text-on-surface-variant/70 mt-0.5">Solo archivos .docx</p>
@@ -352,12 +352,12 @@
       }
       @if (programError) {
         <div class="mt-2 flex items-center gap-2 p-2.5 rounded-lg bg-error-container text-error text-sm">
-          <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-lg"></fa-icon> {{ programError }}
+          <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-lg"></fa-icon> {{ programError }}
         </div>
       }
       @if (programSuccessMessage) {
         <div class="mt-2 flex items-center gap-2 p-2.5 rounded-lg bg-success-container text-on-success-container text-sm">
-          <fa-icon [icon]="['fas', 'check-circle']" class="text-lg"></fa-icon> {{ programSuccessMessage }}
+          <fa-icon [icon]="['fas', 'circle-check']" class="text-lg"></fa-icon> {{ programSuccessMessage }}
         </div>
       }
     </div>
@@ -370,7 +370,7 @@
         <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'" class="text-base"></fa-icon>
         <span>Eliminando...</span>
       } @else {
-        <fa-icon [icon]="['fas', 'trash-alt']" class="text-base"></fa-icon>
+        <fa-icon [icon]="['fas', 'trash-can']" class="text-base"></fa-icon>
         <span>Eliminar Sesión</span>
       }
     </button>
@@ -384,7 +384,7 @@
 <app-modal [isOpen]="showMoveModal" title="Mover Sesion" (close)="closeMoveModal()">
   <div class="space-y-4">
     <div class="flex items-center gap-3 p-3 bg-surface-container-low rounded-xl border border-border/20">
-      <fa-icon [icon]="['fas', 'arrows-alt']" class="text-primary text-lg"></fa-icon>
+      <fa-icon [icon]="['fas', 'up-down-left-right']" class="text-primary text-lg"></fa-icon>
       <div>
         <p class="text-sm font-bold text-on-surface">{{ moveSessionTitle }}</p>
         <p class="text-xs text-on-surface-variant">Selecciona la nueva fecha</p>
@@ -397,7 +397,7 @@
   </div>
   <div modal-footer>
     <app-button variant="ghost" label="Cancelar" (clicked)="closeMoveModal()"></app-button>
-    <app-button variant="primary" label="Mover Sesion" [icon]="['fas', 'arrows-alt']" (clicked)="submitMove()"></app-button>
+    <app-button variant="primary" label="Mover Sesion" [icon]="['fas', 'up-down-left-right']" (clicked)="submitMove()"></app-button>
   </div>
 </app-modal>
 
@@ -511,7 +511,7 @@
       <div class="w-px h-5 bg-on-primary/30"></div>
       <button (click)="openBulkProgramModal()"
         class="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold bg-on-primary text-primary rounded-xl hover:bg-on-primary/90 transition-colors cursor-pointer">
-        <fa-icon [icon]="['fas', 'file-upload']" class="text-xs"></fa-icon>
+        <fa-icon [icon]="['fas', 'file-arrow-up']" class="text-xs"></fa-icon>
         Asignar Programación
       </button>
     </div>
@@ -532,7 +532,7 @@
       <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Documento de Programación (.docx)</p>
       @if (!bulkProgramFile) {
         <label for="bulkProgramFileInput" class="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-border/40 rounded-xl cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all">
-          <fa-icon [icon]="['fas', 'cloud-upload-alt']" class="text-3xl text-on-surface-variant/50"></fa-icon>
+          <fa-icon [icon]="['fas', 'cloud-arrow-up']" class="text-3xl text-on-surface-variant/50"></fa-icon>
           <div class="text-center">
             <p class="text-sm font-medium text-on-surface">Subir documento Word</p>
             <p class="text-xs text-on-surface-variant/70 mt-0.5">Solo archivos .docx</p>
@@ -547,7 +547,7 @@
             <p class="text-xs text-success mt-0.5">{{ (bulkProgramFile.size / 1024).toFixed(0) }} KB</p>
           </div>
           <button (click)="bulkProgramFile = null" class="p-1.5 rounded-lg hover:bg-on-success-container/10 transition-colors cursor-pointer">
-            <fa-icon [icon]="['fas', 'times']" class="text-on-success-container text-sm"></fa-icon>
+            <fa-icon [icon]="['fas', 'xmark']" class="text-on-success-container text-sm"></fa-icon>
           </button>
         </div>
       }
@@ -555,12 +555,12 @@
 
     @if (bulkProgramError) {
       <div class="flex items-center gap-2 p-2.5 rounded-lg bg-error-container text-error text-sm">
-        <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-lg"></fa-icon> {{ bulkProgramError }}
+        <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-lg"></fa-icon> {{ bulkProgramError }}
       </div>
     }
     @if (bulkProgramSuccess) {
       <div class="flex items-center gap-2 p-2.5 rounded-lg bg-success-container text-on-success-container text-sm">
-        <fa-icon [icon]="['fas', 'check-circle']" class="text-lg"></fa-icon> {{ bulkProgramSuccess }}
+        <fa-icon [icon]="['fas', 'circle-check']" class="text-lg"></fa-icon> {{ bulkProgramSuccess }}
       </div>
     }
   </div>
@@ -568,7 +568,7 @@
     <app-button variant="ghost" label="Cancelar" (clicked)="closeBulkProgramModal()"></app-button>
     <app-button variant="primary"
       [label]="bulkProgramUploading ? 'Subiendo...' : 'Asignar a ' + selectedSessionIds.size + ' sesión(es)'"
-      [icon]="bulkProgramUploading ? ['fas', 'spinner'] : ['fas', 'file-upload']"
+      [icon]="bulkProgramUploading ? ['fas', 'spinner'] : ['fas', 'file-arrow-up']"
       [disabled]="!bulkProgramFile || bulkProgramUploading"
       (clicked)="submitBulkProgram()"></app-button>
   </div>

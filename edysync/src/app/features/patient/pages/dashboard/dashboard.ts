@@ -35,7 +35,7 @@ export class PatientDashboard implements OnInit, OnDestroy {
     this.headerService.setConfig({
       title: 'Mi Panel',
       subtitle: 'Resumen de tus actividades',
-      icon: ['fas', 'home'],
+      icon: ['fas', 'house'],
     });
     this.loadData();
   }

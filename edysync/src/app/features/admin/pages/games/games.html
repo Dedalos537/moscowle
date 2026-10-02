@@ -25,7 +25,7 @@
             <h3 class="font-bold text-on-surface truncate">{{ game }}</h3>
             <div class="flex items-center gap-2 mt-3">
               <a [href]="getGameUrl(game)" target="_blank" class="text-xs font-bold text-primary hover:underline flex items-center gap-1">
-                <fa-icon [icon]="['fas', 'external-link-alt']" class="text-[10px]"></fa-icon> Abrir
+                <fa-icon [icon]="['fas', 'up-right-from-square']" class="text-[10px]"></fa-icon> Abrir
               </a>
               <app-button variant="danger" label="Eliminar" (clicked)="confirmDelete(game)"></app-button>
             </div>
@@ -63,7 +63,7 @@
     <p class="text-on-surface">Esta seguro de eliminar <strong>{{ deleteName }}</strong>? Esta accion no se puede deshacer.</p>
     <div modal-footer>
       <app-button variant="ghost" label="Cancelar" (clicked)="cancelDelete()"></app-button>
-      <app-button variant="danger" label="Eliminar" [icon]="['fas', 'trash-alt']" (clicked)="deleteGame()"></app-button>
+      <app-button variant="danger" label="Eliminar" [icon]="['fas', 'trash-can']" (clicked)="deleteGame()"></app-button>
     </div>
   </app-modal>
 }

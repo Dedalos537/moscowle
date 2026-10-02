@@ -3,11 +3,11 @@
   <div class="help-panel" @panelSlide>
     <div class="help-panel-header">
       <div class="help-panel-title">
-        <fa-icon [icon]="$any(helpContentService.currentHelp()?.icon ?? ['fas', 'question-circle'])"></fa-icon>
+        <fa-icon [icon]="$any(helpContentService.currentHelp()?.icon ?? ['fas', 'circle-question'])"></fa-icon>
         <span>{{ helpContentService.currentHelp()?.title ?? 'Ayuda' }}</span>
       </div>
       <button class="help-panel-close" (click)="close()" aria-label="Cerrar ayuda">
-        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+        <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
       </button>
     </div>
 
@@ -65,7 +65,7 @@
 
         @if (wizardCompleted) {
           <div class="help-wizard-done">
-            <fa-icon [icon]="['fas', 'check-circle']"></fa-icon>
+            <fa-icon [icon]="['fas', 'circle-check']"></fa-icon>
             Tour completado
           </div>
         } @else {
@@ -76,7 +76,7 @@
         }
       } @else {
         <div class="help-empty">
-          <fa-icon [icon]="['fas', 'map-signs']"></fa-icon>
+          <fa-icon [icon]="['fas', 'signs-post']"></fa-icon>
           <p>No hay ayuda disponible para esta página.</p>
         </div>
       }

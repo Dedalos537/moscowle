@@ -49,7 +49,7 @@ export class Navbar implements OnInit, OnDestroy {
       message: '¿Estas seguro de que deseas cerrar sesion?',
       confirmText: 'Cerrar Sesion',
       variant: 'danger',
-      icon: ['fas', 'sign-out-alt'],
+      icon: ['fas', 'right-from-bracket'],
     }));
     if (!confirmed) return;
     this.authService.logout().subscribe(() => {

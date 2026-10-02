@@ -49,12 +49,12 @@
       </a>
       <a routerLink="/therapist/patients" routerLinkActive="active" #rlpt="routerLinkActive"
          class="nav-link" [class.active]="rlpt.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'user-friends']" [class.!text-primary-container]="rlpt.isActive"></fa-icon>
+        <fa-icon [icon]="['fas', 'user-group']" [class.!text-primary-container]="rlpt.isActive"></fa-icon>
         <span>Mis Pacientes</span>
       </a>
       <a routerLink="/therapist/sessions" routerLinkActive="active" #rls="routerLinkActive"
          class="nav-link" [class.active]="rls.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'calendar-alt']" [class.!text-primary-container]="rls.isActive"></fa-icon>
+        <fa-icon [icon]="['fas', 'calendar-days']" [class.!text-primary-container]="rls.isActive"></fa-icon>
         <span>Mis Sesiones</span>
       </a>
       <a routerLink="/therapist/games" routerLinkActive="active" #rlg="routerLinkActive"
@@ -84,12 +84,12 @@
       </a>
       <a routerLink="/therapist/kanban" routerLinkActive="active" #rlk="routerLinkActive"
          class="nav-link" [class.active]="rlk.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'columns']" [class.!text-primary-container]="rlk.isActive"></fa-icon>
+        <fa-icon [icon]="['fas', 'table-columns']" [class.!text-primary-container]="rlk.isActive"></fa-icon>
         <span>Kanban</span>
       </a>
       <a routerLink="/therapist/profile" routerLinkActive="active" #rlpf="routerLinkActive"
          class="nav-link" [class.active]="rlpf.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'user-circle']" [class.!text-primary-container]="rlpf.isActive"></fa-icon>
+        <fa-icon [icon]="['fas', 'circle-user']" [class.!text-primary-container]="rlpf.isActive"></fa-icon>
         <span>Mi Perfil</span>
       </a>
     </nav>

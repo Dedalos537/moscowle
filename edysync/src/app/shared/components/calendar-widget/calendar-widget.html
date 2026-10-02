@@ -10,7 +10,7 @@
         <button class="today-btn" (click)="today()">Hoy</button>
       }
       <button class="range-toggle-btn mobile-only" [class.active]="rangeMode" (click)="toggleRangeMode()" title="Seleccionar rango de fechas">
-        <fa-icon [icon]="['fas', 'arrows-alt-h']"></fa-icon>
+        <fa-icon [icon]="['fas', 'left-right']"></fa-icon>
         <span class="range-toggle-label">Rango</span>
       </button>
     </div>
@@ -39,18 +39,18 @@
         }
       </button>
       <button class="range-cancel-btn" (click)="cancelRange()" title="Cancelar">
-        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+        <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
       </button>
     </div>
   }
 
   @if (isRangeSelected) {
     <div class="range-hint">
-      <fa-icon [icon]="['fas', 'calendar-alt']"></fa-icon>
+      <fa-icon [icon]="['fas', 'calendar-days']"></fa-icon>
       <span>{{ rangeStart!.getDate() }} {{ months[rangeStart!.getMonth()] }} — {{ rangeEnd!.getDate() }} {{ months[rangeEnd!.getMonth()] }}</span>
       <span class="range-hint-count">{{ getRangeDayCount() }} día{{ getRangeDayCount() !== 1 ? 's' : '' }}</span>
       <button class="range-clear-btn" (click)="clearRangeSelection()" title="Limpiar selección">
-        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+        <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
       </button>
     </div>
   }
@@ -109,7 +109,7 @@
           [class.text-on-primary-container]="multiSelect()"
           [class.border-border/30]="!multiSelect()"
           [class.hover:bg-surface-container-high]="!multiSelect()">
-          <fa-icon [icon]="multiSelect() ? ['fas', 'times'] : ['fas', 'check-double']" class="text-[10px]"></fa-icon>
+          <fa-icon [icon]="multiSelect() ? ['fas', 'xmark'] : ['fas', 'check-double']" class="text-[10px]"></fa-icon>
           <span>{{ multiSelect() ? 'Cancelar' : 'Selección múltiple' }}</span>
         </button>
       }
@@ -119,7 +119,7 @@
       @if (isRangeSelected) {
         <span class="range-actions">
           <button class="range-action-btn" title="Limpiar selección" (click)="today()">
-            <fa-icon [icon]="['fas', 'times']"></fa-icon>
+            <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
           </button>
         </span>
       }
@@ -178,7 +178,7 @@
       </div>
     } @else {
       <div class="agenda-empty">
-        <fa-icon [icon]="['fas', 'calendar-times']" class="text-on-surface-variant/30"></fa-icon>
+        <fa-icon [icon]="['fas', 'calendar-xmark']" class="text-on-surface-variant/30"></fa-icon>
         <p class="agenda-empty-text">Sin sesiones para esta fecha</p>
         @if (!readonly()) {
           <p class="agenda-empty-hint">Doble click en un día para crear sesión{{ isRangeSelected ? 'es' : '' }}</p>

@@ -33,7 +33,7 @@ export class PatientMyTherapist implements OnInit, OnDestroy {
     this.headerService.setConfig({
       title: 'Mi Terapeuta',
       subtitle: 'Información de tu terapeuta asignado',
-      icon: ['fas', 'user-md'],
+      icon: ['fas', 'user-doctor'],
     });
     this.loadTherapist();
   }
