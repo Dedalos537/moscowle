@@ -87,20 +87,22 @@ def api_therapist_financials():
     result = []
     for f in financials:
         t = f['therapist']
+        # SUM() en MySQL devuelve Decimal; jsonify lo mandaria como string y
+        # Angular revienta en el template con ".toFixed is not a function".
         result.append(
             {
                 'therapist': {
                     'id': t.id,
                     'username': t.username,
-                    'salary_base': t.salary_base,
+                    'salary_base': float(t.salary_base or 0),
                     'contract_hours': t.contract_hours,
                 },
-                'rate': f['rate'],
-                'contract_hours': f['contract_hours'],
-                'worked_hours': f['worked_hours'],
-                'projected_pay': f['projected_pay'],
-                'paid': f['paid'],
-                'balance': f['balance'],
+                'rate': float(f['rate'] or 0),
+                'contract_hours': int(f['contract_hours'] or 0),
+                'worked_hours': float(f['worked_hours'] or 0),
+                'projected_pay': float(f['projected_pay'] or 0),
+                'paid': float(f['paid'] or 0),
+                'balance': float(f['balance'] or 0),
             }
         )
     return jsonify({'success': True, 'data': result})
