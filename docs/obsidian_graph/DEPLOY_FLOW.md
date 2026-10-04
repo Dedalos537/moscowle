@@ -5,8 +5,14 @@ tags: [deploy, infra, ubuntu, github-actions]
 
 # 🚀 Flujo de Deploy (Auto, sin cPanel)
 
-Objetivo: cada `git push origin main` desplega automáticamente **backend + frontend**
-al servidor Ubuntu (`192.168.1.41`) vía el **webhook de deploy**.
+Objetivo: cada `git push origin main` despliega automáticamente **backend + frontend**
+al servidor Ubuntu (host `192.168.1.249`, backend en la **VM-APP** `192.168.122.10`)
+vía el **webhook de deploy**.
+
+> El webhook y `server_deploy.sh` corren **dentro de VM-APP**; el host solo reenvía
+> `127.0.0.1:5000` $\rightarrow$ `192.168.122.10:5000` con `moscowle-fwd.service` (socat).
+> El frontend LAN (`/var/www/moscowle/app`, nginx en el host) y el de cPanel
+> (`https://moscowle.centrojuanpabloii.com`) se sirven con el mismo `dist`.
 
 ## Diagrama
 

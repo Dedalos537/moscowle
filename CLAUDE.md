@@ -12,9 +12,11 @@ Moscowle IA is a comprehensive management system for a therapy center, integrate
 - **Deployment**: Ubuntu Server via Cloudflare Tunnel.
 
 ## Infrastructure & Deployment
-- **Primary Target**: Ubuntu Server (`192.168.1.41`)
-- **Deployment Flow**: `git push origin main` $\rightarrow$ (Webhook/Manual) $\rightarrow$ `systemctl restart moscowle`.
-- **Tunnel**: Cloudflare Tunnel connects `api-centrojuanpabloii.online` to local port `5000`.
+- **Topology**: host `192.168.1.249` + **VM-APP** `192.168.122.10` (gunicorn + bridge WhatsApp) + **VM-DB** `192.168.122.20` (MySQL). El host conserva `cloudflared`, `nginx` (frontend LAN), `socat` (forwarder) y Ollama. Ver `PRPs/006--division-servicios-qemu.md`.
+- **Primary Target**: Ubuntu Server (`192.168.1.249`) — la IP por DHCP cambió de `.41`.
+- **Deployment Flow**: `git push origin main` $\rightarrow$ `deploy-ubuntu.yml` $\rightarrow$ webhook $\rightarrow$ `scripts/server_deploy.sh` (se ejecuta dentro de VM-APP) $\rightarrow$ `systemctl restart moscowle`.
+- **Tunnel**: `api-centrojuanpabloii.online` $\rightarrow$ cloudflared (host) $\rightarrow$ `socat 127.0.0.1:5000` $\rightarrow$ VM-APP `:5000`.
+- **Frontends**: LAN `/app/` (nginx del host) y `https://moscowle.centrojuanpabloii.com` (cPanel) apuntan al mismo backend a través del túnel.
 - **Fallbacks**: Docker/Railway (Keep as backup, do not use for primary deploy).
 
 ## Development Guidelines
