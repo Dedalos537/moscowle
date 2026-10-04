@@ -35,7 +35,8 @@ jobs:
 
       - name: Run linting
         run: |
-          pip install ruff
+          # Fijado al mismo ruff que .pre-commit-config.yaml (v0.15.16)
+          pip install ruff==0.15.16
           ruff check app/ --select E,F,W --ignore E501
 
       - name: Run tests

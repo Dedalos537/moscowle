@@ -20,7 +20,8 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install ruff
+      # Fijado al mismo ruff que .pre-commit-config.yaml (v0.15.16)
+      - run: pip install ruff==0.15.16
       - run: ruff check app/ --output-format=github
       - run: ruff format app/ --check --output-format=github
 
