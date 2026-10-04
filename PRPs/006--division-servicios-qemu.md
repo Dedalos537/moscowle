@@ -19,6 +19,31 @@
 
 ---
 
+## Estado: EJECUTADO (2026-10-04) ✅
+
+| Fase | Resultado |
+|---|---|
+| 1 Base QEMU | ✅ QEMU 10.2.1, libvirt 12.0.0, `socat`, `virt-install`, `cloud-localds`; `virbr0 = 192.168.122.1/24` (DHCP .2–.254); imagen base `ubuntu-resolute-base.img` (825 MB, SHA256 OK); ufw `11434/tcp on virbr0` |
+| 2 VM-DB | ✅ `192.168.122.20`, 1 vCPU / 1536 MB / 30 GB, dump `118 MB · 69 CREATE TABLE`, restore → **69 / 59 / 411 / 62**, `bind-address 0.0.0.0` |
+| 3 VM-APP | ✅ `192.168.122.10`, 2 vCPU / **2048 MB** / 30 GB, Python **3.11** + Node **20.20.2**, repo + venv + `.env`, `/health` → 200 |
+| 4 Corte | ✅ host `moscowle` parado → dump final → restore → `moscowle-fwd.service` (`socat TCP-LISTEN:5000,bind=127.0.0.1 → 192.168.122.10:5000`) → API pública **200** |
+| 5 Deploy | ✅ commit **`575707c0`**; Actions `Deploy to Ubuntu (auto)` → success; `--frontend` y `--backend` probados end-to-end |
+| 6 Aceptación | ✅ ver checklist final abajo |
+
+### Desviaciones respecto a la versión prevista del plan
+
+1. **`gunicorn` bindea `0.0.0.0:5000`** dentro de VM-APP (no `127.0.0.1`): el `socat` del host entra por la IP de la VM. `misc.py` (`UPSTREAM_HOST='127.0.0.1'`) sigue funcionando porque `0.0.0.0` incluye loopback.
+2. **Python 3.11 vía deadsnakes**: se copiaron `/etc/apt/sources.list.d/deadsnakes-ppa.list` (suite `noble`) y `/etc/apt/keyrings/deadsnakes.gpg` desde el host; `add-apt-repository` no sirve porque el PPA no publica para `resolute`.
+3. **Node oficial**: tarball `node-v20.20.2-linux-x64.tar.xz` en `/usr/local` (misma versión que el nvm del host).
+4. **`venv` (1 GB) y `.git` (309 MB) se copiaron por rsync** en vez de reinstalar: el repo es legible sin credenciales (`git ls-remote` OK), así que `git fetch/reset` funciona dentro de la VM.
+5. **Clave VM→host** `~/.ssh/id_ed25519_to_host` en VM-APP, añadida a `authorized_keys` del host: sirve para copiar el dist a `/var/www/moscowle/app` y hacer `sudo systemctl reload nginx` (NOPASSWD ya lo cubría).
+6. **`.env` de VM-APP**: solo dos claves distintas → `SQLALCHEMY_DATABASE_URI=@192.168.122.20` y `OLLAMA_HOST=http://192.168.122.1:11434`.
+7. **Ollama**: drop-in `/etc/systemd/system/ollama.service.d/listen.conf` con `Environment=OLLAMA_HOST=0.0.0.0:11434` (ufw sólo lo publica en `virbr0`).
+8. **El MySQL del host sigue activo** de forma intencionada (vía de rollback) hasta 24 h de estabilidad → Fase 5.4 pendiente.
+
+
+---
+
 ## Fase 0 — Descubrimiento (verificado en el host tras el reboot)
 
 ### 0.1 Hardware y virtualización
@@ -252,17 +277,19 @@ sudo systemctl disable --now mysql         # el MySQL viejo deja de arrancar (NO
 
 ## Fase 6 — Verificación final (aceptación)
 
-- [ ] `virsh list --all` → `moscowle-app` y `moscowle-db` en `running`.
-- [ ] `curl -s https://api-centrojuanpabloii.online/health` → `{"app":"app","status":"ok",…}`.
-- [ ] `curl -s https://api-centrojuanpabloii.online/app/` → 200.
-- [ ] Conteos idénticos a la Fase 0: **69 tablas / `user` 59 / `appointment` 411 / `payment` 62**.
-- [ ] El flujo de deploy (`git push` → webhook) reinicia el backend en la VM.
-- [ ] `ps -C node` dentro de VM-APP → **1 proceso** (puente WhatsApp); en el host **0**.
-- [ ] `curl http://192.168.122.1:11434/api/tags` desde VM-APP → 200.
-- [ ] `mysql` y `gunicorn` **no** aparecen en `ss -lntp` del host.
-- [ ] `free -h` del host con ≥ 3 GB libres (MySQL liberó ~541 MB).
-- [ ] `git diff` sin credenciales nuevas.
-- [ ] Frontend estático de `/var/www/moscowle/app` intacto (LAN `http://<host>/app/`).
+- [x] `virsh list --all` → `moscowle-app` y `moscowle-db` en `running`.
+- [x] `curl -s https://api-centrojuanpabloii.online/health` → `{"app":"app","status":"ok",…}`.
+- [x] `curl -s https://api-centrojuanpabloii.online/app/` → 200 (y LAN `http://127.0.0.1/app/` → 200).
+- [x] Conteos idénticos a la Fase 0: **69 tablas / `user` 59 / `appointment` 411 / `payment` 62**.
+- [x] Flujo de deploy (`git push` → Actions → webhook) reinicia el backend **en la VM** (`575707c0`, run `Deploy to Ubuntu (auto)` → success).
+- [x] `ps -C node` dentro de VM-APP → **1 proceso**; en el host → **0**. `gunicorn` host = 0, VM = 2.
+- [x] `curl http://192.168.122.1:11434/api/tags` desde VM-APP → 200.
+- [ ] `mysql` y `gunicorn` **no** aparecen en `ss -lntp` del host → `gunicorn` ✅ fuera; **`mysql` sigue activo** (Fase 5.4, a las 24 h).
+- [ ] `free -h` del host con ≥ 3 GB libres → hoy **2.5 Gi disponibles**; mejora al retirar el MySQL del host.
+- [x] `git diff` sin credenciales nuevas.
+- [x] Frontend estático de `/var/www/moscowle/app` intacto (sincronizado por el deploy).
+
+**Pendiente fuera de este PRP:** QR de WhatsApp (vincular en `Bot → Vincular`), `SMS_GATEWAY_TOKEN`, reserva DHCP del router para `192.168.1.249`, y el fallo preexistente de lint en `CI Backend` (`pip install ruff` sin fijar versión).
 
 ---
 
@@ -280,12 +307,12 @@ El MySQL del host **no se desinstala** hasta 24 h después de la validación (Fa
 
 ## Presupuesto de recursos
 
-| Elemento | vCPU | RAM | Disco | Nota |
+| Elemento | vCPU | RAM | Disco | Estado real (2026-10-04) |
 |---|---|---|---|---|
-| Host (resto) | — | ~3.0 GB | 98 GB | `cloudflared`, `nginx`, `Ollama` (sube al cargar modelo), socat, sistema |
-| `VM-APP` | 2 | 1.5 GB | 20 GB | gunicorn 285 MB + node 86 MB + margen |
-| `VM-DB` | 1 | 1.5 GB | 20 GB | mysqld 541 MB medidos |
-| **Total** | 4 | **6.0 / 7.2 GB** | | holgura ~1.2 GB; si Ollama carga modelo grande, revisar |
+| Host (resto) | — | ~3.0 GB | 98 GB (65 libres) | `cloudflared`, `nginx`, `Ollama`, `socat`; RAM medida 4.6 GB usados (incluye el MySQL de rollback) |
+| `VM-APP` | 2 | **2048 MB** | 30 GB | gunicorn (2 proc) + node (1) |
+| `VM-DB` | 1 | 1536 MB | 30 GB | mysqld medido 541 MB |
+| **Total** | 4 | **~6.0 / 7.2 GB** | | libera ~540 MB al retirar el MySQL del host |
 
 ---
 
