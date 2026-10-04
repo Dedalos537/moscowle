@@ -511,8 +511,9 @@ def mcp_chat_stream():
                                     streamed_text += chunk
                                     chunk_data = {'type': 'chunk', 'content': chunk}
                                     yield f'data: {json.dumps(chunk_data, ensure_ascii=False)}\n\n'
-                            msg = {'type': 'text', 'content': full_content}
-                            yield f'data: {json.dumps(msg)}\n\n'
+                            # No se reenvia full_content como 'text': los chunks ya
+                            # llevaron la respuesta entera y el frontend CONCATENA
+                            # 'text' tras 'chunk' (ai-chat.ts / chat.ts) -> respuesta doble.
                             done_payload = {
                                 'type': 'done',
                                 'has_tool_call': False,

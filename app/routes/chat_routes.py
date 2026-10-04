@@ -3,6 +3,7 @@ import contextlib
 import json
 import logging
 import os
+import shutil
 import subprocess
 import tempfile
 import traceback
@@ -830,10 +831,16 @@ def _analyze_file(path, ext, mime, category):
             result['duration'] = out.get('duration')
             result['language'] = out.get('language')
         elif category == 'video':
+            ffmpeg = shutil.which('ffmpeg')
+            if not ffmpeg:
+                raise ValueError('ffmpeg no disponible para extraer el fotograma')
             tmp = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
             tmp.close()
             subprocess.run(
-                ['ffmpeg', '-y', '-i', path, '-frames:v', '1', '-q:v', '2', tmp.name], capture_output=True, timeout=20
+                [ffmpeg, '-y', '-i', path, '-frames:v', '1', '-q:v', '2', tmp.name],
+                capture_output=True,
+                timeout=20,
+                check=False,
             )
             b64 = _base64_file(tmp.name)
             os.unlink(tmp.name)
@@ -856,7 +863,7 @@ def _analyze_file(path, ext, mime, category):
                 with pdfplumber.open(path) as pdf:
                     text = ' '.join((p.extract_text() or '') for p in pdf.pages[:5])
             except Exception:
-                pass
+                logger.debug('pdfplumber no pudo leer el documento', exc_info=True)
             if not text:
                 try:
                     import docx
@@ -864,7 +871,7 @@ def _analyze_file(path, ext, mime, category):
                     d = docx.Document(path)
                     text = '\n'.join(p.text for p in d.paragraphs)
                 except Exception:
-                    pass
+                    logger.debug('python-docx no pudo leer el documento', exc_info=True)
             if not text:
                 text = open(path, 'rb').read()[:2000].decode('utf-8', 'ignore')
             result['summary'] = _summarize_text(text)
@@ -898,6 +905,7 @@ def _analyze_file(path, ext, mime, category):
 
 
 @chat_bp.route('/api/files/ai-preview', methods=['POST'])
+@csrf.exempt
 @login_required
 def ai_preview():
     """Genera una vista previa con IA de cualquier archivo adjunto de chat."""
