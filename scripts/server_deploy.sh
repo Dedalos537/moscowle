@@ -3,16 +3,28 @@
 #
 #   ./server_deploy.sh [--backend] [--frontend /tmp/frontend.tar.gz]
 #
+# Topologia (PRP 006): el webhook se ejecuta DENTRO de la VM-APP, asi que
+#   - backend  : git reset + systemctl restart moscowle  -> todo local en la VM
+#   - frontend : SPA -> SPA_FRONTEND_ROOT (VM)  |  nginx LAN -> se copia al host via SSH
+#
 set -u
 
 DEPLOY_ROOT="/home/diego/moscowle_ia"
 # Flask serves the SPA from here -> public at api-centrojuanpabloii.online/app/
 SPA_FRONTEND_ROOT="${DEPLOY_ROOT}/edysync/dist/edysync/browser"
-# nginx fallback (LAN) -> http://192.168.1.41/app/
+# nginx (LAN) corre en el HOST, fuera de la VM -> http://192.168.1.249/app/
+NGINX_HOST="${MOSCOWLE_NGINX_HOST:-192.168.122.1}"
 NGINX_FRONTEND_ROOT="/var/www/moscowle/app"
+NGINX_SSH_KEY="${MOSCOWLE_NGINX_SSH_KEY:-${HOME}/.ssh/id_ed25519_to_host}"
 OBSIDIAN_DIR="${DEPLOY_ROOT}/docs/obsidian_graph/Deployments"
 LOG_FILE="${DEPLOY_ROOT}/logs/auto_deploy.log"
 SUDO_CMD=""
+
+# canal VM -> host (usado solo para la copia estatica de nginx)
+# NGINX_RSYNC_RSH: sin destino (rsync -e lo anade); NGINX_SSH: con destino (para comandos)
+NGINX_RSYNC_RSH="ssh -i $NGINX_SSH_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o BatchMode=yes -o ConnectTimeout=10"
+NGINX_SSH=(ssh -i "$NGINX_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+  -o LogLevel=ERROR -o BatchMode=yes -o ConnectTimeout=10 "diego@${NGINX_HOST}")
 
 if command -v sudo >/dev/null 2>&1; then
   SUDO_CMD="sudo"
@@ -66,19 +78,26 @@ if [ -n "$FRONTEND_TAR" ] && [ -f "$FRONTEND_TAR" ]; then
   mkdir -p "$STAGE"
   if tar -xzf "$FRONTEND_TAR" -C "$STAGE"; then
     log "Extracted frontend dist (stage)"
-    for target in "$SPA_FRONTEND_ROOT" "$NGINX_FRONTEND_ROOT"; do
-      mkdir -p "$target"
-      if rsync -a --delete "$STAGE/" "$target/"; then
-        log "Frontend synced to $target"
-      else
-        log "ERROR: rsync frontend failed -> $target"
-        FAILED=1
-      fi
-    done
-    if ${SUDO_CMD} -n /usr/bin/systemctl reload nginx >>"$LOG_FILE" 2>&1; then
-      log "nginx reloaded"
+    # 1) SPA que sirve Flask (publico via tunel) -> local en la VM
+    mkdir -p "$SPA_FRONTEND_ROOT"
+    if rsync -a --delete "$STAGE/" "$SPA_FRONTEND_ROOT/"; then
+      log "Frontend synced to $SPA_FRONTEND_ROOT"
     else
-      log "ERROR: nginx reload failed"
+      log "ERROR: rsync frontend failed -> $SPA_FRONTEND_ROOT"
+      FAILED=1
+    fi
+    # 2) nginx LAN -> copia al host y reload via SSH (VM -> 192.168.122.1)
+    if "${NGINX_SSH[@]}" "mkdir -p '$NGINX_FRONTEND_ROOT'" >>"$LOG_FILE" 2>&1 \
+      && rsync -a --delete -e "$NGINX_RSYNC_RSH" "$STAGE/" "diego@${NGINX_HOST}:${NGINX_FRONTEND_ROOT}/" >>"$LOG_FILE" 2>&1; then
+      log "Frontend synced to host:$NGINX_FRONTEND_ROOT"
+    else
+      log "ERROR: rsync frontend failed -> host:$NGINX_FRONTEND_ROOT"
+      FAILED=1
+    fi
+    if "${NGINX_SSH[@]}" "sudo -n /usr/bin/systemctl reload nginx" >>"$LOG_FILE" 2>&1; then
+      log "nginx reloaded (host)"
+    else
+      log "ERROR: nginx reload failed (host)"
       FAILED=1
     fi
   else
