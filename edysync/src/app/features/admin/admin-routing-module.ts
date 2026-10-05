@@ -20,6 +20,7 @@ import { Incidents } from './pages/incidents/incidents';
 import { IncidentDetailPage } from './pages/incidents/incident-detail';
 import { PasswordResets } from './pages/password-resets/password-resets';
 import { AdminLayout } from '../../core/layout/admin-layout/admin-layout';
+import { TherapistSessionReview } from '../therapist/pages/session-review/session-review';
 
 const routes: Routes = [
   {
@@ -37,6 +38,7 @@ const routes: Routes = [
       { path: 'payments', loadComponent: () => import('./pages/payments/payments').then(m => m.Payments) },
       { path: 'payments/history/:userId', component: PaymentHistory },
       { path: 'sessions', component: Sessions },
+      { path: 'sessions/:id/review', component: TherapistSessionReview },
       { path: 'expenses', component: Expenses },
       { path: 'messages', component: ChatComponent },
       { path: 'reports', loadComponent: () => import('./pages/reports/reports').then(m => m.Reports) },

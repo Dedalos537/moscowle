@@ -37,24 +37,24 @@
   </button>
 </div>
 
+<div class="finanzas-period-wrap">
+<div class="finanzas-period-bar" role="group" aria-label="Período de análisis">
+  <app-month-range-picker [label]="'Período'" [value]="monthRangeValue" (valueChange)="onMonthFilterChange($event)"></app-month-range-picker>
+  @if (isSingleMonth) {
+  <div class="finanzas-period-chips" role="group" aria-label="Quincena">
+    <button type="button" (click)="setFortnightFilter(null)" class="period-chip" [class.is-active]="!fortnightFilter" [attr.aria-pressed]="!fortnightFilter">Todo el mes</button>
+    <button type="button" (click)="setFortnightFilter(1)" class="period-chip" [class.is-active]="fortnightFilter === 1" [attr.aria-pressed]="fortnightFilter === 1">1ra quincena</button>
+    <button type="button" (click)="setFortnightFilter(2)" class="period-chip" [class.is-active]="fortnightFilter === 2" [attr.aria-pressed]="fortnightFilter === 2">2da quincena</button>
+  </div>
+  }
+  @if (monthRange) {
+  <button type="button" (click)="onMonthFilterChange(null)" class="period-clear">Quitar período</button>
+  }
+</div>
+</div>
+
 @if (activeTab === 'resumen') {
 <div class="finanzas-body animate-fade-in" [@fadeInUp]>
-  <div class="flex flex-wrap items-center gap-3 mb-5">
-    <app-month-range-picker [label]="'Período'" [value]="monthRangeValue" (valueChange)="onMonthFilterChange($event)"></app-month-range-picker>
-    @if (monthFilter) {
-    <div class="flex gap-1 bg-surface-container-high rounded-xl p-1">
-      <button (click)="setFortnightFilter(null)" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
-        [class.bg-surface-container-lowest]="!fortnightFilter" [class.text-on-surface]="!fortnightFilter"
-        [class.text-on-surface-variant]="!!fortnightFilter">Todo el mes</button>
-      <button (click)="setFortnightFilter(1)" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
-        [class.bg-primary]="fortnightFilter === 1" [class.text-on-primary]="fortnightFilter === 1"
-        [class.text-on-surface-variant]="fortnightFilter !== 1">1ra Quincena</button>
-      <button (click)="setFortnightFilter(2)" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
-        [class.bg-primary]="fortnightFilter === 2" [class.text-on-primary]="fortnightFilter === 2"
-        [class.text-on-surface-variant]="fortnightFilter !== 2">2da Quincena</button>
-    </div>
-    }
-  </div>
   @if (historyTruncated) {
   <div class="mb-4">
     <app-alert type="warning" [dismissible]="false"
@@ -457,34 +457,6 @@
       <div class="flex flex-col md:flex-row gap-3">
         <app-select (valueChange)="selectedStatus = $event" [options]="statusFilterOptions"
           class="min-w-[160px]"></app-select>
-
-        <app-month-range-picker [label]="'Vencimiento'" [value]="monthRangeValue" (valueChange)="onMonthFilterChange($event)"></app-month-range-picker>
-
-        @if (monthFilter) {
-        <div class="flex gap-1 bg-surface-container-high rounded-xl p-1">
-          <button (click)="setFortnightFilter(null)"
-            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
-            [class.bg-surface-container-lowest]="!fortnightFilter"
-            [class.text-on-surface]="!fortnightFilter"
-            [class.text-on-surface-variant]="!!fortnightFilter">
-            Todo el mes
-          </button>
-          <button (click)="setFortnightFilter(1)"
-            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
-            [class.bg-primary]="fortnightFilter === 1"
-            [class.text-on-primary]="fortnightFilter === 1"
-            [class.text-on-surface-variant]="fortnightFilter !== 1">
-            1ra Quincena
-          </button>
-          <button (click)="setFortnightFilter(2)"
-            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
-            [class.bg-primary]="fortnightFilter === 2"
-            [class.text-on-primary]="fortnightFilter === 2"
-            [class.text-on-surface-variant]="fortnightFilter !== 2">
-            2da Quincena
-          </button>
-        </div>
-        }
 
         <app-select (valueChange)="selectedSort = $event" [options]="sortOptions" class="min-w-[180px]"></app-select>
 
@@ -1200,10 +1172,10 @@
     <div class="text-center py-16">
       <fa-icon [icon]="['fas', 'mobile-screen-button']" class="text-4xl text-on-surface-variant/40 mb-2 block"></fa-icon>
       <p class="text-sm font-medium text-on-surface-variant">
-        No hay transacciones Yape / Plin
+        {{ monthRange && yapeAll.length > 0 ? 'No hay transacciones Yape / Plin en este período' : 'No hay transacciones Yape / Plin' }}
       </p>
       <p class="text-xs text-on-surface-variant/60 mt-1">
-        Los pagos con Yape o Plin aparecerán aquí
+        {{ monthRange && yapeAll.length > 0 ? 'Prueba con otro período o quítalo para ver todas' : 'Los pagos con Yape o Plin aparecerán aquí' }}
       </p>
     </div>
     }
@@ -1219,7 +1191,7 @@
   <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 overflow-hidden">
     <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
       <h3 class="text-lg font-bold text-on-surface font-accent">
-        Nómina de Terapeutas (Mes Actual)
+        Nómina de Terapeutas ({{ payrollPeriodLabel }})
       </h3>
       <app-button variant="secondary" label="Registrar Gasto Operativo" [icon]="['fas', 'plus']"
         (clicked)="openOperationalModal()"></app-button>
@@ -1324,7 +1296,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-border/10">
-          @for (e of recentExpenses; track e.id) {
+          @for (e of filteredExpenses; track e.id) {
           <tr class="hover:bg-surface-container-high/50">
             <td class="px-6 py-4 text-sm text-on-surface-variant">
               {{ e.date }}
@@ -1377,7 +1349,7 @@
           } @empty {
           <tr>
             <td colspan="5" class="px-6 py-8 text-center text-on-surface-variant/60">
-              No hay gastos registrados.
+              {{ monthRange && recentExpenses.length > 0 ? 'No hay gastos en este período.' : 'No hay gastos registrados.' }}
             </td>
           </tr>
           }

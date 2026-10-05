@@ -46,7 +46,7 @@ import { MonthRange, MonthRangePicker } from '../../../../shared/components/mont
 import { PatientRow, PaymentHistoryRow, Therapist, ExpenseForm, Contract, ContractDetail, ContractFilter, CreateContractForm, PayInstallmentForm, CancelContractForm } from './finanzas.models';
 import {
   getCategoryLabel, getMethodBadgeClass, getMethodLabel, formatMonthLabel,
-  getMonthlyIncome, getMonthlyExpenses, getYearMonthKeys, getRangeMonthKeys,
+  getMonthlyIncome, getMonthlyExpenses, getYearMonthKeys, getRangeMonthKeys, getMonthDayKeys, getContextMonthKeys,
   isDateInRange, isDateInFortnight,
   localDateString, parseLocalDate, isCollectedPayment,
   getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue, rankContract,
@@ -400,16 +400,7 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   private genDashboardCharts() {
-    const incomeByMonth = getMonthlyIncome(this.collectedPayments());
-    const expenseByMonth = getMonthlyExpenses(this.recentExpenses);
-    if (this.fortnightFilter && this.monthFilter) {
-      incomeByMonth.set(this.monthFilter, this.getFilteredPayments().reduce((sum, p) => sum + (p.amount || 0) - (p.discount || 0), 0));
-      expenseByMonth.set(this.monthFilter, this.getFilteredExpenses().reduce((sum, e) => sum + (e.amount || 0), 0));
-    }
-    const monthKeys = this.getChartMonthKeys();
-    const revenues = monthKeys.map((k) => incomeByMonth.get(k) || 0);
-    const expValues = monthKeys.map((k) => expenseByMonth.get(k) || 0);
-    const labels = monthKeys.map((k) => formatMonthLabel(k));
+    const { labels, income: revenues, expense: expValues } = this.buildIncomeExpenseSeries();
 
     this.dashIncomeExpenseChart = {
       labels,
@@ -429,6 +420,48 @@ export class Finanzas implements OnInit, OnDestroy {
       datasets: [{ data: Object.values(catMap), backgroundColor: catLabels.map((k) => catColors[k] || '#8b5cf6'), borderWidth: 0, hoverOffset: 8 }],
     };
     this.updateCharts();
+  }
+
+  get isSingleMonth(): boolean { return !!this.singleMonth; }
+
+  /** Mes único ('AAAA-MM') si el período abarca exactamente un mes; si no, null. */
+  private get singleMonth(): string | null {
+    const r = this.monthRange;
+    return r?.start && r.start === r.end ? r.start : null;
+  }
+
+  /**
+   * Serie de ingresos/gastos del gran gráfico. Un mes único se muestra día a día (o por quincena):
+   * con un solo punto mensual la línea no se dibuja y el gráfico quedaba vacío.
+   */
+  private buildIncomeExpenseSeries(): { labels: string[]; income: number[]; expense: number[] } {
+    const month = this.singleMonth;
+    if (month) {
+      const days = getMonthDayKeys(month, this.fortnightFilter);
+      const inc = new Map<string, number>();
+      const exp = new Map<string, number>();
+      this.getFilteredPayments().forEach((p) => {
+        const k = (p.date || '').substring(0, 10);
+        inc.set(k, (inc.get(k) || 0) + (p.amount || 0) - (p.discount || 0));
+      });
+      this.getFilteredExpenses().forEach((e) => {
+        const k = (e.date || '').substring(0, 10);
+        exp.set(k, (exp.get(k) || 0) + (e.amount || 0));
+      });
+      return {
+        labels: days.map((d) => String(Number(d.substring(8, 10)))),
+        income: days.map((d) => inc.get(d) || 0),
+        expense: days.map((d) => exp.get(d) || 0),
+      };
+    }
+    const incomeByMonth = getMonthlyIncome(this.collectedPayments());
+    const expenseByMonth = getMonthlyExpenses(this.recentExpenses);
+    const keys = this.getChartMonthKeys();
+    return {
+      labels: keys.map((k) => formatMonthLabel(k)),
+      income: keys.map((k) => incomeByMonth.get(k) || 0),
+      expense: keys.map((k) => expenseByMonth.get(k) || 0),
+    };
   }
 
   private updateCharts() {
@@ -472,6 +505,8 @@ export class Finanzas implements OnInit, OnDestroy {
     return collected.filter(p => !!p.date && this.inSelectedMonths(p.date) && this.inFortnight(p.date));
   }
 
+  get filteredExpenses(): Expense[] { return this.getFilteredExpenses(); }
+
   private getFilteredExpenses(): Expense[] {
     if (!this.monthRange) return this.recentExpenses;
     return this.recentExpenses.filter(e => !!e.date && this.inSelectedMonths(e.date) && this.inFortnight(e.date));
@@ -509,10 +544,9 @@ export class Finanzas implements OnInit, OnDestroy {
 
   private buildChartRevenueHistory() {
     const incomeByMonth = getMonthlyIncome(this.collectedPayments());
-    if (this.fortnightFilter && this.monthFilter) {
-      incomeByMonth.set(this.monthFilter, this.getFilteredPayments().reduce((sum, p) => sum + (p.amount || 0) - (p.discount || 0), 0));
-    }
-    const monthKeys = this.getChartMonthKeys();
+    const r = this.monthRange;
+    // Un mes aislado no forma una línea: se muestra con los meses anteriores como contexto.
+    const monthKeys = r?.start ? getContextMonthKeys(r.start, r.end) : this.getChartMonthKeys();
     const revenues = monthKeys.map((k) => incomeByMonth.get(k) || 0);
     const labels = monthKeys.map((k) => formatMonthLabel(k));
     return { labels, datasets: [{ label: 'Ingresos (S/)', data: revenues, borderColor: '#75a83a', backgroundColor: 'rgba(117, 168, 58, 0.1)', fill: true, pointBackgroundColor: '#75a83a', pointBorderColor: '#fff', pointBorderWidth: 2 }] };
@@ -1300,6 +1334,7 @@ export class Finanzas implements OnInit, OnDestroy {
     }
     this.patientPage = 1;
     this.genDashboardCharts();
+    this.reloadPayroll();
     this.cdr.markForCheck();
   }
 
@@ -1571,9 +1606,14 @@ export class Finanzas implements OnInit, OnDestroy {
     return Array.from(s).sort((a, b) => b.localeCompare(a));
   }
 
-  get yapeTransactions(): PaymentHistoryRow[] { return this.paymentHistory.filter((p) => p.method === 'yape' || p.method === 'plin'); }
+  get yapeAll(): PaymentHistoryRow[] { return this.paymentHistory.filter((p) => p.method === 'yape' || p.method === 'plin'); }
+  /** Yape/Plin dentro del período elegido en la barra de período. */
+  get yapeTransactions(): PaymentHistoryRow[] {
+    if (!this.monthRange) return this.yapeAll;
+    return this.yapeAll.filter((p) => !!p.date && this.inSelectedMonths(p.date) && this.inFortnight(p.date));
+  }
   get yapeTotal(): number { return this.yapeTransactions.reduce((sum, p) => sum + (p.amount - (p.discount || 0)), 0); }
-  get yapeMonthlyTotal(): number { const cm = localDateString().substring(0, 7); return this.yapeTransactions.filter((p) => p.date && p.date.startsWith(cm)).reduce((sum, p) => sum + (p.amount - (p.discount || 0)), 0); }
+  get yapeMonthlyTotal(): number { const cm = localDateString().substring(0, 7); return this.yapeAll.filter((p) => p.date && p.date.startsWith(cm)).reduce((sum, p) => sum + (p.amount - (p.discount || 0)), 0); }
   get yapeCount(): number { return this.yapeTransactions.length; }
 
   get patientsWithoutContractCount(): number { return this.patients.filter(p => p.is_active !== false && !this.patientContractMap[p.id]).length; }
@@ -1704,9 +1744,28 @@ export class Finanzas implements OnInit, OnDestroy {
   therapistById(id: number): string { return this.therapistsList.find((t) => t.id === id)?.username || ''; }
   trackById(_: number, item: any): number { return item.id || item.patient_id; }
 
+  /** Mes/año de la nómina: el del período si es un mes único; si no, el mes actual. */
+  private payrollArgs(): [number, number] | [] {
+    const m = this.singleMonth;
+    if (!m) return [];
+    const [y, mo] = m.split('-').map(Number);
+    return [mo, y];
+  }
+
+  get payrollPeriodLabel(): string {
+    return this.singleMonth ? formatMonthLabel(this.singleMonth) : 'Mes Actual';
+  }
+
+  private reloadPayroll() {
+    this.subscriptions.add(this.adminService.getTherapistFinancials(...this.payrollArgs()).subscribe({
+      next: (res) => { this.therapistFinancials = res.data; this.cdr.markForCheck(); },
+      error: () => { this.toastService.show('No se pudo cargar el balance de terapeutas.', 'error'); this.cdr.markForCheck(); },
+    }));
+  }
+
   private loadExpensesData() {
     this.expensesLoading = true;
-    this.subscriptions.add(this.adminService.getTherapistFinancials().subscribe({ next: (res) => { this.therapistFinancials = res.data; this.cdr.markForCheck(); }, error: () => { this.toastService.show('No se pudo cargar el balance de terapeutas.', 'error'); this.cdr.markForCheck(); } }));
+    this.subscriptions.add(this.adminService.getTherapistFinancials(...this.payrollArgs()).subscribe({ next: (res) => { this.therapistFinancials = res.data; this.cdr.markForCheck(); }, error: () => { this.toastService.show('No se pudo cargar el balance de terapeutas.', 'error'); this.cdr.markForCheck(); } }));
     this.subscriptions.add(this.adminService.getUsers('terapista').subscribe({ next: (res) => { this.expenseTherapists = res.users.map((u: any) => ({ ...u, is_active: true } as User)); this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
     this.subscriptions.add(this.adminService.getExpenses().subscribe({ next: (res) => { this.recentExpenses = res.data; this.expensesLoading = false; this.genDashboardCharts(); this.cdr.detectChanges(); }, error: () => { this.expensesLoading = false; this.toastService.show('No se pudo cargar la lista de gastos.', 'error'); this.cdr.markForCheck(); } }));
   }

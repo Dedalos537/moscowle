@@ -1,12 +1,13 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom, Subscription } from 'rxjs';
+import { firstValueFrom, Subscription, take } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { TherapistService } from '../../../../core/services/therapist.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { RecordingService } from '../../../../core/services/recording.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
@@ -92,16 +93,47 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     private toastService: ToastService,
     private recordingService: RecordingService,
     private confirmService: ConfirmService,
+    private location: Location,
+    private auth: AuthService,
   ) {}
+
+  /**
+   * La revision se sirve bajo /admin/... (layout de administracion) o /therapist/... (layout de terapeuta).
+   * Antes solo existia la ruta de terapeuta: el admin veia el menu del terapeuta y "Volver" lo llevaba
+   * a la agenda del terapeuta.
+   */
+  get inAdminContext(): boolean {
+    return this.router.url.startsWith('/admin');
+  }
+
+  /** Destino cuando no hay historial desde el que volver (enlace directo, pestaña nueva). */
+  get backFallback(): string {
+    return this.inAdminContext ? '/admin/sessions' : '/therapist/sessions';
+  }
+
+  /** Vuelve a la pantalla de origen (p. ej. la ficha del paciente); sin historial interno usa el destino por defecto. */
+  goBack() {
+    if ((window.history.state?.navigationId ?? 0) > 1) this.location.back();
+    else this.router.navigate([this.backFallback]);
+  }
 
   ngOnInit() {
     this.sessionId = Number(this.route.snapshot.paramMap.get('id'));
     if (!this.sessionId) {
-      this.router.navigate(['/therapist/sessions']);
+      this.router.navigate([this.backFallback]);
       return;
     }
-    this.loadSession();
-    this.subscribeToRecordingService();
+    // Un admin/supervisor que llega por un enlace antiguo (/therapist/...) pasa a la version con su layout.
+    this.subs.add(
+      this.auth.currentUser$.pipe(take(1)).subscribe((user) => {
+        if (user && (user.role === 'admin' || user.role === 'supervisor') && this.router.url.startsWith('/therapist')) {
+          this.router.navigate(['/admin/sessions', this.sessionId, 'review'], { replaceUrl: true });
+          return;
+        }
+        this.loadSession();
+        this.subscribeToRecordingService();
+      }),
+    );
   }
 
   ngOnDestroy() {
@@ -168,7 +200,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         this.loading = false;
         this.error = err.message;
         this.cdr.markForCheck();
-        this.router.navigate(['/therapist/sessions']);
+        this.router.navigate([this.backFallback]);
       },
     }));
   }

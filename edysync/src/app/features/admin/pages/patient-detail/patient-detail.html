@@ -296,7 +296,7 @@
   <div modal-footer>
     <app-button variant="ghost" label="Cerrar" (clicked)="closeSessionModal()"></app-button>
     @if (selectedSession) {
-      <a [routerLink]="['/therapist/sessions', selectedSession.id, 'review']"
+      <a [routerLink]="['/admin/sessions', selectedSession.id, 'review']"
          class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors">
         <fa-icon [icon]="['fas', 'up-right-from-square']" class="text-xs"></fa-icon> Ir a Revisión
       </a>

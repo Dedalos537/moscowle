@@ -83,6 +83,27 @@ export function getYearMonthKeys(year: number): string[] {
   return Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
 }
 
+/** Días ('AAAA-MM-DD') de un mes; con `fortnight` solo la 1ra (1-15) o la 2da (16-fin). */
+export function getMonthDayKeys(month: string, fortnight: 1 | 2 | null = null): string[] {
+  const [y, m] = month.split('-').map(Number);
+  const last = new Date(y, m, 0).getDate();
+  const from = fortnight === 2 ? 16 : 1;
+  const to = fortnight === 1 ? Math.min(15, last) : last;
+  const keys: string[] = [];
+  for (let d = from; d <= to; d++) keys.push(`${month}-${String(d).padStart(2, '0')}`);
+  return keys;
+}
+
+/**
+ * Meses a mostrar en una serie temporal. Una línea con UN solo punto no dibuja nada, así que si el período
+ * abarca menos de `minMonths` se completa con meses anteriores hasta `minMonths` (terminando en el fin del período).
+ */
+export function getContextMonthKeys(start: string, end: string | null | undefined, minMonths = 6): string[] {
+  const keys = getRangeMonthKeys(start, end);
+  if (keys.length >= minMonths) return keys;
+  return getAnchorMonthsKeys(keys[keys.length - 1]).slice(-minMonths);
+}
+
 export function getRangeMonthKeys(start: string, end?: string | null): string[] {
   if (!start) return [];
   const last = end && end > start ? end : start;
