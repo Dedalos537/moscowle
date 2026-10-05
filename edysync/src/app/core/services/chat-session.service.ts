@@ -17,6 +17,8 @@ export interface ChatSessionToolCall {
   success: boolean;
 }
 
+import type { McpTraceStep } from './mcp-chat.service';
+
 export interface ChatSessionMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -24,6 +26,8 @@ export interface ChatSessionMessage {
   error?: boolean;
   filePreview?: string;
   toolCalls?: ChatSessionToolCall[];
+  /** Traza de pasos del pipeline (para la tarjeta colapsada tras responder). */
+  trace?: McpTraceStep[];
 }
 
 export interface ChatSession {

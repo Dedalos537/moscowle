@@ -54,7 +54,7 @@
         </div>
       }
 
-      @for (msg of messages; track msg.timestamp; let i = $index) {
+      @for (msg of messages; track msg.timestamp; let last = $last) {
         <!-- User message -->
         @if (msg.role === 'user') {
           <div class="flex justify-end">
@@ -65,51 +65,62 @@
           </div>
         }
 
-        <!-- Tool call -->
-        @if (msg.role === 'tool_call') {
-          <div class="flex justify-start">
-            <div class="max-w-[85%] rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 overflow-hidden">
-              <button class="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors"
-                      (click)="toggleToolCall(msg)">
-                <fa-icon [icon]="['fas', 'gear']" class="text-amber-600 text-xs animate-spin" [class.animate-spin]="!msg.toolResult"></fa-icon>
-                <span class="text-xs font-medium text-amber-800 dark:text-amber-200 flex-1">
-                  {{ msg.toolName }}
-                </span>
-                @if (msg.toolResult) {
-                  <fa-icon [icon]="['fas', msg.toolResultSuccess ? 'check-circle' : 'exclamation-circle']"
-                           [class.text-green-600]="msg.toolResultSuccess"
-                           [class.text-red-500]="!msg.toolResultSuccess"
-                           class="text-[10px]"></fa-icon>
-                  <fa-icon [icon]="['fas', msg.expanded ? 'chevron-up' : 'chevron-down']" class="text-amber-400 text-[10px]"></fa-icon>
-                }
-              </button>
-              @if (msg.expanded) {
-                <div class="px-3 pb-2 space-y-1.5 border-t border-amber-200/50 dark:border-amber-800/50">
-                  @if (msg.toolArgs && getObjectKeys(msg.toolArgs).length > 0) {
-                    <div>
-                      <p class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mb-0.5">Parámetros:</p>
-                      <pre class="text-[11px] text-amber-900 dark:text-amber-100 bg-amber-100/50 dark:bg-amber-900/30 rounded p-1.5 overflow-x-auto">{{ msg.toolArgs | json }}</pre>
-                    </div>
-                  }
-                  @if (msg.toolResult) {
-                    <div>
-                      <p class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mb-0.5">Resultado:</p>
-                      <pre class="text-[11px] text-amber-900 dark:text-amber-100 bg-amber-100/50 dark:bg-amber-900/30 rounded p-1.5 overflow-x-auto max-h-40 overflow-y-auto">{{ msg.toolResult | json }}</pre>
-                    </div>
-                  }
-                </div>
-              }
-            </div>
-          </div>
-        }
-
-        <!-- Assistant message -->
+        <!-- Assistant message: la burbuja SOLO lleva texto del modelo -->
         @if (msg.role === 'assistant') {
-          <div class="flex justify-start">
+          <div class="flex flex-col items-start gap-1.5">
             <div class="max-w-[75%] p-3 rounded-lg text-sm bg-surface-container-low text-on-surface rounded-bl-sm">
               <div [innerHTML]="sanitize(msg.content)"></div>
               <p class="text-[10px] mt-1 opacity-60">{{ msg.timestamp | date:'HH:mm' }}</p>
             </div>
+            @if (last && ((msg.trace && msg.trace.length) || (msg.toolCalls && msg.toolCalls.length))) {
+              <details class="max-w-[85%] rounded-lg border border-amber-200 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/20 overflow-hidden">
+                <summary class="flex items-center gap-2 px-3 py-2 cursor-pointer text-xs font-semibold text-amber-800 dark:text-amber-200 select-none">
+                  <fa-icon [icon]="['fas', 'route']" class="text-amber-600 text-[10px]"></fa-icon>
+                  <span>Respuesta generada</span>
+                  <span class="ml-auto text-[10px] font-bold text-amber-700 dark:text-amber-300">{{ traceSummary(msg) }}</span>
+                  <fa-icon [icon]="['fas', 'chevron-down']" class="text-amber-400 text-[10px]"></fa-icon>
+                </summary>
+                <div class="px-3 pb-2 space-y-1.5 border-t border-amber-200/50 dark:border-amber-800/50">
+                  @for (step of msg.trace || []; track $index) {
+                    <p class="text-[11px] text-amber-900/80 dark:text-amber-100/80 leading-snug border-l-2 border-amber-300 dark:border-amber-700 pl-2">
+                      {{ step.text }}
+                    </p>
+                  }
+                  @for (tc of msg.toolCalls || []; track $index) {
+                    <div class="rounded border border-amber-200/70 bg-amber-50/70 dark:border-amber-800/70 dark:bg-amber-950/30 overflow-hidden">
+                      <button class="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-amber-100/60 dark:hover:bg-amber-900/25 transition-colors"
+                              (click)="toggleToolEntry(tc)">
+                        <fa-icon [icon]="['fas', 'gear']" class="text-amber-600 text-xs" [class.animate-spin]="tc.result === undefined"></fa-icon>
+                        <span class="text-[11px] font-mono font-semibold text-amber-900 dark:text-amber-100 flex-1">{{ tc.name }}</span>
+                        @if (tc.result !== undefined) {
+                          <fa-icon [icon]="['fas', tc.success ? 'check-circle' : 'exclamation-circle']"
+                                   [class.text-green-600]="tc.success"
+                                   [class.text-red-500]="!tc.success"
+                                   class="text-[10px]"></fa-icon>
+                        }
+                        <fa-icon [icon]="['fas', tc.expanded ? 'chevron-up' : 'chevron-down']" class="text-amber-400 text-[10px]"></fa-icon>
+                      </button>
+                      @if (tc.expanded) {
+                        <div class="px-2 pb-2 space-y-1.5 border-t border-amber-200/50 dark:border-amber-800/50">
+                          @if (getObjectKeys(tc.args).length > 0) {
+                            <div>
+                              <p class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mb-0.5">Parámetros:</p>
+                              <pre class="text-[11px] text-amber-900 dark:text-amber-100 bg-amber-100/50 dark:bg-amber-900/30 rounded p-1.5 overflow-x-auto">{{ tc.args | json }}</pre>
+                            </div>
+                          }
+                          @if (tc.result !== undefined) {
+                            <div>
+                              <p class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mb-0.5">Resultado:</p>
+                              <pre class="text-[11px] text-amber-900 dark:text-amber-100 bg-amber-100/50 dark:bg-amber-900/30 rounded p-1.5 overflow-x-auto max-h-40 overflow-y-auto">{{ tc.result }}</pre>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </details>
+            }
           </div>
         }
       }

@@ -913,6 +913,32 @@
   padding: 2px 6px;
 }
 
+/* Tarjeta de traza persistente tras `done` (colapsada por defecto). */
+.think-panel--done {
+  border-style: solid;
+  background: var(--color-surface-container-low, #fafafa);
+}
+
+.think-panel--done .think-panel__summary-counts {
+  margin-left: auto;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+/* Argumentos resumidos de cada herramienta dentro de la tarjeta. */
+.tool-call-args {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem;
+  color: var(--color-on-surface-variant);
+  word-break: break-word;
+  margin-bottom: 4px;
+}
+
+.think-panel__body .tool-calls {
+  margin-top: 4px;
+}
+
 .tool-badge {
   font-size: 0.6rem;
   padding: 1px 6px;

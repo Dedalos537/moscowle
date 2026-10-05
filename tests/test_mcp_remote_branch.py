@@ -1,8 +1,9 @@
 """Pruebas de la rama de IA remota de MCPService.process_message.
 
 Hallazgo: `tools` solo se asignaba dentro de la rama `if local_mode:` pero se
-usaba despues en la rama remota (`_build_tool_prompt(tools)`), por lo que la
-rama remota reventaba con UnboundLocalError antes de llamar al modelo.
+usaba despues en la rama remota (construccion del prompt de herramientas),
+por lo que la rama remota reventaba con UnboundLocalError antes de llamar al
+modelo.
 
 En el entorno desplegado la ruta no se ejecutaba porque Ollama es el primario,
 asi que el bug estaba latente: cualquier cambio a proveedor remoto lo activaba.
@@ -26,11 +27,8 @@ def remote(monkeypatch):
 
     monkeypatch.setattr(mcp_service, 'llm_chat', fake_llm_chat)
     monkeypatch.setattr(mcp_service, 'get_current_date_context', lambda: 'HOY: test')
-    monkeypatch.setattr(mcp_service, 'resolve_system_prompt', lambda *a, **k: 'prompt de sistema')
     calls['mcp'] = MCPService()
     return calls
-
-
 
 
 class TestRamaRemotaInicializaTools:
@@ -38,7 +36,7 @@ class TestRamaRemotaInicializaTools:
         """La rama remota debe construir el prompt de herramientas sin error."""
         result = remote['mcp'].process_message('¿Cuántos pacientes hay?', 'admin', 1, mode='grande')
         assert 'error' not in result or 'UnboundLocalError' not in str(result.get('error')), (
-            f"la rama remota fallo: {result.get('error')}"
+            f'la rama remota fallo: {result.get("error")}'
         )
 
     def test_llm_fue_invocado(self, remote):
@@ -56,9 +54,7 @@ class TestRamaRemotaInicializaTools:
 
         monkeypatch.setattr(mcp_service, 'llm_chat', spy)
         remote['mcp'].process_message('listar pacientes', 'admin', 1, mode='grande')
-        assert 'function' in captured.get('system', '').lower(), (
-            'el prompt remoto no incluia las herramientas'
-        )
+        assert 'function' in captured.get('system', '').lower(), 'el prompt remoto no incluia las herramientas'
 
     def test_rama_local_sigue_funcionando(self, monkeypatch):
         """No romper la ruta local (Ollama), que es la activa en produccion."""

@@ -201,6 +201,79 @@ def auto_propose_faq():
     return created
 
 
+def _faq_templates(name, entry):
+    """1-3 preguntas FAQ en español derivadas de la descripción de la tool.
+
+    El sustantivo temático sale de la propia descripción (mismo léxico
+    normalizado que tool_intents), así el catálogo de preguntas se GENERA
+    y no se escribe a mano tool por tool.
+    """
+    from app.services.tool_intents import _content_words, norm
+
+    desc = (entry.get('description') or '').strip()
+    if len(desc.split()) < 4:
+        return []
+    nouns = _content_words(desc)
+    if not nouns:
+        return []
+    subject = nouns[0]
+    plural_q = 'cuántas' if subject.endswith(('a', 'as')) else 'cuántos'
+    questions = [f'Lista de {subject}', f'¿Qué {subject} hay?']
+    if re.search(r'cuant|cantidad|total|estadistic', desc, re.IGNORECASE):
+        questions.append(f'¿{plural_q.title()} {subject} hay?')
+
+    first_sentence = re.split(r'(?<=[.!?])\s', desc)[0]
+    answer = (
+        f'Lo resuelve la herramienta `{name}` del asistente: {first_sentence} '
+        'El asistente llamará esa herramienta con los parámetros de tu mensaje '
+        'y te mostrará exactamente lo que devuelva (sin inventar datos).'
+    )
+    keywords = norm(f'{name} {subject} ' + ' '.join(nouns[1:4]))
+    return [(q, answer, keywords) for q in questions]
+
+
+def generate_faq_from_tools(limit=None):
+    """Crea FAQs activas (source='generated') derivadas del catálogo de tools.
+
+    Regla de oro: SIN duplicados por pregunta normalizada contra TODAS las
+    FAQs existentes (manuales, auto-propuestas o generadas), para que el
+    catálogo pueda crecer de forma incremental sin ensuciar la base.
+    ``limit`` acota cuántas crea en esta corrida (el scheduler usa 1).
+    Devuelve el número de FAQs creadas.
+    """
+    from app.services.tools_registry import TOOL_REGISTRY
+
+    existing = {_normalize(f.question) for f in Faq.query.with_entities(Faq.question).all()}
+    created = 0
+    for name, entry in TOOL_REGISTRY.items():
+        if entry.get('category') != 'read':
+            continue
+        for question, answer, keywords in _faq_templates(name, entry):
+            q_norm = _normalize(question)
+            if q_norm in existing:
+                continue
+            db.session.add(
+                Faq(
+                    question=question,
+                    answer=answer,
+                    category='herramientas',
+                    keywords=keywords,
+                    is_active=True,
+                    source='generated',
+                    status='active',
+                )
+            )
+            existing.add(q_norm)
+            created += 1
+            if limit is not None and created >= limit:
+                db.session.commit()
+                return created
+    if created:
+        db.session.commit()
+    return created
+
+
 def hourly_auto_grow():
-    """Callable for the scheduler: create proposed FAQs from repeated unanswered hits."""
-    return auto_propose_faq()
+    """Callable for the scheduler: create proposed FAQs from repeated unanswered hits
+    and, como máximo 1 por corrida, FAQs generadas desde el catálogo de tools."""
+    return auto_propose_faq() + generate_faq_from_tools(limit=1)

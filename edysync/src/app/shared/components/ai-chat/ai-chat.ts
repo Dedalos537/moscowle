@@ -11,7 +11,7 @@ import { Router } from '@angular/router';
 import { AdminService } from '../../../core/services/admin.service';
 import { WizardService } from '../../contextual-help/services/wizard.service';
 import { FloatingUiService } from '../../../core/services/floating-ui.service';
-import { McpChatService, McpChip, McpPendingConfirm, McpStreamEvent } from '../../../core/services/mcp-chat.service';
+import { McpChatService, McpChip, McpPendingConfirm, McpStreamEvent, McpTraceStep } from '../../../core/services/mcp-chat.service';
 import { ChatSessionService, ChatSession, ChatSessionMessage } from '../../../core/services/chat-session.service';
 import { ChatConfirmDialog, PendingAction } from '../chat-confirm-dialog/chat-confirm-dialog';
 import { environment } from '../../../../environments/environment';
@@ -27,6 +27,8 @@ interface ChatMsg {
   error?: boolean;
   filePreview?: string;
   toolCalls?: ToolCallResult[];
+  trace?: McpTraceStep[];
+  traceCollapsed?: boolean;
 }
 
 interface ToolCallResult {
@@ -130,7 +132,8 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   private lastRequest: { message: string; history: { role: string; content: string }[] } | null = null;
   private assistantText = '';
   streamToolCalls: ToolCallResult[] = [];
-  thinkingLog: string[] = [];
+  /** Traza viva del turno en curso (pasos estructurados del pipeline). */
+  thinkingLog: McpTraceStep[] = [];
 
   private pendingFilePreview: string | null = null;
   private subs = new Subscription();
@@ -154,6 +157,20 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
   get liveToolNames(): string {
     return this.streamToolCalls.map((t) => t.name).join(', ');
+  }
+
+  /** Resumen de la tarjeta colapsada: "· N herramientas · M pasos". */
+  traceSummary(trace?: McpTraceStep[], toolCalls?: ToolCallResult[]): string {
+    const toolNames = new Set<string>();
+    for (const step of trace || []) {
+      if (step.tool) toolNames.add(step.tool);
+    }
+    for (const tc of toolCalls || []) {
+      if (tc.name) toolNames.add(tc.name);
+    }
+    const tools = toolNames.size;
+    const steps = trace?.length || 0;
+    return `· ${tools} herramienta${tools === 1 ? '' : 's'} · ${steps} paso${steps === 1 ? '' : 's'}`;
   }
 
   sanitize(html: string): string {
@@ -369,37 +386,43 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  private updateThinking(text: string) {
+  private updateThinking(text: string, step?: McpTraceStep) {
     this.thinkingText = text;
-    this.pushThought(text);
+    this.pushThought(step ?? { kind: 'route', text });
     this.cdr.markForCheck();
   }
 
-  private pushThought(text: string) {
-    if (!text) return;
+  private pushThought(step: McpTraceStep) {
+    if (!step?.text) return;
     const last = this.thinkingLog[this.thinkingLog.length - 1];
-    if (last !== text) {
-      this.thinkingLog.push(text);
-      if (this.thinkingLog.length > 30) {
+    if (last?.text !== step.text) {
+      this.thinkingLog.push(step);
+      if (this.thinkingLog.length > 40) {
         this.thinkingLog.shift();
       }
     }
     this.cdr.markForCheck();
   }
 
-  private clearThinking() {
+  /** Solo apaga la etiqueta animada: la traza se conserva (bug del chunk). */
+  private clearThinkingLabel() {
+    this.thinkingText = '';
+    this.cdr.markForCheck();
+  }
+
+  private clearTrace() {
     this.thinkingText = '';
     this.thinkingLog = [];
     this.cdr.markForCheck();
   }
 
-  private summarizeArgs(args: Record<string, unknown>): string {
+  summarizeArgs(args: Record<string, unknown>): string {
     if (!args || Object.keys(args).length === 0) return 'sin argumentos';
     const json = JSON.stringify(args);
     return json.length > 100 ? json.slice(0, 100) + '…' : json;
   }
 
-  private summarizeResult(result: string): string {
+  summarizeResult(result: string): string {
     if (!result) return 'sin resultado';
     const clean = result.replace(/\s+/g, ' ').trim();
     return clean.length > 120 ? clean.slice(0, 120) + '…' : clean;
@@ -493,6 +516,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
       ...(m.error ? { error: m.error } : {}),
       ...(m.filePreview ? { filePreview: m.filePreview } : {}),
       ...(m.toolCalls && m.toolCalls.length > 0 ? { toolCalls: m.toolCalls } : {}),
+      ...(m.trace && m.trace.length > 0 ? { trace: m.trace } : {}),
     }));
     session.messages = messages;
     session.updatedAt = Date.now();
@@ -531,6 +555,8 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     this.actionChips = [];
     this.assistantText = '';
     this.streamToolCalls = [];
+    this.thinkingLog = [];
+    this.thinkingText = '';
     this.cdr.markForCheck();
 
     this.streamSub?.unsubscribe();
@@ -554,15 +580,16 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   private handleStreamEvent(event: McpStreamEvent) {
     switch (event.type) {
       case 'thinking':
-        this.updateThinking(event.content || 'Procesando...');
+        // Nunca escribe en la burbuja: solo alimenta la tarjeta de traza.
+        this.updateThinking(event.content || 'Procesando...', event.step);
         break;
 
       case 'chunk':
       case 'text':
         if (event.content) {
           this.assistantText += event.content;
-          this.clearThinking();
-          this.updateLastAssistant(this.assistantText, this.streamToolCalls);
+          this.clearThinkingLabel(); // el log/traza NO se borra al primer chunk
+          this.updateLastAssistant(this.assistantText);
         }
         break;
 
@@ -573,8 +600,12 @@ export class AiChat implements AfterViewChecked, OnDestroy {
           result: '',
           success: false,
         });
-        this.pushThought(`Llamando a la herramienta: ${event.name || '?'}(${this.summarizeArgs(event.args || {})})`);
-        this.updateLastAssistant(this.assistantText, this.streamToolCalls);
+        this.pushThought({
+          kind: 'tool',
+          tool: event.name || '',
+          text: `Llamando a la herramienta: ${event.name || '?'}(${this.summarizeArgs(event.args || {})})`,
+        });
+        this.cdr.markForCheck();
         break;
 
       case 'tool_result':
@@ -583,9 +614,14 @@ export class AiChat implements AfterViewChecked, OnDestroy {
           tc.result = event.result || '';
           tc.success = event.success !== false;
           const state = tc.success ? 'obtuve' : 'error en';
-          this.pushThought(`Resultado de ${tc.name}: ${state} → ${this.summarizeResult(tc.result || (tc.success ? '' : 'la herramienta falló'))}`);
+          this.pushThought({
+            kind: 'result',
+            tool: tc.name,
+            ok: tc.success,
+            text: `Resultado de ${tc.name}: ${state} → ${this.summarizeResult(tc.result || (tc.success ? '' : 'la herramienta falló'))}`,
+          });
         }
-        this.updateLastAssistant(this.assistantText, this.streamToolCalls);
+        this.cdr.markForCheck();
         break;
 
       case 'chips':
@@ -609,24 +645,51 @@ export class AiChat implements AfterViewChecked, OnDestroy {
         break;
       }
 
-      case 'done':
+      case 'done': {
         this.loading = false;
-        this.clearThinking();
+        const text = this.assistantText;
+        const tools = this.streamToolCalls.length ? [...this.streamToolCalls] : undefined;
+        const trace = event.trace?.length ? event.trace : [...this.thinkingLog];
+        this.clearTrace();
+        this.assistantText = '';
+        this.streamToolCalls = [];
+
+        // La tarjeta queda visible (colapsada) colgando del último asistente;
+        // la burbuja se queda SOLO con el texto de la respuesta.
+        if (text || tools) {
+          const last = this.messages[this.messages.length - 1];
+          if (last?.role === 'assistant') {
+            if (text) last.content = text;
+            if (tools) last.toolCalls = tools;
+            if (trace.length) {
+              last.trace = trace;
+              last.traceCollapsed = true;
+            }
+          } else if (text) {
+            this.messages.push({
+              role: 'assistant',
+              content: text,
+              toolCalls: tools,
+              trace: trace.length ? trace : undefined,
+              traceCollapsed: true,
+            });
+          }
+        }
+
         if (event.pending_confirm?.name && !this.processingAction) {
           this.processingAction = true;
           this.pendingAction = event.pending_confirm;
           this.cdr.markForCheck();
           setTimeout(() => this.confirmDialog?.open(event.pending_confirm!));
         }
-        this.assistantText = '';
-        this.streamToolCalls = [];
         this.persistCurrentSession();
         this.cdr.markForCheck();
         break;
+      }
 
       case 'error':
         this.loading = false;
-        this.clearThinking();
+        this.clearTrace();
         this.error = event.error || 'Error desconocido';
         this.pushAssistant('Error: ' + (event.error || 'Error desconocido'));
         this.persistCurrentSession();
@@ -650,17 +713,14 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  private updateLastAssistant(content: string, toolCalls: ToolCallResult[]) {
+  private updateLastAssistant(content: string) {
+    // Recibe SOLO el texto: los toolCalls/traza se adjuntan en done,
+    // para que la burbuja nunca muestre estado del proceso.
     const last = this.messages[this.messages.length - 1];
     if (last && last.role === 'assistant') {
       last.content = content;
-      last.toolCalls = toolCalls.length > 0 ? [...toolCalls] : undefined;
     } else {
-      this.messages.push({
-        role: 'assistant',
-        content,
-        toolCalls: toolCalls.length > 0 ? [...toolCalls] : undefined,
-      });
+      this.messages.push({ role: 'assistant', content });
     }
     this.cdr.markForCheck();
   }

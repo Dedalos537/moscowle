@@ -23,6 +23,13 @@ export interface McpToolCallResult {
   success: boolean;
 }
 
+export interface McpTraceStep {
+  kind: 'route' | 'tool' | 'result' | 'synth' | 'guard' | 'confirm' | string;
+  text: string;
+  tool?: string;
+  ok?: boolean;
+}
+
 export interface McpStreamEvent {
   type:
     | 'thinking'
@@ -44,6 +51,10 @@ export interface McpStreamEvent {
   pending_confirm?: McpPendingConfirm;
   tool_calls?: McpToolCallResult[];
   error?: string;
+  /** Paso estructurado del pipeline (eventos thinking de Fase A). */
+  step?: McpTraceStep;
+  /** Traza completa, enviada en `done`/`error` para la tarjeta persistente. */
+  trace?: McpTraceStep[];
 }
 
 export interface McpStreamRequest {

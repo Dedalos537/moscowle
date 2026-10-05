@@ -5,19 +5,26 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { environment } from '../../../../../environments/environment';
-import { McpChatService, McpChip, McpPendingConfirm, McpStreamEvent } from '../../../../core/services/mcp-chat.service';
+import { McpChatService, McpChip, McpPendingConfirm, McpStreamEvent, McpTraceStep } from '../../../../core/services/mcp-chat.service';
 import { ChatConfirmDialog, PendingAction } from '../../../../shared/components/chat-confirm-dialog/chat-confirm-dialog';
 import DOMPurify from 'dompurify';
 
+interface ToolCallEntry {
+  name: string;
+  args: Record<string, any>;
+  result?: string;
+  success?: boolean;
+  expanded?: boolean;
+}
+
 interface ChatMessage {
-  role: 'user' | 'assistant' | 'tool_call' | 'tool_result';
+  role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  toolName?: string;
-  toolArgs?: Record<string, any>;
-  toolResult?: any;
-  toolResultSuccess?: boolean;
-  expanded?: boolean;
+  /** Llamadas a herramientas adjuntas al turno (no son mensajes propios). */
+  toolCalls?: ToolCallEntry[];
+  /** Traza de pasos del pipeline para la tarjeta colapsada. */
+  trace?: McpTraceStep[];
 }
 
 type VoiceState = 'idle' | 'recording' | 'transcribing' | 'unsupported';
@@ -43,6 +50,10 @@ export class AiAssistantChat implements OnInit, OnDestroy {
 
   actionChips: McpChip[] = [];
   pendingAction: McpPendingConfirm | null = null;
+
+  /** Traza viva del turno: nunca se escribe en `messages` (sin prefijos en la burbuja). */
+  private liveTrace: McpTraceStep[] = [];
+  private streamToolCalls: ToolCallEntry[] = [];
 
   voiceState: VoiceState = 'idle';
   recordingTime = 0;
@@ -138,6 +149,8 @@ export class AiAssistantChat implements OnInit, OnDestroy {
     this.abortCtrl?.abort();
     this.abortCtrl = new AbortController();
     this.actionChips = [];
+    this.liveTrace = [];
+    this.streamToolCalls = [];
 
     this.streamSub = this.mcpChat
       .stream({
@@ -154,42 +167,40 @@ export class AiAssistantChat implements OnInit, OnDestroy {
 
   private handleStreamEvent(event: McpStreamEvent) {
     switch (event.type) {
-      case 'thinking':
-        const lastThinking = this.messages[this.messages.length - 1];
-        if (lastThinking?.role === 'assistant') {
-          lastThinking.content = event.content || '';
-        } else {
-          this.messages.push({
-            role: 'assistant',
-            content: event.content || '',
-            timestamp: new Date(),
-          });
-        }
+      case 'thinking': {
+        // Nunca toca `messages`: la burbuja solo recibe texto del modelo.
+        const step = event.step ?? { kind: 'route', text: event.content || '' };
+        if (step?.text) this.liveTrace.push(step);
         this.cdr.markForCheck();
-        this.scrollToBottom();
         break;
+      }
 
-      case 'tool_call':
-        this.messages.push({
-          role: 'tool_call',
-          content: `Ejecutando: ${event.name}`,
-          timestamp: new Date(),
-          toolName: event.name,
-          toolArgs: event.args,
+      case 'tool_call': {
+        this.streamToolCalls.push({
+          name: event.name || '',
+          args: event.args || {},
           expanded: false,
         });
+        this.liveTrace.push({ kind: 'tool', tool: event.name || '', text: `Llamando a la herramienta: ${event.name || '?'}` });
         this.cdr.markForCheck();
-        this.scrollToBottom();
         break;
+      }
 
-      case 'tool_result':
-        const lastToolCall = [...this.messages].reverse().find((m) => m.role === 'tool_call' && m.toolName === event.name && !m.toolResult);
-        if (lastToolCall) {
-          lastToolCall.toolResult = event.result;
-          lastToolCall.toolResultSuccess = event.success;
+      case 'tool_result': {
+        const entry = [...this.streamToolCalls].reverse().find((t) => t.name === event.name && t.result === undefined);
+        if (entry) {
+          entry.result = event.result || '';
+          entry.success = event.success !== false;
         }
+        this.liveTrace.push({
+          kind: 'result',
+          tool: event.name || '',
+          ok: event.success !== false,
+          text: `Resultado de ${event.name}: ${event.success !== false ? 'obtuve' : 'error en'} → ${(event.result || '').slice(0, 120)}`,
+        });
         this.cdr.markForCheck();
         break;
+      }
 
       case 'chunk':
       case 'text':
@@ -204,6 +215,9 @@ export class AiAssistantChat implements OnInit, OnDestroy {
               timestamp: new Date(),
             });
           }
+          // Las llamadas viven en el msg asistente, nunca como mensajes aparte.
+          const current = this.messages[this.messages.length - 1];
+          if (this.streamToolCalls.length) current.toolCalls = [...this.streamToolCalls];
           this.cdr.markForCheck();
           this.scrollToBottom();
         }
@@ -229,8 +243,17 @@ export class AiAssistantChat implements OnInit, OnDestroy {
         break;
       }
 
-      case 'done':
+      case 'done': {
         this.loading = false;
+        const trace = event.trace?.length ? event.trace : [...this.liveTrace];
+        const tools = this.streamToolCalls.length ? [...this.streamToolCalls] : undefined;
+        this.liveTrace = [];
+        this.streamToolCalls = [];
+        const last = this.messages[this.messages.length - 1];
+        if (last?.role === 'assistant') {
+          if (tools) last.toolCalls = tools;
+          if (trace.length) last.trace = trace;
+        }
         if (event.pending_confirm?.name && !this.pendingAction) {
           this.pendingAction = event.pending_confirm;
           this.cdr.markForCheck();
@@ -238,6 +261,7 @@ export class AiAssistantChat implements OnInit, OnDestroy {
         }
         this.cdr.markForCheck();
         break;
+      }
 
       case 'error':
         this.messages.push({
@@ -246,6 +270,8 @@ export class AiAssistantChat implements OnInit, OnDestroy {
           timestamp: new Date(),
         });
         this.loading = false;
+        this.liveTrace = [];
+        this.streamToolCalls = [];
         this.cdr.markForCheck();
         this.scrollToBottom();
         break;
@@ -286,9 +312,23 @@ export class AiAssistantChat implements OnInit, OnDestroy {
     }
   }
 
-  toggleToolCall(msg: ChatMessage) {
-    msg.expanded = !msg.expanded;
+  toggleToolEntry(entry: ToolCallEntry) {
+    entry.expanded = !entry.expanded;
     this.cdr.markForCheck();
+  }
+
+  /** Resumen de la tarjeta colapsada: "· N herramientas · M pasos". */
+  traceSummary(msg: ChatMessage): string {
+    const toolNames = new Set<string>();
+    for (const step of msg.trace || []) {
+      if (step.tool) toolNames.add(step.tool);
+    }
+    for (const tc of msg.toolCalls || []) {
+      if (tc.name) toolNames.add(tc.name);
+    }
+    const tools = toolNames.size;
+    const steps = msg.trace?.length || 0;
+    return `· ${tools} herramienta${tools === 1 ? '' : 's'} · ${steps} paso${steps === 1 ? '' : 's'}`;
   }
 
   sanitize(html: string): string {
@@ -454,6 +494,8 @@ export class AiAssistantChat implements OnInit, OnDestroy {
     this.messages = [];
     this.error = null;
     this.actionChips = [];
+    this.liveTrace = [];
+    this.streamToolCalls = [];
     this.cdr.markForCheck();
   }
 

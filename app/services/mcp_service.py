@@ -3,10 +3,15 @@ import logging
 import os
 import re
 from datetime import date, datetime, timedelta
-from zoneinfo import ZoneInfo
 
 from app.services.llm_client import llm_chat
-from app.services.personality_prompt import LOCAL_BASE_PROMPT, PERSONALITY_PROMPT, ROLE_NAMES_ES
+from app.services.prompt_builder import (
+    _MESES_ES,
+    LIMA_TZ,
+    build_system_prompt,
+    get_current_date_context,  # noqa: F401 — re-export para mcp_routes y tests
+)
+from app.services.tool_intents import match_intent
 from app.services.tools_registry import SAFE_WRITE_TOOLS, TOOL_REGISTRY, execute_tool, get_tools_for_mode
 
 logger = logging.getLogger('app.mcp')
@@ -14,179 +19,16 @@ logger = logging.getLogger('app.mcp')
 MAX_TOOL_RESULT_CHARS = 1500
 LOCAL_MAX_TOOLS = 14
 
-LIMA_TZ = ZoneInfo('America/Lima')
 
-_DIAS_ES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
-_MESES_ES = [
-    'enero',
-    'febrero',
-    'marzo',
-    'abril',
-    'mayo',
-    'junio',
-    'julio',
-    'agosto',
-    'septiembre',
-    'octubre',
-    'noviembre',
-    'diciembre',
-]
+def resolve_system_prompt(user_role, user_id=None, mode='grande', tools=None):
+    """Prompt remoto completo (FECHA · REGLAS · CATÁLOGO · ACCESO).
 
-
-def get_current_date_context():
-    """Fecha actual en America/Lima para que el LLM nunca adivine 'hoy'."""
-    now = datetime.now(LIMA_TZ)
-    fecha = f'{_DIAS_ES[now.weekday()]} {now.day} de {_MESES_ES[now.month - 1]} de {now.year}'
-    return (
-        f"Hoy es {fecha}. Usa SIEMPRE esta fecha como referencia para 'hoy'. "
-        'Todos los usuarios están en la zona horaria America/Lima (UTC-5).'
-    )
-
-
-SYSTEM_PROMPTS = {
-    'admin': (
-        'Eres Diego, el asistente de IA del Centro Juan Pablo II, un centro de salud mental en Perú.\n'
-        'Eres un chatbot de ERP que ejecuta ACCIONES REALES en el sistema.\n\n'
-        'CRITICAL RULES:\n'
-        '- ALWAYS respond in Spanish.\n'
-        '- Be concise: max 3-5 lines per response.\n'
-        '- NEVER invent, guess, or fabricate ANY data. ONLY use EXACT values from tool results.\n'
-        '- NEVER generate HTML, JavaScript, CSS, or code. You are a chatbot, not a code generator.\n'
-        '- NEVER output code blocks, <html>, <script>, <table>, or any markup.\n'
-        '- If you don\'t have data from a tool, and a tool exists that could answer the question, ALWAYS call that tool first. Only reply "No tengo esos datos" after calling a tool and receiving no data.\n'
-        '- NEVER modify, estimate, or "fill in" values. Report EXACTLY what the tool returned.\n'
-        '- If a tool result is truncated, say "el resultado fue truncado" and show what you received.\n'
-        '- NEVER show your reasoning process. Only show the final result.\n'
-        '- When listing items, show a SHORT summary (count + first 5 names).\n'
-        '- For payments: ALWAYS ask patient, amount, method, date BEFORE registering.\n'
-        '- Before deleting, confirm with the user.\n\n'
-        'TOOL FORMAT (you MUST call tools to get real data):\n'
-        'Option 1: <function=search_patients{"query": "Carlos"}</function>\n'
-        'Option 2: search_patients(query: "Carlos")\n'
-        'Both formats work. ALWAYS include the arguments.\n'
-        'WRONG: search_patients  <- missing arguments, WILL FAIL\n\n'
-        'EXAMPLE of a correct tool call:\n'
-        'User: "Busca al paciente Carlos"\n'
-        'You: <function=search_patients{"query": "Carlos"}</function>\n\n'
-        'EXAMPLE with multiple params:\n'
-        'User: "Registra pago de Juan por 100 soles en efectivo"\n'
-        'You: <function=register_payment{"patient_id": 5, "amount": 100, "method": "Efectivo", "payment_date": "2026-08-18"}</function>\n\n'
-        'TOOLS BY CATEGORY:\n\n'
-        'PATIENTS/USERS: search_patients, list_patients, get_patient_detail, list_users, get_therapist_patients (pacientes asignados a un terapeuta), get_user_detail, create_user, delete_user, assign_therapist, update_patient, toggle_user_status\n'
-        'SESSIONS: get_sessions, get_sessions_day, schedule_programmed_session, update_session_plan, cancel_session, complete_session, batch_create_sessions\n'
-        'INCIDENTS: create_incident, list_incidents, get_incident_detail, update_incident_status, assign_incident\n'
-        'BRANCHES: list_sedes, get_sede_stats, list_patient_groups, create_patient_group\n'
-        'FINANCE: get_financial_summary (use month/year params for past months), get_payment_history, register_payment, cancel_payment (delete a payment by ID), edit_payment (modify amount/method/date/status/receipt_url), get_debtors, send_payment_reminder, list_expenses, create_expense, get_therapist_financials, get_debt_summary, compare_periods (compare 2 months)\n'
-        'REPORTS: generate_weekly_report, get_weekly_summary, get_monthly_reports, get_therapist_efficiency, get_user_growth (user registration metrics by month)\n'
-        'MESSAGING: broadcast_message, send_direct_message, get_notifications, mark_notifications_read\n'
-        'CONTRACTS: list_contracts\n\n'
-        'PAYMENT WORKFLOW:\n'
-        '1. search_patients to find the patient ID\n'
-        '2. Ask: amount, method (Efectivo/Yape/Transferencia/IA/Copilot), date\n'
-        '3. Only THEN call register_payment with ALL 4 params\n'
-        '4. Confirm the result\n\n'
-        'VOUCHER IMAGE PROCESSING:\n'
-        'When user sends an image (voucher/comprobante):\n'
-        '1. The frontend uploads image to /mcp/upload and gets OCR data\n'
-        '2. OCR extracts: amount, method, date, patient_hint\n'
-        '3. Use ONLY the OCR data provided - NEVER invent or guess values\n'
-        '4. If OCR returns null for a field, ASK the user for that data\n'
-        '5. Confirm all extracted data with user before registering\n'
-        '6. Store image URL as receipt_url in the payment\n'
-        '7. NEVER say "Juan Pérez" or "S/100" if OCR did not return those values\n\n'
-        'EDITING PAYMENTS:\n'
-        '1. get_payment_history(patient_id) to find the payment ID\n'
-        '2. edit_payment(payment_id, amount=..., method=..., payment_date=..., status=..., receipt_url=...)\n'
-        '3. Confirm changes to user\n\n'
-        'DELETING PAYMENTS:\n'
-        '1. get_payment_history(patient_id) to find the payment ID\n'
-        '2. Show user the payment details and ask for confirmation\n'
-        '3. cancel_payment(payment_id) — ONLY after user confirms\n\n'
-        'FINANCIAL QUERIES:\n'
-        '- get_financial_summary with month=5, year=2026 for May 2026\n'
-        '- ALWAYS include year parameter (current year is 2026)\n'
-        '- compare_periods to compare any two months side by side\n'
-        '- get_user_growth for registration trends\n\n'
-        'MESSAGING WORKFLOW:\n'
-        '1. search_patients or list_users to find the user ID\n'
-        '2. send_direct_message with receiver_id AND content (BOTH required)\n'
-    ),
-    'supervisor': (
-        'You are the AI assistant for Centro Juan Pablo II.\n'
-        'You can query patients, sessions, payments, incidents, reports, branches, contracts.\n'
-        'You can create sessions, incidents, users, groups, expenses and update data.\n'
-        'Respond in Spanish, max 5 lines. Use tools for real data.\n'
-        'For payments ask: patient, amount, method, date BEFORE registering.\n'
-        'NEVER show your internal process. Only the final result.\n'
-        'TOOL FORMAT: <function=name{"param": "value"}</function>  ← ALWAYS include JSON args\n'
-    ),
-    'terapista': (
-        'You are the AI assistant for Centro Juan Pablo II.\n'
-        'You can view your sessions, assigned patients, weekly/monthly reports.\n'
-        'You can create sessions, complete them, cancel them and generate reports.\n'
-        'Respond in Spanish, max 5 lines.\n'
-        'NEVER show your internal process. Only the final result.\n'
-        'TOOL FORMAT: <function=name{"param": "value"}</function>  ← ALWAYS include JSON args\n'
-    ),
-    'jugador': (
-        'You are the AI assistant for Centro Juan Pablo II.\n'
-        'You can view your sessions and profile.\n'
-        'Respond in Spanish, max 3 lines.\n'
-    ),
-}
-
-
-def get_configured_system_prompt():
-    """Prompt editado en el módulo de configuración del bot, si existe."""
-    try:
-        from app.models.bot_config import BotConfig
-
-        configured = (BotConfig.get_or_create().system_prompt or '').strip()
-        return configured or None
-    except Exception:
-        return None
-
-
-def _substitute_tokens(prompt, user_role, user_id):
-    prompt = prompt.replace('{rol}', ROLE_NAMES_ES.get(user_role, user_role))
-    prompt = prompt.replace('{rol_id}', user_role)
-    prompt = prompt.replace('{user_id}', str(user_id or ''))
-    try:
-        from app.models import User
-
-        u = User.query.get(int(user_id)) if user_id else None
-        name = ''
-        if u:
-            name = getattr(u, 'full_name', None) or getattr(u, 'username', '') or ''
-        prompt = prompt.replace('{usuario}', name)
-    except Exception:
-        pass
-    return prompt
-
-
-def get_role_access_block(user_role, mode='grande'):
-    """Refuerza en runtime qué puede y qué NO puede hacer el rol actual."""
-    role_name = ROLE_NAMES_ES.get(user_role, user_role)
-    allowed = get_tools_for_mode(mode, user_role)
-    names = ', '.join(t['function']['name'] for t in allowed) or 'ninguna'
-    return (
-        f'\n\nACCESO Y PERMISOS DEL USUARIO (nivel: {role_name}):\n'
-        f'- Herramientas permitidas para tu nivel (SOLO estas): {names}\n'
-        '- NO puedes usar ninguna otra herramienta ni elevar tu nivel de acceso.\n'
-        '- PROHIBIDO: inventar resultados, afirmar que una operación se completó sin confirmación '
-        'de la herramienta, y ejecutar acciones de escritura sin confirmación del usuario.\n'
-        '- Si el usuario pide algo fuera de tu nivel de acceso, responde que no tienes permisos '
-        'y sugiere solicitarlo al administrador o supervisor.'
-    )
-
-
-def resolve_system_prompt(user_role, user_id=None, mode='grande'):
-    """Prompt base: configuración del bot > prompt de personalidad, + acceso según rol."""
-    configured = get_configured_system_prompt()
-    base = configured if configured else PERSONALITY_PROMPT
-    base = _substitute_tokens(base, user_role, user_id)
-    base += get_role_access_block(user_role, mode=mode)
-    return base
+    El catálogo y el bloque de acceso se generan en ``prompt_builder`` desde
+    las ``tools`` permitidas del rol; el admin puede sobrescribir las reglas
+    con ``BotConfig.system_prompt`` (fallback: PERSONALITY_PROMPT)."""
+    if tools is None:
+        tools = get_tools_for_mode(mode, user_role)
+    return build_system_prompt(user_role, user_id=user_id, mode=mode, tools=tools, compact=False)
 
 
 MAX_ITERATIONS = 6
@@ -204,8 +46,18 @@ TOOL_CALL_PATTERN = re.compile(
     re.DOTALL,
 )
 
+# Variante con paréntesis que emiten los modelos pequeños: cierran el hint
+# <function=nombre{...}> con () en vez de </function>. Sin este patrón la llamada
+# cruda se filtraba a la burbuja del chat (bug de producción 007-F).
+_PAREN_FUNC_PATTERN = re.compile(
+    r'\(\s*function\s*=\s*(\w+)\s*(\{.*?\})?(?=\s*\))',
+    re.DOTALL,
+)
+
 # Broader fallback patterns for small models that deviate from the exact format
 _FALLBACK_PATTERNS = [
+    # Parenthesized variant: (function=search_patients {"query": "Carlos"})
+    _PAREN_FUNC_PATTERN,
     # Without braces: <function=search_patients</function> or <function=search_patients></function>
     re.compile(r'<function=(\w+)\s*</function>', re.DOTALL),
     # With single quotes: <function=search_patients{'query': 'Carlos'}</function>
@@ -223,6 +75,21 @@ _PAREN_PATTERN = re.compile(
     r'(\w+)\s*\(([^)]*)\)',
     re.DOTALL,
 )
+
+# Cualquiera de las dos sintaxis, para limpiar llamadas del texto visible.
+_TOOL_CALL_ANY_RE = re.compile(
+    r'<function=\w+.*?(?:</function>|/\s*>)'
+    r'|\(\s*function\s*=\s*\w+\s*(?:\{.*?\})?(?=\s*\))',
+    re.DOTALL,
+)
+
+# Nombres de herramienta invocados en cualquiera de las dos sintaxis.
+_UNKNOWN_CALL_RE = re.compile(r'(?:<|\(\s*)function\s*=\s*(\w+)')
+
+
+def strip_tool_calls(text):
+    """Elimina llamadas a funciones (ángulos o paréntesis) del texto visible."""
+    return _TOOL_CALL_ANY_RE.sub('', text or '')
 
 
 def _parse_paren_args(args_str):
@@ -604,12 +471,9 @@ def _select_local_tools(tools, message, user_role=None, k=None):
 
     # El prompt local siempre incluye el reloj: el bot lo necesita para
     # cualquier referencia temporal y es lo mas barato posible.
-    if 'get_current_datetime' in permitidas and not any(
-        t.name == 'get_current_datetime' for t in candidates
-    ):
+    if 'get_current_datetime' in permitidas and not any(t.name == 'get_current_datetime' for t in candidates):
         rel = next(
-            t for t in _get_retriever().search('fecha hora actual', role=role, k=1)
-            if t.name == 'get_current_datetime'
+            t for t in _get_retriever().search('fecha hora actual', role=role, k=1) if t.name == 'get_current_datetime'
         )
         candidates = [rel] + candidates
 
@@ -623,96 +487,6 @@ def _select_local_tools(tools, message, user_role=None, k=None):
 # ante una consulta de datos inequívoca sobre reportes/estadísticas.
 # Formato por entrada: (tool_name, keywords, args) donde args puede ser un dict
 # fijo, la string 'month' (se extrae el mes del mensaje) o None (sin args).
-_LOCAL_FORCE_TOOLS = (
-    (
-        'get_sessions_day',
-        (
-            'que sesiones hay',
-            'que sesiones',
-            'sesiones hay para',
-            'sesiones para el',
-            'sesiones del dia',
-            'sesiones de hoy',
-            'sesiones de mañana',
-            'agenda del',
-            'agenda de hoy',
-            'agenda de mañana',
-            'que hay el',
-            'citas del dia',
-            'citas de hoy',
-        ),
-        'session_day',
-    ),
-    (
-        'list_sedes',
-        (
-            'cuantas sedes',
-            'cuántas sedes',
-            'que sedes',
-            'qué sedes',
-            'sedes tiene',
-            'sedes del centro',
-            'lista de sedes',
-            'donde estan las sedes',
-            'dónde están las sedes',
-        ),
-        None,
-    ),
-    (
-        'create_group_sessions',
-        (
-            'grupo y se hacen las sesiones',
-            'se crea un grupo de',
-            'crea un grupo de',
-            'crear un grupo de',
-            'creamos un grupo de',
-            'grupo de sesiones',
-        ),
-        'group_session',
-    ),
-    ('get_debtors', ('moroso', 'morosos', 'deudor', 'deudores', 'cuanto debe', 'deuda', 'saldos pendientes'), None),
-    (
-        'list_expenses',
-        ('gastos de', 'gastos en', 'gastos del mes', 'gastos registrados', 'gasto'),
-        'month',
-    ),
-    (
-        'get_patient_stats',
-        (
-            'cuántos pacientes',
-            'cuantos pacientes',
-            'cuántos paciente',
-            'cuantos paciente',
-            'número de pacientes',
-            'numero de pacientes',
-            'cantidad de pacientes',
-            'total de pacientes',
-            'cuántos hay de pacientes',
-        ),
-        None,
-    ),
-    (
-        'list_patients',
-        (
-            'cuántos pacientes',
-            'cuantos pacientes',
-            'cuántos paciente',
-            'cuantos paciente',
-            'pacientes tiene el centro',
-            'cuántos pacientes tiene el centro',
-        ),
-        None,
-    ),
-    (
-        'get_financial_summary',
-        ('ingreso', 'ingresos', 'utilidad', 'ganancia', 'recaud', 'resumen financiero', 'finanzas'),
-        None,
-    ),
-    ('get_user_growth', ('crecimiento', 'nuevos usuarios', 'registro de usuarios', 'cuántos se registr'), None),
-    ('get_monthly_collection', ('recaudaci', 'total cobrado', 'cobrado este mes', 'collection'), None),
-)
-
-
 _LOCAL_MONTH_ABBR = {
     'ene': 1,
     'feb': 2,
@@ -840,9 +614,7 @@ def _extract_date_arg(message):
 def _normalize_text(value):
     import unicodedata
 
-    return ''.join(
-        c for c in unicodedata.normalize('NFD', str(value or '')) if unicodedata.category(c) != 'Mn'
-    ).lower()
+    return ''.join(c for c in unicodedata.normalize('NFD', str(value or '')) if unicodedata.category(c) != 'Mn').lower()
 
 
 def _find_user_id_by_words(full_name, roles=('jugador',)):
@@ -870,7 +642,9 @@ def _default_therapist_id():
 
 
 def _extract_session_time(msg):
-    m = re.search(r'(\d{1,2})(?::(\d{2}))?\s*(?:am|a\.m\.|hrs?)?\s*(?:a\s+las?|-)\s*(\d{1,2})(?::(\d{2}))?\s*(?:am|a\.m\.)', msg)
+    m = re.search(
+        r'(\d{1,2})(?::(\d{2}))?\s*(?:am|a\.m\.|hrs?)?\s*(?:a\s+las?|-)\s*(\d{1,2})(?::(\d{2}))?\s*(?:am|a\.m\.)', msg
+    )
     if not m:
         m = re.search(r'(\d{1,2})[:.](\d{2})\s*(?:a\s+las?|-)\s*(\d{1,2})[:.](\d{2})', msg)
     if m:
@@ -942,25 +716,29 @@ def _build_group_session_args(message):
 
 def _force_intent_tool(message, local_tools, user_role):
     """Si el router local no llamó ninguna tool para un reporte inequívoco,
-    fuerza la ejecución determinista de la tool de reporte del intent."""
+    fuerza la ejecución determinista de la tool elegida por el índice
+    GENERADO (``tool_intents.match_intent``), sin keywords hardcodeadas.
+
+    Solo decide la tool: los argumentos los resuelven los extractores
+    genéricos de fecha/mes/grupo de este módulo."""
     if not local_tools:
         return None
-    msg = (message or '').lower()
     allowed = {t['function']['name'] for t in local_tools}
-    for tool_name, keywords, arg_spec in _LOCAL_FORCE_TOOLS:
-        if any(k in msg for k in keywords) and tool_name in allowed:
-            if arg_spec == 'month':
-                resolved_args = _extract_month_arg(message)
-            elif arg_spec == 'session_day':
-                resolved_args = _extract_date_arg(message) or {}
-            elif arg_spec == 'group_session':
-                resolved_args = _build_group_session_args(message)
-                if not resolved_args:
-                    continue
-            else:
-                resolved_args = arg_spec
-            return (tool_name, resolved_args or {})
-    return None
+    hit = match_intent(message, allowed)
+    if not hit:
+        return None
+    tool_name, arg_spec = hit
+    if arg_spec == 'month':
+        resolved_args = _extract_month_arg(message)
+    elif arg_spec == 'date':
+        resolved_args = _extract_date_arg(message) or {}
+    elif arg_spec == 'group_session':
+        resolved_args = _build_group_session_args(message)
+        if not resolved_args:
+            return None
+    else:
+        resolved_args = {}
+    return (tool_name, resolved_args or {})
 
 
 def _compact_local_schema(tool):
@@ -992,17 +770,8 @@ def _build_local_system_prompt(user_role, user_id, mode, message, selected_tools
     Inyecta ademas las entidades ya resueltas contra la base de datos, para que
     el modelo use identificadores reales en vez de inventarlos.
     """
-    base = LOCAL_BASE_PROMPT.replace('{rol}', ROLE_NAMES_ES.get(user_role, user_role))
-    base = base.replace('{rol_id}', user_role)
-    base = base.replace('{user_id}', str(user_id or ''))
-    if selected_tools:
-        names = ', '.join(t['function']['name'] for t in selected_tools)
-    else:
-        allowed = get_tools_for_mode(mode, user_role)
-        names = ', '.join(t['function']['name'] for t in allowed) or 'ninguna'
-    base += f'\n\nHerramientas disponibles este turno: {names}'
-
-    context = get_current_date_context() + '\n\n' + base
+    tools = selected_tools or get_tools_for_mode(mode, user_role)
+    context = build_system_prompt(user_role, user_id=user_id, mode=mode, tools=tools, compact=True)
     try:
         from app.services.entity_resolver import resolve_entities
 
@@ -1010,36 +779,11 @@ def _build_local_system_prompt(user_role, user_id, mode, message, selected_tools
         if entities:
             context += (
                 '\n\nDATOS VERIFICADOS DE LA BASE (usa estos identificadores tal cual, '
-                'no los inventes ni los calcules):\n'
-                + entities.to_prompt_context()
+                'no los inventes ni los calcules):\n' + entities.to_prompt_context()
             )
     except Exception:
         pass
     return context
-
-
-def _build_tool_prompt(tools):
-    """Build a compact text listing of available tools."""
-    lines = [
-        'AVAILABLE TOOLS (use format: <function=name{"param": "value"}</function>):',
-        'IMPORTANT: ALWAYS include JSON args in {}. Without {} it FAILS.',
-        'IMPORTANT: For any tool that REGISTERS, UPDATES, DELETES, or CHANGES STATE (payments, users, sessions, '
-        'incidents, expenses, messages, contracts, patient groups, reminders), you MUST first collect ALL required '
-        'parameters from the user one by one. If a required parameter is missing, ASK for it. '
-        'Only call the tool once you have every required value. The system will then ask the user to confirm before executing.',
-        '',
-    ]
-    for t in tools:
-        fn = t['function']
-        params = fn.get('parameters', {}).get('properties', {})
-        required = fn.get('parameters', {}).get('required', [])
-        param_parts = []
-        for pname, pinfo in params.items():
-            req = '*' if pname in required else ''
-            param_parts.append(f'{pname}{req}:{pinfo.get("type", "string")}')
-        params_str = ', '.join(param_parts) if param_parts else 'none'
-        lines.append(f'- {fn["name"]}: {fn["description"]} | Params: {params_str}')
-    return '\n'.join(lines)
 
 
 class MCPService:
@@ -1064,7 +808,7 @@ class MCPService:
                     'Si los datos son largos, resume con conteo + top 3.'
                 )
         else:
-            system_prompt = resolve_system_prompt(user_role, user_id=user_id, mode=mode)
+            system_prompt = resolve_system_prompt(user_role, user_id=user_id, mode=mode, tools=tools)
 
             if telegram_mode:
                 system_prompt += (
@@ -1096,11 +840,8 @@ class MCPService:
             except Exception:
                 pass
 
-        if local_mode:
-            full_system = system_prompt
-        else:
-            tool_prompt = _build_tool_prompt(tools)
-            full_system = get_current_date_context() + '\n\n' + system_prompt + '\n\n' + tool_prompt
+        # Ambas ramas ya entregan el system prompt completo (fecha + catálogo).
+        full_system = system_prompt
 
         messages = [{'role': 'system', 'content': full_system}]
 
@@ -1212,7 +953,7 @@ class MCPService:
                     # Guard against hallucinated tool names: if the model emits a
                     # <function=X{...}> call for a tool that does not exist, re-prompt
                     # instead of silently passing the fabricated text to the user.
-                    m = re.search(r'<function=(\w+)', content)
+                    m = _UNKNOWN_CALL_RE.search(content)
                     if m and m.group(1) not in TOOL_REGISTRY:
                         unknown = m.group(1)
                         logger.warning(f'MCP hallucinated unknown tool: {unknown}')
@@ -1292,7 +1033,7 @@ class MCPService:
                 # Si la respuesta afirma un dato del sistema sin haber ejecutado
                 # herramienta (conteos/lists/estados), re-consulta hasta 2 veces
                 # pidiendo la llamada real antes de devolverla como final.
-                clean_content = re.sub(r'<function=\w+.*?</function>', '', content).strip()
+                clean_content = strip_tool_calls(content).strip()
                 if (
                     not (confirmed_tool or {}).get('name')
                     and corrections < 2

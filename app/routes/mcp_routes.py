@@ -5,9 +5,10 @@ import os
 import re
 import tempfile
 import uuid
+from contextlib import nullcontext
 
 import requests as req
-from flask import Blueprint, Response, current_app, jsonify, request
+from flask import Blueprint, Response, current_app, has_app_context, jsonify, request
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 
 from app.auth_compat import current_user
@@ -20,16 +21,16 @@ from app.services.llm_client import (
 from app.services.mcp_service import (
     MCPService,
     _build_local_system_prompt,
-    _build_tool_prompt,
     _force_intent_tool,
     _is_ollama_primary,
     _is_smalltalk,
     _parse_text_tool_call,
     _select_local_tools,
     _trim_tool_result,
-    get_current_date_context,
     resolve_system_prompt,
+    strip_tool_calls,
 )
+from app.services.mcp_trace import TraceBuilder
 from app.services.tools_registry import (
     SAFE_WRITE_TOOLS,
     TOOL_REGISTRY,
@@ -416,10 +417,15 @@ def mcp_chat_stream():
         return resp
 
     def generate():
-        with _app.app_context():
+        # Solo empuja un app_context si no hay ninguno activo: en el test client
+        # (y en cualquier request viva) hacerlo reinicia la sesión de SQLAlchemy
+        # y rompe la transacción anidada del fixture de tests.
+        _ctx = nullcontext() if has_app_context() else _app.app_context()
+        with _ctx:
+            trace = TraceBuilder()
             try:
-                # Send thinking indicator
-                yield f'data: {json.dumps({"type": "thinking", "content": "Evaluando tu petición..."})}\n\n'
+                # Send thinking indicator (legacy payload + structured step)
+                yield trace.thinking('Evaluando tu petición...', 'route')
 
                 tools = get_tools_for_mode(mode, user.role)
                 local_mode = _is_ollama_primary()
@@ -429,9 +435,8 @@ def mcp_chat_stream():
                         user.role, user.id, mode, message, selected_tools=local_tools
                     )
                 else:
-                    tool_prompt = _build_tool_prompt(tools)
-                    base_prompt = resolve_system_prompt(user.role, user_id=user.id, mode=mode)
-                    full_system = get_current_date_context() + '\n\n' + base_prompt + '\n\n' + tool_prompt
+                    # resolve_system_prompt ya incluye fecha + catálogo + acceso
+                    full_system = resolve_system_prompt(user.role, user_id=user.id, mode=mode, tools=tools)
                 messages = [{'role': 'system', 'content': full_system}]
 
                 if history:
@@ -456,9 +461,11 @@ def mcp_chat_stream():
                         f'<function={cname}{json.dumps(cargs, ensure_ascii=False)}</function>'
                     )
                     if _requires_confirmation(cname):
-                        msg = {'type': 'thinking', 'content': f'Ejecutando la acción confirmada: llamando a {cname}...'}
-                        yield f'data: {json.dumps(msg)}\n\n'
+                        yield trace.thinking(
+                            f'Ejecutando la acción confirmada: llamando a {cname}...', 'tool', tool=cname
+                        )
                         tc_data = {'type': 'tool_call', 'name': cname, 'args': cargs}
+                        trace.tool_call(cname, cargs)
                         yield f'data: {json.dumps(tc_data, ensure_ascii=False)}\n\n'
 
                         result = execute_tool(cname, cargs, user_id=user.id, role=user.role)
@@ -466,6 +473,7 @@ def mcp_chat_stream():
 
                         trimmed = _trim_tool_result(result)
                         success = not (isinstance(result, dict) and 'error' in result)
+                        trace.tool_result(cname, success)
                         tr_data = {'type': 'tool_result', 'name': cname, 'result': trimmed, 'success': success}
                         yield f'data: {json.dumps(tr_data, ensure_ascii=False)}\n\n'
 
@@ -490,7 +498,7 @@ def mcp_chat_stream():
                         if chips:
                             yield f'data: {json.dumps({"type": "chips", "chips": chips}, ensure_ascii=False)}\n\n'
 
-                        yield f'data: {json.dumps({"type": "thinking", "content": "Procesando resultado..."})}\n\n'
+                        yield trace.thinking('Procesando resultado...', 'result')
 
                 # Intent determinista: si el mensaje corresponde a un reporte inequívoco
                 # (agenda de una fecha, sedes, gastos, deudores, grupo de sesiones), se ejecuta
@@ -517,6 +525,7 @@ def mcp_chat_stream():
                             done_payload = {
                                 'type': 'done',
                                 'has_tool_call': False,
+                                'trace': trace.as_list(),
                             }
                             yield f'data: {json.dumps(done_payload)}\n\n'
                             return
@@ -535,13 +544,14 @@ def mcp_chat_stream():
                                     llm_stream_kwargs['tools'] = local_tools
                             for chunk in llm_chat_stream(messages, **llm_stream_kwargs):
                                 full_content += chunk
-                                clean = re.sub(r'<function=\w+.*?</function>', '', chunk)
+                                clean = strip_tool_calls(chunk)
                                 if clean.strip():
                                     streamed_text += clean
                                     _cd = {'type': 'chunk', 'content': clean}
                                     yield f'data: {json.dumps(_cd, ensure_ascii=False)}\n\n'
 
                         if not full_content.strip():
+                            trace.add('synth', 'No pude generar una respuesta.')
                             msg = {'type': 'text', 'content': 'No pude generar una respuesta.'}
                             yield f'data: {json.dumps(msg)}\n\n'
                             break
@@ -564,8 +574,9 @@ def mcp_chat_stream():
                         if tool_name:
                             # Never re-execute a tool that was already confirmed & run above.
                             if confirmed_tool.get('name') and tool_name == confirmed_tool['name'] and last_result_str:
-                                msg = {'type': 'thinking', 'content': f'Analizando el resultado de {tool_name}...'}
-                                yield f'data: {json.dumps(msg)}\n\n'
+                                yield trace.thinking(
+                                    f'Analizando el resultado de {tool_name}...', 'synth', tool=tool_name
+                                )
                                 tool_call_match = re.search(
                                     r'<function=.*?(?:</function>|/\s*>)', full_content, re.DOTALL
                                 )
@@ -588,6 +599,7 @@ def mcp_chat_stream():
 
                             # Send tool_call event
                             tc_data = {'type': 'tool_call', 'name': tool_name, 'args': tool_args}
+                            trace.tool_call(tool_name, tool_args)
                             yield f'data: {json.dumps(tc_data, ensure_ascii=False)}\n\n'
 
                             # Write tools require explicit human confirmation before running.
@@ -606,6 +618,7 @@ def mcp_chat_stream():
                                         'args': tool_args,
                                         'tool_call_text': full_content,
                                     },
+                                    'trace': trace.as_list(),
                                 }
                                 yield f'data: {json.dumps(done_payload, ensure_ascii=False)}\n\n'
                                 return
@@ -616,6 +629,7 @@ def mcp_chat_stream():
                             # Send trimmed tool_result
                             trimmed = _trim_tool_result(result)
                             success = not (isinstance(result, dict) and 'error' in result)
+                            trace.tool_result(tool_name, success)
                             tr_data = {'type': 'tool_result', 'name': tool_name, 'result': trimmed, 'success': success}
                             yield f'data: {json.dumps(tr_data, ensure_ascii=False)}\n\n'
 
@@ -644,12 +658,12 @@ def mcp_chat_stream():
 
                             # Send thinking indicator for next iteration
                             thinking_msg = f'Analizando el resultado de {tool_name}...'
-                            yield f'data: {json.dumps({"type": "thinking", "content": thinking_msg})}\n\n'
+                            yield trace.thinking(thinking_msg, 'synth', tool=tool_name)
                             continue
 
                         # No more tool calls — check if the model affirmed a system datum
                         # without having called any tool.  If so, re-prompt up to 2 times.
-                        clean_final = re.sub(r'<function=\w+.*?</function>', '', full_content).strip()
+                        clean_final = strip_tool_calls(full_content).strip()
                         if (
                             not confirmed_tool.get('name')
                             and corrections < 2
@@ -670,7 +684,7 @@ def mcp_chat_stream():
                                 }
                             )
                             thinking_retry = 'Los datos deben venir de una herramienta. Reintentando...'
-                            yield f'data: {json.dumps({"type": "thinking", "content": thinking_retry})}\n\n'
+                            yield trace.thinking(thinking_retry, 'guard')
                             continue
 
                         # No more tool calls — final response already streamed
@@ -688,7 +702,7 @@ def mcp_chat_stream():
                                 if tn:
                                     # Never re-execute an already-confirmed tool.
                                     if confirmed_tool.get('name') and tn == confirmed_tool['name'] and last_result_str:
-                                        yield f'data: {json.dumps(msg)}\n\n'
+                                        yield trace.thinking(f'Analizando el resultado de {tn}...', 'synth', tool=tn)
                                         tool_call_match = re.search(
                                             r'<function=.*?(?:</function>|/\s*>)', failed_gen, re.DOTALL
                                         )
@@ -710,6 +724,7 @@ def mcp_chat_stream():
                                         continue
 
                                     tc_data = {'type': 'tool_call', 'name': tn, 'args': ta}
+                                    trace.tool_call(tn, ta)
                                     yield f'data: {json.dumps(tc_data, ensure_ascii=False)}\n\n'
 
                                     if _requires_confirmation(tn):
@@ -723,6 +738,7 @@ def mcp_chat_stream():
                                         done_payload = {
                                             'type': 'done',
                                             'pending_confirm': {'name': tn, 'args': ta, 'tool_call_text': failed_gen},
+                                            'trace': trace.as_list(),
                                         }
                                         yield f'data: {json.dumps(done_payload, ensure_ascii=False)}\n\n'
                                         return
@@ -732,6 +748,7 @@ def mcp_chat_stream():
 
                                     trimmed = _trim_tool_result(result)
                                     success = not (isinstance(result, dict) and 'error' in result)
+                                    trace.tool_result(tn, success)
                                     tr_data = {'type': 'tool_result', 'name': tn, 'result': trimmed, 'success': success}
                                     yield f'data: {json.dumps(tr_data, ensure_ascii=False)}\n\n'
 
@@ -761,7 +778,7 @@ def mcp_chat_stream():
                                             {'type': 'chips', 'chips': chips}, ensure_ascii=False
                                         )
                                         yield f'data: {chips_payload}\n\n'
-                                    yield f'data: {json.dumps(msg)}\n\n'
+                                    yield trace.thinking(f'Analizando el resultado de {tn}...', 'synth', tool=tn)
                                     continue
 
                         if iteration >= 2:
@@ -779,11 +796,12 @@ def mcp_chat_stream():
                     )
                     yield f'data: {json.dumps({"type": "text", "content": warning}, ensure_ascii=False)}\n\n'
 
-                yield f'data: {json.dumps({"type": "done", "tool_calls": tool_calls_log}, ensure_ascii=False)}\n\n'
+                done_final = {'type': 'done', 'tool_calls': tool_calls_log, 'trace': trace.as_list()}
+                yield f'data: {json.dumps(done_final, ensure_ascii=False)}\n\n'
 
             except Exception as e:
                 logger.error(f'MCP stream error: {e}', exc_info=True)
-                yield f'data: {json.dumps({"type": "error", "error": str(e)})}\n\n'
+                yield f'data: {json.dumps({"type": "error", "error": str(e), "trace": trace.as_list()})}\n\n'
 
     headers = {
         'Cache-Control': 'no-cache',

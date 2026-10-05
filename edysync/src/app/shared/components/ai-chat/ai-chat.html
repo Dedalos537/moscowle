@@ -120,7 +120,7 @@
           </div>
         }
 
-        @for (msg of messages; track $index) {
+        @for (msg of messages; track $index; let last = $last) {
           <div class="message {{ msg.role }}" [style.animation-delay]="'0.05s'">
             @if (msg.error) {
               <div class="error-msg">
@@ -133,25 +133,42 @@
               }
               <div [innerHTML]="sanitize(msg.content)"></div>
             }
-            @if (msg.toolCalls && msg.toolCalls.length > 0) {
-              <div class="tool-calls">
-                @for (tc of msg.toolCalls; track tc.name) {
-                  <div class="tool-call" [class.tool-call--error]="!tc.success">
-                    <div class="tool-call-header">
-                      <fa-icon [icon]="['fas', tc.success ? 'check-circle' : 'wrench']" class="tool-icon" [class.text-success]="tc.success"></fa-icon>
-                      <span class="tool-name">{{ tc.name }}</span>
-                      @if (tc.success) {
-                        <span class="tool-badge tool-badge--ok">OK</span>
+            @if (last && !msg.error && msg.role === 'assistant' && msg.trace && msg.trace.length) {
+              <details class="think-panel think-panel--done">
+                <summary class="think-panel__summary">
+                  <fa-icon [icon]="['fas', 'chevron-down']" class="think-panel__chevron"></fa-icon>
+                  <span>Respuesta generada</span>
+                  <span class="think-panel__summary-counts">{{ traceSummary(msg.trace, msg.toolCalls) }}</span>
+                </summary>
+                <div class="think-panel__body">
+                  @for (step of msg.trace; track $index) {
+                    <div class="think-panel__thought">{{ step.text }}</div>
+                  }
+                  @if (msg.toolCalls && msg.toolCalls.length > 0) {
+                    <div class="tool-calls">
+                      @for (tc of msg.toolCalls; track $index) {
+                        <div class="tool-call" [class.tool-call--error]="!tc.success">
+                          <div class="tool-call-header">
+                            <fa-icon [icon]="['fas', tc.success ? 'check-circle' : 'wrench']" class="tool-icon" [class.text-success]="tc.success"></fa-icon>
+                            <span class="tool-name">{{ tc.name }}</span>
+                            @if (tc.success) {
+                              <span class="tool-badge tool-badge--ok">OK</span>
+                            }
+                          </div>
+                          @if (summarizeArgs(tc.args) && summarizeArgs(tc.args) !== '{}') {
+                            <div class="tool-call-args">{{ summarizeArgs(tc.args) }}</div>
+                          }
+                          @if (tc.result) {
+                            <div class="tool-call-result">
+                              <pre>{{ tc.result | slice:0:200 }}{{ tc.result.length > 200 ? '...' : '' }}</pre>
+                            </div>
+                          }
+                        </div>
                       }
                     </div>
-                    @if (tc.result) {
-                      <div class="tool-call-result">
-                        <pre>{{ tc.result | slice:0:200 }}{{ tc.result.length > 200 ? '...' : '' }}</pre>
-                      </div>
-                    }
-                  </div>
-                }
-              </div>
+                  }
+                </div>
+              </details>
             }
           </div>
         }
@@ -169,7 +186,7 @@
                 <span class="think-loop__label">{{ thinkingText }}</span>
               }
             </div>
-            <details class="think-panel">
+            <details class="think-panel" open>
               <summary class="think-panel__summary">
                 <fa-icon [icon]="['fas', 'chevron-down']" class="think-panel__chevron"></fa-icon>
                 <span>Pensamiento y herramientas</span>
@@ -178,13 +195,36 @@
                 }
               </summary>
               <div class="think-panel__body">
-                @if (thinkingLog.length === 0) {
+                @if (thinkingLog.length === 0 && streamToolCalls.length === 0) {
                   <div class="think-panel__tools think-panel__tools--empty">
                     Pensando...
                   </div>
                 } @else {
-                  @for (thought of thinkingLog; track $index) {
-                    <div class="think-panel__thought">{{ thought }}</div>
+                  @for (step of thinkingLog; track $index) {
+                    <div class="think-panel__thought">{{ step.text }}</div>
+                  }
+                  @if (streamToolCalls.length > 0) {
+                    <div class="tool-calls">
+                      @for (tc of streamToolCalls; track $index) {
+                        <div class="tool-call" [class.tool-call--error]="!tc.success">
+                          <div class="tool-call-header">
+                            <fa-icon [icon]="['fas', tc.success ? 'check-circle' : 'wrench']" class="tool-icon" [class.text-success]="tc.success"></fa-icon>
+                            <span class="tool-name">{{ tc.name }}</span>
+                            @if (tc.success) {
+                              <span class="tool-badge tool-badge--ok">OK</span>
+                            }
+                          </div>
+                          @if (summarizeArgs(tc.args) && summarizeArgs(tc.args) !== '{}') {
+                            <div class="tool-call-args">{{ summarizeArgs(tc.args) }}</div>
+                          }
+                          @if (tc.result) {
+                            <div class="tool-call-result">
+                              <pre>{{ tc.result | slice:0:200 }}{{ tc.result.length > 200 ? '...' : '' }}</pre>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
                   }
                 }
               </div>
