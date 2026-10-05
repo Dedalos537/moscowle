@@ -31,9 +31,10 @@ import time
 from pathlib import Path
 
 # ─── FTP Config ───
-FTP_HOST = 'ftp.centrojuanpabloii.com'
-FTP_USER = 'centroju'
-FTP_PASS = '+LC6OXpm0dq6@4'
+# La contrasena NO va en el codigo: se pasa por entorno (FTP_PASS=... python scripts/deploy_cpanel.py).
+FTP_HOST = os.environ.get('FTP_HOST', 'ftp.centrojuanpabloii.com')
+FTP_USER = os.environ.get('FTP_USER', 'centroju')
+FTP_PASS = os.environ.get('FTP_PASS', '')
 
 # ─── Remote paths ───
 REMOTE_BACKEND_DIR = '/moscowle'
@@ -161,7 +162,7 @@ def delete_old_hashed_files(ftp: ftplib.FTP, remote_dir: str):
             try:
                 ftp.delete(filename)
                 deleted += 1
-            except Exception:
+            except Exception:  # noqa: S110 - mejor esfuerzo, se ignora a proposito
                 pass
     if deleted:
         print(f'  Cleaned {deleted} old hashed file(s)')
@@ -183,7 +184,7 @@ def bust_index_cache(ftp: ftplib.FTP, remote_dir: str):
         try:
             ftp.storbinary('STOR index.html', io.BytesIO(new_html.encode('utf-8')))
             print(f'  index.html cache-bust ?v={ts}')
-        except Exception:
+        except Exception:  # noqa: S110 - mejor esfuerzo, se ignora a proposito
             pass
 
 
@@ -263,7 +264,7 @@ def deploy_backend(ftp: ftplib.FTP, dry_run=False):
 
     if dry_run:
         count = 0
-        for root, dirs, files in os.walk(PROJECT_ROOT):
+        for root, _dirs, files in os.walk(PROJECT_ROOT):
             rel = os.path.relpath(root, PROJECT_ROOT)
             if rel == '.':
                 rel = ''
@@ -326,9 +327,15 @@ def main():
     do_backend = not frontend_only
     do_frontend = not backend_only
 
+    if not FTP_PASS:
+        print('ERROR: falta la variable de entorno FTP_PASS (no se guarda en el repositorio).')
+        sys.exit(1)
+
     print(f'Connecting to {FTP_HOST}...')
-    ftp = ftplib.FTP(FTP_HOST)
+    # FTPS: con FTP plano la contrasena viaja en claro.
+    ftp = ftplib.FTP_TLS(FTP_HOST)  # noqa: S321 - FTPS explicito (TLS) con prot_p()
     ftp.login(FTP_USER, FTP_PASS)
+    ftp.prot_p()
     print('Connected!')
 
     if do_backend:

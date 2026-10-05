@@ -11,9 +11,10 @@ import ftplib
 import os
 import re
 
-FTP_HOST = 'ftp.centrojuanpabloii.com'
-FTP_USER = 'centroju'
-FTP_PASS = '+LC6OXpm0dq6@4'
+# La contrasena NO va en el codigo: se pasa por entorno (FTP_PASS=... python scripts/deploy_frontend.py).
+FTP_HOST = os.environ.get('FTP_HOST', 'ftp.centrojuanpabloii.com')
+FTP_USER = os.environ.get('FTP_USER', 'centroju')
+FTP_PASS = os.environ.get('FTP_PASS', '')
 REMOTE_DIR = '/public_html/moscowle.centrojuanpabloii.com'
 LOCAL_DIR = 'edysync/dist/edysync/browser'
 
@@ -73,7 +74,7 @@ def delete_old_hashed_files(ftp, remote_dir):
 
 def upload_dir(ftp, local, remote):
     ftp.cwd('/')
-    for root, dirs, files in os.walk(local):
+    for root, _dirs, files in os.walk(local):
         rel = os.path.relpath(root, local)
         rem = os.path.join(remote, rel).replace('\\', '/') if rel != '.' else remote
         ftp.cwd('/')
@@ -82,7 +83,7 @@ def upload_dir(ftp, local, remote):
                 continue
             try:
                 ftp.cwd(part)
-            except:
+            except Exception:
                 ftp.mkd(part)
                 ftp.cwd(part)
         for f in files:
@@ -100,9 +101,14 @@ if __name__ == '__main__':
     script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     local_dir = os.path.join(script_dir, LOCAL_DIR)
 
+    if not FTP_PASS:
+        raise SystemExit('Falta la variable de entorno FTP_PASS (no se guarda en el repositorio).')
+
     print(f'Connecting to {FTP_HOST}...')
-    ftp = ftplib.FTP(FTP_HOST)
+    # FTPS: con FTP plano la contrasena viaja en claro.
+    ftp = ftplib.FTP_TLS(FTP_HOST)  # noqa: S321 - FTPS explicito (TLS) con prot_p()
     ftp.login(FTP_USER, FTP_PASS)
+    ftp.prot_p()
 
     print('Cleaning old hashed files...')
     delete_old_hashed_files(ftp, REMOTE_DIR)
