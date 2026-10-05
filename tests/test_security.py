@@ -16,11 +16,21 @@ class TestSecurityConfig:
         assert isinstance(limit, int)
         assert limit > 0
 
-    def test_csrf_enabled_in_non_test_config(self):
-        from config import Config
+    def test_csrf_enabled_in_non_test_config(self, monkeypatch):
+        """El valor POR DEFECTO de Config (sin la variable de entorno que los workflows fijan a
+        "False" para poder ejecutar los tests) debe tener CSRF activado."""
+        import importlib
 
-        assert hasattr(Config, 'WTF_CSRF_ENABLED')
-        assert Config.WTF_CSRF_ENABLED is not False
+        import config
+
+        monkeypatch.delenv('WTF_CSRF_ENABLED', raising=False)
+        try:
+            reloaded = importlib.reload(config)
+            assert hasattr(reloaded.Config, 'WTF_CSRF_ENABLED')
+            assert reloaded.Config.WTF_CSRF_ENABLED is True
+        finally:
+            monkeypatch.undo()
+            importlib.reload(config)  # restaura el modulo con el entorno real del test
 
     def test_session_protection_strong(self, app):
         session_config = current_app.config.get('SESSION_PROTECTION')
