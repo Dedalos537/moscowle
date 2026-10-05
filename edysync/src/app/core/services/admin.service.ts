@@ -732,6 +732,11 @@ export class AdminService {
     return this.http.post('/api/telegram/link', { code });
   }
 
+  /** Código de un solo uso para iniciar sesión en el chat del bot con /login (cualquier rol). */
+  getChatLoginCode(): Observable<{ code: string; expires_in: number; instructions: string }> {
+    return this.http.post<{ code: string; expires_in: number; instructions: string }>('/api/telegram/login-code', {});
+  }
+
   unlinkTelegram(chatId: number): Observable<any> {
     return this.http.post('/api/telegram/unlink', { telegram_chat_id: chatId });
   }

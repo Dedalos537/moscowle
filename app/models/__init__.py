@@ -1,3 +1,4 @@
+# ruff: noqa: I001  (el orden de estos imports es deliberado: evita ciclos entre modelos)
 from app.models.admin import *
 from app.models.ai import *
 from app.models.ai_provider import AIProvider as AIProvider
@@ -19,6 +20,7 @@ from app.models.payment import *
 from app.models.refresh_token import RefreshToken as RefreshToken
 from app.models.report import *
 from app.models.service_request import *
+from app.models.chat_login_code import ChatLoginCode as ChatLoginCode
 from app.models.telegram_user import TelegramUser as TelegramUser
 from app.models.user import *
 from app.models.user_session import UserSession as UserSession

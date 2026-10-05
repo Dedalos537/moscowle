@@ -3,6 +3,7 @@ import json
 import logging
 import re
 import tempfile
+import time
 from datetime import UTC, datetime
 
 from flask import current_app
@@ -545,12 +546,21 @@ def confirm_pending_operation(chat_id, confirmed=True):
         _clear_pending_confirmation(chat_id)
         return {'type': 'response', 'response': '❌ Operación cancelada.'}
 
+    from app.models.telegram_user import TelegramUser
     from app.services.mcp_service import MCPService
+
+    # La operacion se ejecuta con la identidad VIGENTE del chat: si se desvinculo
+    # o cambio de usuario tras pedir la confirmacion, no se ejecuta; y el rol se
+    # relee de la BD (el guardado al pedirla puede haber quedado viejo).
+    tg_user = TelegramUser.query.filter_by(telegram_chat_id=chat_id).first()
+    if not tg_user or not tg_user.is_linked or tg_user.admin_user_id != pending_data['user_id']:
+        _clear_pending_confirmation(chat_id)
+        return {'type': 'error', 'response': '⚠️ La sesión de este chat cambió. Repite la solicitud.'}
 
     mcp = MCPService()
     result = mcp.process_message(
         message='Confirmar operación',
-        user_role=pending_data['user_role'],
+        user_role=_real_role_for(pending_data['user_id']),
         user_id=pending_data['user_id'],
         mode=pending_data['mode'],
         confirmed_tool=pending_data['data'],
@@ -584,7 +594,7 @@ def handle_webhook_update(update):
     # Interruptor maestro: si el bot esta apagado no responde a consultas,
     # pero deja gestionar la vinculacion y reencenderlo desde /menu.
     text = (msg.get('text') or '').strip()
-    if not _bot_enabled() and text not in _BOT_OFF_ALLOWED and not text.startswith('/link'):
+    if not _bot_enabled() and text not in _BOT_OFF_ALLOWED and not text.startswith(('/link', '/login')):
         send_telegram_message(
             chat_id,
             '⏸️ El bot está desactivado temporalmente.\nUn administrador puede reencenderlo en Centro de control → Bot.',
@@ -603,6 +613,10 @@ def handle_webhook_update(update):
 
     if msg.get('text', '').startswith('/link'):
         _handle_link(chat_id, msg['text'], tg_user, bot_token)
+        return
+
+    if msg.get('text', '').startswith('/login'):
+        _handle_login(chat_id, msg['text'], msg.get('from', {}), tg_user, bot_token)
         return
 
     if msg.get('text') == '/unlink':
@@ -777,13 +791,113 @@ def _handle_start(chat_id, from_user, tg_user, bot_token):
         chat_id,
         f'{BOT_EMOJI} *¡Bienvenido a {BOT_NAME}!*\n\n'
         f'Soy tu asistente inteligente para el Centro Juan Pablo II.\n\n'
-        f'Para vincular tu cuenta:\n'
-        f'1. Inicia sesión en el panel de admin\n'
-        f'2. Ve a *Centro de Operaciones > Bot de Telegram*\n'
-        f'3. Ingresa este código: `{link_code}`\n\n'
-        f'⏰ El código expira en 10 minutos.',
+        f'Para iniciar sesión:\n'
+        f'1. Entra a la plataforma con tu usuario\n'
+        f'2. Abre *Preferencias > Vincular chat* y pulsa *Generar código*\n'
+        f'3. Escribe aquí `/login CODIGO`\n\n'
+        f'⏰ El código vale 10 minutos y es de un solo uso.\n\n'
+        f'_Administradores: también pueden ingresar este código en el panel (Centro de Operaciones > Bot de Telegram):_ `{link_code}`',
         bot_token,
         reply_markup={'remove_keyboard': True},
+    )
+
+
+_LOGIN_MAX_FAILURES = 5
+_LOGIN_LOCK_SECONDS = 900
+_LOGIN_FAILURES = {}  # chat_id -> (fallos, inicio de la ventana)
+
+_ROLE_LABELS = {
+    'admin': 'Administrador',
+    'supervisor': 'Supervisor',
+    'terapista': 'Terapeuta',
+    'jugador': 'Paciente',
+}
+_ROLE_SCOPE = {
+    'admin': 'Puedes consultar y gestionar todo el centro (las acciones que modifican datos piden confirmación).',
+    'supervisor': 'Puedes consultar y gestionar el centro (las acciones que modifican datos piden confirmación).',
+    'terapista': 'Puedes consultar y gestionar tus pacientes y tus sesiones.',
+    'jugador': 'Puedes consultar información del centro, tu hora y tus notificaciones.',
+}
+
+
+def _login_locked(chat_id):
+    entry = _LOGIN_FAILURES.get(chat_id)
+    if not entry:
+        return False
+    count, started = entry
+    if time.time() - started > _LOGIN_LOCK_SECONDS:
+        _LOGIN_FAILURES.pop(chat_id, None)
+        return False
+    return count >= _LOGIN_MAX_FAILURES
+
+
+def _login_failed(chat_id):
+    count, started = _LOGIN_FAILURES.get(chat_id, (0, time.time()))
+    if time.time() - started > _LOGIN_LOCK_SECONDS:
+        count, started = 0, time.time()
+    _LOGIN_FAILURES[chat_id] = (count + 1, started)
+
+
+def _handle_login(chat_id, text, from_user, tg_user, bot_token):
+    """/login CODIGO: liga el chat al usuario que genero el codigo en la web."""
+    from app import db
+    from app.models.chat_login_code import ChatLoginCode
+    from app.models.telegram_user import TelegramUser
+
+    if _login_locked(chat_id):
+        send_telegram_message(
+            chat_id, '⛔ Demasiados intentos fallidos. Espera 15 minutos y vuelve a intentarlo.', bot_token
+        )
+        return
+
+    parts = text.split(maxsplit=1)
+    if len(parts) < 2 or not parts[1].strip():
+        send_telegram_message(
+            chat_id,
+            'Uso: /login <código>\nGenera tu código en la plataforma: *Perfil > Vincular chat*.',
+            bot_token,
+        )
+        return
+
+    if tg_user and tg_user.is_linked and tg_user.admin_user_id:
+        send_telegram_message(
+            chat_id, 'Este chat ya tiene una sesión iniciada. Usa /unlink para cambiar de cuenta.', bot_token
+        )
+        return
+
+    user = ChatLoginCode.consume(parts[1].strip())
+    if user is None:
+        _login_failed(chat_id)
+        send_telegram_message(
+            chat_id,
+            '❌ Código inválido o expirado. Genera uno nuevo en la plataforma e inténtalo de nuevo.',
+            bot_token,
+        )
+        return
+
+    if not tg_user:
+        tg_user = TelegramUser(
+            telegram_chat_id=chat_id,
+            telegram_user_id=from_user.get('id'),
+            telegram_username=from_user.get('username'),
+            telegram_first_name=from_user.get('first_name'),
+        )
+        db.session.add(tg_user)
+    tg_user.admin_user_id = user.id
+    tg_user.is_linked = True
+    tg_user.link_code = None
+    tg_user.link_code_expires_at = None
+    db.session.commit()
+    _LOGIN_FAILURES.pop(chat_id, None)
+
+    role = user.role or 'jugador'
+    send_telegram_message(
+        chat_id,
+        f'{BOT_EMOJI} *¡Sesión iniciada!*\n\n'
+        f'Hola {user.username or "de nuevo"}. Rol: *{_ROLE_LABELS.get(role, role)}*.\n'
+        f'{_ROLE_SCOPE.get(role, "")}\n\n'
+        'Usa /ayuda para ver lo que puedo hacer y /unlink para cerrar sesión.',
+        bot_token,
     )
 
 
@@ -852,7 +966,7 @@ def _handle_help(chat_id, bot_token):
         f'{BOT_EMOJI} *{BOT_NAME} — Tu asistente inteligente*\n\n'
         '*Comandos:*\n'
         '/start — Vincular cuenta\n'
-        '/link — Cómo vincular tu cuenta\n'
+        '/login <código> — Iniciar sesión con el código de la plataforma\n'
         '/unlink — Desvincuar cuenta\n'
         '/status — Ver estado\n'
         '/ayuda — Esta ayuda\n'

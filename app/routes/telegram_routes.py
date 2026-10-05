@@ -143,6 +143,27 @@ def link_account():
     return jsonify({'status': 'linked', 'telegram_chat_id': tg_user.telegram_chat_id})
 
 
+@telegram_bp.route('/login-code', methods=['POST'])
+@jwt_required()
+def issue_chat_login_code():
+    """Codigo de un solo uso para iniciar sesion en el chat con /login. Lo pide el
+    usuario YA autenticado en la web (cualquier rol); invalida sus codigos previos."""
+    from app.models.chat_login_code import CODE_TTL_MINUTES, ChatLoginCode
+    from app.models.user import User
+
+    user = db.session.get(User, int(get_jwt_identity()))
+    if user is None or not getattr(user, 'is_active', True):
+        return jsonify({'error': 'Usuario no autorizado'}), 403
+    code = ChatLoginCode.issue(user.id)
+    return jsonify(
+        {
+            'code': code,
+            'expires_in': CODE_TTL_MINUTES * 60,
+            'instructions': f'Escribe /login {code} en el chat del bot. Vale {CODE_TTL_MINUTES} minutos y un solo uso.',
+        }
+    )
+
+
 @telegram_bp.route('/status', methods=['GET'])
 @jwt_required()
 @admin_required
