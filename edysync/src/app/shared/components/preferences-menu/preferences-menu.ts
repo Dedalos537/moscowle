@@ -15,13 +15,14 @@ import { ThemeService, type ThemeSchedule } from '../../../core/services/theme.s
 import { GlobalSettingsService } from '../../../core/services/global-settings.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { ChatLink } from '../chat-link/chat-link';
 import { AdminService } from '../../../core/services/admin.service';
 import { NotificationPreferences } from '../../../core/models/notification';
 
 @Component({
   selector: 'app-preferences-menu',
   standalone: true,
-  imports: [FontAwesomeModule, AsyncPipe],
+  imports: [FontAwesomeModule, AsyncPipe, ChatLink],
   template: `
     <div class="relative">
       <button
@@ -301,39 +302,7 @@ import { NotificationPreferences } from '../../../core/models/notification';
                   </button>
                 </div>
 
-                <div class="px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors space-y-2">
-                  <div class="flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-3 min-w-0">
-                      <div class="w-8 h-8 rounded-lg bg-[#229ED9]/15 flex items-center justify-center shrink-0">
-                        <fa-icon [icon]="['fas', 'key']" class="text-[#229ED9] text-sm"></fa-icon>
-                      </div>
-                      <div class="min-w-0">
-                        <p class="text-sm font-semibold text-on-surface">Vincular chat</p>
-                        <p class="text-xs text-on-surface-variant">Inicia sesión en el bot de Telegram</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
-                      [disabled]="chatCodeLoading"
-                      (click)="generateChatCode()"
-                    >{{ chatCodeLoading ? 'Generando…' : (chatCode ? 'Nuevo código' : 'Generar código') }}</button>
-                  </div>
-                  @if (chatCode) {
-                    <div class="flex items-center justify-between gap-2 rounded-lg bg-surface-container-low px-3 py-2">
-                      <div class="min-w-0">
-                        <p class="font-mono text-base font-bold tracking-widest text-on-surface">{{ chatCode }}</p>
-                        <p class="text-xs text-on-surface-variant">Escribe <span class="font-mono">/login {{ chatCode }}</span> en el bot. Vale 10 minutos y un solo uso.</p>
-                      </div>
-                      <button type="button" class="shrink-0 text-xs px-2 py-1 rounded-md text-primary hover:bg-primary/10" (click)="copyChatCode()" aria-label="Copiar comando">
-                        <fa-icon [icon]="['fas', 'copy']"></fa-icon>
-                      </button>
-                    </div>
-                  }
-                  @if (chatCodeError) {
-                    <p class="text-xs text-error">{{ chatCodeError }}</p>
-                  }
-                </div>
+                <app-chat-link></app-chat-link>
 
                 <div class="border-t border-border/10 pt-2 mt-2 space-y-1">
                   <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
@@ -482,10 +451,6 @@ export class PreferencesMenu {
   telegramLoading = false;
   telegramToggling: number | null = null;
 
-  chatCode = '';
-  chatCodeLoading = false;
-  chatCodeError = '';
-
   hours = Array.from({ length: 24 }, (_, i) => i);
   schedule = signal<ThemeSchedule>(this.theme.getSchedule());
 
@@ -534,32 +499,6 @@ export class PreferencesMenu {
         this.cdr.markForCheck();
       },
     });
-  }
-
-  generateChatCode(): void {
-    if (this.chatCodeLoading) return;
-    this.chatCodeLoading = true;
-    this.chatCodeError = '';
-    this.admin.getChatLoginCode().subscribe({
-      next: (res) => {
-        this.chatCode = res.code;
-        this.chatCodeLoading = false;
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.chatCodeError = 'No se pudo generar el código. Inténtalo de nuevo.';
-        this.chatCodeLoading = false;
-        this.cdr.markForCheck();
-      },
-    });
-  }
-
-  copyChatCode(): void {
-    try {
-      void navigator.clipboard?.writeText(`/login ${this.chatCode}`);
-    } catch {
-      /* el portapapeles puede estar bloqueado: el código sigue visible */
-    }
   }
 
   telegramAllEnabled(): boolean {

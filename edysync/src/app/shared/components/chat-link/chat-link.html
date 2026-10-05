@@ -1,0 +1,81 @@
+<section class="chat-link" aria-labelledby="chat-link-title">
+  <header class="chat-link__header">
+    <span class="chat-link__icon" aria-hidden="true"><fa-icon [icon]="['fab', 'telegram']"></fa-icon></span>
+    <div class="chat-link__heading">
+      <h3 id="chat-link-title" class="chat-link__title">Asistente en Telegram</h3>
+      <p class="chat-link__subtitle">
+        @if (loading()) { Consultando estado… }
+        @else if (linked()) { Sesión iniciada como {{ roleLabel() }} }
+        @else { Inicia sesión en el bot con un código de un solo uso }
+      </p>
+    </div>
+    @if (loading()) { <app-spinner size="sm"></app-spinner> }
+  </header>
+
+  <div aria-live="polite">
+    @if (justLinked()) {
+      <app-alert type="success" message="¡Chat vinculado! Ya puedes escribirle al bot." (dismissed)="justLinked.set(false)"></app-alert>
+    }
+    @if (error()) {
+      <app-alert type="error" [message]="error()" (dismissed)="error.set('')"></app-alert>
+    }
+  </div>
+
+  @if (!loading()) {
+    @if (linked()) {
+      <ul class="chat-link__accounts">
+        @for (account of accounts(); track account.chat_id) {
+          <li class="chat-link__account">
+            <div class="chat-link__account-info">
+              <span class="chat-link__account-name">{{ accountName(account) }}</span>
+              <span class="chat-link__account-meta">
+                {{ account.notifications_enabled ? 'Notificaciones activas' : 'Notificaciones en pausa' }}
+              </span>
+            </div>
+            @if (confirmingChatId() === account.chat_id) {
+              <div class="chat-link__confirm" role="group" aria-label="Confirmar cierre de sesión">
+                <app-button variant="danger" label="Cerrar sesión" [loading]="unlinking()" (clicked)="confirmUnlink(account.chat_id)"></app-button>
+                <app-button variant="ghost" label="Cancelar" [disabled]="unlinking()" (clicked)="cancelUnlink()"></app-button>
+              </div>
+            } @else {
+              <app-button variant="ghost" label="Desvincular" [icon]="['fas', 'unlink']" (clicked)="askUnlink(account.chat_id)"></app-button>
+            }
+          </li>
+        }
+      </ul>
+    } @else {
+      <ol class="chat-link__steps">
+        <li>Pulsa <strong>Generar código</strong>.</li>
+        <li>Abre el bot de Telegram y escribe el comando que verás aquí.</li>
+      </ol>
+    }
+
+    @if (hasCode()) {
+      <div class="chat-link__code" [class.chat-link__code--expired]="expired()">
+        <div class="chat-link__code-body">
+          <code class="chat-link__command">/login {{ code() }}</code>
+          <span class="chat-link__timer" aria-live="off">
+            @if (expired()) { Código vencido } @else { Vence en {{ countdown() }} · un solo uso }
+          </span>
+        </div>
+        <app-button
+          variant="secondary"
+          [label]="copied() ? 'Copiado' : 'Copiar'"
+          [icon]="['fas', copied() ? 'check' : 'copy']"
+          [disabled]="expired()"
+          (clicked)="copy()"
+        ></app-button>
+      </div>
+    }
+
+    <div class="chat-link__actions">
+      <app-button
+        [variant]="linked() ? 'ghost' : 'primary'"
+        [label]="hasCode() ? 'Generar otro código' : (linked() ? 'Vincular otro chat' : 'Generar código')"
+        [icon]="['fas', 'key']"
+        [loading]="generating()"
+        (clicked)="generate()"
+      ></app-button>
+    </div>
+  }
+</section>

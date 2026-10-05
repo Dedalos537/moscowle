@@ -14,6 +14,7 @@ import { Spinner } from './components/spinner/spinner';
 import { Alert } from './components/alert/alert';
 import { Modal } from './components/modal/modal';
 import { Chip } from './components/chip/chip';
+import { ChatLink } from './components/chat-link/chat-link';
 import { ProgressBar } from './components/progress-bar/progress-bar';
 import { PillStatus } from './components/pill-status/pill-status';
 import { CollapsiblePanel } from './components/collapsible-panel/collapsible-panel';
@@ -22,12 +23,12 @@ import { Select } from './components/select/select';
 @NgModule({
   imports: [
     CommonModule, FormsModule, FontAwesomeModule,
-    Button, Card, Input, Spinner, Alert, Modal, Chip,
+    Button, Card, Input, Spinner, Alert, Modal, Chip, ChatLink,
     ProgressBar, PillStatus, CollapsiblePanel, Select,
   ],
   exports: [
     CommonModule, FormsModule, FontAwesomeModule,
-    Button, Card, Input, Spinner, Alert, Modal, Chip,
+    Button, Card, Input, Spinner, Alert, Modal, Chip, ChatLink,
     ProgressBar, PillStatus, CollapsiblePanel, Select,
   ]
 })

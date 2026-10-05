@@ -164,6 +164,60 @@ def issue_chat_login_code():
     )
 
 
+def _current_active_user():
+    from app.models.user import User
+
+    user = db.session.get(User, int(get_jwt_identity()))
+    if user is None or not getattr(user, 'is_active', True):
+        return None
+    return user
+
+
+@telegram_bp.route('/me', methods=['GET'])
+@jwt_required()
+def my_chat_link():
+    """Estado del chat del usuario autenticado (cualquier rol): solo sus cuentas."""
+    user = _current_active_user()
+    if user is None:
+        return jsonify({'error': 'Usuario no autorizado'}), 403
+    rows = TelegramUser.query.filter_by(admin_user_id=user.id, is_linked=True).order_by(TelegramUser.id.desc()).all()
+    accounts = [
+        {
+            'chat_id': r.telegram_chat_id,
+            'username': r.telegram_username,
+            'first_name': r.telegram_first_name,
+            'notifications_enabled': bool(r.notifications_enabled),
+            'last_interaction_at': r.last_interaction_at.isoformat() if r.last_interaction_at else None,
+        }
+        for r in rows
+    ]
+    return jsonify({'linked': bool(accounts), 'role': user.role, 'accounts': accounts})
+
+
+@telegram_bp.route('/me/unlink', methods=['POST'])
+@jwt_required()
+def unlink_my_chat():
+    """Cierra la sesion de UNO de mis chats. Un chat ajeno responde 404 igual que
+    uno inexistente (no se revela que existe)."""
+    user = _current_active_user()
+    if user is None:
+        return jsonify({'error': 'Usuario no autorizado'}), 403
+    chat_id = (request.get_json(silent=True) or {}).get('chat_id')
+    if chat_id in (None, ''):
+        return jsonify({'error': 'chat_id requerido'}), 400
+    try:
+        chat_id = int(chat_id)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'chat_id inválido'}), 400
+    row = TelegramUser.query.filter_by(telegram_chat_id=chat_id, admin_user_id=user.id, is_linked=True).first()
+    if row is None:
+        return jsonify({'error': 'Chat no encontrado'}), 404
+    row.is_linked = False
+    row.admin_user_id = None
+    db.session.commit()
+    return jsonify({'status': 'unlinked'})
+
+
 @telegram_bp.route('/status', methods=['GET'])
 @jwt_required()
 @admin_required
