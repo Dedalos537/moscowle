@@ -21,6 +21,7 @@ from app.models.refresh_token import RefreshToken as RefreshToken
 from app.models.report import *
 from app.models.service_request import *
 from app.models.chat_login_code import ChatLoginCode as ChatLoginCode
+from app.models.email_throttle import EmailThrottle as EmailThrottle
 from app.models.telegram_user import TelegramUser as TelegramUser
 from app.models.user import *
 from app.models.user_session import UserSession as UserSession

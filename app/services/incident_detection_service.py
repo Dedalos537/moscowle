@@ -5,8 +5,12 @@ from sqlalchemy import func
 
 from app.extensions import db
 from app.models.appointment import Appointment, SessionMetrics
+from app.models.email_throttle import EmailThrottle
 from app.models.incidente import Incidente
 from app.services.incident_escalation_service import IncidentEscalationService
+
+# Horas minimas entre dos avisos del mismo incidente con SLA vencido.
+SLA_REMINDER_HOURS = 6
 
 logger = logging.getLogger(__name__)
 
@@ -264,6 +268,10 @@ class IncidentDetectionService:
             horas_vencido = (ahora - incidente.fecha_limite_sla).total_seconds() / 3600
             if horas_vencido > 24:
                 # SLA breached more than 24h ago - don't keep notifying
+                continue
+            # El job corre cada 15 min: sin memoria de lo ya avisado enviaba el mismo
+            # correo/Telegram hasta 96 veces al dia. Persistente: sobrevive a reinicios.
+            if not EmailThrottle.allow(f'sla:{incidente.id_incidente}', SLA_REMINDER_HOURS * 60):
                 continue
             incidentes_a_notificar.append(incidente)
 

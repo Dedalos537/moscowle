@@ -1,3 +1,5 @@
+import html as _html
+import re
 import secrets
 import string
 
@@ -5,6 +7,49 @@ from flask import current_app
 from flask_mail import Message as MailMessage
 
 from app.extensions import mail
+
+UNSUBSCRIBE_PATH = '/api/public/email/unsubscribe'
+NEW_MESSAGE_COOLDOWN_MINUTES = 30
+
+
+def _html_to_text(markup):
+    """Alternativa de texto plano para un correo HTML (clientes sin HTML y filtros antispam)."""
+    text = re.sub(r'(?is)<(script|style).*?</\1>', '', markup or '')
+    text = re.sub(r'(?i)<br\s*/?>|</(p|div|tr|h[1-6]|li)>', '\n', text)
+    text = _html.unescape(re.sub(r'<[^>]+>', '', text))
+    text = re.sub(r'[ \t]+', ' ', text)
+    return re.sub(r'\n\s*\n\s*\n+', '\n\n', text).strip()
+
+
+def _make_message(subject, recipients, body=None, html=None, user_id=None):
+    """Mensaje de NOTIFICACION: parte html con alternativa de texto, remitente con nombre,
+    cabeceras de correo automatico y, si se conoce al usuario, baja con un clic (RFC 8058).
+    Son las senales con las que Gmail distingue una notificacion de un correo personal."""
+    cfg = current_app.config
+    address = cfg.get('MAIL_DEFAULT_SENDER') or cfg.get('MAIL_USERNAME')
+    if isinstance(address, str) and '<' not in address:
+        sender = (cfg.get('MAIL_SENDER_NAME') or 'Notificaciones', address)
+    else:
+        sender = address
+    headers = {
+        'Auto-Submitted': 'auto-generated',
+        'X-Auto-Response-Suppress': 'OOF, AutoReply',
+    }
+    if user_id:
+        from app.utils.email_tokens import make_unsubscribe_token
+
+        base = (cfg.get('PUBLIC_API_URL') or '').rstrip('/')
+        headers['List-Unsubscribe'] = f'<{base}{UNSUBSCRIBE_PATH}?t={make_unsubscribe_token(user_id)}>'
+        headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click'
+    text = body if body is not None else (_html_to_text(html) if html else '')
+    return MailMessage(
+        subject=subject,
+        recipients=recipients if isinstance(recipients, list) else [recipients],
+        body=text,
+        html=html,
+        sender=sender,
+        extra_headers=headers,
+    )
 
 
 class EmailService:
@@ -93,7 +138,7 @@ class EmailService:
                 'Si ya realizaste el pago, por favor ignora este mensaje o contacta a administración.\n\n'
                 'Saludos,\nEquipo Moscowle'
             )
-            msg = MailMessage(subject=subject, recipients=[recipient_email], body=body)
+            msg = _make_message(subject, [recipient_email], body)
             mail.send(msg)
             current_app.logger.info(f'Payment reminder email sent to {recipient_email}')
             return True
@@ -120,7 +165,7 @@ class EmailService:
                 'Gracias por mantener tu cuenta al día.\n\n'
                 'Saludos,\nEquipo Moscowle'
             )
-            msg = MailMessage(subject=subject, recipients=[recipient_email], body=body)
+            msg = _make_message(subject, [recipient_email], body)
             mail.send(msg)
             current_app.logger.info(f'Payment confirmation email sent to {recipient_email}')
             return True
@@ -153,7 +198,7 @@ class EmailService:
                 'Ingresa a la plataforma para ver más información.\n\n'
                 'Saludos,\nEquipo Moscowle'
             )
-            msg = MailMessage(subject=subject, recipients=[recipient_email], body=body)
+            msg = _make_message(subject, [recipient_email], body)
             mail.send(msg)
             return True
         except Exception as e:
@@ -166,6 +211,12 @@ class EmailService:
         if not current_app.config.get('MAIL_USERNAME'):
             return False
 
+        from app.models.email_throttle import EmailThrottle
+
+        # Un correo por conversacion cada 30 min (el aviso en la app sigue siendo uno por mensaje).
+        if not EmailThrottle.allow(f'newmsg:{recipient_email}:{sender_name}', NEW_MESSAGE_COOLDOWN_MINUTES):
+            return False
+
         try:
             subject = f'Nuevo mensaje de {sender_name} - Moscowle'
             body = (
@@ -175,7 +226,7 @@ class EmailService:
                 'Inicia sesión para responder.\n\n'
                 'Saludos,\nEquipo Moscowle'
             )
-            msg = MailMessage(subject=subject, recipients=[recipient_email], body=body)
+            msg = _make_message(subject, [recipient_email], body)
             mail.send(msg)
             return True
         except Exception as e:
@@ -310,18 +361,14 @@ class EmailService:
             return False
 
     @staticmethod
-    def send_notification_email(subject, recipients, body):
-        """Send a generic notification email."""
+    def send_notification_email(subject, recipients, body=None, html=None, user_id=None):
+        """Correo de notificacion generico. ``html`` va en su parte propia (con ``body`` como
+        alternativa de texto; si falta se deriva del HTML). ``user_id`` habilita la baja."""
         if not current_app.config.get('MAIL_USERNAME'):
             current_app.logger.info(f'[MOCK EMAIL] {subject} to {recipients}')
             return False
         try:
-            msg = MailMessage(
-                subject=subject,
-                recipients=recipients if isinstance(recipients, list) else [recipients],
-                body=body,
-            )
-            mail.send(msg)
+            mail.send(_make_message(subject, recipients, body, html=html, user_id=user_id))
             return True
         except Exception as e:
             current_app.logger.error(f'Failed to send notification email: {e}')

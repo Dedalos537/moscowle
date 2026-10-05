@@ -544,10 +544,13 @@ def _send_email_digest(user, html_body):
         from app.services.email_service import EmailService
 
         subject = f'🦜 Resumen Diario — Centro Juan Pablo II ({datetime.now().strftime("%d/%m/%Y")})'
+        # HTML en su parte propia (antes iba como texto plano y Gmail mostraba el codigo);
+        # user_id habilita la baja con un clic del resumen.
         EmailService.send_notification_email(
             subject=subject,
             recipients=[user.email],
-            body=html_body,
+            html=html_body,
+            user_id=user.id,
         )
         logger.info(f'Digest sent via email to {user.email}')
 

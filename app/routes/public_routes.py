@@ -1,12 +1,59 @@
 import hashlib
 import os
 import time
+from html import escape
+from urllib.parse import quote
 
-from flask import Blueprint, abort, current_app, jsonify, redirect, send_from_directory, url_for
+from flask import Blueprint, Response, abort, current_app, jsonify, redirect, request, send_from_directory, url_for
 
-from app.extensions import limiter
+from app.extensions import csrf, db, limiter
 
 public_bp = Blueprint('public', __name__, url_prefix='/api/public')
+
+
+_UNSUB_PAGE = (
+    '<!doctype html><html lang="es"><head><meta charset="utf-8">'
+    '<meta name="viewport" content="width=device-width,initial-scale=1">'
+    '<title>Resumen diario</title></head>'
+    '<body style="font-family:system-ui,sans-serif;max-width:28rem;margin:3rem auto;padding:0 1rem;color:#222">'
+    '<h1 style="font-size:1.25rem">Centro Juan Pablo II</h1>{body}</body></html>'
+)
+
+
+def _unsub_page(body, status=200):
+    return Response(_UNSUB_PAGE.format(body=body), status=status, mimetype='text/html')
+
+
+@public_bp.route('/email/unsubscribe', methods=['GET', 'POST'])
+@csrf.exempt
+def email_unsubscribe():
+    """Baja del resumen diario por correo, sin login (token firmado en el enlace).
+
+    POST aplica la baja (baja con un clic, RFC 8058: la usa el propio Gmail). GET solo
+    muestra la confirmacion: un escaner de enlaces que abra la URL no debe dar de baja."""
+    from app.models.notification import UserNotificationPreference
+    from app.utils.email_tokens import read_unsubscribe_token
+
+    token = request.args.get('t', '')
+    user_id = read_unsubscribe_token(token)
+    if user_id is None:
+        return _unsub_page('<p>El enlace no es válido o venció.</p>', 400)
+
+    if request.method == 'GET':
+        return _unsub_page(
+            '<p>¿Quieres dejar de recibir el <strong>resumen diario</strong> por correo?</p>'
+            f'<form method="post" action="?t={escape(quote(token))}">'
+            '<button type="submit" style="padding:.6rem 1rem;font-size:1rem">Sí, darme de baja</button></form>'
+            '<p style="font-size:.85rem;color:#666">Puedes volver a activarlo desde Preferencias en la plataforma.</p>'
+        )
+
+    prefs = UserNotificationPreference.query.filter_by(user_id=user_id).first()
+    if prefs is None:
+        prefs = UserNotificationPreference(user_id=user_id)
+        db.session.add(prefs)
+    prefs.digest_enabled = False
+    db.session.commit()
+    return _unsub_page('<p>Listo: ya no recibirás el resumen diario por correo.</p>')
 
 
 @public_bp.route('/app-key', methods=['GET'])

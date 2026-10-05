@@ -598,7 +598,7 @@ def _send_report_email(user, html, period_type):
         from app.services.email_service import EmailService
 
         subject = f'📊 Reporte {period_type} — Centro Juan Pablo II ({datetime.now().strftime("%d/%m/%Y")})'
-        EmailService.send_notification_email(subject=subject, recipients=[user.email], body=html)
+        EmailService.send_notification_email(subject=subject, recipients=[user.email], html=html)
         logger.info(f'Report sent via email to {user.email}')
     except Exception as e:
         logger.error(f'Email report failed for user {user.id}: {e}')
