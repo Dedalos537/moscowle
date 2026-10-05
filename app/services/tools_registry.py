@@ -825,7 +825,7 @@ def handle_edit_payment(payment_id, **kwargs):
 
 @tool(
     name='toggle_user_status',
-    description='Cambia el estado de un usuario: activar, desactivar, marcar como retirado o deudor.',
+    description='Cambia el estado de un usuario: activar, desactivar, marcar como retirado o deudor. Para desactivar/retirar/deudor pide SIEMPRE el motivo (justification).',
     parameters={
         'type': 'object',
         'properties': {
@@ -835,17 +835,25 @@ def handle_edit_payment(payment_id, **kwargs):
                 'description': 'Nuevo estado',
                 'enum': ['active', 'inactive', 'retired', 'debtor'],
             },
+            'justification': {
+                'type': 'string',
+                'description': 'Motivo del cambio. OBLIGATORIO para inactive, retired y debtor: pregúntaselo al usuario.',
+            },
         },
         'required': ['user_id', 'status'],
     },
     category='write',
     roles=ROLES_SUPERVISOR,
 )
-def handle_toggle_user_status(user_id, status, **kwargs):
+def handle_toggle_user_status(user_id, status, justification=None, **kwargs):
+    if status in ('inactive', 'retired', 'debtor') and not (justification or '').strip():
+        return {
+            'error': 'Falta la justificación: pregunta al usuario el motivo antes de marcar como inactivo, retirado o deudor.'
+        }
     try:
         resp = _api_post(
             f'/admin/api/users/{user_id}/toggle-status',
-            json={'status': status},
+            json={'status': status, 'justification': (justification or '').strip()},
             user_id=kwargs.get('_user_id'),
             role=kwargs.get('_role'),
         )

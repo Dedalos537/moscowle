@@ -225,6 +225,16 @@
 <!-- Edit Drawer -->
 <app-drawer [isOpen]="showEditDrawer" title="Editar usuario" [icon]="['fas', 'user-gear']" (close)="closeEditDrawer()"
   size="lg">
+  <div class="tabs" role="tablist" aria-label="Secciones del usuario" (keydown)="onEditTabsKeydown($event)">
+    @for (tab of editTabs; track tab.key) {
+      <button type="button" role="tab" class="tabs__tab" [id]="'edit-tab-' + tab.key" [class.tabs__tab--active]="activeEditTab === tab.key"
+        [attr.aria-selected]="activeEditTab === tab.key" [attr.aria-controls]="'edit-panel-' + tab.key"
+        [attr.tabindex]="activeEditTab === tab.key ? 0 : -1" (click)="editTab = tab.key">{{ tab.label }}</button>
+    }
+  </div>
+
+  @if (activeEditTab === 'cuenta') {
+  <div role="tabpanel" id="edit-panel-cuenta" aria-labelledby="edit-tab-cuenta" class="tab-panel">
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre</label>
@@ -240,16 +250,21 @@
     <label class="text-label-caps text-on-surface-variant mb-1.5 block">Rol</label>
     <app-select ariaLabel="Rol" [(ngModel)]="editData.role" [options]="roleOptions" class="w-full"></app-select>
   </div>
-  <label class="flex items-center gap-2 cursor-pointer">
-    <input type="checkbox" [(ngModel)]="editData.is_active" class="rounded text-primary-text focus:ring-primary" />
-    <span class="text-sm font-medium text-on-surface">Cuenta activa</span>
-  </label>
-
-  <div>
-    <label class="text-label-caps text-on-surface-variant mb-1.5 block">Estado de la cuenta</label>
-    <app-select ariaLabel="Estado de la cuenta" [(ngModel)]="editData.account_status" [options]="accountStatusOptions" class="w-full"></app-select>
+  <div class="status-row">
+    <div>
+      <p class="text-label-caps text-on-surface-variant mb-1.5">Estado de la cuenta</p>
+      <span [class]="getStatusClass(currentEditUser?.account_status || 'active')">{{ getStatusLabel(currentEditUser?.account_status || 'active') }}</span>
+    </div>
+    @if (currentEditUser) {
+      <app-button variant="secondary" label="Cambiar estado…" [icon]="['fas', 'right-left']" (clicked)="openStatusModal(currentEditUser)"></app-button>
+    }
+    <p class="status-row__hint">Pasar a inactivo, retirado o deudor te pedirá un motivo y quedará en el historial.</p>
   </div>
+  </div>
+  }
 
+  @if (activeEditTab === 'plan') {
+  <div role="tabpanel" id="edit-panel-plan" aria-labelledby="edit-tab-plan" class="tab-panel">
   @if (editData.role === 'terapista') {
   <div class="bg-surface-container-high rounded-xl p-4 space-y-4">
     <h4 class="text-sm font-bold text-primary-text flex items-center gap-2">
@@ -385,7 +400,11 @@
     Editar datos del paciente
   </button>
   }
+  </div>
+  }
 
+  @if (activeEditTab === 'seguridad') {
+  <div role="tabpanel" id="edit-panel-seguridad" aria-labelledby="edit-tab-seguridad" class="tab-panel">
   <div class="bg-surface-container-high rounded-xl p-4 space-y-3">
     <h4 class="text-sm font-bold text-tertiary-text flex items-center gap-2">
       <fa-icon [icon]="['fas', 'lock']" class="text-lg"></fa-icon> Cambiar contraseña
@@ -408,6 +427,8 @@
       </p>
       <app-button variant="danger" label="Eliminar usuario" [icon]="['fas', 'trash-can']" (clicked)="deleteUser(currentEditUser)"></app-button>
     </section>
+  }
+  </div>
   }
 
   <div drawer-footer>
@@ -478,6 +499,17 @@
     <ng-container *ngTemplateOutlet="credentialsCard"></ng-container>
   }
   <div [hidden]="tempCredentials?.context === 'created'" class="create-form">
+  <ol class="stepper" aria-label="Pasos para crear el usuario">
+    @for (step of createSteps; track step.key; let i = $index) {
+      <li class="stepper__item" [class.stepper__item--active]="createStep === i + 1" [class.stepper__item--done]="createStep > i + 1"
+        [attr.aria-current]="createStep === i + 1 ? 'step' : null">
+        <span class="stepper__num" aria-hidden="true">{{ i + 1 }}</span><span class="stepper__label">{{ step.label }}</span>
+      </li>
+    }
+  </ol>
+  <p class="stepper__counter" role="status">Paso {{ createStep }} de {{ createSteps.length }}</p>
+
+  @if (createStep === 1) {
   <div>
     <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre</label>
     <input aria-label="Nombre" [(ngModel)]="newUser.username" class="input-field text-sm" placeholder="Nombre completo" />
@@ -498,12 +530,18 @@
     <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sede</label>
     <app-select ariaLabel="Sede" [(ngModel)]="newUser.sede_id" [options]="patientSedeOptions" class="w-full"></app-select>
   </div>
-  } @if (newUser.role === 'terapista') {
+  }
+  @if (newUser.role === 'terapista') {
   <div>
     <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sedes Asignadas</label>
     <app-select ariaLabel="Sedes Asignadas" [multiple]="true" [(ngModel)]="newUser.sede_ids" [options]="multiSedeOptions"
       class="w-full"></app-select>
   </div>
+  }
+  }
+
+  @if (createStep === 2) {
+  @if (newUser.role === 'terapista') {
   <div class="bg-surface-container-high rounded-xl p-4">
     <h4 class="text-sm font-bold text-primary-text flex items-center gap-2 mb-4">
       <fa-icon [icon]="['fas', 'briefcase']" class="text-lg"></fa-icon>
@@ -523,7 +561,8 @@
       El pago por hora se calculará: Base / Horas.
     </p>
   </div>
-  } @if (newUser.role === 'jugador') {
+  }
+  @if (newUser.role === 'jugador') {
   <div class="bg-surface-container-high rounded-xl p-4 space-y-4">
     <h4 class="text-sm font-bold text-primary-text flex items-center gap-2">
       <fa-icon [icon]="['fas', 'receipt']" class="text-lg"></fa-icon>
@@ -598,6 +637,11 @@
       </div>
     </div>
     }
+  </div>
+  }
+  }
+
+  @if (createStep === 3 && newUser.role === 'jugador') {
     <div class="bg-surface-container-high rounded-xl p-4">
       <h4 class="text-sm font-bold text-primary-text flex items-center gap-2 mb-4">
         <fa-icon [icon]="['fas', 'user-shield']" class="text-lg"></fa-icon>
@@ -628,7 +672,6 @@
         </div>
       </div>
     </div>
-  </div>
   }
   </div>
 
@@ -643,9 +686,17 @@
       @if (tempCredentials?.context === 'created') {
         <app-button variant="primary" label="Listo" [icon]="['fas', 'check']" (clicked)="finishCredentials()"></app-button>
       } @else {
-        <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateDrawer()"></app-button>
-        <app-button variant="primary" label="Crear usuario" [icon]="['fas', 'floppy-disk']"
-          [loading]="createStatus === 'Creando...'" (clicked)="createUser()"></app-button>
+        @if (createStep === 1) {
+          <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateDrawer()"></app-button>
+        } @else {
+          <app-button variant="ghost" label="Atrás" [icon]="['fas', 'arrow-left']" (clicked)="prevCreateStep()"></app-button>
+        }
+        @if (isLastCreateStep) {
+          <app-button variant="primary" label="Crear usuario" [icon]="['fas', 'floppy-disk']"
+            [loading]="createStatus === 'Creando...'" (clicked)="createUser()"></app-button>
+        } @else {
+          <app-button variant="primary" label="Siguiente" [icon]="['fas', 'arrow-right']" (clicked)="nextCreateStep()"></app-button>
+        }
       }
     </div>
   </div>

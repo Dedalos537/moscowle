@@ -24,6 +24,14 @@ HOLIDAYS_2026 = [
 ]
 
 
+# Pasar a un usuario a estos estados es una decision de alto impacto (cobranza, acceso, historial):
+# exige dejar el motivo, venga la orden de la pantalla, de la edicion o del asistente.
+STATUSES_REQUIRING_JUSTIFICATION = ('inactive', 'retired', 'debtor')
+JUSTIFICATION_REQUIRED_MSG = (
+    'La justificación es obligatoria para marcar a un usuario como inactivo, retirado o deudor.'
+)
+
+
 class AdminService:
     def __init__(self):
         self.notification_service = NotificationService()
@@ -353,6 +361,17 @@ class AdminService:
         if not user:
             return False, 'Usuario no encontrado'
 
+        if 'account_status' in data:
+            requested = (data['account_status'] or 'active').strip().lower()
+            if requested not in ('active', 'inactive', 'debtor', 'retired'):
+                return False, 'Estado inválido'
+            if (
+                requested != (user.account_status or 'active')
+                and requested in STATUSES_REQUIRING_JUSTIFICATION
+                and not (data.get('justification') or '').strip()
+            ):
+                return False, JUSTIFICATION_REQUIRED_MSG
+
         if 'username' in data:
             user.username = data['username']
 
@@ -545,6 +564,8 @@ class AdminService:
         old_status = user.account_status or 'active'
         if old_status == new_status:
             return False, 'El usuario ya tiene ese estado'
+        if new_status in STATUSES_REQUIRING_JUSTIFICATION and not (justification or '').strip():
+            return False, JUSTIFICATION_REQUIRED_MSG
 
         user.account_status = new_status
         log = UserStatusLog(

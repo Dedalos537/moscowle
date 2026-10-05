@@ -1,9 +1,9 @@
 import logging
-from datetime import date, datetime
+from datetime import date
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
-from app.auth_compat import current_user, login_required
 
+from app.auth_compat import current_user, login_required
 from app.extensions import db
 from app.models import Payment, Sede, SessionMetrics, User, db
 from app.routes.admin import admin_bp
@@ -25,34 +25,38 @@ def list_patients():
             age = None
             if u.date_of_birth:
                 today = date.today()
-                age = today.year - u.date_of_birth.year - (
-                    (today.month, today.day) < (u.date_of_birth.month, u.date_of_birth.day)
+                age = (
+                    today.year
+                    - u.date_of_birth.year
+                    - ((today.month, today.day) < (u.date_of_birth.month, u.date_of_birth.day))
                 )
-            patients.append({
-                'id': u.id,
-                'username': u.username,
-                'email': u.email,
-                'is_active': u.is_active,
-                'phone': u.phone,
-                'document_number': u.document_number,
-                'date_of_birth': u.date_of_birth.strftime('%Y-%m-%d') if u.date_of_birth else None,
-                'age': age,
-                'sex': u.sex,
-                'guardian_name': u.guardian_name,
-                'guardian_type': u.guardian_type,
-                'guardian_dni': u.guardian_dni,
-                'guardian_contact': u.guardian_contact,
-                'preliminary_diagnosis': u.preliminary_diagnosis,
-                'therapy_goals': u.therapy_goals,
-                'notes': u.notes,
-                'payment_plan': u.payment_plan,
-                'payment_amount': u.payment_amount,
-                'sede': u.sede.name if u.sede else None,
-                'sede_id': u.sede_id,
-                'therapist': u.therapist.username if u.therapist else None,
-                'therapist_id': u.therapist_id,
-                'created_at': u.created_at.strftime('%Y-%m-%d') if u.created_at else None,
-            })
+            patients.append(
+                {
+                    'id': u.id,
+                    'username': u.username,
+                    'email': u.email,
+                    'is_active': u.is_active,
+                    'phone': u.phone,
+                    'document_number': u.document_number,
+                    'date_of_birth': u.date_of_birth.strftime('%Y-%m-%d') if u.date_of_birth else None,
+                    'age': age,
+                    'sex': u.sex,
+                    'guardian_name': u.guardian_name,
+                    'guardian_type': u.guardian_type,
+                    'guardian_dni': u.guardian_dni,
+                    'guardian_contact': u.guardian_contact,
+                    'preliminary_diagnosis': u.preliminary_diagnosis,
+                    'therapy_goals': u.therapy_goals,
+                    'notes': u.notes,
+                    'payment_plan': u.payment_plan,
+                    'payment_amount': u.payment_amount,
+                    'sede': u.sede.name if u.sede else None,
+                    'sede_id': u.sede_id,
+                    'therapist': u.therapist.username if u.therapist else None,
+                    'therapist_id': u.therapist_id,
+                    'created_at': u.created_at.strftime('%Y-%m-%d') if u.created_at else None,
+                }
+            )
         return jsonify({'success': True, 'patients': patients})
     except Exception as e:
         db.session.rollback()
@@ -171,7 +175,14 @@ def api_toggle_user_status(user_id):
         return jsonify({'error': 'No puedes cambiar tu propio estado'}), 400
 
     old_status = user.account_status or ('active' if user.is_active else 'inactive')
-    user.account_status = status
+    # Misma regla y mismo historial que el modal de estado (antes este camino no dejaba rastro).
+    from app.services.admin_service import AdminService
+
+    ok, result = AdminService().change_user_status(
+        user.id, status, (data.get('justification') or '').strip(), changed_by_id=current_user.id
+    )
+    if not ok:
+        return jsonify({'error': result}), 400
     user.is_active = status == 'active'
     db.session.commit()
 
@@ -181,7 +192,14 @@ def api_toggle_user_status(user_id):
         'retired': 'Usuario marcado como retirado',
         'debtor': 'Usuario marcado como deudor',
     }
-    return jsonify({'success': True, 'message': messages.get(status, 'Estado actualizado'), 'old_status': old_status, 'new_status': status})
+    return jsonify(
+        {
+            'success': True,
+            'message': messages.get(status, 'Estado actualizado'),
+            'old_status': old_status,
+            'new_status': status,
+        }
+    )
 
 
 @admin_bp.route('/users/<int:user_id>/delete', methods=['POST'])
@@ -232,9 +250,17 @@ def update_patient_details(user_id):
         data = request.get_json(silent=True) or {}
 
         allowed_fields = [
-            'document_number', 'phone', 'date_of_birth', 'sex',
-            'guardian_name', 'guardian_type', 'guardian_dni', 'guardian_contact',
-            'preliminary_diagnosis', 'therapy_goals', 'notes',
+            'document_number',
+            'phone',
+            'date_of_birth',
+            'sex',
+            'guardian_name',
+            'guardian_type',
+            'guardian_dni',
+            'guardian_contact',
+            'preliminary_diagnosis',
+            'therapy_goals',
+            'notes',
         ]
 
         updated = []
@@ -243,6 +269,7 @@ def update_patient_details(user_id):
                 value = data[field]
                 if field == 'date_of_birth' and value:
                     from datetime import datetime
+
                     try:
                         value = datetime.strptime(value, '%Y-%m-%d').date()
                     except ValueError:
@@ -271,31 +298,33 @@ def get_patient_details(user_id):
         if not user:
             return jsonify({'success': False, 'error': 'Usuario no encontrado'}), 404
 
-        return jsonify({
-            'success': True,
-            'patient': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'phone': user.phone,
-                'document_number': user.document_number,
-                'date_of_birth': user.date_of_birth.strftime('%Y-%m-%d') if user.date_of_birth else None,
-                'sex': user.sex,
-                'guardian_name': user.guardian_name,
-                'guardian_type': user.guardian_type,
-                'guardian_dni': user.guardian_dni,
-                'guardian_contact': user.guardian_contact,
-                'preliminary_diagnosis': user.preliminary_diagnosis,
-                'therapy_goals': user.therapy_goals,
-                'notes': user.notes,
-                'payment_plan': user.payment_plan,
-                'payment_amount': user.payment_amount,
-                'sessions_total': user.sessions_total,
-                'sessions_attended': user.sessions_attended,
-                'plan_type': user.plan_type,
-                'sede_id': user.sede_id,
+        return jsonify(
+            {
+                'success': True,
+                'patient': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'phone': user.phone,
+                    'document_number': user.document_number,
+                    'date_of_birth': user.date_of_birth.strftime('%Y-%m-%d') if user.date_of_birth else None,
+                    'sex': user.sex,
+                    'guardian_name': user.guardian_name,
+                    'guardian_type': user.guardian_type,
+                    'guardian_dni': user.guardian_dni,
+                    'guardian_contact': user.guardian_contact,
+                    'preliminary_diagnosis': user.preliminary_diagnosis,
+                    'therapy_goals': user.therapy_goals,
+                    'notes': user.notes,
+                    'payment_plan': user.payment_plan,
+                    'payment_amount': user.payment_amount,
+                    'sessions_total': user.sessions_total,
+                    'sessions_attended': user.sessions_attended,
+                    'plan_type': user.plan_type,
+                    'sede_id': user.sede_id,
+                },
             }
-        })
+        )
     except Exception as e:
         logger.exception('Error getting patient details')
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -307,7 +336,7 @@ def get_patient_details(user_id):
 def patient_stats():
     """Get patient demographic stats for MCP queries"""
     try:
-        from datetime import date, timedelta
+        from datetime import date
 
         patients = User.query.filter_by(role='jugador', is_active=True).all()
         total = len(patients)
@@ -329,13 +358,20 @@ def patient_stats():
         for p in patients:
             if p.date_of_birth:
                 age = (today - p.date_of_birth).days // 365
-                if age <= 3: age_ranges['0-3'] += 1
-                elif age <= 6: age_ranges['4-6'] += 1
-                elif age <= 9: age_ranges['7-9'] += 1
-                elif age <= 12: age_ranges['10-12'] += 1
-                elif age <= 15: age_ranges['13-15'] += 1
-                elif age <= 18: age_ranges['16-18'] += 1
-                else: age_ranges['19+'] += 1
+                if age <= 3:
+                    age_ranges['0-3'] += 1
+                elif age <= 6:
+                    age_ranges['4-6'] += 1
+                elif age <= 9:
+                    age_ranges['7-9'] += 1
+                elif age <= 12:
+                    age_ranges['10-12'] += 1
+                elif age <= 15:
+                    age_ranges['13-15'] += 1
+                elif age <= 18:
+                    age_ranges['16-18'] += 1
+                else:
+                    age_ranges['19+'] += 1
 
             if p.sex:
                 sex_key = p.sex if p.sex in ('M', 'F') else 'Otro'
@@ -350,28 +386,34 @@ def patient_stats():
                 month_key = p.created_at.strftime('%Y-%m')
                 join_month_counts[month_key] = join_month_counts.get(month_key, 0) + 1
 
-            if p.guardian_name: has_guardian += 1
-            if p.document_number: has_dni += 1
-            if p.preliminary_diagnosis: has_diagnosis += 1
+            if p.guardian_name:
+                has_guardian += 1
+            if p.document_number:
+                has_dni += 1
+            if p.preliminary_diagnosis:
+                has_diagnosis += 1
 
         from app.models.contract import Contract
+
         active_contracts = Contract.query.filter_by(status='active').count()
 
-        return jsonify({
-            'success': True,
-            'stats': {
-                'total': total,
-                'age_ranges': age_ranges,
-                'sex_distribution': sex_counts,
-                'by_sede': sede_counts,
-                'by_join_month': dict(sorted(join_month_counts.items(), reverse=True)[:12]),
-                'has_guardian': has_guardian,
-                'has_dni': has_dni,
-                'has_diagnosis': has_diagnosis,
-                'active_contracts': active_contracts,
-                'without_contract': total - active_contracts,
+        return jsonify(
+            {
+                'success': True,
+                'stats': {
+                    'total': total,
+                    'age_ranges': age_ranges,
+                    'sex_distribution': sex_counts,
+                    'by_sede': sede_counts,
+                    'by_join_month': dict(sorted(join_month_counts.items(), reverse=True)[:12]),
+                    'has_guardian': has_guardian,
+                    'has_dni': has_dni,
+                    'has_diagnosis': has_diagnosis,
+                    'active_contracts': active_contracts,
+                    'without_contract': total - active_contracts,
+                },
             }
-        })
+        )
     except Exception as e:
         logger.exception('Error getting patient stats')
         return jsonify({'success': False, 'error': str(e)}), 500

@@ -24,6 +24,22 @@ import { StatKey, UsersStatsCards } from '../components/users-stats-cards/users-
 /** Valor del filtro de terapeuta que significa "pacientes sin ningun terapeuta asignado". */
 const NO_THERAPIST = -1;
 
+type EditTabKey = 'cuenta' | 'plan' | 'seguridad';
+
+/** Pestañas del drawer de edición según el rol (referencias estables: no se crean arrays por ciclo). */
+const EDIT_TABS: Record<string, { key: EditTabKey; label: string }[]> = {
+  terapista: [{ key: 'cuenta', label: 'Cuenta' }, { key: 'plan', label: 'Contrato y horario' }, { key: 'seguridad', label: 'Seguridad' }],
+  jugador: [{ key: 'cuenta', label: 'Cuenta' }, { key: 'plan', label: 'Plan y terapeuta' }, { key: 'seguridad', label: 'Seguridad' }],
+  default: [{ key: 'cuenta', label: 'Cuenta' }, { key: 'seguridad', label: 'Seguridad' }],
+};
+
+/** Pasos del asistente de alta según el rol. */
+const CREATE_STEPS: Record<string, { key: string; label: string }[]> = {
+  jugador: [{ key: 'datos', label: 'Datos' }, { key: 'plan', label: 'Plan y horario' }, { key: 'apoderado', label: 'Apoderado' }],
+  terapista: [{ key: 'datos', label: 'Datos' }, { key: 'contrato', label: 'Contrato' }],
+  default: [{ key: 'datos', label: 'Datos' }],
+};
+
 interface UserRow {
   id: number;
   username: string;
@@ -93,6 +109,8 @@ export class UsersList implements OnInit, OnDestroy {
   isDesktop = window.matchMedia('(min-width: 1280px)').matches;
   showFilters = false;
   editSaving = false;
+  editTab: EditTabKey = 'cuenta';
+  createStep = 1;
 
   readonly roleChips = [
     { value: 'all', label: 'Todos' },
@@ -649,6 +667,7 @@ export class UsersList implements OnInit, OnDestroy {
   }
 
   openEditDrawer(user: UserRow) {
+    this.editTab = 'cuenta';
     this.editData = {
       id: user.id,
       username: user.username,
@@ -692,8 +711,6 @@ export class UsersList implements OnInit, OnDestroy {
     this.editSaving = true;
     const payload: any = { id: this.editData.id };
     if (this.editData.username) payload.username = this.editData.username;
-    if (this.editData.is_active !== undefined) payload.is_active = this.editData.is_active;
-    if (this.editData.account_status) payload.account_status = this.editData.account_status;
     if (this.editData.role) payload.role = this.editData.role;
     if (this.editData.sede_id) payload.sede_id = this.editData.sede_id;
     if (this.editData.sede_ids?.length) payload.sede_ids = this.editData.sede_ids;
@@ -776,6 +793,68 @@ export class UsersList implements OnInit, OnDestroy {
     if (payload.sessions_attended !== undefined) u.sessions_attended = payload.sessions_attended;
     if (payload.has_second_shift !== undefined) u.has_second_shift = payload.has_second_shift;
     this.applyFilters();
+  }
+
+  // --- Drawer de edición por pestañas ---
+  get editTabs() {
+    return EDIT_TABS[this.editData?.role] ?? EDIT_TABS['default'];
+  }
+
+  get activeEditTab(): EditTabKey {
+    return this.editTabs.some((t) => t.key === this.editTab) ? this.editTab : 'cuenta';
+  }
+
+  onEditTabsKeydown(event: KeyboardEvent) {
+    const keys = this.editTabs.map((t) => t.key);
+    const current = keys.indexOf(this.activeEditTab);
+    let next = -1;
+    if (event.key === 'ArrowRight') next = (current + 1) % keys.length;
+    else if (event.key === 'ArrowLeft') next = (current - 1 + keys.length) % keys.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = keys.length - 1;
+    else return;
+    event.preventDefault();
+    this.editTab = keys[next];
+    this.cdr.markForCheck();
+    setTimeout(() => document.getElementById('edit-tab-' + keys[next])?.focus(), 0);
+  }
+
+  // --- Asistente de alta por pasos ---
+  get createSteps() {
+    return CREATE_STEPS[this.newUser.role] ?? CREATE_STEPS['default'];
+  }
+
+  get isLastCreateStep(): boolean {
+    return this.createStep >= this.createSteps.length;
+  }
+
+  prevCreateStep() {
+    if (this.createStep > 1) {
+      this.createStep--;
+      this.createStatus = '';
+    }
+  }
+
+  nextCreateStep() {
+    if (!this.validateCreateStep()) return;
+    this.createStatus = '';
+    this.createStep = Math.min(this.createStep + 1, this.createSteps.length);
+  }
+
+  private validateCreateStep(): boolean {
+    if (this.createStep === 1) {
+      const username = this.newUser.username.trim();
+      const email = this.newUser.email.trim();
+      if (!username && !email) {
+        this.createStatus = 'Error: escribe un nombre o un correo.';
+        return false;
+      }
+      if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        this.createStatus = 'Error: el correo no tiene un formato válido.';
+        return false;
+      }
+    }
+    return true;
   }
 
   openResetDrawer(user: UserRow) {
@@ -880,6 +959,7 @@ export class UsersList implements OnInit, OnDestroy {
   openCreateDrawer() {
     this.newUser = { email: '', username: '', role: 'jugador', sede_id: null, sede_ids: [], salary: null, hours: null, modality: null, evaluation_date: '', frequency: 'monthly', plan_type: 'individual', amount: null, generate_schedule: true, start_date: '', start_time: '', schedule_therapist: null, days: [], guardian_name: '', guardian_type: 'tutor', guardian_dni: '', guardian_contact: '' };
     this.createStatus = '';
+    this.createStep = 1;
     this.tempCredentials = null;
     this.passwordCopied = false;
     this.showCreateDrawer = true;
