@@ -800,6 +800,9 @@ def create_app(config_class=None):
         ('webauthn', 'app.routes.webauthn', 'webauthn_bp'),
         ('deploy', 'app.routes.deploy_routes', 'deploy_bp'),
         ('crm', 'app.routes.crm_routes', 'crm_bp'),
+        # API de solicitudes de servicio: existia (modelo, repo, rutas con roles) pero solo estaba en el
+        # bootstrap.py que nadie ejecuta, asi que respondia 404.
+        ('api_service_requests', 'app.api.service_requests', 'api_sr'),
     ]
     for name, module_path, bp_name in _blueprints:
         try:
