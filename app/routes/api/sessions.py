@@ -454,7 +454,7 @@ def api_update_session(session_id):
             start_time=start_time,
             end_time=end_time,
             patient_id=existing_appt.patient_id,
-            therapist_id=current_user.id,
+            therapist_id=existing_appt.therapist_id,
             session_id=session_id,
         )
 

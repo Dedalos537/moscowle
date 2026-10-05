@@ -20,6 +20,8 @@ se cachea por (role, user_id) durante la vida del request, para no repetir la
 consulta por cada tool del turno.
 """
 
+import contextlib
+
 from flask import g
 
 # Tools cuyo resultado es una coleccion de pacientes y hay que acotar.
@@ -46,8 +48,16 @@ _SCOPED_ROW_TOOLS = {
 
 # Claves bajo las que suele venir la coleccion a filtrar.
 _COLLECTION_KEYS = (
-    'patients', 'sessions', 'payments', 'installments', 'contracts',
-    'results', 'items', 'debtors', 'data', 'groups',
+    'patients',
+    'sessions',
+    'payments',
+    'installments',
+    'contracts',
+    'results',
+    'items',
+    'debtors',
+    'data',
+    'groups',
 )
 
 # Que clave de la fila identifica a SU DONO, por tool. En 'list_patients' la
@@ -69,6 +79,9 @@ _ROW_OWNER_KEY = {
     'get_therapist_patients': 'id',
 }
 
+# Parametros que identifican una sesion (Appointment) y no un paciente.
+_SESSION_ID_KEYS = ('session_id', 'appointment_id')
+
 # Tools que no tocan datos de paciente: pasan intactas.
 _PUBLIC_TOOLS = {'list_sedes', 'get_current_datetime', 'get_notifications', 'mark_notifications_read'}
 
@@ -82,10 +95,8 @@ def _get_cached(role, user_id):
 
 
 def _set_cached(role, user_id, value):
-    try:
+    with contextlib.suppress(Exception):
         setattr(g, _cache_key(role, user_id), value)
-    except Exception:
-        pass
 
 
 class PolicyEngine:
@@ -230,14 +241,42 @@ class PolicyEngine:
                 continue
             value = args[key]
             # Solo hay que comprobarlo si el id se refiere a un paciente.
-            if key == 'patient_id' or self._looks_like_patient_id(value):
-                if not self.can_access_patient(role, user_id, value):
-                    return (
-                        False,
-                        args,
-                        'No tienes acceso a ese paciente: no esta en tu alcance.',
-                    )
+            if (key == 'patient_id' or self._looks_like_patient_id(value)) and not self.can_access_patient(
+                role, user_id, value
+            ):
+                return (
+                    False,
+                    args,
+                    'No tienes acceso a ese paciente: no esta en tu alcance.',
+                )
+        for key in _SESSION_ID_KEYS:
+            if key not in args or args[key] in (None, ''):
+                continue
+            if not self.can_access_session(role, user_id, args[key]):
+                return (
+                    False,
+                    args,
+                    'No tienes acceso a ese paciente: no esta en tu alcance.',
+                )
         return True, args, ''
+
+    def can_access_session(self, role, user_id, session_id):
+        """Una sesion es accesible si es del propio terapeuta o de un paciente de
+        su alcance. Si no existe se deniega igual: no se revela su existencia."""
+        scope = self.allowed_patient_ids(role, user_id)
+        if scope is None:
+            return True
+        try:
+            from app.models.appointment import Appointment
+
+            appt = Appointment.query.filter_by(id=int(session_id)).first()
+        except Exception:
+            return False
+        if appt is None:
+            return False
+        if role == 'terapista' and appt.therapist_id == int(user_id):
+            return True
+        return appt.patient_id in scope
 
     def _looks_like_patient_id(self, value):
         try:

@@ -172,6 +172,7 @@ CORE_TOOL_NAMES = [
     'create_full_patient',
     'update_patient_profile',
     'delete_user',
+    'update_user',
     'assign_therapist',
     'assign_therapist_to_sede',
     'get_current_datetime',
@@ -181,6 +182,7 @@ CORE_TOOL_NAMES = [
     'update_session_plan',
     'cancel_session',
     'complete_session',
+    'reschedule_session',
     'batch_create_sessions',
     'create_group_sessions',
     'get_financial_summary',
@@ -209,6 +211,8 @@ CORE_TOOL_NAMES = [
     'create_patient_group',
     'list_expenses',
     'create_expense',
+    'update_expense',
+    'delete_expense',
     'generate_weekly_report',
     'get_weekly_summary',
     'get_monthly_reports',
@@ -270,6 +274,21 @@ def execute_tool(name, args, user_id=None, role=None):
                 'error': f'Faltan parametros requeridos para {name}: {", ".join(missing)}. '
                 f'Usa el formato: <function={name}{{"param1": "valor1"}}' + '</function>'
             }
+    # Aislamiento por fila. Se aplica aqui y no dentro de cada handler para que
+    # una tool nueva no pueda saltarselo por olvido. El veto de argumentos corre
+    # ANTES del handler (una escritura denegada no debe haberse ejecutado) y el
+    # filtro de filas corre DESPUES, sobre lo que devuelve.
+    try:
+        from app.services.policy import get_policy
+
+        policy = get_policy()
+        permitido, args, motivo = policy.check(name, args, role=role, user_id=user_id)
+    except Exception as e:
+        logger.error(f'Policy error on {name}: {e}', exc_info=True)
+        return {'error': 'No se pudo verificar el acceso a esos datos.'}
+    if not permitido:
+        return {'error': f'No se puede ejecutar {name}: {motivo}'}
+
     try:
         resultado = t['handler'](**args, _user_id=user_id, _role=role)
     except TypeError as e:
@@ -281,16 +300,7 @@ def execute_tool(name, args, user_id=None, role=None):
         logger.error(f'Tool {name} error: {e}', exc_info=True)
         return {'error': str(e)}
 
-    # Aislamiento por fila. Se aplica aqui y no dentro de cada handler para que
-    # una tool nueva no pueda saltarselo por olvido: el filtro corre DESPUES del
-    # handler, sobre lo que devuelve.
     try:
-        from app.services.policy import get_policy
-
-        policy = get_policy()
-        permitido, args, motivo = policy.check(name, args, role=role, user_id=user_id)
-        if not permitido:
-            return {'error': f'No se puede ejecutar {name}: {motivo}'}
         return policy.filter_result(name, resultado, role=role, user_id=user_id)
     except Exception as e:
         logger.error(f'Policy error on {name}: {e}', exc_info=True)
@@ -1395,6 +1405,52 @@ def handle_delete_user(user_id, **kwargs):
 
 
 @tool(
+    name='update_user',
+    description='Edita datos de contacto de un usuario: nombre, correo o telefono. No cambia rol ni contrasena.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'user_id': {'type': 'integer', 'description': 'ID del usuario'},
+            'username': {'type': 'string', 'description': 'Nuevo nombre'},
+            'email': {'type': 'string', 'description': 'Nuevo correo'},
+            'phone': {'type': 'string', 'description': 'Nuevo telefono'},
+        },
+        'required': ['user_id'],
+    },
+    category='write',
+    roles=ROLES_ADMIN,
+)
+def handle_update_user(user_id, username=None, email=None, phone=None, **kwargs):
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return {'error': 'Usuario no encontrado'}
+        updated = []
+        if username:
+            user.username = sanitize_text(username, 100)
+            updated.append('username')
+        if email:
+            new_email = str(email).strip().lower()
+            if not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', new_email):
+                return {'error': 'El correo no tiene un formato valido'}
+            taken = User.query.filter(User.email == new_email, User.id != user.id).first()
+            if taken:
+                return {'error': 'Ese correo ya esta en uso por otro usuario'}
+            user.email = new_email
+            updated.append('email')
+        if phone:
+            user.phone = sanitize_text(phone, 50)
+            updated.append('phone')
+        if not updated:
+            return {'error': 'Indica que cambiar: username, email o phone'}
+        db.session.commit()
+        return {'success': True, 'updated_fields': updated, 'message': f'Usuario {user.username} actualizado'}
+    except Exception as e:
+        db.session.rollback()
+        return {'error': str(e)}
+
+
+@tool(
     name='assign_therapist',
     description='Asigna un terapeuta a un paciente.',
     parameters={
@@ -1632,6 +1688,65 @@ def handle_complete_session(session_id, **kwargs):
         if resp and resp.status_code < 400:
             return {'success': True, 'message': f'Sesion {session_id} completada'}
         return {'error': data.get('message', 'Error al completar sesion')}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+def _parse_tool_datetime(value):
+    """'YYYY-MM-DD HH:MM' o ISO -> datetime ingenuo (hora local); None si no se entiende."""
+    try:
+        return datetime.fromisoformat(str(value).strip().replace('Z', ''))
+    except (TypeError, ValueError):
+        return None
+
+
+@tool(
+    name='reschedule_session',
+    description='Reprograma una sesion existente a otra fecha y hora. Uso tipico: "mueve la sesion 45 al viernes 15:00".',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'session_id': {'type': 'integer', 'description': 'ID de la sesion'},
+            'start_time': {'type': 'string', 'description': 'Nuevo inicio: YYYY-MM-DD HH:MM'},
+            'end_time': {'type': 'string', 'description': 'Nuevo fin: YYYY-MM-DD HH:MM (default: misma duracion)'},
+        },
+        'required': ['session_id', 'start_time'],
+    },
+    category='write',
+    roles=ROLES_THERAPIST,
+)
+def handle_reschedule_session(session_id, start_time, end_time=None, **kwargs):
+    try:
+        start_dt = _parse_tool_datetime(start_time)
+        if not start_dt:
+            return {'error': 'Fecha/hora de inicio invalida. Usa el formato YYYY-MM-DD HH:MM'}
+        appt = Appointment.query.get(session_id)
+        if not appt:
+            return {'error': 'Esa sesion no existe'}
+        if end_time:
+            end_dt = _parse_tool_datetime(end_time)
+            if not end_dt:
+                return {'error': 'Fecha/hora de fin invalida. Usa el formato YYYY-MM-DD HH:MM'}
+        else:
+            duration = (appt.end_time - appt.start_time) if appt.end_time and appt.start_time else timedelta(hours=1)
+            end_dt = start_dt + duration
+        if end_dt <= start_dt:
+            return {'error': 'El fin debe ser posterior al inicio'}
+        resp = _api_put(
+            f'/api/sessions/{session_id}',
+            json={'start_time': start_dt.isoformat(), 'end_time': end_dt.isoformat()},
+            user_id=kwargs.get('_user_id'),
+            role=kwargs.get('_role'),
+        )
+        data = resp.get_json() if resp else {}
+        if resp and resp.status_code < 400:
+            return {
+                'success': True,
+                'message': f'Sesion {session_id} reprogramada al {start_dt.strftime("%d/%m/%Y %H:%M")}',
+                'data': data,
+            }
+        errors = data.get('errors') or []
+        return {'error': data.get('message', 'No se pudo reprogramar'), 'details': errors}
     except Exception as e:
         return {'error': str(e)}
 
@@ -2090,6 +2205,38 @@ def handle_create_patient_group(name, description='', **kwargs):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
+_DEBT_MONTHS_ES = (
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'setiembre', 'octubre', 'noviembre', 'diciembre',
+)  # fmt: skip
+
+
+def normalize_debt_month(month):
+    """Lleva el mes que manda la IA ('YYYY-MM', '10', 'octubre', 10) al formato
+    de /api/admin/deudores: 'current' | '1'..'12' | None (todos)."""
+    if month is None:
+        return None
+    value = str(month).strip().lower()
+    if value in ('', 'all', 'todos', 'none', 'null'):
+        return None
+    if value in ('current', 'curr', 'actual', 'este mes'):
+        return 'current'
+    num = None
+    m = re.fullmatch(r'(\d{4})-(\d{1,2})', value)
+    if m:
+        year, num = int(m.group(1)), int(m.group(2))
+        now = datetime.utcnow()
+        if (year, num) == (now.year, now.month):
+            return 'current'
+    elif value.isdigit():
+        num = int(value)
+    elif value in _DEBT_MONTHS_ES:
+        num = _DEBT_MONTHS_ES.index(value) + 1
+    elif value == 'septiembre':
+        num = 9
+    return str(num) if num and 1 <= num <= 12 else None
+
+
 @tool(
     name='get_debtors',
     description='Reporte de deudores por sede. Pacientes con pagos pendientes.',
@@ -2105,6 +2252,7 @@ def handle_create_patient_group(name, description='', **kwargs):
 def handle_get_debtors(month=None, **kwargs):
     try:
         url = '/api/admin/deudores'
+        month = normalize_debt_month(month)
         if month:
             url += f'?month={month}'
         resp = _api_get(url, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
@@ -2216,6 +2364,86 @@ def handle_create_expense(description, amount, category='operational', **kwargs)
             return {'success': True, 'message': f'Gasto de S/. {amount:.2f} registrado', 'data': data}
         return {'error': data.get('error') or data.get('message') or 'Error al registrar gasto'}
     except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='update_expense',
+    description='Edita un gasto existente del centro: monto, descripcion o categoria.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'expense_id': {'type': 'integer', 'description': 'ID del gasto (de list_expenses)'},
+            'amount': {'type': 'number', 'description': 'Nuevo monto en soles (mayor a 0)'},
+            'description': {'type': 'string', 'description': 'Nueva descripcion'},
+            'category': {
+                'type': 'string',
+                'description': 'Categoria: therapist_payment, operational, bonus, other',
+            },
+        },
+        'required': ['expense_id'],
+    },
+    category='write',
+    roles=ROLES_ADMIN,
+)
+def handle_update_expense(expense_id, amount=None, description=None, category=None, **kwargs):
+    try:
+        from app.models.payment import Expense
+        from app.services.financial_service import normalize_expense_category
+
+        expense = Expense.query.filter_by(id=expense_id, is_active=True).first()
+        if not expense:
+            return {'error': 'Gasto no encontrado'}
+        updated = []
+        if amount is not None:
+            try:
+                value = float(amount)
+            except (TypeError, ValueError):
+                return {'error': 'El monto debe ser un numero valido'}
+            if value <= 0:
+                return {'error': 'El monto debe ser mayor a 0'}
+            expense.amount = value
+            updated.append('amount')
+        if description:
+            expense.description = sanitize_text(description, 1000)
+            updated.append('description')
+        if category:
+            expense.category = normalize_expense_category(category)
+            updated.append('category')
+        if not updated:
+            return {'error': 'Indica que cambiar: amount, description o category'}
+        db.session.commit()
+        return {'success': True, 'updated_fields': updated, 'message': f'Gasto {expense_id} actualizado'}
+    except Exception as e:
+        db.session.rollback()
+        return {'error': str(e)}
+
+
+@tool(
+    name='delete_expense',
+    description='Elimina un gasto del centro (baja logica, deja de contar en los reportes).',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'expense_id': {'type': 'integer', 'description': 'ID del gasto (de list_expenses)'},
+        },
+        'required': ['expense_id'],
+    },
+    category='write',
+    roles=ROLES_ADMIN,
+)
+def handle_delete_expense(expense_id, **kwargs):
+    try:
+        from app.models.payment import Expense
+
+        expense = Expense.query.filter_by(id=expense_id, is_active=True).first()
+        if not expense:
+            return {'error': 'Gasto no encontrado'}
+        expense.is_active = False
+        db.session.commit()
+        return {'success': True, 'message': f'Gasto {expense_id} eliminado'}
+    except Exception as e:
+        db.session.rollback()
         return {'error': str(e)}
 
 

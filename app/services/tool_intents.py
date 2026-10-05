@@ -83,7 +83,20 @@ _NAME_LEXICON = {
 _CONCEPT_GROUPS = (
     ('agenda', 'sesiones', 'sesion', 'citas', 'cita', 'calendario'),
     ('gastos', 'gasto', 'egresos', 'egreso'),
-    ('deudores', 'deudor', 'morosos', 'moroso', 'deuda', 'debe', 'atrasos', 'atraso'),
+    (
+        'deudores',
+        'deudor',
+        'morosos',
+        'moroso',
+        'deuda',
+        'deudas',
+        'debe',
+        'deben',
+        'adeuda',
+        'adeudan',
+        'atrasos',
+        'atraso',
+    ),
     ('cobranza', 'recaudacion', 'cobrado', 'cobros', 'cobro', 'genero', 'generado', 'recaudo', 'recaudado'),
     ('pacientes', 'paciente', 'jugadores', 'jugador'),
     ('usuarios', 'usuario'),
@@ -202,6 +215,7 @@ _QUERY_MARKERS = frozenset(
         'cuanto',
         'cuantos',
         'cuantas',
+        'cuanta',
         'quien',
         'lista',
         'listar',
@@ -236,10 +250,13 @@ _QUERY_MARKERS = frozenset(
 _WRITE_VERB_RE = re.compile(
     r'\b(crea|crear|creo|registra|registrar|registro|actualiza|actualizar|'
     r'elimina|eliminar|borra|borrar|asigna|asignar|agrega|agregar|modifica|modificar|'
-    r'programa|programar|envia|enviar|marca|marcar|cierra|cerrar|paga|pagar)\b'
+    r'programa|programar|envia|enviar|marca|marcar|cierra|cerrar|paga|pagar|'
+    r'reprograma|reprogramar|cambia|cambiar|edita|editar|mueve|mover|corrige|corregir|'
+    r'quita|quitar|anula|anular|cancela|cancelar|pospone|posponer|activa|activar|'
+    r'desactiva|desactivar|completa|completar)\b'
 )
 
-_COUNT_RE = re.compile(r'\bcuant(?:es|as|o|os)\b|\bcuanto\b|\btotal de\b|\bcantidad de\b|\bnumero de\b')
+_COUNT_RE = re.compile(r'\bcuant(?:es|as|a|o|os)\b|\bcuanto\b|\btotal de\b|\bcantidad de\b|\bnumero de\b')
 
 _METRIC_RE = re.compile(r'\b(metricas?|crecimiento|rendimiento|eficiencia|efficiency)\b')
 
@@ -382,6 +399,9 @@ def _phrase_candidates(entry: dict) -> tuple[set[str], set[str], bool, frozenset
             'reporte de {n}',
             'resumen de {n}',
             'ver {n}',
+            'cuantos pacientes {n}',
+            'pacientes que {n}',
+            'pacientes con {n}',
         ):
             phrases.add(tpl.format(n=n))
         if 'month' in params:

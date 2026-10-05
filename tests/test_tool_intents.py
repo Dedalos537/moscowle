@@ -42,6 +42,9 @@ INTENT_CASES = [
     ('cuánto debe juan', 'get_debtors'),
     ('reporte de morosos', 'get_debtors'),
     ('deudores por sede', 'get_debtors'),
+    ('cuánta es la deuda total?', 'get_debtors'),
+    ('cuántos pacientes deben', 'get_debtors'),
+    ('quiénes adeudan pagos', 'get_debtors'),
     # Resumen financiero (entidad "financiero" no bloquea ingresos/ganancia)
     ('resumen financiero', 'get_financial_summary'),
     ('ingresos del mes', 'get_financial_summary'),
@@ -119,3 +122,22 @@ class TestIndiceGenerado:
         index = build_intent_index()
         for entry in index:
             assert TOOL_REGISTRY[entry['name']].get('category') != 'write' or entry['name'] == 'create_group_sessions'
+
+
+@pytest.mark.parametrize(
+    'msg',
+    [
+        'reprograma la sesión 45 para el viernes',
+        'cambia el teléfono del usuario 7',
+        'edita el gasto 12 a 200 soles',
+        'mueve la sesión de hoy a las 5',
+        'cancela la sesión de mañana',
+        'anula el gasto 3',
+        'desactiva al usuario 9',
+        'completa la sesión de hoy',
+    ],
+)
+def test_verbo_de_escritura_nunca_fuerza_una_lectura(msg):
+    """Una orden de modificar no debe resolverse con una tool de lectura
+    determinista: la decide el LLM (que pasa por la puerta de confirmacion)."""
+    assert _match(msg) in (None, 'create_group_sessions')

@@ -278,6 +278,7 @@ def _trim_tool_result(result, max_chars=MAX_TOOL_RESULT_CHARS):
                 result = {
                     'success': result.get('success', True),
                     'count': result.get('count', len(deudores)),
+                    'summary': payload.get('summary') or {},
                     'deudores': deudores[:8],
                     'note': (
                         f'Showing {min(8, len(deudores))} of {len(deudores)} deudores' if len(deudores) > 8 else None
