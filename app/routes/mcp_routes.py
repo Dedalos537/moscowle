@@ -27,6 +27,7 @@ from app.services.mcp_service import (
     _parse_text_tool_call,
     _select_local_tools,
     _trim_tool_result,
+    normalize_number_spaces,
     resolve_system_prompt,
     strip_tool_calls,
     tool_result_context,
@@ -449,6 +450,7 @@ def mcp_chat_stream():
                 tool_calls_log = []
                 last_result_str = ''
                 streamed_text = ''
+                final_answer = None
                 confirmed_tool = data.get('confirmed_tool') or {}
                 corrections = 0
 
@@ -499,7 +501,7 @@ def mcp_chat_stream():
                 # inventada antes del tool_call y ahorra CPU.
                 det_tool = None
                 if local_mode and not confirmed_tool.get('name') and not tool_calls_log:
-                    det_tool = _force_intent_tool(message, local_tools, user.role)
+                    det_tool = _force_intent_tool(message, tools, user.role)
 
                 for iteration in range(6):
                     try:
@@ -515,6 +517,9 @@ def mcp_chat_stream():
                             # No se reenvia full_content como 'text': los chunks ya
                             # llevaron la respuesta entera y el frontend CONCATENA
                             # 'text' tras 'chunk' (ai-chat.ts / chat.ts) -> respuesta doble.
+                            final_answer = normalize_number_spaces(strip_tool_calls(full_content))
+                            _final_ev = json.dumps({'type': 'final', 'content': final_answer}, ensure_ascii=False)
+                            yield f'data: {_final_ev}\n\n'
                             done_payload = {
                                 'type': 'done',
                                 'has_tool_call': False,
@@ -553,7 +558,7 @@ def mcp_chat_stream():
 
                         forced = None
                         if local_mode and iteration == 0 and not confirmed_tool.get('name') and not tool_calls_log:
-                            forced = _force_intent_tool(message, local_tools, user.role)
+                            forced = _force_intent_tool(message, tools, user.role)
                         if forced:
                             # El intent determinista gana sobre lo que emita el router:
                             # evita paciente/hora alucinados en tools de escritura o de reporte.
@@ -643,6 +648,7 @@ def mcp_chat_stream():
                         # No more tool calls — check if the model affirmed a system datum
                         # without having called any tool.  If so, re-prompt up to 2 times.
                         clean_final = strip_tool_calls(full_content).strip()
+                        final_answer = normalize_number_spaces(clean_final)
                         if (
                             not confirmed_tool.get('name')
                             and corrections < 2
@@ -664,6 +670,9 @@ def mcp_chat_stream():
                             )
                             thinking_retry = 'Los datos deben venir de una herramienta. Reintentando...'
                             yield trace.thinking(thinking_retry, 'guard')
+                            # El intento erróneo ya se transmitió: vacía la burbuja
+                            # para que el retry no quede pegado a la respuesta final.
+                            yield f'data: {json.dumps({"type": "reset_text"})}\n\n'
                             continue
 
                         # No more tool calls — final response already streamed
@@ -749,6 +758,10 @@ def mcp_chat_stream():
                         if iteration >= 2:
                             yield f'data: {json.dumps({"type": "text", "content": f"Error: {error_str[:200]}"})}\n\n'
                             break
+
+                if final_answer is not None:
+                    _final_ev = json.dumps({'type': 'final', 'content': final_answer}, ensure_ascii=False)
+                    yield f'data: {_final_ev}\n\n'
 
                 if not tool_calls_log and (
                     _ACTION_CLAIM_RE.search(streamed_text) or _FAKE_VERIFY_RE.search(streamed_text)

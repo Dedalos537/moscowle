@@ -84,7 +84,7 @@ _CONCEPT_GROUPS = (
     ('agenda', 'sesiones', 'sesion', 'citas', 'cita', 'calendario'),
     ('gastos', 'gasto', 'egresos', 'egreso'),
     ('deudores', 'deudor', 'morosos', 'moroso', 'deuda', 'debe', 'atrasos', 'atraso'),
-    ('cobranza', 'recaudacion', 'cobrado', 'cobros', 'cobro'),
+    ('cobranza', 'recaudacion', 'cobrado', 'cobros', 'cobro', 'genero', 'generado', 'recaudo', 'recaudado'),
     ('pacientes', 'paciente', 'jugadores', 'jugador'),
     ('usuarios', 'usuario'),
     ('sedes', 'sede', 'sucursales', 'sucursal'),
@@ -355,6 +355,16 @@ def _phrase_candidates(entry: dict) -> tuple[set[str], set[str], bool, frozenset
             if any(w not in _STOPWORDS and len(w) > 2 for w in gram.split()):
                 phrases.add(gram)
 
+    # 4b) Frases de uso entre comillas (la descripción enseña el patrón real:
+    #     'Uso tipico: "cuantos usuarios tiene el terapeuta Milagros"').
+    #     De ahí salen n-gramas como "tiene el terapeuta", que ganan por largo.
+    for quoted in re.findall(r'["\x60](.{6,}?)["\x60]', desc):
+        q_words = _words(quoted)
+        for size in (3, 2):
+            for gram in _ngrams(q_words, size):
+                if any(w not in _STOPWORDS and len(w) > 2 for w in gram.split()):
+                    phrases.add(gram)
+
     # 5) Plantillas de consulta por sustantivo (nouns[:3] + conceptos).
     template_nouns: list[str] = []
     for n in nouns[:3]:
@@ -449,6 +459,9 @@ def _arg_spec(entry: dict) -> str | None:
     # mensaje ('cuántos terapeutas' -> role=terapista) contra ese mismo enum.
     if 'role' in params and (params.get('role') or {}).get('enum'):
         return 'role'
+    # Tool atada a un terapeuta por nombre (get_therapist_patients...).
+    if 'therapist_name' in params:
+        return 'therapist'
     return None
 
 

@@ -2885,11 +2885,20 @@ def handle_reactivate_contract(contract_id, next_payment_date, **kwargs):
 def handle_get_monthly_collection(**kwargs):
     from app.services.contract_service import ContractService
 
+    # El extractor genérico de mes devuelve 'YYYY-MM' (formato de list_expenses);
+    # get_monthly_breakdown espera enteros. Se aceptan ambos formatos.
+    month = kwargs.get('month')
+    year = kwargs.get('year')
+    if isinstance(month, str) and '-' in month:
+        try:
+            year_str, month_str = month.split('-', 1)
+            year = int(year_str)
+            month = int(month_str)
+        except (ValueError, TypeError):
+            month = None
+
     svc = ContractService()
-    breakdown = svc.get_monthly_breakdown(
-        month=kwargs.get('month'),
-        year=kwargs.get('year'),
-    )
+    breakdown = svc.get_monthly_breakdown(month=month, year=year)
     return {'success': True, 'data': breakdown}
 
 

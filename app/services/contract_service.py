@@ -672,13 +672,17 @@ class ContractService:
         target_month = month or today.month
         target_year = year or today.year
 
+        # Rango de fechas: 'due_date.month' no existe en SQLAlchemy 2.x y
+        # rompía la tool get_monthly_collection con AttributeError.
+        first_day = date(int(target_year), int(target_month), 1)
+        last_day = date(int(target_year), int(target_month), monthrange(int(target_year), int(target_month))[1])
         installments = (
             db.session.query(Installment)
             .join(Contract, Installment.contract_id == Contract.id)
             .filter(
                 Contract.status == 'active',
-                Installment.due_date.month == target_month,
-                Installment.due_date.year == target_year,
+                Installment.due_date >= first_day,
+                Installment.due_date <= last_day,
             )
             .all()
         )

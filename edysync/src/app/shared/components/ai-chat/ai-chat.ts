@@ -594,6 +594,10 @@ export class AiChat implements AfterViewChecked, OnDestroy {
         break;
 
       case 'tool_call':
+        // La prosa previa al tool_call no es la respuesta: vacía la burbuja
+        // (la respuesta real llega tras el resultado de la herramienta).
+        this.assistantText = '';
+        this.updateLastAssistant('');
         this.streamToolCalls.push({
           name: event.name || '',
           args: event.args || {},
@@ -605,6 +609,22 @@ export class AiChat implements AfterViewChecked, OnDestroy {
           tool: event.name || '',
           text: `Llamando a la herramienta: ${event.name || '?'}(${this.summarizeArgs(event.args || {})})`,
         });
+        this.cdr.markForCheck();
+        break;
+
+      case 'final':
+        // Texto final normalizado del backend (espacios de cifras corregidos):
+        // REEMPLAZA lo transmitido en chunks.
+        this.assistantText = event.content || '';
+        this.updateLastAssistant(this.assistantText);
+        this.clearThinkingLabel();
+        this.cdr.markForCheck();
+        break;
+
+      case 'reset_text':
+        // Reintento de corrección: el intento erróneo ya no debe verse.
+        this.assistantText = '';
+        this.updateLastAssistant('');
         this.cdr.markForCheck();
         break;
 

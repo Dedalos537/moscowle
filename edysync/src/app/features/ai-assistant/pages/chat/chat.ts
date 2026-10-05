@@ -176,6 +176,9 @@ export class AiAssistantChat implements OnInit, OnDestroy {
       }
 
       case 'tool_call': {
+        // La prosa previa al tool_call no es la respuesta: vacía la burbuja.
+        const prev = this.messages[this.messages.length - 1];
+        if (prev?.role === 'assistant') prev.content = '';
         this.streamToolCalls.push({
           name: event.name || '',
           args: event.args || {},
@@ -222,6 +225,26 @@ export class AiAssistantChat implements OnInit, OnDestroy {
           this.scrollToBottom();
         }
         break;
+
+      case 'final': {
+        // Texto final normalizado: REEMPLAZA lo transmitido en chunks.
+        const lastF = this.messages[this.messages.length - 1];
+        if (lastF?.role === 'assistant') {
+          lastF.content = event.content || '';
+        } else if (event.content) {
+          this.messages.push({ role: 'assistant', content: event.content, timestamp: new Date() });
+        }
+        this.cdr.markForCheck();
+        this.scrollToBottom();
+        break;
+      }
+
+      case 'reset_text': {
+        const lastR = this.messages[this.messages.length - 1];
+        if (lastR?.role === 'assistant') lastR.content = '';
+        this.cdr.markForCheck();
+        break;
+      }
 
       case 'chips':
         this.actionChips = event.chips || [];

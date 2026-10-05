@@ -39,6 +39,8 @@ export interface McpStreamEvent {
     | 'tool_result'
     | 'confirm'
     | 'chips'
+    | 'final'
+    | 'reset_text'
     | 'done'
     | 'error';
   content?: string;

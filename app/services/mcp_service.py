@@ -11,7 +11,7 @@ from app.services.prompt_builder import (
     build_system_prompt,
     get_current_date_context,  # noqa: F401 — re-export para mcp_routes y tests
 )
-from app.services.tool_intents import match_intent
+from app.services.tool_intents import match_intent, norm
 from app.services.tools_registry import SAFE_WRITE_TOOLS, TOOL_REGISTRY, execute_tool, get_tools_for_mode
 
 logger = logging.getLogger('app.mcp')
@@ -92,6 +92,35 @@ def strip_tool_calls(text):
     return _TOOL_CALL_ANY_RE.sub('', text or '')
 
 
+# Emails/URLs: nunca se les inserta espacio (los modelos retipean correos
+# como "adrenalina11@..." y el normalizador no debe romperlos).
+_EMAIL_URL_RE = re.compile(r'https?://\S+|www\.\S+|[\w.+-]+@[\w-]+\.[\w.-]+')
+
+
+def normalize_number_spaces(text):
+    """Corrige el sesgo de los modelos locales (qwen/minicpm) de emitir cifras
+    sin espacio previo: 'Hay4', 'domingo4', 'a las14:58:47'.
+
+    Solo INSERTA espacio entre una letra y un dígito; emails y URLs quedan
+    intactos. Idempotente."""
+    if not text:
+        return text or ''
+
+    def _fix(segment):
+        return re.sub(
+            r'(?<=[A-Za-z\u00c1\u00c9\u00cd\u00d3\u00da\u00d1\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1])(?=\d)', ' ', segment
+        )
+
+    parts = []
+    last = 0
+    for m in _EMAIL_URL_RE.finditer(text):
+        parts.append(_fix(text[last : m.start()]))
+        parts.append(m.group(0))
+        last = m.end()
+    parts.append(_fix(text[last:]))
+    return ''.join(parts)
+
+
 def _parse_paren_args(args_str):
     """Parse 'key: value, key: value' from parentheses format."""
     result = {}
@@ -149,12 +178,16 @@ def tool_result_context(tool_name, result_str, already_executed=False):
         '2. Luego lista los valores EXACTAMENTE como aparecen arriba; nunca inventes, '
         'complete ni fusiones nombres/correos.',
         '3. Si el resultado indica "Showing X of Y" o viene cortado, dilo: "mostrando X de Y".',
-        '4. No afirmes estados (activo/inactivo, permisos, montos) salvo que estén en los '
+        '4. Si el resultado es GLOBAL (sin filtro de la persona nombrada), NO se lo atribuyas: '
+        'di el alcance real (p.ej. "pacientes activos del centro"); para UN terapeuta existe '
+        'get_therapist_patients.',
+        '5. No afirmes estados (activo/inactivo, permisos, montos) salvo que estén en los '
         'datos; si falta un campo, di "no disponible".',
-        '5. Responde en español, conciso, sin mencionar herramientas ni procesos internos.',
+        '6. Responde en español, conciso, sin mencionar herramientas ni procesos internos.',
+        '7. Escribe con espacio entre palabras y cifras ("Hay 4", "las 14:58"): NUNCA "Hay4".',
     ]
     if already_executed:
-        lines.append(f'6. {tool_name} YA fue ejecutada: NO la llames de nuevo; responde ahora.')
+        lines.append(f'8. {tool_name} YA fue ejecutada: NO la llames de nuevo; responde ahora.')
     return '\n'.join(lines)
 
 
@@ -762,20 +795,80 @@ def _extract_role_arg(message, tool_name):
     return {}
 
 
+# Preguntas de identidad de sesión: se responden con los tokens del prompt
+# (usuario/rol/id), jamás forzando una tool de listado.
+_IDENTITY_RE = re.compile(
+    r'\b(en que usuario|que usuario soy|mi usuario|quien soy|soy yo|en que cuenta'
+    r'|que rol tengo|mi rol|como me llamo|en que sesion estoy)\b'
+)
+
+_THERAPIST_NAME_RE = re.compile(
+    r'(?:terapeuta|terapista)(?:s)?(?:\s+(?:el|la|llamad[oa]|de))?\s+'
+    r'([A-Z\u00c1\u00c9\u00cd\u00d3\u00da\u00d1][\w\u00c1\u00c9\u00cd\u00d3\u00da\u00d1'
+    r'\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1]+'
+    r'(?:\s+[A-Z\u00c1\u00c9\u00cd\u00d3\u00da\u00d1][\w\u00c1\u00c9\u00cd\u00d3\u00da\u00d1'
+    r'\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1]+)*)'
+)
+
+
+def _extract_therapist_arg(message, user_role):
+    """arg_spec='therapist': {'therapist_name': nombre} para tools de terapeuta.
+
+    1) Nombre propio tras 'terapeuta/terapista' en el mensaje crudo;
+    2) resolutor de entidades (el nombre está en la BD con rol terapista)."""
+    m = _THERAPIST_NAME_RE.search(message or '')
+    if m:
+        name = m.group(1).strip().rstrip('.,;:\u00bf?\u00a1!')
+        if len(name) >= 3:
+            return {'therapist_name': name}
+    # Fallback al resolutor: solo si el mensaje contiene un candidato a nombre
+    # propio (mayúscula inicial distinto de 'terapeuta/terapista'). Evita que la
+    # palabra genérica resuelva a un usuario arbitrario de la BD.
+    candidates = {
+        w.lower()
+        for w in re.findall(
+            r'[A-Z\u00c1\u00c9\u00cd\u00d3\u00da\u00d1][\w\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1]+', message or ''
+        )
+    }
+    if candidates - {'terapeuta', 'terapeutas', 'terapista', 'terapistas'}:
+        try:
+            from app.services.entity_resolver import resolve_entities
+
+            ents = resolve_entities(message, role=user_role)
+            if ents.therapists:
+                t = ents.therapists[0]
+                name = t.get('username') or t.get('email') or ''
+                if name:
+                    return {'therapist_name': name}
+        except Exception:
+            pass
+    return {}
+
+
 def _force_intent_tool(message, local_tools, user_role):
     """Si el router local no llamó ninguna tool para un reporte inequívoco,
     fuerza la ejecución determinista de la tool elegida por el índice
     GENERADO (``tool_intents.match_intent``), sin keywords hardcodeadas.
 
     Solo decide la tool: los argumentos los resuelven los extractores
-    genéricos de fecha/mes/grupo/rol de este módulo."""
+    genéricos de fecha/mes/grupo/rol/terapeuta de este módulo."""
     if not local_tools:
+        return None
+    # Identidad de sesión: se responde con el prompt, nunca con una tool.
+    if _IDENTITY_RE.search(norm(message)):
         return None
     allowed = {t['function']['name'] for t in local_tools}
     hit = match_intent(message, allowed)
     if not hit:
         return None
     tool_name, arg_spec = hit
+    # Estadísticas globales + persona nombrada en el mensaje -> la lista REAL
+    # de ese terapeuta, en vez de atribuirle el total del centro.
+    if tool_name == 'get_patient_stats' and 'get_therapist_patients' in allowed:
+        resolved_therapist = _extract_therapist_arg(message, user_role)
+        if resolved_therapist:
+            logger.info(f'MCP force override stats->therapist: {resolved_therapist}')
+            return ('get_therapist_patients', resolved_therapist)
     if arg_spec == 'month':
         resolved_args = _extract_month_arg(message)
     elif arg_spec == 'date':
@@ -786,6 +879,10 @@ def _force_intent_tool(message, local_tools, user_role):
             return None
     elif arg_spec == 'role':
         resolved_args = _extract_role_arg(message, tool_name)
+    elif arg_spec == 'therapist':
+        resolved_args = _extract_therapist_arg(message, user_role)
+        if not resolved_args:
+            return None
     else:
         resolved_args = {}
     return (tool_name, resolved_args or {})
@@ -917,7 +1014,7 @@ class MCPService:
                     phase='tactical',
                 )
                 return {
-                    'response': content or '¡Hola! ¿En qué te ayudo hoy? 😊',
+                    'response': normalize_number_spaces(content) or '¡Hola! ¿En qué te ayudo hoy? 😊',
                     'tool_calls': [],
                     'done': True,
                     'provider': provider,
@@ -961,7 +1058,7 @@ class MCPService:
                     tools_kw['phase'] = 'resume'
                 content, provider = llm_chat(messages, temperature=0.3, max_tokens=1024, **tools_kw)
                 return {
-                    'response': content or f'✅ Operación ejecutada: {tool_name}',
+                    'response': normalize_number_spaces(content) or f'✅ Operación ejecutada: {tool_name}',
                     'tool_calls': tool_calls_log,
                     'done': True,
                     'provider': provider,
@@ -1101,7 +1198,7 @@ class MCPService:
                     continue
 
                 return {
-                    'response': content,
+                    'response': normalize_number_spaces(content),
                     'tool_calls': tool_calls_log,
                     'done': True,
                     'provider': provider,
