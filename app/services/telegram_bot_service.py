@@ -781,59 +781,32 @@ def _handle_start(chat_id, from_user, tg_user, bot_token):
         f'1. Inicia sesión en el panel de admin\n'
         f'2. Ve a *Centro de Operaciones > Bot de Telegram*\n'
         f'3. Ingresa este código: `{link_code}`\n\n'
-        f'⏰ El código expira en 10 minutos.\n'
-        f'Usa /link <código> si ya tienes uno.',
+        f'⏰ El código expira en 10 minutos.',
         bot_token,
         reply_markup={'remove_keyboard': True},
     )
 
 
 def _handle_link(chat_id, text, tg_user, bot_token):
-    from app import db
-    from app.models.telegram_user import TelegramUser
+    """El bot NUNCA vincula por si mismo.
 
-    parts = text.split(maxsplit=1)
-    if len(parts) < 2:
-        send_telegram_message(chat_id, 'Uso: /link <código-de-6-caracteres>', bot_token)
-        return
-
-    code = parts[1].strip().upper()
-
+    Vincular un chat a una cuenta exige que el usuario este autenticado en el
+    panel (POST /telegram/link con JWT). Antes este comando validaba el codigo
+    contra la fila del propio chat: cualquier desconocido con /start + /link
+    quedaba vinculado y con admin_user_id = id de telegram_users (no de User).
+    """
     if not tg_user:
         send_telegram_message(chat_id, 'Usa /start primero para generar un código.', bot_token)
         return
-
-    if tg_user.is_link_code_valid(code):
-        admin_user = TelegramUser.query.filter_by(link_code=code, is_linked=False).first()
-
-        if not admin_user:
-            send_telegram_message(chat_id, '❌ Código inválido. Intenta de nuevo.', bot_token)
-            return
-
-        tg_user.admin_user_id = admin_user.admin_user_id or admin_user.id
-        tg_user.is_linked = True
-        tg_user.link_code = None
-        tg_user.link_code_expires_at = None
-        db.session.commit()
-
-        send_telegram_message(
-            chat_id,
-            f'{BOT_EMOJI} *¡Cuenta vinculada!*\n\n'
-            'Ya puedes interactuar con el sistema desde Telegram.\n\n'
-            'Puedes:\n'
-            '• Enviar mensajes de texto para consultar datos\n'
-            '• Enviar mensajes de voz para comandos por voz\n'
-            '• Enviar fotos de comprobantes para registrar pagos\n'
-            '• Recibir notificaciones importantes\n\n'
-            'Usa /ayuda para ver todo lo que puedo hacer.',
-            bot_token,
-        )
-    else:
-        send_telegram_message(
-            chat_id,
-            '❌ Código expirado o inválido.\nUsa /start para generar uno nuevo.',
-            bot_token,
-        )
+    send_telegram_message(
+        chat_id,
+        '🔒 La vinculación se hace desde el panel, con tu sesión iniciada:\n'
+        '1. Inicia sesión en el panel\n'
+        '2. Ve a *Centro de Operaciones > Bot de Telegram*\n'
+        '3. Ingresa el código que te di con /start\n\n'
+        'Si el código expiró, usa /start para generar uno nuevo.',
+        bot_token,
+    )
 
 
 def _handle_unlink(chat_id, tg_user, bot_token):
@@ -879,7 +852,7 @@ def _handle_help(chat_id, bot_token):
         f'{BOT_EMOJI} *{BOT_NAME} — Tu asistente inteligente*\n\n'
         '*Comandos:*\n'
         '/start — Vincular cuenta\n'
-        '/link <código> — Vincular con código\n'
+        '/link — Cómo vincular tu cuenta\n'
         '/unlink — Desvincuar cuenta\n'
         '/status — Ver estado\n'
         '/ayuda — Esta ayuda\n'
