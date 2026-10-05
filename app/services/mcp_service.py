@@ -168,6 +168,22 @@ def _parse_paren_args(args_str):
 def tool_result_context(tool_name, result_str, already_executed=False):
     """Bloque de contexto tras una tool real para una síntesis fiel:
     conteo primero, copia exacta y honestidad con resultados truncados."""
+    if '"readable"' in str(result_str):
+        # Resultado ya redactado por el sistema: solo se copia. Sin la regla del
+        # conteo "Hay N", que el modelo aplicaba (y rellenaba) donde no correspondia.
+        lines = [
+            f'[REAL Tool {tool_name} result — use ONLY this data, do NOT invent anything]:',
+            str(result_str),
+            '',
+            'RESPONDE ASÍ (obligatorio):',
+            '1. Copia el campo "readable" TAL CUAL: una línea por métrica. '
+            'No agregues frases ni datos que no estén en él.',
+            '2. Responde en español, sin mencionar herramientas ni procesos internos.',
+            '3. Escribe con espacio entre palabras y cifras ("Hay 4", "las 14:58"): NUNCA "Hay4".',
+        ]
+        if already_executed:
+            lines.append(f'4. {tool_name} YA fue ejecutada: NO la llames de nuevo; responde ahora.')
+        return '\n'.join(lines)
     lines = [
         f'[REAL Tool {tool_name} result — use ONLY this data, do NOT invent anything]:',
         str(result_str),
@@ -179,7 +195,7 @@ def tool_result_context(tool_name, result_str, already_executed=False):
         'complete ni fusiones nombres/correos.',
         '3. Si el resultado indica "Showing X of Y" o viene cortado, dilo: "mostrando X de Y".',
         '4. Si el resultado es GLOBAL (sin filtro de la persona nombrada), NO se lo atribuyas: '
-        'di el alcance real (p.ej. "pacientes activos del centro"); para UN terapeuta existe '
+        'di el alcance real (todo el centro, no una persona); para UN terapeuta existe '
         'get_therapist_patients.',
         '5. No afirmes estados (activo/inactivo, permisos, montos) salvo que estén en los '
         'datos; si falta un campo, di "no disponible".',
@@ -322,6 +338,17 @@ def _trim_tool_result(result, max_chars=MAX_TOOL_RESULT_CHARS):
                 'count': result.get('count', len(sessions)),
                 'sessions': sessions[:5],
                 'note': f'Showing {min(5, len(sessions))} of {len(sessions)} sessions' if len(sessions) > 5 else None,
+            }
+
+        elif (
+            isinstance(result.get('readable'), str)
+            and isinstance(result.get('data'), dict)
+            and 'income_expected' in (result['data'].get('data') or {})
+        ):
+            result = {
+                'success': result.get('success', True),
+                'readable': result['readable'],
+                'note': 'Copia "readable" TAL CUAL en tu respuesta: una linea por metrica y en soles. No agregues otros datos.',
             }
 
     result_str = json.dumps(result, ensure_ascii=False, default=str)

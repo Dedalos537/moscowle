@@ -1,7 +1,7 @@
 import contextlib
 from datetime import datetime, timedelta
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from app.models import Expense, Payment, User, db
 from app.services.email_service import EmailService
@@ -284,6 +284,7 @@ class PaymentService:
         income_query = (
             db.session.query(func.sum(Payment.amount))
             .filter(Payment.date >= start_date, Payment.date <= end_date)
+            .filter(or_(Payment.status.is_(None), Payment.status.in_(['completed', 'paid'])))
             .scalar()
         )
 
@@ -298,7 +299,14 @@ class PaymentService:
             else:
                 monthly_income_expected += amt
 
-        overdue_users = User.query.filter(User.role == 'jugador', User.payment_due_date < today).all()
+        # Misma definicion que el reporte de deudores (build_debt_report): solo
+        # pacientes activos con plan (monto > 0) y fecha de vencimiento pasada.
+        overdue_users = User.query.filter(
+            User.role == 'jugador',
+            User.is_active.is_(True),
+            User.payment_amount > 0,
+            User.payment_due_date < today,
+        ).all()
 
         overdue_amount = sum([u.payment_amount or 0 for u in overdue_users])
 

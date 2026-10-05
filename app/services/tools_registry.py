@@ -563,6 +563,64 @@ def handle_get_sessions(start=None, end=None, therapist_id=None, **kwargs):
         return {'error': str(e)}
 
 
+def parse_period(month, year=None):
+    """Lleva el periodo que manda la IA ('YYYY-MM', '9', 9, 'setiembre') al formato de
+    /admin/api/financial-summary: (mes 1-12 | None, anio | None). Un valor invalido se
+    descarta (el endpoint usa el mes actual) en vez de mandar basura que se ignora."""
+    parsed_month, parsed_year = None, None
+    value = str(month).strip().lower() if month is not None else ''
+    match = re.fullmatch(r'(\d{4})-(\d{1,2})', value)
+    if match:
+        parsed_year, parsed_month = int(match.group(1)), int(match.group(2))
+    elif value.isdigit():
+        parsed_month = int(value)
+    elif value in _DEBT_MONTHS_ES:
+        parsed_month = _DEBT_MONTHS_ES.index(value) + 1
+    elif value == 'septiembre':
+        parsed_month = 9
+    if parsed_month is not None and not 1 <= parsed_month <= 12:
+        parsed_month = None
+    try:
+        explicit_year = int(year) if year not in (None, '') else None
+    except (TypeError, ValueError):
+        explicit_year = None
+    if explicit_year and 2000 <= explicit_year <= 2100:
+        parsed_year = explicit_year
+    if parsed_month is None:
+        parsed_year = explicit_year if explicit_year and 2000 <= explicit_year <= 2100 else None
+    return parsed_month, parsed_year
+
+
+_MONTHS_EN_TO_ES = {
+    'January': 'enero', 'February': 'febrero', 'March': 'marzo', 'April': 'abril',
+    'May': 'mayo', 'June': 'junio', 'July': 'julio', 'August': 'agosto',
+    'September': 'septiembre', 'October': 'octubre', 'November': 'noviembre', 'December': 'diciembre',
+}  # fmt: skip
+
+
+def _soles(value):
+    value = float(value or 0)
+    return f'{"-" if value < 0 else ""}S/. {abs(value):,.2f}'
+
+
+def format_financial_summary(data, year):
+    """Texto en espanol, una metrica por linea y en soles, listo para copiar al chat
+    (el modelo tendia a volcar las claves en ingles pegadas y con '$')."""
+    raw_month = str(data.get('month_name') or '')
+    month = _MONTHS_EN_TO_ES.get(raw_month, raw_month)
+    count = int(data.get('overdue_users_count') or 0)
+    return '\n'.join(
+        [
+            f'Resumen financiero de {month} de {year}:',
+            f'- Ingresos cobrados: {_soles(data.get("income_real"))}',
+            f'- Ingresos esperados: {_soles(data.get("income_expected"))}',
+            f'- Egresos: {_soles(data.get("expenses"))}',
+            f'- Ganancia neta: {_soles(data.get("net_profit"))}',
+            f'- Deuda vencida: {_soles(data.get("overdue_amount"))} ({count} paciente{"" if count == 1 else "s"})',
+        ]
+    )
+
+
 @tool(
     name='get_financial_summary',
     description='Resumen financiero del mes: ingresos, egresos, ganancia, cobranza. Puede consultar cualquier mes.',
@@ -579,6 +637,7 @@ def handle_get_sessions(start=None, end=None, therapist_id=None, **kwargs):
 def handle_financial_summary(month=None, year=None, **kwargs):
     try:
         url = '/admin/api/financial-summary'
+        month, year = parse_period(month, year)
         params = []
         if month:
             params.append(f'month={month}')
@@ -588,7 +647,11 @@ def handle_financial_summary(month=None, year=None, **kwargs):
             url += '?' + '&'.join(params)
         resp = _api_get(url, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else {}
-        return {'success': True, 'data': data}
+        result = {'success': True, 'data': data}
+        inner = data.get('data') if isinstance(data, dict) else None
+        if isinstance(inner, dict) and 'income_expected' in inner:
+            result['readable'] = format_financial_summary(inner, year or datetime.utcnow().year)
+        return result
     except Exception as e:
         return {'error': str(e)}
 
