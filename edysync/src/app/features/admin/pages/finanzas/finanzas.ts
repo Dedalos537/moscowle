@@ -26,6 +26,7 @@ import {
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { Alert } from '../../../../shared/components/alert/alert';
 import { AlertService } from '../../../../core/services/alert.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
@@ -47,6 +48,7 @@ import {
   getCategoryLabel, getMethodBadgeClass, getMethodLabel, formatMonthLabel,
   getMonthlyIncome, getMonthlyExpenses, getYearMonthKeys, getRangeMonthKeys,
   isDateInRange, isDateInFortnight,
+  localDateString, parseLocalDate, isCollectedPayment,
   getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue, rankContract,
 } from './finanzas-utils';
 import { makeLineOpts, makeDoughnutOpts } from './finanzas-charts-config';
@@ -70,7 +72,7 @@ Chart.register(
 @Component({
   selector: 'app-finanzas',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal, SummaryCard, Table, TableCell, MonthRangePicker],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal, SummaryCard, Table, TableCell, MonthRangePicker, Alert],
   templateUrl: './finanzas.html',
   styleUrl: './finanzas.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
@@ -100,9 +102,17 @@ export class Finanzas implements OnInit, OnDestroy {
     this.activeTab = tab;
   }
 
+  /** Deuda VENCIDA a hoy según el reporte de deudores (activos con plan). No depende del periodo: es lo que se debe ahora. */
+  overdueDebtTotal = 0;
+  overdueDebtCount = 0;
+
   get summaryTotalDeuda(): number {
-    return this.getChartPatients().reduce((sum, p) => sum + (p.payment_amount || 0), 0);
+    return this.overdueDebtTotal;
   }
+
+  /** El listado de pagos llega acotado: si hay más, se avisa en vez de mostrar totales incompletos en silencio. */
+  historyTruncated = false;
+  historyTotal = 0;
 
   get summaryIngresos(): number {
     return this.getFilteredPayments().reduce((sum, p) => sum + (p.amount || 0) - (p.discount || 0), 0);
@@ -185,7 +195,7 @@ export class Finanzas implements OnInit, OnDestroy {
   selectedPatientContracts: ContractDetail[] = [];
   selectedPatientContract: ContractDetail | null = null;
   contractLoading = false;
-  today = new Date().toISOString().split('T')[0];
+  today = localDateString();
 
   showPatientDetailModal = false;
   isEditingContract = false;
@@ -390,7 +400,7 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   private genDashboardCharts() {
-    const incomeByMonth = getMonthlyIncome(this.paymentHistory);
+    const incomeByMonth = getMonthlyIncome(this.collectedPayments());
     const expenseByMonth = getMonthlyExpenses(this.recentExpenses);
     if (this.fortnightFilter && this.monthFilter) {
       incomeByMonth.set(this.monthFilter, this.getFilteredPayments().reduce((sum, p) => sum + (p.amount || 0) - (p.discount || 0), 0));
@@ -451,9 +461,15 @@ export class Finanzas implements OnInit, OnDestroy {
     return this.patients.filter(p => !!p.next_due_date && this.inSelectedMonths(p.next_due_date) && this.inFortnight(p.next_due_date));
   }
 
+  /** Pagos cobrados (completed/paid/sin estado): los pendientes o vencidos no son ingreso. */
+  private collectedPayments(): PaymentHistoryRow[] {
+    return this.paymentHistory.filter(isCollectedPayment);
+  }
+
   private getFilteredPayments(): PaymentHistoryRow[] {
-    if (!this.monthRange) return this.paymentHistory;
-    return this.paymentHistory.filter(p => !!p.date && this.inSelectedMonths(p.date) && this.inFortnight(p.date));
+    const collected = this.collectedPayments();
+    if (!this.monthRange) return collected;
+    return collected.filter(p => !!p.date && this.inSelectedMonths(p.date) && this.inFortnight(p.date));
   }
 
   private getFilteredExpenses(): Expense[] {
@@ -492,7 +508,7 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   private buildChartRevenueHistory() {
-    const incomeByMonth = getMonthlyIncome(this.paymentHistory);
+    const incomeByMonth = getMonthlyIncome(this.collectedPayments());
     if (this.fortnightFilter && this.monthFilter) {
       incomeByMonth.set(this.monthFilter, this.getFilteredPayments().reduce((sum, p) => sum + (p.amount || 0) - (p.discount || 0), 0));
     }
@@ -532,7 +548,8 @@ export class Finanzas implements OnInit, OnDestroy {
   get summaryBalance(): number { return this.summaryIngresos - this.summaryGastos; }
 
   get dashExpectedIncome(): number {
-    return this.getChartPatients().reduce((sum, p) => sum + (p.payment_amount || 0), 0);
+    // Solo pacientes activos y no retirados: los inactivos no van a pagar este periodo.
+    return this.getChartPatients().filter((p) => p.is_active !== false && p.status !== 'retired').reduce((sum, p) => sum + (p.payment_amount || 0), 0);
   }
 
   get dashCollectionRate(): number {
@@ -559,11 +576,11 @@ export class Finanzas implements OnInit, OnDestroy {
   private loadPaymentsData() { this.loadSedes(); this.loadPaymentsTherapists(); this.loadPaymentsDebtReport(); this.loadPaymentHistory(); this.loadContractAlerts(); }
 
   private loadSedes() {
-    this.subscriptions.add(this.adminService.getSedes().subscribe({ next: (list) => { this.sedes = list; this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
+    this.subscriptions.add(this.adminService.getSedes().subscribe({ next: (list) => { this.sedes = list; this.cdr.markForCheck(); }, error: () => { this.toastService.show('No se pudieron cargar las sedes.', 'error'); this.cdr.markForCheck(); } }));
   }
 
   private loadPaymentsTherapists() {
-    this.subscriptions.add(this.adminService.getUsers('terapista').subscribe({ next: (res) => { if (res.success) this.therapistsList = res.users; this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
+    this.subscriptions.add(this.adminService.getUsers('terapista').subscribe({ next: (res) => { if (res.success) this.therapistsList = res.users; this.cdr.markForCheck(); }, error: () => { this.toastService.show('No se pudo cargar la lista de terapeutas.', 'error'); this.cdr.markForCheck(); } }));
   }
 
   private loadPaymentsDebtReport() {
@@ -572,14 +589,21 @@ export class Finanzas implements OnInit, OnDestroy {
       forkJoin({ patients: this.adminService.getUsers('jugador'), debt: this.adminService.getDebtReport('all') }).subscribe({
         next: ({ patients, debt }) => {
           const porSede: Record<string, any> = debt?.data?.por_sede || {};
-          const debtByName = new Map<string, any>();
+          // Se cruza por id de paciente: por nombre, dos homónimos se intercambiaban deuda, terapeuta y monto.
+          const debtById = new Map<number, any>();
+          let overdueTotal = 0;
+          let overdueCount = 0;
           Object.values(porSede).forEach((group: any) => (group.deudores || []).forEach((d: any) => {
-            const key = (d.paciente || d.email || '').toLowerCase().trim();
-            if (key) debtByName.set(key, d);
+            if (d.id != null) debtById.set(Number(d.id), d);
+            if (d.estado === 'vencido') {
+              overdueTotal += Number(d.monto) || 0;
+              overdueCount += 1;
+            }
           }));
+          this.overdueDebtTotal = overdueTotal;
+          this.overdueDebtCount = overdueCount;
           this.patients = (patients.users || []).map((u: any) => {
-            const nameKey = (u.username || u.email || '').toLowerCase().trim();
-            const d = debtByName.get(nameKey) || {};
+            const d = debtById.get(Number(u.id)) || {};
             return {
               id: u.id, is_active: u.is_active !== false, username: u.username || 'Sin nombre', email: u.email || '', phone: u.phone,
               sede_name: d.sede_name || u.sede_name || '', therapist_name: d.therapist_name || '',
@@ -596,7 +620,7 @@ export class Finanzas implements OnInit, OnDestroy {
           this.paymentsLoading = false;
           this.cdr.detectChanges();
         },
-        error: () => { this.paymentsLoading = false; this.cdr.markForCheck(); },
+        error: () => { this.paymentsLoading = false; this.toastService.show('No se pudo cargar el reporte de pacientes y deudas. Revisa tu conexión.', 'error'); this.cdr.markForCheck(); },
       }),
     );
   }
@@ -617,18 +641,20 @@ export class Finanzas implements OnInit, OnDestroy {
             receipt_image_path: p.receipt_image_path, document_number: p.document_number, guardian_name: p.guardian_name,
           }));
         }
+        this.historyTruncated = !!res.truncated;
+        this.historyTotal = res.total ?? this.paymentHistory.length;
         this.historyLoading = false;
         this.genDashboardCharts();
         this.cdr.detectChanges();
       },
-      error: () => { this.historyLoading = false; this.cdr.markForCheck(); },
+      error: () => { this.historyLoading = false; this.toastService.show('No se pudo cargar el historial de pagos. Los totales pueden estar incompletos.', 'error'); this.cdr.markForCheck(); },
       }));
   }
 
   loadContractAlerts() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = localDateString(today);
 
     this.subscriptions.add(
       forkJoin({
@@ -658,7 +684,7 @@ export class Finanzas implements OnInit, OnDestroy {
             const key = `${inst.contract_id}-${inst.id}`;
             if (seen.has(key)) return;
             seen.add(key);
-            const dueDate = new Date(inst.due_date);
+            const dueDate = parseLocalDate(inst.due_date);
             dueDate.setHours(0, 0, 0, 0);
             const isToday = dueDate.getTime() === today.getTime();
             alerts.push({
@@ -809,7 +835,7 @@ export class Finanzas implements OnInit, OnDestroy {
   openCreateContractModal() {
     console.log('[FINANZAS] openCreateContractModal called');
     this.isEditingContract = false;
-    const today = new Date().toISOString().substring(0, 10);
+    const today = localDateString();
     this.createContractForm = {
       patient_id: null, total_amount: 0, billing_type: 'Mensual', currency: 'PEN',
       installment_count: 12, duration_months: 12, start_date: today, payment_start_date: today,
@@ -1141,7 +1167,7 @@ export class Finanzas implements OnInit, OnDestroy {
       contract_id: contract.id,
       contract_name: contract.name,
       patient_name: contract.patient_name,
-      cancellation_date: new Date().toISOString().split('T')[0],
+      cancellation_date: localDateString(),
       reason: '',
       comment: '',
       disposition: 'none',
@@ -1496,7 +1522,7 @@ export class Finanzas implements OnInit, OnDestroy {
 
   openCreateContractForPatient(patient: PatientRow) {
     this.isEditingContract = false;
-    const today = new Date().toISOString().substring(0, 10);
+    const today = localDateString();
     this.createContractForm = {
       patient_id: patient.id, total_amount: 0, billing_type: 'Mensual', currency: 'PEN',
       installment_count: 12, duration_months: 12, start_date: today, payment_start_date: today,
@@ -1547,7 +1573,7 @@ export class Finanzas implements OnInit, OnDestroy {
 
   get yapeTransactions(): PaymentHistoryRow[] { return this.paymentHistory.filter((p) => p.method === 'yape' || p.method === 'plin'); }
   get yapeTotal(): number { return this.yapeTransactions.reduce((sum, p) => sum + (p.amount - (p.discount || 0)), 0); }
-  get yapeMonthlyTotal(): number { const cm = new Date().toISOString().substring(0, 7); return this.yapeTransactions.filter((p) => p.date && p.date.startsWith(cm)).reduce((sum, p) => sum + (p.amount - (p.discount || 0)), 0); }
+  get yapeMonthlyTotal(): number { const cm = localDateString().substring(0, 7); return this.yapeTransactions.filter((p) => p.date && p.date.startsWith(cm)).reduce((sum, p) => sum + (p.amount - (p.discount || 0)), 0); }
   get yapeCount(): number { return this.yapeTransactions.length; }
 
   get patientsWithoutContractCount(): number { return this.patients.filter(p => p.is_active !== false && !this.patientContractMap[p.id]).length; }
@@ -1556,7 +1582,7 @@ export class Finanzas implements OnInit, OnDestroy {
     const c = await firstValueFrom(this.confirmService.confirm({ title: 'Generar Reporte', message: 'Esta operación puede tomar unos segundos. ¿Deseas continuar?', confirmText: 'Generar', cancelText: 'Cancelar', variant: 'warning' }));
     if (!c) return;
     this.subscriptions.add(this.adminService.exportPaymentsCsv().subscribe({
-      next: (blob) => { const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `pagos_${new Date().toISOString().slice(0, 7)}.csv`; a.click(); window.URL.revokeObjectURL(url); this.cdr.markForCheck(); },
+      next: (blob) => { const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `pagos_${localDateString().slice(0, 7)}.csv`; a.click(); window.URL.revokeObjectURL(url); this.cdr.markForCheck(); },
       error: () => { this.toastService.show('Error al generar el reporte', 'error'); this.cdr.markForCheck(); },
     }));
   }
@@ -1567,9 +1593,9 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   async deletePayment(id: number) {
-    const c = await firstValueFrom(this.confirmService.confirm({ title: 'Eliminar Pago', message: '¿Eliminar este pago?', confirmText: 'Eliminar', cancelText: 'Cancelar', variant: 'danger' }));
+    const c = await firstValueFrom(this.confirmService.confirm({ title: 'Eliminar Pago', message: '¿Eliminar este pago? Si salda una cuota, la cuota volverá a quedar pendiente. No se puede deshacer.', confirmText: 'Eliminar', cancelText: 'Cancelar', variant: 'danger' }));
     if (!c) return;
-    this.subscriptions.add(this.adminService.deletePayment(id).subscribe({ next: () => { this.paymentHistory = this.paymentHistory.filter((p) => p.id !== id); this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
+    this.subscriptions.add(this.adminService.deletePayment(id).subscribe({ next: () => { this.paymentHistory = this.paymentHistory.filter((p) => p.id !== id); this.toastService.show('Pago eliminado. La cuota asociada volvió a quedar pendiente.', 'success'); this.loadPaymentsData(); this.loadContracts(); this.cdr.markForCheck(); }, error: (err) => { this.toastService.show(err?.error?.error || 'No se pudo eliminar el pago.', 'error'); this.cdr.markForCheck(); } }));
   }
 
   editPayment(id: number) {
@@ -1680,30 +1706,65 @@ export class Finanzas implements OnInit, OnDestroy {
 
   private loadExpensesData() {
     this.expensesLoading = true;
-    this.subscriptions.add(this.adminService.getTherapistFinancials().subscribe({ next: (res) => { this.therapistFinancials = res.data; this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
+    this.subscriptions.add(this.adminService.getTherapistFinancials().subscribe({ next: (res) => { this.therapistFinancials = res.data; this.cdr.markForCheck(); }, error: () => { this.toastService.show('No se pudo cargar el balance de terapeutas.', 'error'); this.cdr.markForCheck(); } }));
     this.subscriptions.add(this.adminService.getUsers('terapista').subscribe({ next: (res) => { this.expenseTherapists = res.users.map((u: any) => ({ ...u, is_active: true } as User)); this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
-    this.subscriptions.add(this.adminService.getExpenses().subscribe({ next: (res) => { this.recentExpenses = res.data; this.expensesLoading = false; this.genDashboardCharts(); this.cdr.detectChanges(); }, error: () => { this.expensesLoading = false; this.cdr.markForCheck(); } }));
+    this.subscriptions.add(this.adminService.getExpenses().subscribe({ next: (res) => { this.recentExpenses = res.data; this.expensesLoading = false; this.genDashboardCharts(); this.cdr.detectChanges(); }, error: () => { this.expensesLoading = false; this.toastService.show('No se pudo cargar la lista de gastos.', 'error'); this.cdr.markForCheck(); } }));
   }
 
   openTherapistPaymentModal(therapist: TherapistFinancial) {
     this.expenseModalMode = 'therapist_payment';
-    this.expenseForm = { category: 'therapist_payment', therapist_id: therapist.therapist.id, therapist_name: therapist.therapist.username, amount: therapist.balance > 0 ? therapist.balance : 0, method: 'transfer', date: new Date().toISOString().split('T')[0], description: `Pago a ${therapist.therapist.username}`, receipt: null };
+    this.expenseEditingId = null;
+    this.expenseForm = { category: 'therapist_payment', therapist_id: therapist.therapist.id, therapist_name: therapist.therapist.username, amount: therapist.balance > 0 ? therapist.balance : 0, method: 'transfer', date: localDateString(), description: `Pago a ${therapist.therapist.username}`, receipt: null };
     this.showExpenseModal = true;
     this.cdr.markForCheck();
   }
 
   openOperationalModal() {
     this.expenseModalMode = 'operational';
-    this.expenseForm = { category: 'operational', therapist_id: null, therapist_name: '', amount: 0, method: 'transfer', date: new Date().toISOString().split('T')[0], description: '', receipt: null };
+    this.expenseEditingId = null;
+    this.expenseForm = { category: 'operational', therapist_id: null, therapist_name: '', amount: 0, method: 'transfer', date: localDateString(), description: '', receipt: null };
     this.showExpenseModal = true;
     this.cdr.markForCheck();
   }
 
-  closeExpenseModal() { this.showExpenseModal = false; }
+  closeExpenseModal() { this.showExpenseModal = false; this.expenseEditingId = null; }
 
   onExpenseFileSelected(event: any) { const file = event.target.files[0]; if (file) this.expenseForm.receipt = file; }
 
+  expenseEditingId: number | null = null;
+
+  editExpense(e: Expense) {
+    this.expenseModalMode = e.category === 'therapist_payment' ? 'therapist_payment' : 'operational';
+    this.expenseEditingId = e.id;
+    this.expenseForm = {
+      category: e.category, therapist_id: e.therapist?.id ?? null, therapist_name: e.therapist?.username || '',
+      amount: e.amount, method: e.method || 'transfer', date: e.date || localDateString(), description: e.description || '', receipt: null,
+    } as any;
+    this.showExpenseModal = true;
+    this.cdr.markForCheck();
+  }
+
+  async deleteExpense(e: Expense) {
+    const ok = await firstValueFrom(this.confirmService.confirm({
+      title: 'Eliminar gasto',
+      message: `¿Eliminar el gasto «${e.description || e.category}» de S/ ${e.amount.toFixed(2)}? Dejará de contar en los reportes.`,
+      confirmText: 'Eliminar', cancelText: 'Cancelar', variant: 'danger',
+    }));
+    if (!ok) return;
+    this.subscriptions.add(this.adminService.deleteExpense(e.id).subscribe({
+      next: () => { this.recentExpenses = this.recentExpenses.filter((x) => x.id !== e.id); this.genDashboardCharts(); this.toastService.show('Gasto eliminado', 'success'); this.cdr.markForCheck(); },
+      error: (err) => { this.toastService.show(err?.error?.error || 'No se pudo eliminar el gasto.', 'error'); this.cdr.markForCheck(); },
+    }));
+  }
+
   submitExpenseForm() {
+    const amount = Number(this.expenseForm.amount);
+    if (!(amount > 0)) { this.toastService.show('El monto debe ser mayor a 0.', 'error'); return; }
+    if (!this.expenseForm.date) { this.toastService.show('Elige la fecha del gasto.', 'error'); return; }
+    if (this.expenseForm.category !== 'therapist_payment' && !(this.expenseForm.description || '').trim()) {
+      this.toastService.show('Describe el gasto para poder identificarlo después.', 'error'); return;
+    }
+    if (this.expenseEditingId) { this.submitExpenseEdit(amount); return; }
     this.submitting = true;
     const fd = new FormData();
     fd.append('category', this.expenseForm.category);
@@ -1716,7 +1777,16 @@ export class Finanzas implements OnInit, OnDestroy {
 
     this.subscriptions.add(this.adminService.createExpense(fd).subscribe({
       next: () => { this.submitting = false; this.closeExpenseModal(); this.loadExpensesData(); this.loadSummaryData(); this.cdr.markForCheck(); },
-      error: () => { this.submitting = false; this.cdr.markForCheck(); },
+      error: (err) => { this.submitting = false; this.toastService.show(err?.error?.error || 'No se pudo guardar el gasto. Inténtalo de nuevo.', 'error'); this.cdr.markForCheck(); },
+    }));
+  }
+
+  private submitExpenseEdit(amount: number) {
+    this.submitting = true;
+    const body = { amount, description: this.expenseForm.description, category: this.expenseForm.category, method: this.expenseForm.method, date: this.expenseForm.date };
+    this.subscriptions.add(this.adminService.updateExpense(this.expenseEditingId!, body).subscribe({
+      next: () => { this.submitting = false; this.closeExpenseModal(); this.toastService.show('Gasto actualizado', 'success'); this.loadExpensesData(); this.loadSummaryData(); this.cdr.markForCheck(); },
+      error: (err) => { this.submitting = false; this.toastService.show(err?.error?.error || 'No se pudo actualizar el gasto.', 'error'); this.cdr.markForCheck(); },
     }));
   }
 }

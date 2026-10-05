@@ -505,6 +505,29 @@ class ContractService:
             db.session.rollback()
             return False, str(e)
 
+    def revert_payment(self, payment):
+        """Deshace el efecto de un pago en la(s) cuota(s) que saldo, ANTES de borrarlo.
+
+        Sin esto el pago desaparecia pero la cuota seguia 'pagada' (o el borrado fallaba por la
+        FK installment.payment_id). No hace commit: lo hace quien borra el pago."""
+        installments = Installment.query.filter(
+            db.or_(Installment.payment_id == payment.id, Installment.id == payment.installment_id)
+        ).all()
+        for inst in installments:
+            inst.paid_amount = max(0.0, (inst.paid_amount or 0.0) - (payment.amount or 0.0))
+            if inst.payment_id == payment.id:
+                inst.payment_id = None
+            if inst.paid_amount <= 0:
+                inst.status = 'pending'
+                inst.paid_date = None
+                inst.real_amount = None
+                inst.payment_method = None
+            elif inst.paid_amount >= inst.amount:
+                inst.status = 'paid'
+            else:
+                inst.status = 'partial'
+        return installments
+
     def cancel_contract(self, contract_id, cancellation_date=None, reason=None, comment=None, disposition='none'):
         contract = Contract.query.get(contract_id)
         if not contract:

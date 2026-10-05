@@ -20,6 +20,7 @@ from app.models import (
 )
 from app.routes.admin import admin_bp, finance_service, payment_service
 from app.schemas.payment_schema import validate_payment_register
+from app.services.contract_service import ContractService
 from app.services.receipt_generator import generate_receipt_pdf
 
 
@@ -171,6 +172,8 @@ def api_create_expense():
         data['amount'] = float(data['amount'])
     except (ValueError, TypeError):
         return jsonify({'success': False, 'error': 'El monto debe ser un número válido'}), 400
+    if not data['amount'] > 0:
+        return jsonify({'success': False, 'error': 'El monto debe ser mayor a 0'}), 400
 
     if 'receipt' in request.files:
         file = request.files['receipt']
@@ -198,6 +201,40 @@ def api_create_expense():
             }
         )
     return jsonify({'success': False, 'error': res}), 400
+
+
+@admin_bp.route('/api/expenses/<int:expense_id>', methods=['PUT'])
+@login_required
+def api_update_expense(expense_id):
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'error': 'Unauthorized'}), 403
+    expense = Expense.query.filter_by(id=expense_id, is_active=True).first()
+    if not expense:
+        return jsonify({'success': False, 'error': 'Gasto no encontrado'}), 404
+    data = request.get_json(silent=True) or {}
+    if 'amount' in data:
+        try:
+            amount = float(data['amount'])
+        except (ValueError, TypeError):
+            return jsonify({'success': False, 'error': 'El monto debe ser un número válido'}), 400
+        if not amount > 0:
+            return jsonify({'success': False, 'error': 'El monto debe ser mayor a 0'}), 400
+        expense.amount = amount
+    if 'description' in data:
+        expense.description = (data['description'] or '').strip()[:1000]
+    if data.get('category'):
+        from app.services.financial_service import normalize_expense_category
+
+        expense.category = normalize_expense_category(data['category'])
+    if data.get('method'):
+        expense.method = data['method']
+    if data.get('date'):
+        try:
+            expense.date = datetime.strptime(str(data['date'])[:10], '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'success': False, 'error': 'Fecha inválida (usa AAAA-MM-DD)'}), 400
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Gasto actualizado'})
 
 
 @admin_bp.route('/api/expenses/<int:expense_id>', methods=['DELETE'])
@@ -236,7 +273,12 @@ def api_all_payments():
         return jsonify({'error': 'Unauthorized'}), 403
     from app.models import Payment, User
 
-    payments = Payment.query.order_by(Payment.date.desc()).limit(500).all()
+    try:
+        limit = max(1, min(int(request.args.get('limit', 5000)), 20000))
+    except (TypeError, ValueError):
+        limit = 5000
+    total = Payment.query.count()
+    payments = Payment.query.order_by(Payment.date.desc()).limit(limit).all()
     result = []
     for p in payments:
         patient = User.query.get(p.patient_id)
@@ -257,7 +299,8 @@ def api_all_payments():
                 'guardian_dni': patient.guardian_dni or '' if patient else '',
             }
         )
-    return jsonify({'success': True, 'payments': result})
+    # truncated: la pantalla avisa en vez de mostrar totales de un periodo incompleto en silencio.
+    return jsonify({'success': True, 'payments': result, 'total': total, 'truncated': total > len(result)})
 
 
 @admin_bp.route('/api/report-therapist-stats')
@@ -486,6 +529,7 @@ def delete_payment(payment_id):
 
     try:
         payment = Payment.query.get_or_404(payment_id)
+        ContractService().revert_payment(payment)
 
         if payment.receipt_image_path:
             file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], payment.receipt_image_path)
@@ -512,6 +556,8 @@ def api_delete_payment(payment_id):
         patient = User.query.get(payment.patient_id)
         patient_name = patient.username if patient else 'Unknown'
         amount = float(payment.amount)
+        # Primero la cuota: sin revertirla quedaba 'pagada' sin dinero (o la FK impedia borrar en MySQL).
+        ContractService().revert_payment(payment)
         if payment.receipt_image_path:
             file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], payment.receipt_image_path)
             if os.path.exists(file_path):

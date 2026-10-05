@@ -133,8 +133,8 @@ export class AdminService {
     return this.http.get<{ success: boolean; payments: Payment[]; patient: User }>(`/admin/payments/history/${userId}`);
   }
 
-  getAllPayments(): Observable<{ success: boolean; payments: any[] }> {
-    return this.http.get<{ success: boolean; payments: any[] }>('/admin/api/payments/all');
+  getAllPayments(): Observable<{ success: boolean; payments: any[]; total?: number; truncated?: boolean }> {
+    return this.http.get<{ success: boolean; payments: any[]; total?: number; truncated?: boolean }>('/admin/api/payments/all');
   }
 
   deletePayment(paymentId: number): Observable<ApiResponse> {
@@ -349,6 +349,10 @@ export class AdminService {
 
   createExpense(formData: FormData): Observable<ApiResponse> {
     return this.http.post<ApiResponse>('/admin/api/expenses/create', formData);
+  }
+
+  updateExpense(expenseId: number, body: { amount?: number; description?: string; category?: string; method?: string; date?: string }): Observable<ApiResponse> {
+    return this.http.put<ApiResponse>(`/admin/api/expenses/${expenseId}`, body);
   }
 
   deleteExpense(expenseId: number): Observable<ApiResponse> {

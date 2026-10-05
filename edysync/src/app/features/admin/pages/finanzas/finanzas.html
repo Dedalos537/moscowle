@@ -55,10 +55,16 @@
     </div>
     }
   </div>
+  @if (historyTruncated) {
+  <div class="mb-4">
+    <app-alert type="warning" [dismissible]="false"
+      [message]="'Solo se cargaron ' + paymentHistory.length + ' de ' + historyTotal + ' pagos: los totales de ingresos pueden estar incompletos.'"></app-alert>
+  </div>
+  }
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
     <app-summary-card [border]="false" label="Deuda Total" [value]="summaryTotalDeuda.toFixed(2)" prefix="S/ "
       [icon]="['fas', 'triangle-exclamation']" variant="error"
-      [trend]="{ icon: ['fas', 'arrow-up'], label: 'Pendiente', subtitle: 'de cobro', color: 'error' }" />
+      [trend]="{ icon: ['fas', 'arrow-up'], label: 'Vencida a hoy', subtitle: overdueDebtCount + (overdueDebtCount === 1 ? ' paciente' : ' pacientes'), color: 'error' }" />
 
     <app-summary-card [border]="false" label="Ingresos Reales" [value]="summaryIngresos.toFixed(2)" prefix="S/ "
       [icon]="['fas', 'money-bill-wave']" variant="success"
@@ -314,7 +320,7 @@
     </div>
     <div class="bg-surface-container-lowest rounded-xl border border-border/30 p-3">
       <h4 class="text-[10px] font-bold text-on-surface-variant mb-2 flex items-center gap-1.5 uppercase tracking-wide">
-        <fa-icon [icon]="['fas', 'chart-line']" class="text-primary text-[12px]"></fa-icon> Historial 6 Meses
+        <fa-icon [icon]="['fas', 'chart-line']" class="text-primary text-[12px]"></fa-icon> Ingresos por mes
       </h4>
       <div style="height: 170px"><canvas baseChart [data]="chartRevenueHistory" [options]="chartRevenueHistoryOpt" [type]="chartRevenueHistoryType"></canvas></div>
     </div>
@@ -1312,6 +1318,9 @@
             <th class="px-6 py-4 text-right text-xs font-bold text-on-surface-variant/60 uppercase">
               Monto
             </th>
+            <th scope="col" class="px-3 py-4 text-right text-xs font-bold text-on-surface-variant/60 uppercase">
+              Acciones
+            </th>
           </tr>
         </thead>
         <tbody class="divide-y divide-border/10">
@@ -1352,10 +1361,22 @@
             <td class="px-6 py-4 text-right font-mono font-bold text-on-surface">
               S/ {{ e.amount.toFixed(2) }}
             </td>
+            <td class="px-3 py-2">
+              <div class="flex justify-end gap-1">
+                <button type="button" class="w-11 h-11 rounded-lg hover:bg-primary/10 flex items-center justify-center text-on-surface-variant hover:text-primary-text"
+                  [attr.aria-label]="'Editar el gasto ' + (e.description || e.category)" title="Editar" (click)="editExpense(e)">
+                  <fa-icon [icon]="['fas', 'pen']"></fa-icon>
+                </button>
+                <button type="button" class="w-11 h-11 rounded-lg hover:bg-error/10 flex items-center justify-center text-on-surface-variant hover:text-error-text"
+                  [attr.aria-label]="'Eliminar el gasto ' + (e.description || e.category)" title="Eliminar" (click)="deleteExpense(e)">
+                  <fa-icon [icon]="['fas', 'trash-can']"></fa-icon>
+                </button>
+              </div>
+            </td>
           </tr>
           } @empty {
           <tr>
-            <td colspan="4" class="px-6 py-8 text-center text-on-surface-variant/60">
+            <td colspan="5" class="px-6 py-8 text-center text-on-surface-variant/60">
               No hay gastos registrados.
             </td>
           </tr>
@@ -1369,7 +1390,7 @@
 }
 
 <app-modal [isOpen]="showExpenseModal"
-  [title]="expenseModalMode === 'therapist_payment' ? 'Pagar a Terapeuta' : 'Registrar Gasto'"
+  [title]="expenseEditingId ? 'Editar gasto' : (expenseModalMode === 'therapist_payment' ? 'Pagar a Terapeuta' : 'Registrar Gasto')"
   (close)="closeExpenseModal()">
   <div class="space-y-4">
     <div>
@@ -1407,7 +1428,7 @@
         placeholder="Detalles del pago o gasto..."></textarea>
     </div>
 
-    <app-button variant="primary" label="Registrar" [disabled]="submitting"
+    <app-button variant="primary" [label]="expenseEditingId ? 'Guardar cambios' : 'Registrar'" [loading]="submitting"
       (clicked)="submitExpenseForm()"></app-button>
   </div>
 </app-modal>

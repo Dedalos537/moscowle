@@ -57,6 +57,28 @@ export function getAnchorMonthsKeys(anchor: string): string[] {
   return keys;
 }
 
+/**
+ * Fecha LOCAL en formato AAAA-MM-DD. `toISOString()` devuelve la fecha en UTC: en Lima (UTC-5), a partir
+ * de las 19:00 ya es "mañana" y los gastos/cancelaciones se registraban con un día de adelanto.
+ */
+export function localDateString(date: Date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/** Interpreta 'AAAA-MM-DD' como fecha local. `new Date('2026-10-05')` la toma como UTC y en Lima cae el día anterior. */
+export function parseLocalDate(value: string): Date {
+  const [y, m, d] = value.substring(0, 10).split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+/** Un pago cuenta como ingreso solo si está cobrado (igual que el resumen del backend): completed, paid o sin estado. */
+export function isCollectedPayment(payment: { status?: string | null }): boolean {
+  return !payment.status || payment.status === 'completed' || payment.status === 'paid';
+}
+
 export function getYearMonthKeys(year: number): string[] {
   return Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
 }
