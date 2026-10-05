@@ -5,8 +5,10 @@ mes") y el campaign_send es un destinatario con su propio estado. Separarlos
 permite reanudar una campaña a medio mandar sin duplicar a los que ya
 recibieron, que es justo como se termina floodeando a un paciente.
 """
-from app import db
+
 from datetime import datetime
+
+from app import db
 
 
 class Campaign(db.Model):
@@ -37,9 +39,7 @@ class Campaign(db.Model):
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    sends = db.relationship(
-        'CampaignSend', backref='campaign', lazy='select', cascade='all, delete-orphan'
-    )
+    sends = db.relationship('CampaignSend', backref='campaign', lazy='select', cascade='all, delete-orphan')
 
     def to_dict(self):
         return {

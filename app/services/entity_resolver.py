@@ -15,8 +15,15 @@ import unicodedata
 
 # Palabras que activan la busqueda de una sede en el mensaje.
 _SEDE_CUES = (
-    'sede', 'sedes', 'sucursal', 'sucursales', 'establecimiento',
-    'establecimientos', 'local', 'locales', 'centro',
+    'sede',
+    'sedes',
+    'sucursal',
+    'sucursales',
+    'establecimiento',
+    'establecimientos',
+    'local',
+    'locales',
+    'centro',
 )
 
 # Expresiones temporales que el modelo deberia normalizar, no inventar.
@@ -34,10 +41,7 @@ _NON_WORD_RE = re.compile(r'[^a-z0-9]+')
 
 
 def _strip_accents(text):
-    return ''.join(
-        c for c in unicodedata.normalize('NFD', (text or '').lower())
-        if unicodedata.category(c) != 'Mn'
-    )
+    return ''.join(c for c in unicodedata.normalize('NFD', (text or '').lower()) if unicodedata.category(c) != 'Mn')
 
 
 def _norm(text):
@@ -126,13 +130,9 @@ def _resolve_sedes(message):
         if not nombre_norm or len(nombre_norm) < 4:
             continue
         tokens = norm_msg.split()
-        coincide = nombre_norm in norm_msg or any(
-            tok == nombre_norm or tok.startswith(nombre_norm) for tok in tokens
-        )
+        coincide = nombre_norm in norm_msg or any(tok == nombre_norm or tok.startswith(nombre_norm) for tok in tokens)
         if coincide:
-            encontrados.append(
-                {'id': sede.id, 'name': sede.name, 'address': sede.address or '', '_cue': hay_cue}
-            )
+            encontrados.append({'id': sede.id, 'name': sede.name, 'address': sede.address or '', '_cue': hay_cue})
     # Las mencionadas explicitamente ('sede Talara') van primero.
     encontrados.sort(key=lambda s: (not s['_cue'], s['name']))
     for item in encontrados:
@@ -189,8 +189,11 @@ def resolve_entities(message, role=None):
         patients, therapists = _resolve_people(message, role)
         temporal = _resolve_temporal(message)
         return ResolvedEntities(
-            sedes=sedes, patients=patients, therapists=therapists,
-            temporal=temporal, raw_message=message,
+            sedes=sedes,
+            patients=patients,
+            therapists=therapists,
+            temporal=temporal,
+            raw_message=message,
         )
     except Exception:
         # La resolucion es una mejora, nunca un punto de falla: si algo falla

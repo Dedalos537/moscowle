@@ -52,6 +52,7 @@ def generate_receipt_pdf(payment, patient, installment=None, contract=None):
             logo_loaded = True
     except Exception:
         import traceback
+
         traceback.print_exc()
 
     if logo_loaded:

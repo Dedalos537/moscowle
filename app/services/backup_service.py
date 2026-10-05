@@ -22,11 +22,7 @@ def run_backup():
     table_names = inspector.get_table_names()
     allowed_tables = set(table_names)
 
-    backup_data = {
-        'generated_at': timestamp,
-        'version': '1.0',
-        'tables': {}
-    }
+    backup_data = {'generated_at': timestamp, 'version': '1.0', 'tables': {}}
 
     for table_name in table_names:
         if table_name.startswith('alembic_'):
@@ -35,7 +31,7 @@ def run_backup():
             continue
 
         try:
-            result = db.session.execute(text(f'SELECT * FROM `{table_name}`'))
+            result = db.session.execute(text(f'SELECT * FROM `{table_name}`'))  # noqa: S608 - nombre validado contra allowed_tables
             rows = []
             for row in result.mappings().all():
                 cleaned = {}
@@ -52,16 +48,9 @@ def run_backup():
                         cleaned[key] = value
                 rows.append(cleaned)
 
-            backup_data['tables'][table_name] = {
-                'row_count': len(rows),
-                'rows': rows
-            }
+            backup_data['tables'][table_name] = {'row_count': len(rows), 'rows': rows}
         except Exception as e:
-            backup_data['tables'][table_name] = {
-                'error': str(e),
-                'row_count': 0,
-                'rows': []
-            }
+            backup_data['tables'][table_name] = {'error': str(e), 'row_count': 0, 'rows': []}
 
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(backup_data, f, indent=2, ensure_ascii=False)
@@ -73,10 +62,7 @@ def run_backup():
 
 def _cleanup_old_backups(backup_dir, keep=7):
     try:
-        files = sorted([
-            f for f in os.listdir(backup_dir)
-            if f.startswith('db_backup_') and f.endswith('.json')
-        ])
+        files = sorted([f for f in os.listdir(backup_dir) if f.startswith('db_backup_') and f.endswith('.json')])
         for f in files[:-keep] if len(files) > keep else []:
             os.remove(os.path.join(backup_dir, f))
     except Exception:

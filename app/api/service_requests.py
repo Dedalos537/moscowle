@@ -19,13 +19,15 @@ def list_requests():
     else:
         pagination = service_request_repo.find_by_requester(user.id, page=page, per_page=per_page)
 
-    return jsonify({
-        "success": True,
-        "data": [r.to_dict() for r in pagination.items],
-        "page": pagination.page,
-        "pages": pagination.pages,
-        "total": pagination.total,
-    })
+    return jsonify(
+        {
+            'success': True,
+            'data': [r.to_dict() for r in pagination.items],
+            'page': pagination.page,
+            'pages': pagination.pages,
+            'total': pagination.total,
+        }
+    )
 
 
 @api_sr.route('', methods=['POST'])
@@ -35,7 +37,7 @@ def create_request():
     required = ['category', 'title']
     for field in required:
         if not data.get(field):
-            return api_response(False, error={"message": f"{field} is required"}, status=400)
+            return api_response(False, error={'message': f'{field} is required'}, status=400)
 
     record = service_request_repo.create(
         requester_id=g.current_user.id,
@@ -53,7 +55,7 @@ def get_request(request_id):
     record = service_request_repo.get_by_id_or_404(request_id)
     user = g.current_user
     if user.role != 'admin' and record.requester_id != user.id:
-        return api_response(False, error={"message": "Forbidden"}, status=403)
+        return api_response(False, error={'message': 'Forbidden'}, status=403)
     return api_response(True, data=record.to_dict())
 
 
@@ -61,7 +63,7 @@ def get_request(request_id):
 @login_required
 def approve_request(request_id):
     if g.current_user.role != 'admin':
-        return api_response(False, error={"message": "Forbidden"}, status=403)
+        return api_response(False, error={'message': 'Forbidden'}, status=403)
     data = request.get_json(silent=True) or {}
     record = service_request_repo.approve(request_id, g.current_user.id, data.get('notes'))
     return api_response(True, data=record.to_dict())
@@ -71,7 +73,7 @@ def approve_request(request_id):
 @login_required
 def reject_request(request_id):
     if g.current_user.role != 'admin':
-        return api_response(False, error={"message": "Forbidden"}, status=403)
+        return api_response(False, error={'message': 'Forbidden'}, status=403)
     data = request.get_json(silent=True) or {}
     record = service_request_repo.reject(request_id, g.current_user.id, data.get('notes'))
     return api_response(True, data=record.to_dict())

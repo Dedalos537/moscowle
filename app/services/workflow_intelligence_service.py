@@ -45,7 +45,7 @@ class WorkflowPattern:
             next_intents = [self.intent_sequence[i] for i in next_indices]
             most_common = Counter(next_intents).most_common(1)
             return most_common[0][0] if most_common else None
-        except:
+        except Exception:
             return None
 
     def get_predicted_parameters(self, intent):

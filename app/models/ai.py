@@ -10,7 +10,9 @@ class AIConversation(db.Model, AuditMixin):
     is_active = db.Column(db.Boolean, default=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     session_id = db.Column(db.String(100), nullable=True)
-    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('ai_conversations', lazy=True, cascade='all, delete-orphan'))
+    user = db.relationship(
+        'User', foreign_keys=[user_id], backref=db.backref('ai_conversations', lazy=True, cascade='all, delete-orphan')
+    )
 
     messages = db.relationship('AIChatMessage', backref='conversation', lazy=True, cascade='all, delete-orphan')
 
@@ -35,5 +37,5 @@ class AIChatMessage(db.Model, AuditMixin):
             'timestamp': self.timestamp.isoformat(),
             'intent': self.intent,
             'parameters': self.parameters,
-            'action_status': self.action_status
+            'action_status': self.action_status,
         }

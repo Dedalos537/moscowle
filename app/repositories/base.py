@@ -36,9 +36,7 @@ class BaseRepository(Generic[T]):
                 col = getattr(self.model, attr, None)
                 if col is not None:
                     q = q.filter(col == value)
-        return q.order_by(self.model.id.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
+        return q.order_by(self.model.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
 
     def create(self, **kwargs) -> T:
         record = self.model(**kwargs)

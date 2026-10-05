@@ -10,7 +10,7 @@ def check_ollama():
     try:
         response = requests.get(os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434') + '/api/tags', timeout=2)
         return response.status_code == 200
-    except:
+    except Exception:
         return False
 
 
@@ -30,7 +30,9 @@ def start_ollama():
 
     try:
         with open('logs/ollama_startup.log', 'a') as log_file:
-            subprocess.Popen([ollama_path, 'serve'], stdout=log_file, stderr=log_file, start_new_session=True)
+            subprocess.Popen(  # noqa: S603 - ruta resuelta con shutil.which, sin entrada de usuario
+                [ollama_path, 'serve'], stdout=log_file, stderr=log_file, start_new_session=True
+            )
 
         for i in range(15):
             time.sleep(1)

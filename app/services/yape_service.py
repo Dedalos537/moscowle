@@ -51,7 +51,7 @@ class YapeService:
 
         except Exception as e:
             logger.error(f'Error al parsear CSV: {str(e)}')
-            raise ValueError(f'No se pudo leer CSV: {str(e)}')
+            raise ValueError(f'No se pudo leer CSV: {str(e)}') from e
 
     def parse_yape_excel(self, file_stream):
         """Parsea Excel Yape (XLSX) desde Flask"""
@@ -119,7 +119,7 @@ class YapeService:
 
         except Exception as e:
             logger.error(f'Error crítico parseando Excel: {str(e)}')
-            raise ValueError(f'Formato de Excel no compatible: {str(e)}')
+            raise ValueError(f'Formato de Excel no compatible: {str(e)}') from e
 
     def _map_csv_row(self, row):
         """Mapea fila CSV a dict normalizado"""

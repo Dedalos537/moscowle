@@ -6,8 +6,10 @@ si le llego". Tampoco de detectar que una campaña se mando dos veces.
 Guarda una fila por envio, exitos o no. Los fallos se guardan igual: un envio
 que se registro como fallido es informacion, no basura.
 """
-from app import db
+
 from datetime import datetime
+
+from app import db
 
 
 class MessageLog(db.Model):

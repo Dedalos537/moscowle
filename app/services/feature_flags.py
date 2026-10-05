@@ -11,13 +11,13 @@ _FLAGS_CACHE = None
 
 def _default_flags():
     return {
-        "new_dashboard": {"enabled": False, "description": "Nuevo dashboard con gráficos"},
-        "ai_chat_v2": {"enabled": False, "description": "Chat IA con modelo mejorado"},
-        "payment_reminders": {"enabled": True, "description": "Recordatorios automáticos de pago"},
-        "dark_mode": {"enabled": False, "description": "Interfaz con tema oscuro"},
-        "export_reports": {"enabled": True, "description": "Exportar reportes a PDF/Excel"},
-        "telehealth": {"enabled": False, "description": "Videollamadas integradas"},
-        "bulk_import": {"enabled": False, "description": "Importación masiva de pacientes"},
+        'new_dashboard': {'enabled': False, 'description': 'Nuevo dashboard con gráficos'},
+        'ai_chat_v2': {'enabled': False, 'description': 'Chat IA con modelo mejorado'},
+        'payment_reminders': {'enabled': True, 'description': 'Recordatorios automáticos de pago'},
+        'dark_mode': {'enabled': False, 'description': 'Interfaz con tema oscuro'},
+        'export_reports': {'enabled': True, 'description': 'Exportar reportes a PDF/Excel'},
+        'telehealth': {'enabled': False, 'description': 'Videollamadas integradas'},
+        'bulk_import': {'enabled': False, 'description': 'Importación masiva de pacientes'},
     }
 
 
@@ -59,7 +59,9 @@ def flag_required(flag_name):
                     return f(*args, **kwargs)
                 abort(404)
             return f(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 

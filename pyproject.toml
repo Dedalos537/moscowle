@@ -31,9 +31,19 @@ ignore = [
   "SIM115", # Open context manager
   "SIM108", # Ternary
   "SIM117", # Multiple with
+  "PLC0415", # Imports diferidos dentro de funciones: patron deliberado del proyecto para evitar ciclos entre modelos/servicios/rutas
+  "E501",   # Longitud de linea: la gestiona el formateador; las lineas largas que quedan son literales (SQL, prompts, URLs). ci.yml ya la ignora
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["F401", "E402"]  # reexportaciones y registro de submodulos
+"app/extensions.py" = ["E402"]
+"app/services/enhanced_llm_service_v5.py" = ["E402"]
+"app/services/smart_modal_error_service.py" = ["E402"]
+"app/services/yape_service.py" = ["E402"]
+"app/services/ai_service.py" = ["PLW0603"]  # carga perezosa de numpy/sklearn (singletons de modulo)
+"app/services/feature_flags.py" = ["PLW0603"]  # cache de modulo
+"app/routes/admin_ai.py" = ["PLW0603"]  # hilo de entrenamiento unico
 "tests/*" = ["S", "PL", "B", "SIM"]
 "app/models/*" = ["N", "F403"]
 "app/routes/api/*" = ["PLC0415", "F841", "SIM210", "E501", "E722", "SIM102", "E712"]

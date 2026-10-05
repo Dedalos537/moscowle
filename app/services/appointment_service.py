@@ -242,9 +242,8 @@ class AppointmentService:
                 if appt.attendance == 'present' and old_attendance != 'present':
                     patient.sessions_attended += 1
 
-                elif appt.attendance != 'present' and old_attendance == 'present':
-                    if patient.sessions_attended > 0:
-                        patient.sessions_attended -= 1
+                elif appt.attendance != 'present' and old_attendance == 'present' and patient.sessions_attended > 0:
+                    patient.sessions_attended -= 1
 
         db.session.commit()
 
@@ -355,9 +354,8 @@ class AppointmentService:
                 return appt
             raise ValueError(f"Transición inválida: no se puede cambiar de '{current_status}' a '{new_status}'")
 
-        if new_status == 'completed' and appt.end_time and appt.end_time > datetime.utcnow():
-            if appt.end_time > datetime.utcnow() + timedelta(minutes=15):
-                raise ValueError('No se puede completar una sesión futura')
+        if new_status == 'completed' and appt.end_time and appt.end_time > datetime.utcnow() + timedelta(minutes=15):
+            raise ValueError('No se puede completar una sesión futura')
 
         old_status = appt.status
         appt.status = new_status

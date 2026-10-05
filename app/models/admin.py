@@ -20,9 +20,10 @@ class SmartAction(db.Model, AuditMixin):
 
     def get_payload(self):
         import json
+
         try:
             return json.loads(self.suggested_payload) if self.suggested_payload else {}
-        except:
+        except Exception:
             return {}
 
 
@@ -38,7 +39,9 @@ class CSPReport(db.Model, AuditMixin):
     ip_address = db.Column(db.String(100), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
 
-    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('csp_reports', lazy=True, cascade='all, delete-orphan'))
+    user = db.relationship(
+        'User', foreign_keys=[user_id], backref=db.backref('csp_reports', lazy=True, cascade='all, delete-orphan')
+    )
 
 
 class AdminAPIToken(db.Model, AuditMixin):

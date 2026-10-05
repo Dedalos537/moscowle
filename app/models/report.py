@@ -22,8 +22,7 @@ class SessionAudit(db.Model, AuditMixin):
     audited_at = db.Column(db.DateTime, nullable=True)
 
     appointment = db.relationship(
-        'Appointment',
-        backref=db.backref('audit', uselist=False, lazy=True, cascade='all, delete-orphan')
+        'Appointment', backref=db.backref('audit', uselist=False, lazy=True, cascade='all, delete-orphan')
     )
     uploader = db.relationship('User', foreign_keys=[docx_uploaded_by])
 
@@ -34,6 +33,7 @@ class SessionAudit(db.Model, AuditMixin):
 
     def get_report(self):
         import json
+
         try:
             return json.loads(self.audit_report_json) if self.audit_report_json else {}
         except Exception:
@@ -72,9 +72,7 @@ class DailyReport(db.Model, AuditMixin):
     patient = db.relationship('User', foreign_keys=[patient_id])
     therapist = db.relationship('User', foreign_keys=[therapist_id])
 
-    __table_args__ = (
-        db.UniqueConstraint('patient_id', 'therapist_id', 'date', name='uq_daily_report'),
-    )
+    __table_args__ = (db.UniqueConstraint('patient_id', 'therapist_id', 'date', name='uq_daily_report'),)
 
 
 class MonthlyReport(db.Model, AuditMixin):
@@ -94,9 +92,7 @@ class MonthlyReport(db.Model, AuditMixin):
     patient = db.relationship('User', foreign_keys=[patient_id])
     therapist = db.relationship('User', foreign_keys=[therapist_id])
 
-    __table_args__ = (
-        db.UniqueConstraint('patient_id', 'therapist_id', 'month', 'year', name='uq_monthly_report'),
-    )
+    __table_args__ = (db.UniqueConstraint('patient_id', 'therapist_id', 'month', 'year', name='uq_monthly_report'),)
 
 
 class QuarterlyReport(db.Model, AuditMixin):
@@ -116,6 +112,4 @@ class QuarterlyReport(db.Model, AuditMixin):
     patient = db.relationship('User', foreign_keys=[patient_id])
     therapist = db.relationship('User', foreign_keys=[therapist_id])
 
-    __table_args__ = (
-        db.UniqueConstraint('patient_id', 'therapist_id', 'quarter', 'year', name='uq_quarterly_report'),
-    )
+    __table_args__ = (db.UniqueConstraint('patient_id', 'therapist_id', 'quarter', 'year', name='uq_quarterly_report'),)

@@ -660,15 +660,17 @@ def admin_app_metrics():
         all_p99.append(lat['p99_ms'])
         all_avg.append(lat['avg_ms'])
         all_max.append(lat['max_ms'])
-        path_latencies.append({
-            'path': path_key,
-            'count': lat['count'],
-            'avg_ms': lat['avg_ms'],
-            'p50_ms': lat['p50_ms'],
-            'p95_ms': lat['p95_ms'],
-            'p99_ms': lat['p99_ms'],
-            'max_ms': lat['max_ms'],
-        })
+        path_latencies.append(
+            {
+                'path': path_key,
+                'count': lat['count'],
+                'avg_ms': lat['avg_ms'],
+                'p50_ms': lat['p50_ms'],
+                'p95_ms': lat['p95_ms'],
+                'p99_ms': lat['p99_ms'],
+                'max_ms': lat['max_ms'],
+            }
+        )
 
     error_rate = round((total_errors / total_requests * 100), 2) if total_requests > 0 else 0
 

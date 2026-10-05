@@ -19,12 +19,16 @@ def validate_password_strength(value):
 
 class LoginSchema(Schema):
     email = fields.Email(required=True, error_messages={'required': 'Email es requerido'})
-    password = fields.Str(required=True, validate=validate.Length(min=1), error_messages={'required': 'Password es requerida'})
+    password = fields.Str(
+        required=True, validate=validate.Length(min=1), error_messages={'required': 'Password es requerida'}
+    )
 
 
 class RegisterSchema(Schema):
     email = fields.Email(required=True, error_messages={'required': 'Email es requerido'})
-    password = fields.Str(required=True, validate=validate_password_strength, error_messages={'required': 'Password es requerida'})
+    password = fields.Str(
+        required=True, validate=validate_password_strength, error_messages={'required': 'Password es requerida'}
+    )
 
 
 def validate_login_input(data):

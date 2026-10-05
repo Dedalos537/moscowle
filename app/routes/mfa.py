@@ -26,7 +26,12 @@ def verify_setup():
     secret = request.form.get('secret', '')
     if not code or not secret:
         flash('Código requerido', 'error')
-        return render_template('mfa_setup.html', qr=mfa_service.get_qr_svg(secret, current_user.email), secret=secret, already_enabled=False)
+        return render_template(
+            'mfa_setup.html',
+            qr=mfa_service.get_qr_svg(secret, current_user.email),
+            secret=secret,
+            already_enabled=False,
+        )
     if mfa_service.verify_totp(secret, code):
         current_user.otp_secret = secret
         current_user.mfa_enabled = True
@@ -34,7 +39,9 @@ def verify_setup():
         flash('MFA activado exitosamente', 'success')
         return redirect(url_for('main.dashboard'))
     flash('Código inválido. Intenta de nuevo.', 'error')
-    return render_template('mfa_setup.html', qr=mfa_service.get_qr_svg(secret, current_user.email), secret=secret, already_enabled=False)
+    return render_template(
+        'mfa_setup.html', qr=mfa_service.get_qr_svg(secret, current_user.email), secret=secret, already_enabled=False
+    )
 
 
 @mfa_bp.route('/mfa/disable', methods=['POST'])
@@ -57,6 +64,7 @@ def mfa_login():
             flash('Código requerido', 'error')
             return render_template('mfa_login.html', email=email)
         from app.models import User
+
         user = User.query.filter_by(email=email).first()
         if not user:
             flash('Usuario no encontrado', 'error')
@@ -85,15 +93,18 @@ def api_verify():
     if not code or not email:
         return jsonify({'success': False, 'error': 'Código y email requeridos'}), 400
     from app.models import User
+
     user = User.query.filter_by(email=email).first()
     if not user:
         return jsonify({'success': False, 'error': 'Usuario no encontrado'}), 401
     lockout = mfa_service.check_lockout(user)
     if lockout['locked']:
-        return jsonify({
-            'success': False,
-            'error': f'Demasiados intentos. Intenta de nuevo en {lockout["minutes_remaining"]} min.',
-        }), 429
+        return jsonify(
+            {
+                'success': False,
+                'error': f'Demasiados intentos. Intenta de nuevo en {lockout["minutes_remaining"]} min.',
+            }
+        ), 429
     if user.mfa_enabled and user.otp_secret and mfa_service.verify_totp(user.otp_secret, code):
         mfa_service.record_attempt(user, success=True)
         access_token = create_access_token(identity=str(user.id))

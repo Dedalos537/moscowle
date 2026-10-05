@@ -1,8 +1,8 @@
 from threading import Thread
 
 from flask import Blueprint, current_app, jsonify, request
-from app.auth_compat import login_required
 
+from app.auth_compat import login_required
 from app.services.ai_service import _train_lock, _train_thread, train_model
 
 bp = Blueprint('admin_ai', __name__, url_prefix='/admin/ai')
@@ -24,7 +24,6 @@ def status():
 
     in_progress = False
     try:
-        global _train_thread
         with _train_lock:
             in_progress = _train_thread is not None and _train_thread.is_alive()
     except Exception:
@@ -40,9 +39,9 @@ def trigger_train():
     payload = request.get_json(silent=True) or {}
     real_data = payload.get('real_data')
 
+    global _train_thread
     started = False
     try:
-        global _train_thread
         with _train_lock:
             if _train_thread is None or not _train_thread.is_alive():
                 t = Thread(target=lambda: train_model(real_data), daemon=True)

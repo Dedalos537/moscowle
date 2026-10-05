@@ -13,10 +13,7 @@ class MFAService:
         return pyotp.random_base32()
 
     def get_totp_uri(self, secret, email):
-        return pyotp.totp.TOTP(secret).provisioning_uri(
-            name=email,
-            issuer_name='Centro de Terapias'
-        )
+        return pyotp.totp.TOTP(secret).provisioning_uri(name=email, issuer_name='Centro de Terapias')
 
     def get_qr_svg(self, secret, email):
         uri = self.get_totp_uri(secret, email)
@@ -44,11 +41,12 @@ class MFAService:
     def check_lockout(self, user):
         if user.mfa_locked_until and user.mfa_locked_until > datetime.utcnow():
             remaining = int((user.mfa_locked_until - datetime.utcnow()).total_seconds() // 60)
-            return {"locked": True, "minutes_remaining": remaining}
-        return {"locked": False}
+            return {'locked': True, 'minutes_remaining': remaining}
+        return {'locked': False}
 
     def record_attempt(self, user, success=False):
         from flask import current_app
+
         if success:
             user.mfa_failed_attempts = 0
             user.mfa_locked_until = None

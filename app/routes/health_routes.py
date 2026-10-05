@@ -57,7 +57,7 @@ def health_check():
         cli = Client(host=os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434'))
         cli.list()
         ollama_ok = True
-    except Exception:
+    except Exception:  # noqa: S110 - fallo esperado y sin consecuencia, se ignora a proposito
         pass
     checks['ollama'] = {'status': 'ok' if ollama_ok else 'unreachable'}
 

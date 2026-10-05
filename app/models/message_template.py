@@ -6,8 +6,10 @@ configuracion decia "Sin configurar" aunque el admin la hubiera guardado.
 Una plantilla guarda el texto con marcadores {nombre}, {monto}, etc. El render
 lo hace MessagingService con un formateo que no revienta si falta un dato.
 """
-from app import db
+
 from datetime import datetime
+
+from app import db
 
 
 class MessageTemplate(db.Model):

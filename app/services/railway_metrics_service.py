@@ -42,10 +42,9 @@ class RailwayMetricsService:
             logger.warning('Railway API credentials not configured')
             return None
 
-        query = (
-            """
+        query = """
         query {
-            deployments(input: { projectId: "%s", first: 1 }) {
+            deployments(input: { projectId: "__PROJECT_ID__", first: 1 }) {
                 edges {
                     node {
                         id
@@ -58,9 +57,7 @@ class RailwayMetricsService:
                 }
             }
         }
-        """
-            % self.project_id
-        )
+        """.replace('__PROJECT_ID__', self.project_id)
 
         try:
             resp = requests.post(

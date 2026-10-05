@@ -58,7 +58,7 @@ def dashboard():
         games = []
         try:
             games = json.loads(s.games) if s.games else []
-        except:
+        except Exception:
             games = []
 
         s_start_aware = s.start_time.replace(tzinfo=UTC)
@@ -139,7 +139,7 @@ def sessions():
         games = []
         try:
             games = json.loads(s.games) if s.games else []
-        except:
+        except Exception:
             games = []
 
         is_active = False
@@ -409,7 +409,7 @@ def _parse_datetime(value):
         for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d'):
             try:
                 return datetime.strptime(value, fmt)
-            except Exception:
+            except Exception:  # noqa: S112 - fallo esperado y sin consecuencia, se ignora a proposito
                 continue
     return None
 
@@ -759,7 +759,7 @@ def api_patient_send_message():
             current_user.username,
             (body or 'Has recibido un archivo adjunto')[:100] + ('...' if body and len(body) > 100 else ''),
         )
-    except Exception:
+    except Exception:  # noqa: S110 - fallo esperado y sin consecuencia, se ignora a proposito
         pass
 
     return jsonify(

@@ -25,6 +25,7 @@ login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 login_manager.session_protection = 'strong'
 
+
 def _rate_limit_key():
     """Clave por usuario autenticado, con fallback a IP remota.
 

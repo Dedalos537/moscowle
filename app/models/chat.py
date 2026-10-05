@@ -18,15 +18,13 @@ class Chat(db.Model, AuditMixin):
         participant = ChatParticipant.query.filter_by(chat_id=self.id, user_id=user_id).first()
         if not participant or not participant.last_read_at:
             return Message.query.filter(
-                Message.chat_id == self.id,
-                Message.sender_id != user_id,
-                Message.status.in_(['sent', 'delivered'])
+                Message.chat_id == self.id, Message.sender_id != user_id, Message.status.in_(['sent', 'delivered'])
             ).count()
         return Message.query.filter(
             Message.chat_id == self.id,
             Message.sender_id != user_id,
             Message.created_at > participant.last_read_at,
-            Message.status.in_(['sent', 'delivered'])
+            Message.status.in_(['sent', 'delivered']),
         ).count()
 
 
@@ -59,14 +57,21 @@ class Message(db.Model, AuditMixin):
     attachment_path = db.Column(db.String(500), nullable=True)
     attachment_type = db.Column(db.String(50), nullable=True)
 
-    sender = db.relationship('User', foreign_keys=[sender_id], backref=db.backref('sent_messages', lazy=True, cascade="all, delete-orphan"))
-    receiver = db.relationship('User', foreign_keys=[receiver_id], backref=db.backref('received_messages', lazy=True, cascade="all, delete-orphan"))
+    sender = db.relationship(
+        'User', foreign_keys=[sender_id], backref=db.backref('sent_messages', lazy=True, cascade='all, delete-orphan')
+    )
+    receiver = db.relationship(
+        'User',
+        foreign_keys=[receiver_id],
+        backref=db.backref('received_messages', lazy=True, cascade='all, delete-orphan'),
+    )
     replies = db.relationship('Message', backref=db.backref('parent', remote_side=[id]), lazy=True)
 
     @property
     def file_url(self):
         if self.attachment_path:
             from flask import url_for
+
             return url_for('uploads.protected_file', filename=f'messages/{self.attachment_path}', _external=False)
         return None
 

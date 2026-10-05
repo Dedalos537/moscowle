@@ -38,11 +38,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install flake8
+          # Mismo ruff, fijado, que .pre-commit-config.yaml y ci-backend.yml (un solo linter)
+          pip install ruff==0.15.16
 
-      - name: Lint with flake8
+      - name: Lint with ruff
         run: |
-          flake8 app/ --count --max-complexity=12 --max-line-length=120 --statistics
+          ruff check app/ --output-format=github
 
       - name: Test with pytest (SQLite)
         run: |

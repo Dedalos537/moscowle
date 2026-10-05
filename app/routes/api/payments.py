@@ -130,12 +130,14 @@ Centro de Terapias
             msg = f'Recordatorio enviado por {channel} a {phone_number}'
             if not success:
                 err = result.get('error') if isinstance(result, dict) else f'Error al enviar recordatorio por {channel}'
-                return api_response(
-                    success=False, error={'message': err}, status=500
-                )
+                return api_response(success=False, error={'message': err}, status=500)
             return api_response(
                 success=True,
-                data={'message': msg, 'channel': channel, 'provider_message_id': result.get('provider_message_id') if isinstance(result, dict) else None},
+                data={
+                    'message': msg,
+                    'channel': channel,
+                    'provider_message_id': result.get('provider_message_id') if isinstance(result, dict) else None,
+                },
             )
 
         else:

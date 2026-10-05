@@ -2,6 +2,7 @@ from celery import Celery
 
 celery_app = Celery('moscowle')
 
+
 def init_celery(app):
     celery_app.conf.update(
         broker_url=app.config.get('CELERY_BROKER_URL', 'redis://redis:6379/0'),

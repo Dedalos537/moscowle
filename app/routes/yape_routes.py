@@ -1,4 +1,3 @@
-
 import logging
 
 from flask import Blueprint, jsonify, render_template, request
@@ -39,7 +38,7 @@ def import_transactions():
             return jsonify({'success': True, 'stats': result}), 200
         return jsonify({'success': False, 'error': result}), 400
     except Exception as e:
-        logger.exception("Import error")
+        logger.exception('Import error')
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -54,9 +53,16 @@ def search():
             return jsonify({'results': []}), 200
 
         results = yape_service.search_transactions(q, limit=20)
-        return jsonify({'results': [{'operation_number': r.operation_number, 'amount': r.amount, 'sender': r.sender_name} for r in results]}), 200
+        return jsonify(
+            {
+                'results': [
+                    {'operation_number': r.operation_number, 'amount': r.amount, 'sender': r.sender_name}
+                    for r in results
+                ]
+            }
+        ), 200
     except Exception as e:
-        logger.exception("Search error")
+        logger.exception('Search error')
         return jsonify({'error': str(e)}), 500
 
 
@@ -70,12 +76,12 @@ def attach_receipt(operation_number):
             return jsonify({'success': False, 'error': 'No file'}), 400
 
         file = request.files['file']
-        receipt_path = f"yape_receipts/{operation_number}_{file.filename}"
+        receipt_path = f'yape_receipts/{operation_number}_{file.filename}'
 
         success, msg = yape_service.attach_receipt_to_transaction(operation_number, receipt_path)
         return jsonify({'success': success, 'message': msg}), (200 if success else 400)
     except Exception as e:
-        logger.exception("Attach error")
+        logger.exception('Attach error')
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -86,9 +92,14 @@ def pending():
     """Get pending transactions without receipt."""
     try:
         pending_tx = YapeTransaction.query.filter(YapeTransaction.receipt_image_path is None).limit(50).all()
-        return jsonify({'count': len(pending_tx), 'transactions': [{'operation_number': t.operation_number, 'amount': t.amount} for t in pending_tx]}), 200
+        return jsonify(
+            {
+                'count': len(pending_tx),
+                'transactions': [{'operation_number': t.operation_number, 'amount': t.amount} for t in pending_tx],
+            }
+        ), 200
     except Exception as e:
-        logger.exception("Pending error")
+        logger.exception('Pending error')
         return jsonify({'error': str(e)}), 500
 
 
@@ -101,7 +112,7 @@ def history():
         imports = yape_service.get_all_imports()
         return jsonify({'count': len(imports), 'imports': imports}), 200
     except Exception as e:
-        logger.exception("History error")
+        logger.exception('History error')
         return jsonify({'error': str(e)}), 500
 
 
@@ -115,5 +126,5 @@ def dash():
         pending_count = YapeTransaction.query.filter(YapeTransaction.receipt_image_path is None).count()
         return jsonify({'total': total, 'pending': pending_count}), 200
     except Exception as e:
-        logger.exception("Dashboard error")
+        logger.exception('Dashboard error')
         return jsonify({'error': str(e)}), 500

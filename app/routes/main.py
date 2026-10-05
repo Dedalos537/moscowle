@@ -102,7 +102,7 @@ def update_profile():
             try:
                 parsed = datetime.strptime(date_of_birth, fmt).date()
                 break
-            except Exception:
+            except Exception:  # noqa: S112 - fallo esperado y sin consecuencia, se ignora a proposito
                 continue
         if not parsed:
             return jsonify({'success': False, 'message': 'Fecha de nacimiento inválida'}), 400

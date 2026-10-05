@@ -38,10 +38,7 @@ class RefreshToken(db.Model, AuditMixin):
         return hashlib.sha256(token.encode()).hexdigest()
 
     def is_valid(self):
-        return (
-            self.revoked_at is None
-            and self.expires_at > datetime.utcnow()
-        )
+        return self.revoked_at is None and self.expires_at > datetime.utcnow()
 
     def revoke(self):
         self.revoked_at = datetime.utcnow()
@@ -62,7 +59,5 @@ class RefreshToken(db.Model, AuditMixin):
 
     @classmethod
     def revoke_all_for_user(cls, user_id):
-        cls.query.filter_by(user_id=user_id, revoked_at=None).update(
-            {"revoked_at": datetime.utcnow()}
-        )
+        cls.query.filter_by(user_id=user_id, revoked_at=None).update({'revoked_at': datetime.utcnow()})
         db.session.commit()

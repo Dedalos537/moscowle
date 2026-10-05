@@ -1,4 +1,3 @@
-
 swagger_config = {
     'headers': [],
     'specs': [
@@ -28,7 +27,7 @@ swagger_template = {
             'type': 'apiKey',
             'name': 'Cookie',
             'in': 'header',
-            'description': 'Flask session cookie (moscowle_session) for authenticated requests'
+            'description': 'Flask session cookie (moscowle_session) for authenticated requests',
         }
     },
 }
