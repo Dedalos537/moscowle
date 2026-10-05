@@ -65,24 +65,20 @@ class SessionReminderService:
                 continue
             by_patient.setdefault(patient.id, {'appointments': []})['appointments'].append(appt)
 
-            if local_date == tomorrow_local and not appt.reminder_d1_sent:
-                self._send_reminder(
-                    phone,
-                    patient,
-                    appt,
-                    'Mañana',
-                    counts,
-                )
+            # Se marca como enviado SOLO si algun canal lo entrego: antes se marcaba
+            # igual con el puente caido o sin proveedor y el recordatorio se perdia.
+            if (
+                local_date == tomorrow_local
+                and not appt.reminder_d1_sent
+                and self._send_reminder(phone, patient, appt, 'Mañana', counts)
+            ):
                 appt.reminder_d1_sent = True
 
-            if local_date == today_local and not appt.reminder_d0_sent:
-                self._send_reminder(
-                    phone,
-                    patient,
-                    appt,
-                    'Hoy',
-                    counts,
-                )
+            if (
+                local_date == today_local
+                and not appt.reminder_d0_sent
+                and self._send_reminder(phone, patient, appt, 'Hoy', counts)
+            ):
                 appt.reminder_d0_sent = True
 
         self._send_renewal_notices(by_patient, counts)
@@ -106,7 +102,7 @@ class SessionReminderService:
             + (f' en {location}.' if location else '.')
             + ('\n\nTe esperamos. Centro de Terapias')
         )
-        self._dispatch(phone, body, counts)
+        return self._dispatch(phone, body, counts)
 
     def _send_renewal_notices(self, by_patient, counts):
         today_local = datetime.now(LIMA_TZ).date()
@@ -133,15 +129,20 @@ class SessionReminderService:
                 'Te recomendamos renovar para no interrumpir tu terapia.\n\n'
                 'Centro de Terapias'
             )
-            self._dispatch(phone, body, counts)
-            patient.renewal_notified_count = 2
+            if self._dispatch(phone, body, counts):
+                patient.renewal_notified_count = 2
 
     def _dispatch(self, phone, body, counts):
+        """Envia por WhatsApp y SMS. Devuelve True si ALGUN canal lo entrego."""
+        delivered = False
         if self.messaging.send_whatsapp_message(phone, body):
             counts['sent_whatsapp'] += 1
+            delivered = True
         # send_sms_message devuelve un dict desde que trae el id del
         # proveedor. Contar el truthy del dict contaria tambien los fallos.
         sms = self.messaging.send_sms_message(phone, body)
         sms_ok = sms.get('ok') if isinstance(sms, dict) else bool(sms)
         if sms_ok:
             counts['sent_sms'] += 1
+            delivered = True
+        return delivered
