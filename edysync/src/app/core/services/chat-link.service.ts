@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 
 export interface ChatLoginCode {
@@ -20,12 +20,22 @@ export interface ChatLinkStatus {
   linked: boolean;
   role: string;
   accounts: ChatAccount[];
+  /** @usuario del bot (getMe); null si Telegram no respondió: la UI degrada a instrucciones sin enlace. */
+  bot_username: string | null;
+}
+
+/** Código vigente. Vive en el servicio y no en el componente: el menú de preferencias destruye su contenido al cerrarse. */
+export interface PendingChatCode {
+  code: string;
+  expiresAt: number;
 }
 
 /** Acceso HTTP a la vinculación del chat (Telegram) del usuario autenticado. Vale para cualquier rol. */
 @Injectable({ providedIn: 'root' })
 export class ChatLinkService {
   private http = inject(HttpClient);
+
+  readonly pendingCode = signal<PendingChatCode | null>(null);
 
   getStatus(): Observable<ChatLinkStatus> {
     return this.http.get<ChatLinkStatus>('/api/telegram/me');

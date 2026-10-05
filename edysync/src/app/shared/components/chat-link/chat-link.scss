@@ -79,28 +79,22 @@
   overflow-wrap: anywhere;
 }
 
-.chat-link__account-meta {
-  font-size: 0.75rem;
-  color: var(--color-on-surface-variant);
-}
-
 .chat-link__confirm {
   display: flex;
-  gap: 0.25rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .chat-link__steps {
   margin: 0;
   padding-left: 1.25rem;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: var(--color-on-surface-variant);
 }
 
 .chat-link__code {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 0.75rem;
   padding: 0.75rem;
   border-radius: 0.5rem;
@@ -109,7 +103,6 @@
 }
 
 .chat-link__code--expired {
-  opacity: 0.6;
   border-style: dashed;
 }
 
@@ -139,4 +132,64 @@
 .chat-link__actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.chat-link__command-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.chat-link__open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius);
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  font-family: var(--font-label);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.chat-link__open:hover {
+  background-color: color-mix(in srgb, var(--color-primary) 85%, transparent);
+}
+
+.chat-link__open:focus-visible {
+  outline: 2px solid var(--color-on-surface);
+  outline-offset: 2px;
+}
+
+.chat-link__hint,
+.chat-link__expired {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-on-surface-variant);
+}
+
+/* El aviso de vencido es texto de estado: a contraste completo, sin atenuar el bloque. */
+.chat-link__expired {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-on-surface);
+}
+
+/* Solo para lectores de pantalla: anuncia hitos sin ocupar espacio visual. */
+.chat-link__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }

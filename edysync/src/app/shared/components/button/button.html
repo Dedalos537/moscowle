@@ -2,10 +2,11 @@
   [type]="type()"
   [class]="btnClass"
   [disabled]="disabled() || loading()"
+  [attr.aria-busy]="loading() ? 'true' : null"
   (click)="onClick($event)">
 
   @if (loading()) {
-    <span class="btn-spinner"></span>
+    <span class="btn-spinner" aria-hidden="true"></span>
   }
 
   @if (icon() && !loading()) {

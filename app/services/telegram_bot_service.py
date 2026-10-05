@@ -33,6 +33,30 @@ def _tg_request(method, data=None, bot_token=None):
     return result
 
 
+_BOT_USERNAME_CACHE = {'value': None, 'at': 0.0}
+_BOT_USERNAME_TTL = 3600
+
+
+def get_bot_username():
+    """@usuario del bot (getMe), cacheado 1 h. None si no hay token o Telegram falla:
+    el frontend degrada a las instrucciones sin enlace directo."""
+    now = time.time()
+    if _BOT_USERNAME_CACHE['value'] and now - _BOT_USERNAME_CACHE['at'] < _BOT_USERNAME_TTL:
+        return _BOT_USERNAME_CACHE['value']
+    token = current_app.config.get('TELEGRAM_BOT_TOKEN')
+    if not token:
+        return None
+    try:
+        result = _tg_request('getMe', bot_token=token)
+    except Exception:
+        logger.exception('No se pudo consultar getMe')
+        return None
+    username = ((result or {}).get('result') or {}).get('username') if (result or {}).get('ok') else None
+    if username:
+        _BOT_USERNAME_CACHE.update(value=username, at=now)
+    return username
+
+
 def send_telegram_message(chat_id, text, bot_token=None, reply_markup=None, parse_mode='Markdown'):
     """Send a text message to a Telegram chat and return the message_id."""
     if not bot_token:
@@ -607,7 +631,13 @@ def handle_webhook_update(update):
 
     tg_user = TelegramUser.query.filter_by(telegram_chat_id=chat_id).first()
 
-    if msg.get('text') == '/start':
+    start_payload = text.partition(' ')[2].strip() if text.startswith('/start ') else ''
+    if start_payload.startswith('login_') and len(start_payload) > len('login_'):
+        # Enlace directo t.me/<bot>?start=login_<CODIGO>: mismo camino (y mismos limites) que /login.
+        _handle_login(chat_id, f'/login {start_payload[len("login_") :]}', msg.get('from', {}), tg_user, bot_token)
+        return
+
+    if msg.get('text') == '/start' or text.startswith('/start '):
         _handle_start(chat_id, msg.get('from', {}), tg_user, bot_token)
         return
 

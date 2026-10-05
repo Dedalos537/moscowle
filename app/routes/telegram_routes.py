@@ -191,7 +191,11 @@ def my_chat_link():
         }
         for r in rows
     ]
-    return jsonify({'linked': bool(accounts), 'role': user.role, 'accounts': accounts})
+    from app.services.telegram_bot_service import get_bot_username
+
+    return jsonify(
+        {'linked': bool(accounts), 'role': user.role, 'accounts': accounts, 'bot_username': get_bot_username()}
+    )
 
 
 @telegram_bp.route('/me/unlink', methods=['POST'])

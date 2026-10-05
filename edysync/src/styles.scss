@@ -24,7 +24,7 @@ body { font-size: 16px; }
   --color-primary: #75a83a;
   --color-on-error-container: #410002;
   --color-outline: #737968;
-  --color-on-primary: #ffffff;
+  --color-on-primary: #0a2100; /* AA: 6.03:1 sobre primary claro, 9.73:1 sobre el oscuro (blanco daba 2.83:1 y 1.75:1) */
   --color-on-surface: #191d15;
   --color-surface-variant: #e1e4d7;
   --color-surface-container: #edefe2;

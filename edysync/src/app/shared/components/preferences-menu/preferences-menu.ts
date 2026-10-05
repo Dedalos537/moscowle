@@ -37,7 +37,7 @@ import { NotificationPreferences } from '../../../core/models/notification';
 
       @if (open) {
         <div
-          class="absolute right-0 mt-3 w-80 bg-surface-container-lowest/95 backdrop-blur-xl rounded-xl shadow-soft border border-border/50 z-50 flex flex-col animate-fade-in"
+          class="absolute right-0 mt-3 w-[min(20rem,calc(100vw-1.5rem))] bg-surface-container-lowest/95 backdrop-blur-xl rounded-xl shadow-soft border border-border/50 z-50 flex flex-col animate-fade-in"
           (click)="$event.stopPropagation()"
         >
           <div class="p-4 border-b border-border/30 flex justify-between items-center bg-surface-container-low/80 rounded-t-xl">
@@ -302,7 +302,7 @@ import { NotificationPreferences } from '../../../core/models/notification';
                   </button>
                 </div>
 
-                <app-chat-link></app-chat-link>
+                <app-chat-link (linkedChange)="userRole() === 'admin' && loadTelegramStatus()"></app-chat-link>
 
                 <div class="border-t border-border/10 pt-2 mt-2 space-y-1">
                   <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">

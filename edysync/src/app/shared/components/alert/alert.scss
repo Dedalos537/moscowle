@@ -1,0 +1,10 @@
+/* El icono sigue siendo de 20px; el area tactil se extiende a 44px sin mover el layout. */
+.alert-dismiss {
+  position: relative;
+}
+
+.alert-dismiss::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+}
