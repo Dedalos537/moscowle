@@ -45,7 +45,8 @@ import { MonthRange, MonthRangePicker } from '../../../../shared/components/mont
 import { PatientRow, PaymentHistoryRow, Therapist, ExpenseForm, Contract, ContractDetail, ContractFilter, CreateContractForm, PayInstallmentForm, CancelContractForm } from './finanzas.models';
 import {
   getCategoryLabel, getMethodBadgeClass, getMethodLabel, formatMonthLabel,
-  getAnchorMonthsKeys, getMonthlyIncome, getMonthlyExpenses,
+  getMonthlyIncome, getMonthlyExpenses, getYearMonthKeys, getRangeMonthKeys,
+  isDateInRange, isDateInFortnight,
   getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue, rankContract,
 } from './finanzas-utils';
 import { makeLineOpts, makeDoughnutOpts } from './finanzas-charts-config';
@@ -304,8 +305,12 @@ export class Finanzas implements OnInit, OnDestroy {
     this.chartRevenueByLocationOpt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { family: 'Manrope', size: 11, weight: 600 }, padding: 12, usePointStyle: true, pointStyle: 'circle' } }, tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', callbacks: { label: (ctx: any) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` } } } };
   }
 
-  monthFilter: string | null = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  monthRange: MonthRange | null = null;
   fortnightFilter: 1 | 2 | null = null;
+
+  get monthFilter(): string | null {
+    return this.monthRange?.start ?? null;
+  }
 
   dashIncomeExpenseChart: ChartData<'line'> = { labels: [], datasets: [] };
   dashIncomeExpenseOpt = makeLineOpts();
@@ -385,14 +390,13 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   private genDashboardCharts() {
-    const anchor = this.monthFilter || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
     const incomeByMonth = getMonthlyIncome(this.paymentHistory);
     const expenseByMonth = getMonthlyExpenses(this.recentExpenses);
-    if (this.monthFilter) {
+    if (this.fortnightFilter && this.monthFilter) {
       incomeByMonth.set(this.monthFilter, this.getFilteredPayments().reduce((sum, p) => sum + (p.amount || 0) - (p.discount || 0), 0));
       expenseByMonth.set(this.monthFilter, this.getFilteredExpenses().reduce((sum, e) => sum + (e.amount || 0), 0));
     }
-    const monthKeys = getAnchorMonthsKeys(anchor);
+    const monthKeys = this.getChartMonthKeys();
     const revenues = monthKeys.map((k) => incomeByMonth.get(k) || 0);
     const expValues = monthKeys.map((k) => expenseByMonth.get(k) || 0);
     const labels = monthKeys.map((k) => formatMonthLabel(k));
@@ -427,46 +431,34 @@ export class Finanzas implements OnInit, OnDestroy {
     this.chartRevenueByLocation = this.buildChartRevenueByLocation();
   }
 
+  private inSelectedMonths(date: string): boolean {
+    const r = this.monthRange;
+    return !r?.start ? true : isDateInRange(date, r.start, r.end);
+  }
+
+  private inFortnight(date: string): boolean {
+    return isDateInFortnight(date, this.fortnightFilter);
+  }
+
+  private getChartMonthKeys(): string[] {
+    const r = this.monthRange;
+    if (!r?.start) return getYearMonthKeys(new Date().getFullYear());
+    return getRangeMonthKeys(r.start, r.end);
+  }
+
   private getChartPatients(): PatientRow[] {
-    if (!this.monthFilter) return this.patients;
-    const [year, month] = this.monthFilter.split('-').map(Number);
-    return this.patients.filter(p => {
-      if (!p.next_due_date) return false;
-      const py = Number(p.next_due_date.substring(0, 4));
-      const pm = Number(p.next_due_date.substring(5, 7));
-      if (py !== year || pm !== month) return false;
-      if (this.fortnightFilter === 1) return Number(p.next_due_date.substring(8, 10)) <= 15;
-      if (this.fortnightFilter === 2) return Number(p.next_due_date.substring(8, 10)) > 15;
-      return true;
-    });
+    if (!this.monthRange) return this.patients;
+    return this.patients.filter(p => !!p.next_due_date && this.inSelectedMonths(p.next_due_date) && this.inFortnight(p.next_due_date));
   }
 
   private getFilteredPayments(): PaymentHistoryRow[] {
-    if (!this.monthFilter) return this.paymentHistory;
-    const [year, month] = this.monthFilter.split('-').map(Number);
-    return this.paymentHistory.filter(p => {
-      if (!p.date) return false;
-      const py = Number(p.date.substring(0, 4));
-      const pm = Number(p.date.substring(5, 7));
-      if (py !== year || pm !== month) return false;
-      if (this.fortnightFilter === 1) return Number(p.date.substring(8, 10)) <= 15;
-      if (this.fortnightFilter === 2) return Number(p.date.substring(8, 10)) > 15;
-      return true;
-    });
+    if (!this.monthRange) return this.paymentHistory;
+    return this.paymentHistory.filter(p => !!p.date && this.inSelectedMonths(p.date) && this.inFortnight(p.date));
   }
 
   private getFilteredExpenses(): Expense[] {
-    if (!this.monthFilter) return this.recentExpenses;
-    const [year, month] = this.monthFilter.split('-').map(Number);
-    return this.recentExpenses.filter(e => {
-      if (!e.date) return false;
-      const ey = Number(e.date.substring(0, 4));
-      const em = Number(e.date.substring(5, 7));
-      if (ey !== year || em !== month) return false;
-      if (this.fortnightFilter === 1) return Number(e.date.substring(8, 10)) <= 15;
-      if (this.fortnightFilter === 2) return Number(e.date.substring(8, 10)) > 15;
-      return true;
-    });
+    if (!this.monthRange) return this.recentExpenses;
+    return this.recentExpenses.filter(e => !!e.date && this.inSelectedMonths(e.date) && this.inFortnight(e.date));
   }
 
   private buildChartStatusDist() {
@@ -500,12 +492,11 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   private buildChartRevenueHistory() {
-    const anchor = this.monthFilter || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
     const incomeByMonth = getMonthlyIncome(this.paymentHistory);
-    if (this.monthFilter) {
+    if (this.fortnightFilter && this.monthFilter) {
       incomeByMonth.set(this.monthFilter, this.getFilteredPayments().reduce((sum, p) => sum + (p.amount || 0) - (p.discount || 0), 0));
     }
-    const monthKeys = getAnchorMonthsKeys(anchor);
+    const monthKeys = this.getChartMonthKeys();
     const revenues = monthKeys.map((k) => incomeByMonth.get(k) || 0);
     const labels = monthKeys.map((k) => formatMonthLabel(k));
     return { labels, datasets: [{ label: 'Ingresos (S/)', data: revenues, borderColor: '#75a83a', backgroundColor: 'rgba(117, 168, 58, 0.1)', fill: true, pointBackgroundColor: '#75a83a', pointBorderColor: '#fff', pointBorderWidth: 2 }] };
@@ -522,7 +513,11 @@ export class Finanzas implements OnInit, OnDestroy {
   private buildChartProjVsReal() {
     const expected = this.getChartPatients().reduce((sum, p) => sum + (p.payment_amount || 0), 0);
     const real = this.summaryIngresos;
-    const label = this.monthFilter ? formatMonthLabel(this.monthFilter) : 'Este Mes';
+    const label = this.monthRange
+      ? (this.monthRange.start === this.monthRange.end
+          ? formatMonthLabel(this.monthRange.start)
+          : `${formatMonthLabel(this.monthRange.start)} – ${formatMonthLabel(this.monthRange.end)}`)
+      : 'Todo el año';
     return { labels: [label], datasets: [{ label: 'Proyectado', data: [expected], backgroundColor: 'rgba(59, 130, 246, 0.85)', borderRadius: 6, barPercentage: 0.4 }, { label: 'Real', data: [real], backgroundColor: 'rgba(117, 168, 58, 0.85)', borderRadius: 6, barPercentage: 0.4 }] };
   }
 
@@ -1266,22 +1261,16 @@ export class Finanzas implements OnInit, OnDestroy {
     return c;
   }
 
-  clearFilters() { this.searchQuery = ''; this.selectedSedeId = null; this.selectedTherapistId = null; this.selectedStatus = ''; this.selectedSort = ''; this.monthFilter = null; this.fortnightFilter = null; }
+  clearFilters() { this.searchQuery = ''; this.selectedSedeId = null; this.selectedTherapistId = null; this.selectedStatus = ''; this.selectedSort = ''; this.monthRange = null; this.fortnightFilter = null; }
 
   get monthRangeValue(): MonthRange | null {
-    if (!this.monthFilter) return null;
-    return { start: this.monthFilter, end: this.monthFilter, mode: 'single' };
+    return this.monthRange;
   }
 
   onMonthFilterChange(range: MonthRange | null) {
-    if (!range) {
-      this.monthFilter = null;
+    this.monthRange = range;
+    if (!range || range.start !== range.end) {
       this.fortnightFilter = null;
-    } else {
-      this.monthFilter = range.start;
-      if (range.start !== range.end) {
-        this.fortnightFilter = null;
-      }
     }
     this.patientPage = 1;
     this.genDashboardCharts();

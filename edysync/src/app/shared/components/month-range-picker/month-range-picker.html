@@ -39,7 +39,7 @@
             [class.mrp__cell--end]="isEnd(year, i)"
             [class.mrp__cell--preview]="isPreview(year, i)"
             [class.mrp__cell--range]="allowRange"
-            (click)="select(i)">
+            (click)="select(i, $event)">
             {{ m }}
           </button>
         }
@@ -47,7 +47,7 @@
 
       <div class="mrp__footer">
         <span class="mrp__hint">
-          {{ allowRange ? 'Elige dos meses para formar un rango' : 'Elige un mes' }}
+          {{ allowRange ? 'Elige dos meses para formar un rango' : 'Elige un mes · ⌘/Ctrl + clic inicia un rango' }}
         </span>
         @if (value()) {
           <button type="button" class="mrp__clear" (click)="clear($event)">Limpiar</button>

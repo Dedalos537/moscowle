@@ -107,8 +107,17 @@ export class MonthRangePicker {
     return false;
   }
 
-  select(monthIndex: number) {
+  select(monthIndex: number, event?: MouseEvent) {
     const key = this.keyOf(this.year, monthIndex);
+    const wantsRange = !!event && (event.metaKey || event.ctrlKey);
+
+    if (wantsRange && !this.allowRange) {
+      this.allowRange = true;
+      this.pendingStart = key;
+      this.emit({ start: key, end: key, mode: 'range' });
+      this.cdr.markForCheck();
+      return;
+    }
 
     if (!this.allowRange) {
       this.pendingStart = null;

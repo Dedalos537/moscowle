@@ -57,6 +57,40 @@ export function getAnchorMonthsKeys(anchor: string): string[] {
   return keys;
 }
 
+export function getYearMonthKeys(year: number): string[] {
+  return Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
+}
+
+export function getRangeMonthKeys(start: string, end?: string | null): string[] {
+  if (!start) return [];
+  const last = end && end > start ? end : start;
+  const [sy, sm] = start.split('-').map(Number);
+  const [ey, em] = last.split('-').map(Number);
+  const keys: string[] = [];
+  let y = sy;
+  let m = sm;
+  while (y < ey || (y === ey && m <= em)) {
+    keys.push(`${y}-${String(m).padStart(2, '0')}`);
+    m += 1;
+    if (m > 12) { m = 1; y += 1; }
+    if (keys.length > 120) break;
+  }
+  return keys;
+}
+
+export function isDateInRange(date: string | null | undefined, start: string, end?: string | null): boolean {
+  if (!date || !start) return false;
+  const last = end && end > start ? end : start;
+  const key = date.substring(0, 7);
+  return key >= start && key <= last;
+}
+
+export function isDateInFortnight(date: string, fortnight: 1 | 2 | null): boolean {
+  if (!fortnight) return true;
+  const day = Number(date.substring(8, 10));
+  return fortnight === 1 ? day <= 15 : day > 15;
+}
+
 export function getMonthlyIncome(paymentHistory: PaymentHistoryRow[]): Map<string, number> {
   const map = new Map<string, number>();
   paymentHistory.forEach((p) => {
