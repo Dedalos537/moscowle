@@ -1,308 +1,284 @@
-<div class="flex flex-col gap-6 animate-fade-in" [@fadeInUp]>
-  @if (!loading) {
-    <app-users-stats-cards [stats]="stats" />
+<div class="users-page">
+  @if (!loading && !loadError) {
+    <app-users-stats-cards [stats]="stats" [activeKey]="statsActiveKey" (selected)="onStatSelect($event)" />
   }
 
-  <div class="card animate-fade-in" style="animation-delay: 0.15s">
-    <div class="p-4 sm:p-6 xl:p-8">
-      <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-3 sm:gap-4 border-b border-border/20 pb-4 sm:pb-5 mb-4 sm:mb-5">
-        <h3 class="text-base sm:text-h3 text-on-surface flex items-center gap-2">
-          <fa-icon [icon]="['fas', 'users']" class="text-primary"></fa-icon>
-          Directorio
-          <span class="text-xs sm:text-sm font-normal text-on-surface-variant ml-1 sm:ml-2">({{ filteredUsers.length }} usuarios)</span>
-        </h3>
-
-        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto items-stretch sm:items-center flex-wrap">
-          <app-select (valueChange)="onSedeChange($event)" [options]="sedeOptions" placeholder="Todas las Sedes"
-            [clearable]="true" class="w-full sm:w-48"></app-select>
-
-          <app-select (valueChange)="onStatusChange($event)" [options]="statusOptions" placeholder="Todos los estados"
-            [clearable]="true" class="w-full sm:w-44"></app-select>
-
-          <app-select (valueChange)="onTherapistFilterChange($event)" [options]="therapistOptions"
-            placeholder="Todos los terapeutas" [clearable]="true" class="w-full sm:w-48"></app-select>
-
-          <app-input id="search-user" placeholder="Buscar nombre o email..." (valueChange)="onSearch($event)"
-            class="w-full sm:w-56"></app-input>
+  <section class="card" aria-labelledby="users-directory-title">
+    <div class="directory">
+      <header class="directory__head">
+        <div class="directory__heading">
+          <h2 id="users-directory-title" class="directory__title">
+            <fa-icon [icon]="['fas', 'users']" class="directory__title-icon"></fa-icon>
+            Directorio
+          </h2>
+          <p class="directory__summary" role="status" aria-live="polite">
+            <strong>{{ filteredUsers.length }}</strong> {{ filteredUsers.length === 1 ? 'usuario' : 'usuarios' }} · {{ filterSummary }}
+          </p>
         </div>
+
+        <div class="directory__search">
+          <app-input
+            id="search-user"
+            ariaLabel="Buscar usuario por nombre, correo o código"
+            inputMode="search"
+            placeholder="Buscar nombre, correo o código…"
+            [icon]="['fas', 'magnifying-glass']"
+            [value]="searchQuery"
+            (valueChange)="onSearch($event)"
+          ></app-input>
+          <button
+            type="button"
+            class="directory__filters-toggle"
+            [attr.aria-expanded]="showFilters"
+            aria-controls="users-filters"
+            (click)="showFilters = !showFilters"
+          >
+            <fa-icon [icon]="['fas', 'sliders']"></fa-icon>
+            Filtros@if (selectFilterCount) { ({{ selectFilterCount }}) }
+          </button>
+        </div>
+      </header>
+
+      <div id="users-filters" class="directory__filters" [class.directory__filters--open]="showFilters">
+        <app-select ariaLabel="Filtrar por sede" [ngModel]="selectedSedeId" (ngModelChange)="onSedeChange($event)" [options]="sedeOptions" placeholder="Todas las sedes" [clearable]="true"></app-select>
+        <app-select ariaLabel="Filtrar por estado" [ngModel]="selectedStatus" (ngModelChange)="onStatusChange($event)" [options]="statusOptions" placeholder="Todos los estados" [clearable]="true"></app-select>
+        <app-select ariaLabel="Filtrar por terapeuta" [ngModel]="selectedTherapistId" (ngModelChange)="onTherapistFilterChange($event)" [options]="therapistOptions" placeholder="Todos los terapeutas" [clearable]="true"></app-select>
       </div>
 
-      <!-- Filter tabs -->
-      <div class="flex gap-1 sm:gap-1.5 overflow-x-auto pb-2 sm:pb-3 flex-wrap mb-4 sm:mb-5 items-center">
-        <button (click)="setFilter('all')" class="btn-filter text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5" [class.active]="activeFilter === 'all'">
-          Todos
-        </button>
-        <button (click)="setFilter('jugador')" class="btn-filter text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5" [class.active]="activeFilter === 'jugador'">
-          Pacientes
-        </button>
-        <button (click)="setFilter('terapista')" class="btn-filter text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5" [class.active]="activeFilter === 'terapista'">
-          Terapeutas
-        </button>
-        <button (click)="setFilter('supervisor')" class="btn-filter text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5" [class.active]="activeFilter === 'supervisor'">
-          Supervisores
-        </button>
-        <button (click)="setFilter('admin')" class="btn-filter text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5" [class.active]="activeFilter === 'admin'">
-          Admin
-        </button>
+      <div class="directory__roles" role="group" aria-label="Filtrar por rol">
+        @for (chip of roleChips; track chip.value) {
+          <button
+            type="button"
+            class="btn-filter directory__chip"
+            [class.active]="activeFilter === chip.value"
+            [attr.aria-pressed]="activeFilter === chip.value"
+            (click)="setFilter(chip.value)"
+          >{{ chip.label }}</button>
+        }
         @if (hasActiveFilters) {
-          <button (click)="clearAllFilters()"
-            class="btn-filter text-error hover:bg-error/10 ml-auto flex items-center gap-1.5 cursor-pointer text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5">
-            <fa-icon [icon]="['fas', 'xmark']" class="text-[8px] sm:text-xs"></fa-icon> Limpiar filtros
+          <button type="button" class="directory__clear" (click)="clearAllFilters()">
+            <fa-icon [icon]="['fas', 'xmark']"></fa-icon> Ver todos los usuarios
           </button>
         }
       </div>
 
       @if (loading) {
-      <div class="flex justify-center py-20">
-        <app-spinner size="md" colorClass="text-primary"></app-spinner>
-      </div>
-      } @else {
-
-      <!-- Desktop table -->
-      <div class="hidden md:block overflow-x-auto rounded-xl border border-border/30">
-        <table class="w-full min-w-[1000px]">
-          <thead>
-<tr class="bg-surface-container-high/50">
-                <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Usuario</th>
-                <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Código</th>
-                <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Rol</th>
-                <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Sede</th>
-                <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Estado</th>
-                <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Acciones</th>
-              </tr>
-          </thead>
-          <tbody class="divide-y divide-border/20">
-            @for (u of filteredUsers; track u.id) {
-              <tr class="hover:bg-surface-container-low/50 transition-colors"
-                [class.bg-error-container/10]="u.account_status === 'debtor'"
-                [class.bg-surface-container-highest/40]="u.account_status === 'retired'"
-                [class.bg-warning-container/20]="!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired'">
-                <td class="px-4 py-3.5">
-                  <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-lg bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-sm shrink-0">
-                      {{ getInitials(u.username) }}
-                    </div>
-                    <div class="min-w-0">
-                      <p class="text-sm font-bold text-on-surface truncate">{{ u.username }}</p>
-                    </div>
-                  </div>
-                </td>
-                <td class="px-4 py-3.5 text-sm">
-                  <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-bold rounded-md bg-primary-container/15 text-primary font-mono">
-                    {{ u.login_code || '—' }}
-                  </span>
-                </td>
-                <td class="px-4 py-3.5">
-                  <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-md"
-                    [class]="getRoleBadgeClass(u.role)">
-                    {{ getRoleBadge(u.role) }}
-                  </span>
-                </td>
-                <td class="px-4 py-3.5 text-sm text-on-surface-variant">
-                  @if (u.role === 'jugador' || u.role === 'terapista') {
-                    {{ getSedeName(u) }}
-                  } @else {
-                    <span class="text-on-surface-variant/40">—</span>
-                  }
-                </td>
-                <td class="px-4 py-3.5">
-                  <button (click)="openStatusModal(u)"
-                    class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-md cursor-pointer transition-all hover:brightness-90"
-                    [class]="getStatusClass(u.account_status)"
-                    title="Cambiar estado">
-                    <span class="w-1.5 h-1.5 rounded-full"
-                      [class.bg-primary]="u.account_status === 'active'"
-                      [class.bg-tertiary]="u.account_status === 'inactive'"
-                      [class.bg-on-surface-variant]="u.account_status === 'retired'"
-                      [class.bg-error]="u.account_status === 'debtor'"></span>
-                    {{ getStatusLabel(u.account_status) }}
-                    <fa-icon [icon]="['fas', 'chevron-down']" class="text-[10px] opacity-60"></fa-icon>
-                  </button>
-                </td>
-                <td class="px-4 py-3.5">
-                  <div class="flex justify-end gap-1">
-                    @if (u.role === 'jugador') {
-                      <button (click)="viewPatientDetail(u)"
-                        class="w-8 h-8 rounded-lg hover:bg-primary/10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all cursor-pointer"
-                        title="Ver detalle del paciente">
-                        <fa-icon [icon]="['fas', 'eye']" class="text-sm"></fa-icon>
-                      </button>
-                    }
-                    <button (click)="openEditDrawer(u)"
-                      class="w-8 h-8 rounded-lg hover:bg-primary/10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all cursor-pointer"
-                      title="Editar">
-                      <fa-icon [icon]="['fas', 'pen']" class="text-sm"></fa-icon>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="5" class="px-4 py-16 text-center">
-                  <fa-icon [icon]="['fas', 'user-slash']" class="text-4xl text-on-surface-variant mb-2 block"></fa-icon>
-                  <p class="text-sm font-medium text-on-surface-variant">No se encontraron usuarios</p>
-                  <p class="text-xs text-on-surface-variant mt-1">Intenta ajustar los filtros de búsqueda.</p>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Mobile cards -->
-      <div class="md:hidden space-y-2 sm:space-y-3 mt-3 sm:mt-4 rounded-xl border border-border/30 p-2 sm:p-3">
-        @for (u of filteredUsers; track u.id) {
-        <div class="card overflow-hidden reveal-row" revealOnScroll
-          [class.bg-error-container/10]="u.account_status === 'debtor'"
-          [class.bg-surface-container-highest/30]="u.account_status === 'retired'"
-          [class.bg-warning-container/20]="!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired'">
-          <div class="p-3 sm:p-4 border-b border-border/15 bg-surface-container-high/30">
-            <div class="flex justify-between items-start gap-2 sm:gap-3">
-              <div class="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                <div
-                  class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-xs sm:text-sm shrink-0">
-                  {{ getInitials(u.username) }}
-                </div>
-                <div class="min-w-0 flex-1">
-                  <p class="font-semibold text-on-surface text-sm sm:text-base truncate">{{ u.username }}</p>
-                  <p class="text-[10px] sm:text-xs text-on-surface-variant truncate font-mono">{{ u.login_code || '—' }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="p-3 sm:p-4 space-y-2 sm:space-y-3">
-            <div class="flex items-center justify-between gap-2">
-              <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                <span class="inline-flex items-center px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold rounded-md"
-                  [ngClass]="getRoleBadgeClass(u.role)">{{ getRoleBadge(u.role) }}</span>
-                <span class="text-on-surface-variant/30">|</span>
-                <span class="text-[10px] sm:text-xs text-on-surface-variant">{{ getSedeName(u) }}</span>
-                <button (click)="openStatusModal(u)"
-                  class="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold rounded-md cursor-pointer transition-all hover:brightness-90"
-                  [ngClass]="getStatusClass(u.account_status)"
-                  title="Cambiar estado">
-                  {{ getStatusLabel(u.account_status) }}
-                  <fa-icon [icon]="['fas', 'chevron-down']" class="text-[8px] opacity-60"></fa-icon>
-                </button>
-              </div>
-              <div class="flex gap-1">
-                @if (u.role === 'jugador') {
-                  <button (click)="viewPatientDetail(u)"
-                    class="btn-ghost text-[10px] sm:text-xs !px-2 sm:!px-3 !py-1 sm:!py-1.5 cursor-pointer flex items-center gap-1">
-                    <fa-icon [icon]="['fas', 'eye']" class="text-xs"></fa-icon>
-                    <span class="hidden sm:inline">Detalle</span>
-                  </button>
-                }
-                <button (click)="openEditDrawer(u)" class="btn-ghost text-[10px] sm:text-xs !px-2 sm:!px-3 !py-1 sm:!py-1.5 cursor-pointer">
-                  Editar
-                </button>
-              </div>
-            </div>
-
-            @if (u.role === 'jugador') {
-            <div class="bg-surface-container-high/50 rounded-xl p-3.5 border border-border/20">
-              <label class="text-label-caps text-secondary mb-2 flex items-center gap-1.5">
-                <fa-icon [icon]="['fas', 'stethoscope']" class="text-sm"></fa-icon>
-                Terapeutas Asignados
-              </label>
-              <div class="flex gap-2">
-                <app-select [multiple]="true" [(ngModel)]="u.therapist_ids" [options]="therapistOptionsAll"
-                  class="flex-1"></app-select>
-                <button (click)="assignTherapist(u)"
-                  class="px-3 py-2 bg-secondary text-on-secondary rounded-lg text-xs font-medium hover:bg-secondary-fixed-dim transition-colors shadow-soft self-start shrink-0 cursor-pointer">
-                  <fa-icon [icon]="['fas', 'check']" class="text-sm"></fa-icon>
-                </button>
-              </div>
-            </div>
-            }
-          </div>
+        <div class="skeleton-list" role="status" aria-busy="true">
+          <span class="sr-only">Cargando usuarios…</span>
+          @for (row of [1, 2, 3, 4, 5]; track row) {
+            <div class="skeleton-row" aria-hidden="true"></div>
+          }
         </div>
-        }
-      </div>
+      } @else if (loadError) {
+        <div class="state-block">
+          <app-alert type="error" message="No se pudo cargar la lista de usuarios. Revisa tu conexión e inténtalo de nuevo." [dismissible]="false"></app-alert>
+          <app-button variant="primary" label="Reintentar" [icon]="['fas', 'rotate']" (clicked)="retryLoad()"></app-button>
+        </div>
+      } @else if (filteredUsers.length === 0) {
+        <div class="state-block state-block--empty">
+          <fa-icon [icon]="['fas', 'user-slash']" class="state-block__icon"></fa-icon>
+          <p class="state-block__title">No hay usuarios con estos filtros</p>
+          <p class="state-block__text">
+            @if (hasActiveFilters) { Prueba mostrando a todos o cambia la búsqueda. } @else { Todavía no hay usuarios. Crea el primero. }
+          </p>
+          @if (hasActiveFilters) {
+            <app-button variant="secondary" label="Ver todos los usuarios" (clicked)="clearAllFilters()"></app-button>
+          } @else {
+            <app-button variant="primary" label="Nuevo usuario" [icon]="['fas', 'user-plus']" (clicked)="openCreateDrawer()"></app-button>
+          }
+        </div>
+      } @else if (isDesktop) {
+        <div class="table-wrap">
+          <table class="users-table">
+            <caption class="sr-only">Directorio de usuarios: nombre, código, rol, sede, estado y acciones</caption>
+            <thead>
+              <tr>
+                <th scope="col">Usuario</th>
+                <th scope="col">Código</th>
+                <th scope="col">Rol</th>
+                <th scope="col">Sede</th>
+                <th scope="col">Estado</th>
+                <th scope="col" class="users-table__actions-head">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (u of filteredUsers; track u.id) {
+                <tr
+                  [class.users-row--debtor]="u.account_status === 'debtor'"
+                  [class.users-row--retired]="u.account_status === 'retired'"
+                  [class.users-row--inactive]="!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired'"
+                >
+                  <td>
+                    <div class="user-cell">
+                      <span class="avatar" aria-hidden="true">{{ getInitials(u.username) }}</span>
+                      <span class="user-cell__name">{{ u.username }}</span>
+                    </div>
+                  </td>
+                  <td><span class="code-chip">{{ u.login_code || '—' }}</span></td>
+                  <td><span [class]="getRoleBadgeClass(u.role)">{{ getRoleBadge(u.role) }}</span></td>
+                  <td class="muted">
+                    @if (u.role === 'jugador' || u.role === 'terapista') { {{ getSedeName(u) }} } @else { <span aria-label="No aplica">—</span> }
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="status-button"
+                      [class]="getStatusClass(u.account_status)"
+                      [attr.aria-label]="'Cambiar estado de ' + u.username + '. Estado actual: ' + getStatusLabel(u.account_status)"
+                      (click)="openStatusModal(u)"
+                    >
+                      {{ getStatusLabel(u.account_status) }}
+                      <fa-icon [icon]="['fas', 'chevron-down']" class="status-button__chevron"></fa-icon>
+                    </button>
+                  </td>
+                  <td>
+                    <div class="row-actions">
+                      @if (u.role === 'jugador') {
+                        <button type="button" class="icon-button" [attr.aria-label]="'Ver detalle de ' + u.username" title="Ver detalle del paciente" (click)="viewPatientDetail(u)">
+                          <fa-icon [icon]="['fas', 'eye']"></fa-icon>
+                        </button>
+                      }
+                      <button type="button" class="icon-button" [attr.aria-label]="'Editar a ' + u.username" title="Editar" (click)="openEditDrawer(u)">
+                        <fa-icon [icon]="['fas', 'pen']"></fa-icon>
+                      </button>
+                      <button type="button" class="icon-button" [attr.aria-label]="'Restablecer la contraseña de ' + u.username" title="Restablecer contraseña" (click)="openResetDrawer(u)">
+                        <fa-icon [icon]="['fas', 'key']"></fa-icon>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <ul class="user-cards">
+          @for (u of filteredUsers; track u.id) {
+            <li
+              class="user-card"
+              [class.users-row--debtor]="u.account_status === 'debtor'"
+              [class.users-row--retired]="u.account_status === 'retired'"
+              [class.users-row--inactive]="!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired'"
+            >
+              <div class="user-card__top">
+                <span class="avatar" aria-hidden="true">{{ getInitials(u.username) }}</span>
+                <div class="user-card__id">
+                  <p class="user-card__name">{{ u.username }}</p>
+                  <p class="user-card__code">{{ u.login_code || 'Sin código' }}</p>
+                </div>
+              </div>
 
-      <!-- Footer -->
-      <div class="flex items-center justify-between mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-border/20">
-        <p class="text-[10px] sm:text-sm text-on-surface-variant">
-          {{ filteredUsers.length }} usuario(s) con los filtros aplicados
-        </p>
-      </div>
+              <div class="user-card__meta">
+                <span [class]="getRoleBadgeClass(u.role)">{{ getRoleBadge(u.role) }}</span>
+                @if (u.role === 'jugador' || u.role === 'terapista') { <span class="muted">{{ getSedeName(u) }}</span> }
+                <button
+                  type="button"
+                  class="status-button"
+                  [class]="getStatusClass(u.account_status)"
+                  [attr.aria-label]="'Cambiar estado de ' + u.username + '. Estado actual: ' + getStatusLabel(u.account_status)"
+                  (click)="openStatusModal(u)"
+                >
+                  {{ getStatusLabel(u.account_status) }}
+                  <fa-icon [icon]="['fas', 'chevron-down']" class="status-button__chevron"></fa-icon>
+                </button>
+              </div>
+
+              @if (u.role === 'jugador') {
+                <div class="user-card__assign">
+                  <p class="field-label"><fa-icon [icon]="['fas', 'stethoscope']"></fa-icon> Terapeutas asignados</p>
+                  <div class="user-card__assign-row">
+                    <app-select [multiple]="true" [(ngModel)]="u.therapist_ids" [options]="therapistOptionsAll" [ariaLabel]="'Terapeutas asignados a ' + u.username" class="user-card__select"></app-select>
+                    <app-button variant="secondary" label="Guardar" [icon]="['fas', 'check']" (clicked)="assignTherapist(u)"></app-button>
+                  </div>
+                </div>
+              }
+
+              <div class="user-card__actions">
+                <app-button variant="ghost" label="Editar" [icon]="['fas', 'pen']" (clicked)="openEditDrawer(u)"></app-button>
+                @if (u.role === 'jugador') {
+                  <app-button variant="ghost" label="Detalle" [icon]="['fas', 'eye']" (clicked)="viewPatientDetail(u)"></app-button>
+                }
+                <app-button variant="ghost" label="Contraseña" [icon]="['fas', 'key']" (clicked)="openResetDrawer(u)"></app-button>
+              </div>
+            </li>
+          }
+        </ul>
       }
     </div>
-  </div>
+  </section>
 </div>
 
-<!-- Toast -->
-@if (showToast) {
-<div class="fixed bottom-6 right-6 z-[9999] animate-fade-in"
-  [class.bg-primary-container/95]="toastType === 'success'"
-  [class.text-primary-container]="toastType === 'success'"
-  [class.bg-error-container/95]="toastType === 'error'"
-  [class.text-error]="toastType === 'error'"
-  style="backdrop-filter: blur(12px); border-radius: 12px; padding: 12px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
-  <div class="flex items-center gap-2 text-sm font-medium">
-    <fa-icon [icon]="toastType === 'success' ? ['fas', 'circle-check'] : ['fas', 'circle-exclamation']"></fa-icon>
-    {{ toastMessage }}
+<!-- Avisos: dos regiones siempre presentes en el DOM para que los lectores de pantalla anuncien el cambio -->
+<div class="toast-stack">
+  <div aria-live="polite" aria-atomic="true">
+    @if (showToast && toastType === 'success') {
+      <div class="toast toast--success"><fa-icon [icon]="['fas', 'circle-check']"></fa-icon><span>{{ toastMessage }}</span></div>
+    }
+  </div>
+  <div role="alert" aria-live="assertive" aria-atomic="true">
+    @if (showToast && toastType === 'error') {
+      <div class="toast toast--error"><fa-icon [icon]="['fas', 'circle-exclamation']"></fa-icon><span>{{ toastMessage }}</span></div>
+    }
   </div>
 </div>
-}
 
 <!-- Edit Drawer -->
-<app-drawer [isOpen]="showEditDrawer" title="Editar Usuario" [icon]="['fas', 'user-gear']" (close)="closeEditDrawer()"
+<app-drawer [isOpen]="showEditDrawer" title="Editar usuario" [icon]="['fas', 'user-gear']" (close)="closeEditDrawer()"
   size="lg">
-  <div class="grid grid-cols-2 gap-4">
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre</label>
-      <input [(ngModel)]="editData.username" class="input-field text-sm" />
+      <input aria-label="Nombre" [(ngModel)]="editData.username" class="input-field text-sm" />
     </div>
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Email</label>
-      <input [value]="editData.email" class="input-field text-sm bg-surface-container-high text-on-surface-variant"
+      <input aria-label="Email" [value]="editData.email" class="input-field text-sm bg-surface-container-high text-on-surface-variant"
         readonly disabled />
     </div>
   </div>
   <div>
     <label class="text-label-caps text-on-surface-variant mb-1.5 block">Rol</label>
-    <app-select [(ngModel)]="editData.role" [options]="roleOptions" class="w-full"></app-select>
+    <app-select ariaLabel="Rol" [(ngModel)]="editData.role" [options]="roleOptions" class="w-full"></app-select>
   </div>
   <label class="flex items-center gap-2 cursor-pointer">
-    <input type="checkbox" [(ngModel)]="editData.is_active" class="rounded text-primary focus:ring-primary" />
-    <span class="text-sm font-medium text-on-surface">Cuenta Activa</span>
+    <input type="checkbox" [(ngModel)]="editData.is_active" class="rounded text-primary-text focus:ring-primary" />
+    <span class="text-sm font-medium text-on-surface">Cuenta activa</span>
   </label>
 
   <div>
-    <label class="text-label-caps text-on-surface-variant mb-1.5 block">Estado de Cuenta</label>
-    <app-select [(ngModel)]="editData.account_status" [options]="accountStatusOptions" class="w-full"></app-select>
+    <label class="text-label-caps text-on-surface-variant mb-1.5 block">Estado de la cuenta</label>
+    <app-select ariaLabel="Estado de la cuenta" [(ngModel)]="editData.account_status" [options]="accountStatusOptions" class="w-full"></app-select>
   </div>
 
   @if (editData.role === 'terapista') {
   <div class="bg-surface-container-high rounded-xl p-4 space-y-4">
-    <h4 class="text-sm font-bold text-primary flex items-center gap-2">
+    <h4 class="text-sm font-bold text-primary-text flex items-center gap-2">
       <fa-icon [icon]="['fas', 'briefcase']" class="text-lg"></fa-icon> Contrato
     </h4>
     <div class="bg-surface-container-lowest p-3 rounded-lg border border-border/20">
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sedes Asignadas</label>
-      <app-select [multiple]="true" [(ngModel)]="editData.sede_ids" [options]="multiSedeOptions"
+      <app-select ariaLabel="Sedes Asignadas" [multiple]="true" [(ngModel)]="editData.sede_ids" [options]="multiSedeOptions"
         class="w-full"></app-select>
     </div>
     <div class="bg-surface-container-lowest p-3 rounded-lg border border-border/20">
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Horario Regular</label>
       <div class="grid grid-cols-2 gap-3 mb-3">
         <div>
-          <span class="text-[10px] text-on-surface-variant/60 block mb-1">Entrada</span>
-          <input type="time" [(ngModel)]="editData.start_time" class="input-field text-sm" />
+          <span class="text-xs text-on-surface-variant block mb-1">Entrada</span>
+          <input aria-label="Entrada" type="time" [(ngModel)]="editData.start_time" class="input-field text-sm" />
         </div>
         <div>
-          <span class="text-[10px] text-on-surface-variant/60 block mb-1">Salida</span>
-          <input type="time" [(ngModel)]="editData.end_time" class="input-field text-sm" />
+          <span class="text-xs text-on-surface-variant block mb-1">Salida</span>
+          <input aria-label="Salida" type="time" [(ngModel)]="editData.end_time" class="input-field text-sm" />
         </div>
       </div>
-      <span class="text-[10px] text-on-surface-variant/60 block mb-1.5">Dias Laborales</span>
+      <span class="text-xs text-on-surface-variant block mb-1.5">Días laborales</span>
       <div class="flex flex-wrap gap-1.5">
         @for (day of
         [{v:0,l:'L'},{v:1,l:'M'},{v:2,l:'X'},{v:3,l:'J'},{v:4,l:'V'},{v:5,l:'S'}];
         track day.v) {
         <label
-          class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-border/30 hover:bg-primary/5 cursor-pointer select-none transition-colors"
+          class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 min-h-11 rounded-lg border border-border/30 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary-text hover:bg-primary/5 cursor-pointer select-none transition-colors"
           [class.bg-primary-container/15]="editData.days.includes(day.v)"
           [class.border-primary/30]="editData.days.includes(day.v)">
           <input type="checkbox" [value]="day.v" [checked]="editData.days.includes(day.v)"
@@ -316,11 +292,11 @@
     <div class="grid grid-cols-2 gap-4">
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1.5 block">Base Salarial (S/)</label>
-        <input type="number" step="0.01" [(ngModel)]="editData.salary" class="input-field text-sm" />
+        <input aria-label="Base Salarial (S/)" type="number" step="0.01" [(ngModel)]="editData.salary" class="input-field text-sm" />
       </div>
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1.5 block">Horas Mensuales</label>
-        <input type="number" [(ngModel)]="editData.hours" class="input-field text-sm" />
+        <input aria-label="Horas Mensuales" type="number" [(ngModel)]="editData.hours" class="input-field text-sm" />
       </div>
     </div>
   </div>
@@ -329,36 +305,36 @@
   @if (editData.role === 'jugador') {
   <div>
     <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sede</label>
-    <app-select [(ngModel)]="editData.sede_id" [options]="patientSedeOptions" class="w-full"></app-select>
+    <app-select ariaLabel="Sede" [(ngModel)]="editData.sede_id" [options]="patientSedeOptions" class="w-full"></app-select>
   </div>
 
   <div class="bg-surface-container-high rounded-xl p-4 space-y-3">
-    <h4 class="text-sm font-bold text-primary flex items-center gap-2">
+    <h4 class="text-sm font-bold text-primary-text flex items-center gap-2">
       <fa-icon [icon]="['fas', 'receipt']" class="text-lg"></fa-icon>
-      Configuracion de Plan
+      Configuración de Plan
     </h4>
-    <div class="grid grid-cols-3 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1 block">Modalidad</label>
-        <app-select [(ngModel)]="editData.modality" [options]="editModalityOptions" class="w-full"></app-select>
+        <app-select ariaLabel="Modalidad" [(ngModel)]="editData.modality" [options]="editModalityOptions" class="w-full"></app-select>
       </div>
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1 block">Plan</label>
-        <app-select [(ngModel)]="editData.plan_type" [options]="planTypeOptions" class="w-full"></app-select>
+        <app-select ariaLabel="Plan" [(ngModel)]="editData.plan_type" [options]="planTypeOptions" class="w-full"></app-select>
       </div>
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1 block">Frecuencia</label>
-        <app-select [(ngModel)]="editData.frequency" [options]="frequencyOptions" class="w-full"></app-select>
+        <app-select ariaLabel="Frecuencia" [(ngModel)]="editData.frequency" [options]="frequencyOptions" class="w-full"></app-select>
       </div>
     </div>
     <div class="grid grid-cols-2 gap-3">
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1 block">Monto (S/)</label>
-        <input type="number" step="0.01" [(ngModel)]="editData.amount" class="input-field text-sm" />
+        <input aria-label="Monto (S/)" type="number" step="0.01" [(ngModel)]="editData.amount" class="input-field text-sm" />
       </div>
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1 block">Sesiones Asistidas</label>
-        <input type="number" [(ngModel)]="editData.attended" class="input-field text-sm" />
+        <input aria-label="Sesiones Asistidas" type="number" [(ngModel)]="editData.attended" class="input-field text-sm" />
       </div>
     </div>
 
@@ -366,7 +342,7 @@
       <label class="inline-flex items-center gap-3 cursor-pointer">
         <input type="checkbox" [(ngModel)]="editData.has_shift2" class="sr-only peer" />
         <div
-          class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border after:border-border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary relative">
+          class="w-9 h-5 bg-surface-container-highest peer-focus-visible:ring-2 peer-focus-visible:ring-primary-text rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border after:border-border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary relative">
         </div>
         <span class="text-sm font-medium text-on-surface">2do Turno / Plan Diferenciado</span>
       </label>
@@ -375,59 +351,64 @@
     @if (editData.has_shift2) {
     <div class="bg-surface-container-lowest p-3 rounded-lg border border-border/20 space-y-3">
       <h5 class="text-label-caps text-on-surface-variant">Turno 2</h5>
-      <div class="grid grid-cols-3 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
-          <label class="text-[10px] text-on-surface-variant/60 uppercase">Modalidad</label>
-          <app-select [(ngModel)]="editData.modality_2" [options]="editModalityOptions" class="w-full"></app-select>
+          <label class="text-xs text-on-surface-variant uppercase">Modalidad</label>
+          <app-select ariaLabel="Modalidad" [(ngModel)]="editData.modality_2" [options]="editModalityOptions" class="w-full"></app-select>
         </div>
         <div>
-          <label class="text-[10px] text-on-surface-variant/60 uppercase">Plan</label>
-          <app-select [(ngModel)]="editData.plan_type_2" [options]="planTypeOptions" class="w-full"></app-select>
+          <label class="text-xs text-on-surface-variant uppercase">Plan</label>
+          <app-select ariaLabel="Plan" [(ngModel)]="editData.plan_type_2" [options]="planTypeOptions" class="w-full"></app-select>
         </div>
         <div>
-          <label class="text-[10px] text-on-surface-variant/60 uppercase">Monto</label>
-          <input type="number" step="0.01" [(ngModel)]="editData.amount_2" class="input-field text-sm" />
+          <label class="text-xs text-on-surface-variant uppercase">Monto</label>
+          <input aria-label="Monto" type="number" step="0.01" [(ngModel)]="editData.amount_2" class="input-field text-sm" />
         </div>
       </div>
       <div>
-        <label class="text-[10px] text-on-surface-variant/60 uppercase">Sesiones Asistidas</label>
-        <input type="number" [(ngModel)]="editData.attended_2" class="input-field text-sm" />
+        <label class="text-xs text-on-surface-variant uppercase">Sesiones Asistidas</label>
+        <input aria-label="Sesiones Asistidas" type="number" [(ngModel)]="editData.attended_2" class="input-field text-sm" />
       </div>
     </div>
     }
   </div>
 
   <div class="bg-surface-container-high rounded-xl p-4 space-y-3">
-    <h4 class="text-sm font-bold text-primary flex items-center gap-2">
+    <h4 class="text-sm font-bold text-primary-text flex items-center gap-2">
       <fa-icon [icon]="['fas', 'user-nurse']" class="text-lg"></fa-icon> Terapeuta Asignado
     </h4>
     <app-select [multiple]="true" [(ngModel)]="editData.edit_therapist_ids" [options]="editTherapistOptions" class="w-full"></app-select>
   </div>
 
-  <button type="button" (click)="startEditPatientDetails()" class="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-semibold cursor-pointer">
+  <button type="button" (click)="startEditPatientDetails()" class="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-primary/10 text-primary-text hover:bg-primary/20 transition-colors text-sm font-semibold cursor-pointer">
     <fa-icon [icon]="['fas', 'id-card']"></fa-icon>
-    Editar Datos del Paciente
+    Editar datos del paciente
   </button>
   }
 
   <div class="bg-surface-container-high rounded-xl p-4 space-y-3">
-    <h4 class="text-sm font-bold text-tertiary flex items-center gap-2">
-      <fa-icon [icon]="['fas', 'lock']" class="text-lg"></fa-icon> Cambiar Contrasena
+    <h4 class="text-sm font-bold text-tertiary-text flex items-center gap-2">
+      <fa-icon [icon]="['fas', 'lock']" class="text-lg"></fa-icon> Cambiar contraseña
     </h4>
     <div class="relative">
-      <input [type]="editData.show_password ? 'text' : 'password'" [(ngModel)]="editData.new_password" placeholder="Nueva contrasena (dejar vacio para no cambiar)" class="input-field text-sm pr-10" />
-      <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors" (click)="editData.show_password = !editData.show_password">
+      <input [type]="editData.show_password ? 'text' : 'password'" [(ngModel)]="editData.new_password" aria-label="Nueva contraseña"
+        placeholder="Nueva contraseña (déjalo vacío para no cambiarla)" class="input-field text-sm pr-12" autocomplete="new-password" />
+      <button type="button" class="password-toggle" (click)="editData.show_password = !editData.show_password"
+        [attr.aria-label]="editData.show_password ? 'Ocultar contraseña' : 'Mostrar contraseña'" [attr.aria-pressed]="editData.show_password">
         <fa-icon [icon]="editData.show_password ? ['fas', 'eye-slash'] : ['fas', 'eye']"></fa-icon>
       </button>
     </div>
   </div>
 
-  <div class="border-t border-error/20 pt-4 mt-2">
-    <button *ngIf="currentEditUser" type="button" (click)="deleteUser(currentEditUser)" class="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-error/30 text-error hover:bg-error/5 transition-colors text-sm font-semibold cursor-pointer">
-      <fa-icon [icon]="['fas', 'trash-can']"></fa-icon>
-      Eliminar Usuario
-    </button>
-  </div>
+  @if (currentEditUser) {
+    <section class="danger-zone" aria-labelledby="danger-zone-title">
+      <h4 id="danger-zone-title" class="danger-zone__title">Zona de peligro</h4>
+      <p class="danger-zone__text">
+        Eliminar borra al usuario de forma permanente. Si solo dejó el centro, es mejor cambiar su estado a <strong>Retirado</strong>: conserva su historial y se puede revertir.
+      </p>
+      <app-button variant="danger" label="Eliminar usuario" [icon]="['fas', 'trash-can']" (clicked)="deleteUser(currentEditUser)"></app-button>
+    </section>
+  }
 
   <div drawer-footer>
     <div class="buttons_footer_drawer">
@@ -438,166 +419,167 @@
   </div>
 </app-drawer>
 
-<!-- Reset Password Drawer -->
-<app-drawer [isOpen]="showResetDrawer" title="Reset Password" [icon]="['fas', 'key']" iconColor="text-tertiary"
+<!-- Restablecer contraseña -->
+<app-drawer [isOpen]="showResetDrawer" title="Restablecer contraseña" [icon]="['fas', 'key']" iconColor="text-tertiary-text"
   (close)="closeResetDrawer()" size="md">
-  @if (resetData.firstTime) {
-  <div>
-    <div class="bg-tertiary-container/15 text-tertiary-container p-4 rounded-xl mb-5 text-sm flex gap-3">
-      <fa-icon [icon]="['fas', 'circle-info']" class="text-lg shrink-0"></fa-icon>
-      <p>
-        Este usuario nunca ha iniciado sesion. Ingrese una
-        <strong>contrasena manual</strong> inicial (min. 6 caracteres).
-      </p>
-    </div>
-    <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nueva Contrasena</label>
-      <div class="relative">
-        <input [type]="resetData.showPassword ? 'text' : 'password'" [(ngModel)]="resetData.newPassword"
-          class="input-field text-sm pr-12" placeholder="Ingrese la nueva clave..." />
-        <button (click)="toggleResetPasswordVisibility()"
-          class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-tertiary cursor-pointer">
-          <fa-icon [icon]="resetData.showPassword ? ['fas', 'eye-slash'] : ['fas', 'eye']" class="text-lg"></fa-icon>
-        </button>
-      </div>
-    </div>
-  </div>
+  @if (tempCredentials?.context === 'reset') {
+    <ng-container *ngTemplateOutlet="credentialsCard"></ng-container>
   } @else {
-  <div class="py-8 flex flex-col items-center text-center">
-    <div
-      class="w-14 h-14 bg-primary-container/15 text-primary-container rounded-full flex items-center justify-center mb-4">
-      <fa-icon [icon]="['fas', 'envelope']" class="text-2xl"></fa-icon>
-    </div>
-    <h4 class="text-lg font-bold text-on-surface mb-2">Generar nueva clave</h4>
-    <p class="text-sm text-on-surface-variant max-w-xs">
-      El sistema generara una contrasena segura aleatoriamente y borrara la
-      actual. Estas seguro?
-    </p>
-  </div>
-  } @if (resetData.status) {
-  <div class="p-4 rounded-xl text-sm font-medium text-center"
-    [class.bg-primary-container/15]="resetData.status.includes('reseteada')"
-    [class.text-primary-container]="resetData.status.includes('reseteada')"
-    [class.bg-error-container/30]="resetData.status.includes('Error')"
-    [class.text-error]="resetData.status.includes('Error')">
-    {{ resetData.status }}
-  </div>
+    @if (resetData.firstTime) {
+      <div class="callout callout--info">
+        <fa-icon [icon]="['fas', 'circle-info']" class="callout__icon"></fa-icon>
+        <p>Este usuario nunca ha iniciado sesión. Ingresa una <strong>contraseña inicial</strong> (mínimo 6 caracteres).</p>
+      </div>
+      <div class="password-field">
+        <label for="reset-password" class="text-label-caps text-on-surface-variant mb-1.5 block">Nueva contraseña</label>
+        <div class="relative">
+          <input id="reset-password" [type]="resetData.showPassword ? 'text' : 'password'" [(ngModel)]="resetData.newPassword"
+            class="input-field text-sm pr-12" placeholder="Escribe la nueva contraseña" autocomplete="new-password" />
+          <button type="button" class="password-toggle" (click)="toggleResetPasswordVisibility()"
+            [attr.aria-label]="resetData.showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'" [attr.aria-pressed]="resetData.showPassword">
+            <fa-icon [icon]="resetData.showPassword ? ['fas', 'eye-slash'] : ['fas', 'eye']"></fa-icon>
+          </button>
+        </div>
+      </div>
+    } @else {
+      <div class="state-block state-block--empty">
+        <span class="avatar avatar--lg" aria-hidden="true"><fa-icon [icon]="['fas', 'key']"></fa-icon></span>
+        <p class="state-block__title">Generar una clave nueva</p>
+        <p class="state-block__text">
+          El sistema creará una contraseña temporal aleatoria. <strong>La clave actual dejará de funcionar</strong> en cuanto confirmes.
+        </p>
+      </div>
+    }
+
+    @if (resetData.status.startsWith('Error')) {
+      <app-alert type="error" [message]="resetData.status" [dismissible]="false"></app-alert>
+    } @else if (resetData.status) {
+      <p class="form-status" role="status">{{ resetData.status }}</p>
+    }
   }
 
   <div drawer-footer>
     <div class="buttons_footer_drawer">
-      <app-button variant="ghost" label="Cancelar" (clicked)="closeResetDrawer()"></app-button>
-      <app-button variant="primary" label="Confirmar Reseteo" [icon]="['fas', 'right-left']"
-        (clicked)="confirmResetPassword()"></app-button>
+      @if (tempCredentials?.context === 'reset') {
+        <app-button variant="primary" label="Listo" [icon]="['fas', 'check']" (clicked)="finishCredentials()"></app-button>
+      } @else {
+        <app-button variant="ghost" label="Cancelar" (clicked)="closeResetDrawer()"></app-button>
+        <app-button variant="danger" label="Restablecer contraseña" [icon]="['fas', 'right-left']"
+          [loading]="resetData.status === 'Procesando...'" (clicked)="confirmResetPassword()"></app-button>
+      }
     </div>
   </div>
 </app-drawer>
 
 <!-- Create User Drawer -->
-<app-drawer [isOpen]="showCreateDrawer" title="Crear Nuevo Usuario" [icon]="['fas', 'user-plus']"
+<app-drawer [isOpen]="showCreateDrawer" title="Crear nuevo usuario" [icon]="['fas', 'user-plus']"
   (close)="closeCreateDrawer()" size="lg">
+  @if (tempCredentials?.context === 'created') {
+    <ng-container *ngTemplateOutlet="credentialsCard"></ng-container>
+  }
+  <div [hidden]="tempCredentials?.context === 'created'" class="create-form">
   <div>
     <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre</label>
-    <input [(ngModel)]="newUser.username" class="input-field text-sm" placeholder="Nombre completo" />
+    <input aria-label="Nombre" [(ngModel)]="newUser.username" class="input-field text-sm" placeholder="Nombre completo" />
   </div>
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Email</label>
-      <input [(ngModel)]="newUser.email" type="email" class="input-field text-sm" placeholder="email@ejemplo.com" />
+      <input aria-label="Email" [(ngModel)]="newUser.email" type="email" class="input-field text-sm" placeholder="email@ejemplo.com" />
     </div>
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Rol</label>
-      <app-select [(ngModel)]="newUser.role" [options]="roleOptions" class="w-full"></app-select>
+      <app-select ariaLabel="Rol" [(ngModel)]="newUser.role" [options]="roleOptions" class="w-full"></app-select>
     </div>
   </div>
 
   @if (newUser.role === 'jugador') {
   <div>
     <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sede</label>
-    <app-select [(ngModel)]="newUser.sede_id" [options]="patientSedeOptions" class="w-full"></app-select>
+    <app-select ariaLabel="Sede" [(ngModel)]="newUser.sede_id" [options]="patientSedeOptions" class="w-full"></app-select>
   </div>
   } @if (newUser.role === 'terapista') {
   <div>
-    <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sedes Asignadas (Ctrl+Click)</label>
-    <app-select [multiple]="true" [(ngModel)]="newUser.sede_ids" [options]="multiSedeOptions"
+    <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sedes Asignadas</label>
+    <app-select ariaLabel="Sedes Asignadas" [multiple]="true" [(ngModel)]="newUser.sede_ids" [options]="multiSedeOptions"
       class="w-full"></app-select>
   </div>
   <div class="bg-surface-container-high rounded-xl p-4">
-    <h4 class="text-sm font-bold text-primary flex items-center gap-2 mb-4">
+    <h4 class="text-sm font-bold text-primary-text flex items-center gap-2 mb-4">
       <fa-icon [icon]="['fas', 'briefcase']" class="text-lg"></fa-icon>
-      Configuracion de Contrato
+      Configuración de Contrato
     </h4>
     <div class="grid grid-cols-2 gap-4">
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1.5 block">Base Salarial (S/)</label>
-        <input [(ngModel)]="newUser.salary" type="number" step="0.01" class="input-field text-sm" placeholder="0.00" />
+        <input aria-label="Base Salarial (S/)" [(ngModel)]="newUser.salary" type="number" step="0.01" class="input-field text-sm" placeholder="0.00" />
       </div>
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1.5 block">Horas Contratadas</label>
-        <input [(ngModel)]="newUser.hours" type="number" class="input-field text-sm" placeholder="e.g. 160" />
+        <input aria-label="Horas Contratadas" [(ngModel)]="newUser.hours" type="number" class="input-field text-sm" placeholder="Ej.: 160" />
       </div>
     </div>
-    <p class="text-xs text-on-surface-variant/60 mt-2">
-      El pago por hora se calculara: Base / Horas.
+    <p class="text-xs text-on-surface-variant mt-2">
+      El pago por hora se calculará: Base / Horas.
     </p>
   </div>
   } @if (newUser.role === 'jugador') {
   <div class="bg-surface-container-high rounded-xl p-4 space-y-4">
-    <h4 class="text-sm font-bold text-primary flex items-center gap-2">
+    <h4 class="text-sm font-bold text-primary-text flex items-center gap-2">
       <fa-icon [icon]="['fas', 'receipt']" class="text-lg"></fa-icon>
-      Configuracion del Plan
+      Configuración del Plan
     </h4>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1.5 block">Modalidad</label>
-        <app-select [(ngModel)]="newUser.modality" [options]="createModalityOptions" class="w-full"></app-select>
+        <app-select ariaLabel="Modalidad" [(ngModel)]="newUser.modality" [options]="createModalityOptions" class="w-full"></app-select>
       </div>
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1.5 block">Frecuencia</label>
-        <app-select [(ngModel)]="newUser.frequency" [options]="frequencyOptions" class="w-full"></app-select>
+        <app-select ariaLabel="Frecuencia" [(ngModel)]="newUser.frequency" [options]="frequencyOptions" class="w-full"></app-select>
       </div>
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1.5 block">Tipo de Plan</label>
-        <app-select [(ngModel)]="newUser.plan_type" [options]="planTypeOptions" class="w-full"></app-select>
+        <app-select ariaLabel="Tipo de Plan" [(ngModel)]="newUser.plan_type" [options]="planTypeOptions" class="w-full"></app-select>
       </div>
     </div>
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Monto a Pagar (S/)</label>
-      <input [(ngModel)]="newUser.amount" type="number" step="0.01" class="input-field text-sm" placeholder="0.00" />
+      <input aria-label="Monto a Pagar (S/)" [(ngModel)]="newUser.amount" type="number" step="0.01" class="input-field text-sm" placeholder="0.00" />
     </div>
 
     <label class="flex items-center gap-2 cursor-pointer">
-      <input type="checkbox" [(ngModel)]="newUser.generate_schedule" class="rounded text-primary focus:ring-primary" />
-      <span class="text-sm font-semibold text-on-surface">Generar Horario Automatico</span>
+      <input type="checkbox" [(ngModel)]="newUser.generate_schedule" class="rounded text-primary-text focus:ring-primary" />
+      <span class="text-sm font-semibold text-on-surface">Generar Horario Automático</span>
     </label>
 
     @if (newUser.generate_schedule) {
     <div class="bg-surface-container-lowest p-4 rounded-xl border border-border/20 space-y-4">
       <h5 class="text-label-caps text-on-surface-variant flex items-center gap-1.5">
         <fa-icon [icon]="['fas', 'calendar-days']" class="text-sm"></fa-icon>
-        Programacion de Sesiones
+        Programación de Sesiones
       </h5>
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div>
-          <label class="text-label-caps text-on-surface-variant mb-1 block">Fecha Sesion de Evaluacion</label>
-          <input [(ngModel)]="newUser.evaluation_date" type="date" class="input-field text-sm" />
+          <label class="text-label-caps text-on-surface-variant mb-1 block">Fecha Sesión de Evaluación</label>
+          <input aria-label="Fecha Sesión de Evaluación" [(ngModel)]="newUser.evaluation_date" type="date" class="input-field text-sm" />
         </div>
         <div>
           <label class="text-label-caps text-on-surface-variant mb-1 block">Fecha Inicio</label>
-          <input [(ngModel)]="newUser.start_date" type="date" class="input-field text-sm" />
+          <input aria-label="Fecha Inicio" [(ngModel)]="newUser.start_date" type="date" class="input-field text-sm" />
         </div>
         <div>
           <label class="text-label-caps text-on-surface-variant mb-1 block">Hora Inicio</label>
-          <input [(ngModel)]="newUser.start_time" type="time" class="input-field text-sm" />
+          <input aria-label="Hora Inicio" [(ngModel)]="newUser.start_time" type="time" class="input-field text-sm" />
         </div>
         <div class="sm:col-span-1">
           <label class="text-label-caps text-on-surface-variant mb-1 block">Terapeuta</label>
-          <app-select [(ngModel)]="newUser.schedule_therapist" [options]="scheduleTherapistOptions"
+          <app-select ariaLabel="Terapeuta" [(ngModel)]="newUser.schedule_therapist" [options]="scheduleTherapistOptions"
             class="w-full"></app-select>
         </div>
       </div>
       <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Dias de Sesion</label>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Días de sesión</label>
         <div class="flex gap-2 flex-wrap">
           @for (day of
           [{v:0,l:'Lun'},{v:1,l:'Mar'},{v:2,l:'Mie'},{v:3,l:'Jue'},{v:4,l:'Vie'},{v:5,l:'Sab'}];
@@ -617,18 +599,18 @@
     </div>
     }
     <div class="bg-surface-container-high rounded-xl p-4">
-      <h4 class="text-sm font-bold text-primary flex items-center gap-2 mb-4">
+      <h4 class="text-sm font-bold text-primary-text flex items-center gap-2 mb-4">
         <fa-icon [icon]="['fas', 'user-shield']" class="text-lg"></fa-icon>
         Datos del Apoderado
       </h4>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="text-label-caps text-on-surface-variant mb-1 block">Nombre Apoderado</label>
-          <input [(ngModel)]="newUser.guardian_name" type="text" class="input-field text-sm" placeholder="Nombre completo" />
+          <input aria-label="Nombre Apoderado" [(ngModel)]="newUser.guardian_name" type="text" class="input-field text-sm" placeholder="Nombre completo" />
         </div>
         <div>
           <label class="text-label-caps text-on-surface-variant mb-1 block">Tipo Apoderado</label>
-          <select [(ngModel)]="newUser.guardian_type" class="input-field text-sm">
+          <select aria-label="Tipo Apoderado" [(ngModel)]="newUser.guardian_type" class="input-field text-sm">
             <option value="">No especificado</option>
             <option value="padre">Padre</option>
             <option value="madre">Madre</option>
@@ -638,50 +620,66 @@
         </div>
         <div>
           <label class="text-label-caps text-on-surface-variant mb-1 block">DNI Apoderado</label>
-          <input [(ngModel)]="newUser.guardian_dni" type="text" class="input-field text-sm" placeholder="12345678" />
+          <input aria-label="DNI Apoderado" [(ngModel)]="newUser.guardian_dni" type="text" class="input-field text-sm" placeholder="12345678" />
         </div>
         <div>
           <label class="text-label-caps text-on-surface-variant mb-1 block">Contacto Apoderado</label>
-          <input [(ngModel)]="newUser.guardian_contact" type="text" class="input-field text-sm" placeholder="Telefono o email" />
+          <input aria-label="Contacto Apoderado" [(ngModel)]="newUser.guardian_contact" type="text" class="input-field text-sm" placeholder="Teléfono o email" />
         </div>
       </div>
     </div>
   </div>
   }
+  </div>
+
+  @if (createStatus.startsWith('Error')) {
+    <app-alert type="error" [message]="createStatus" [dismissible]="false"></app-alert>
+  } @else if (createStatus) {
+    <p class="form-status" role="status">{{ createStatus }}</p>
+  }
 
   <div drawer-footer>
     <div class="buttons_footer_drawer">
-      <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateDrawer()"></app-button>
-      <app-button variant="primary" label="Crear Usuario" [icon]="['fas', 'floppy-disk']"
-        (clicked)="createUser()"></app-button>
+      @if (tempCredentials?.context === 'created') {
+        <app-button variant="primary" label="Listo" [icon]="['fas', 'check']" (clicked)="finishCredentials()"></app-button>
+      } @else {
+        <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateDrawer()"></app-button>
+        <app-button variant="primary" label="Crear usuario" [icon]="['fas', 'floppy-disk']"
+          [loading]="createStatus === 'Creando...'" (clicked)="createUser()"></app-button>
+      }
     </div>
-    @if (createStatus) {
-    <span class="text-right text-sm" [class.text-primary]="createStatus.includes('Creado')"
-      [class.text-error]="createStatus.includes('Error')"
-      [class.text-on-surface-variant]="!createStatus.includes('Creado') && !createStatus.includes('Error')">{{
-      createStatus }}</span>
-    }
   </div>
 </app-drawer>
 
+<!-- Clave temporal: se muestra hasta que el admin pulse "Listo" (antes el drawer se cerraba solo a los 2-3 s) -->
+<ng-template #credentialsCard>
+  @if (tempCredentials; as c) {
+    <section class="credentials" aria-labelledby="credentials-title">
+      <h4 id="credentials-title" class="credentials__title" tabindex="-1">
+        <fa-icon [icon]="['fas', 'circle-check']"></fa-icon>
+        {{ c.context === 'created' ? 'Usuario creado' : 'Contraseña restablecida' }}
+      </h4>
+      <p class="credentials__text">
+        Esta clave temporal solo se muestra ahora. Cópiala y compártela con <strong>{{ c.name }}</strong> por un canal seguro.
+      </p>
+      <div class="credentials__row">
+        <code class="credentials__code">{{ c.password || 'No disponible' }}</code>
+        <app-button variant="secondary" [label]="passwordCopied ? 'Copiada' : 'Copiar clave'"
+          [icon]="['fas', passwordCopied ? 'check' : 'copy']" [disabled]="!c.password" (clicked)="copyTempPassword()"></app-button>
+      </div>
+    </section>
+  }
+</ng-template>
+
 <ng-template #headerActions>
-  <div class="flex items-center gap-1 sm:gap-2">
-    <button (click)="openGroupModal()"
-      class="flex items-center gap-1 px-2 py-1 text-[10px] sm:text-sm font-semibold rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer whitespace-nowrap">
-      <fa-icon [icon]="['fas', 'object-group']" class="text-[10px] sm:text-xs"></fa-icon>
-      <span class="hidden sm:inline">Grupos</span>
-    </button>
-    <button (click)="openCreateDrawer()"
-      class="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-sm font-semibold rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors cursor-pointer whitespace-nowrap">
-      <fa-icon [icon]="['fas', 'user-plus']" class="text-[10px] sm:text-xs"></fa-icon>
-      <span class="hidden sm:inline">Nuevo Usuario</span>
-      <span class="sm:hidden">Nuevo</span>
-    </button>
+  <div class="header-actions">
+    <app-button variant="ghost" label="Grupos" [icon]="['fas', 'object-group']" (clicked)="openGroupModal()"></app-button>
+    <app-button variant="primary" label="Nuevo usuario" [icon]="['fas', 'user-plus']" (clicked)="openCreateDrawer()"></app-button>
   </div>
 </ng-template>
 
 <!-- Cambiar Estado Modal -->
-<app-modal [isOpen]="showStatusModal" [title]="'Cambiar Estado del Usuario'" (close)="closeStatusModal()" [allowOverflow]="true">
+<app-modal [isOpen]="showStatusModal" [title]="'Cambiar estado del usuario'" (close)="closeStatusModal()" [allowOverflow]="true">
   @if (statusModalUser) {
     <div class="space-y-4">
       <div class="rounded-xl bg-surface-container-high/50 border border-border/20 p-3 sm:p-4">
@@ -690,12 +688,12 @@
       </div>
 
       <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nuevo Estado</label>
-        <app-select [(ngModel)]="statusModalStatus" [options]="accountStatusOptions" class="w-full"></app-select>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nuevo estado</label>
+        <app-select ariaLabel="Nuevo estado" [(ngModel)]="statusModalStatus" [options]="accountStatusOptions" class="w-full"></app-select>
       </div>
 
       <div class="rounded-xl bg-primary-container/10 border border-primary/20 p-3 text-xs text-on-surface">
-        <fa-icon [icon]="['fas', 'circle-info']" class="text-primary-container mr-1"></fa-icon>
+        <fa-icon [icon]="['fas', 'circle-info']" class="text-primary-text mr-1"></fa-icon>
         Se va a cambiar el estado de <strong>{{ statusModalUser.username }}</strong> de
         <strong>{{ getStatusLabel(statusModalUser.account_status) }}</strong> a
         <strong>{{ getStatusLabel(statusModalStatus) }}</strong>.
@@ -703,23 +701,23 @@
 
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1.5 block">
-          Justificación <span class="text-on-surface-variant/50 font-normal">(opcional)</span>
+          Justificación <span class="font-normal normal-case">({{ justificationRequired ? 'obligatoria' : 'opcional' }})</span>
         </label>
         <textarea [(ngModel)]="statusModalJustification"
-          class="input-field text-sm w-full min-h-20 resize-y"
-          placeholder="Ej: Deudor desde hace 2 meses, se le dio de baja temporalmente..."></textarea>
-        <p class="text-[10px] text-on-surface-variant/60 mt-1">Se registrará junto con la fecha y hora del cambio.</p>
+          class="input-field text-sm w-full min-h-20 resize-y" aria-label="Justificación del cambio de estado"
+          [attr.aria-required]="justificationRequired" placeholder="Ej: Deudor desde hace 2 meses, se le dio de baja temporalmente..."></textarea>
+        <p class="text-xs text-on-surface-variant mt-1">Se registrará junto con la fecha y hora del cambio.</p>
       </div>
 
       <div>
         <div class="flex items-center justify-between mb-1.5">
-          <label class="text-label-caps text-on-surface-variant block">Historial de Cambios</label>
+          <label class="text-label-caps text-on-surface-variant block">Historial de cambios</label>
           @if (statusHistoryLoading) {
             <fa-icon [icon]="['fas', 'spinner']" class="text-xs text-on-surface-variant animate-spin"></fa-icon>
           }
         </div>
         @if (statusHistory.length === 0) {
-          <p class="text-xs text-on-surface-variant/60 text-center py-4 bg-surface-container-high/30 rounded-xl">
+          <p class="text-xs text-on-surface-variant text-center py-4 bg-surface-container-high/30 rounded-xl">
             Sin cambios registrados hasta ahora
           </p>
         } @else {
@@ -729,12 +727,12 @@
                 <div class="flex items-center justify-between gap-2">
                   <p class="text-xs font-semibold text-on-surface">
                     {{ getStatusLabel(log.old_status) }}
-                    <fa-icon [icon]="['fas', 'arrow-right']" class="text-[10px] text-on-surface-variant mx-1"></fa-icon>
+                    <fa-icon [icon]="['fas', 'arrow-right']" class="text-xs text-on-surface-variant mx-1"></fa-icon>
                     {{ getStatusLabel(log.new_status) }}
                   </p>
-                  <p class="text-[10px] text-on-surface-variant whitespace-nowrap">{{ formatStatusTimestamp(log.changed_at) }}</p>
+                  <p class="text-xs text-on-surface-variant whitespace-nowrap">{{ formatStatusTimestamp(log.changed_at) }}</p>
                 </div>
-                <p class="text-[10px] text-on-surface-variant mt-0.5">
+                <p class="text-xs text-on-surface-variant mt-0.5">
                   @if (log.changed_by_username) {
                     <span class="font-medium">{{ log.changed_by_username }}</span> ·
                   }
@@ -750,19 +748,17 @@
         }
       </div>
 
-      <div modal-footer>
+    </div>
+  }
+  @if (statusModalUser) {
+    <div modal-footer>
         <div class="flex justify-end gap-2 w-full">
-          <button (click)="closeStatusModal()" class="btn-ghost text-sm cursor-pointer">Cancelar</button>
-          <button (click)="confirmStatusChange()" [disabled]="statusModalSaving || statusModalStatus === statusModalUser.account_status"
-            class="px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary-fixed-dim transition-colors shadow-soft disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
-            @if (statusModalSaving) {
-              <fa-icon [icon]="['fas', 'spinner']" class="animate-spin mr-1"></fa-icon>
-            }
-            Confirmar Cambio
-          </button>
+          <app-button variant="ghost" label="Cancelar" (clicked)="closeStatusModal()"></app-button>
+          <app-button [variant]="statusConfirmVariant" label="Confirmar cambio" [loading]="statusModalSaving"
+            [disabled]="statusModalStatus === statusModalUser.account_status || (justificationRequired && !statusModalJustification.trim())"
+            (clicked)="confirmStatusChange()"></app-button>
         </div>
       </div>
-    </div>
   }
 </app-modal>
 
@@ -771,26 +767,25 @@
   <div class="space-y-4">
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre del Grupo</label>
-      <input type="text" [(ngModel)]="groupForm.name" placeholder="Ej: Grupo Manana A" class="input-field text-sm w-full">
+      <input aria-label="Nombre del Grupo" type="text" [(ngModel)]="groupForm.name" placeholder="Ej: Grupo Mañana A" class="input-field text-sm w-full">
     </div>
 
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Terapeuta Asignado</label>
-      <app-select [(ngModel)]="groupForm.therapist_id" [options]="groupTherapistOptions" (ngModelChange)="onGroupTherapistChange($event)" class="w-full"></app-select>
-      <p class="text-[10px] text-on-surface-variant mt-1">Se cargan los pacientes asignados a este terapeuta.</p>
+      <app-select ariaLabel="Terapeuta Asignado" [(ngModel)]="groupForm.therapist_id" [options]="groupTherapistOptions" (ngModelChange)="onGroupTherapistChange($event)" class="w-full"></app-select>
+      <p class="text-xs text-on-surface-variant mt-1">Se cargan los pacientes asignados a este terapeuta.</p>
     </div>
 
     <div class="grid grid-cols-2 gap-4">
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sede</label>
-        <app-select [(ngModel)]="groupForm.sede_id" [options]="patientSedeOptions" class="w-full"></app-select>
+        <app-select ariaLabel="Sede" [(ngModel)]="groupForm.sede_id" [options]="patientSedeOptions" class="w-full"></app-select>
       </div>
-      <div></div>
     </div>
 
     <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Fechas <span class="text-[9px] font-normal text-on-surface-variant/60">(opcional)</span></label>
-      <p class="text-xs text-on-surface-variant/60 mb-2">Click para seleccionar dias individuales. Usa "Rango" para un bloque de dias consecutivos. Maximo 10 dias.</p>
+      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Fechas <span class="text-xs font-normal text-on-surface-variant">(opcional)</span></label>
+      <p class="text-xs text-on-surface-variant mb-2">Pulsa para seleccionar días individuales. Usa "Rango" para un bloque de días consecutivos. Máximo 10 días.</p>
 
       <label class="flex items-center gap-2 mb-2 cursor-pointer">
         <input type="checkbox" class="w-4 h-4 accent-primary" [checked]="groupUnlockPast" (change)="toggleGroupUnlockPast()">
@@ -799,13 +794,13 @@
 
       <div class="bg-surface-container-low rounded-xl p-3 border border-border/30">
         <div class="flex items-center justify-between mb-3">
-          <button (click)="groupPrevMonth()" class="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">
+          <button type="button" aria-label="Mes anterior" (click)="groupPrevMonth()" class="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">
             <fa-icon [icon]="['fas', 'chevron-left']" class="text-sm text-on-surface-variant"></fa-icon>
           </button>
           <div class="flex items-center gap-2">
             <span class="text-sm font-bold text-on-surface">{{ groupCalendarLabel }}</span>
             <button (click)="toggleGroupRangeMode()"
-              class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer min-h-11 inline-flex items-center"
+              class="px-2.5 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer min-h-11 inline-flex items-center"
               [class.bg-primary]="groupRangeMode"
               [class.text-on-primary]="groupRangeMode"
               [class.border-primary]="groupRangeMode"
@@ -815,38 +810,39 @@
               <fa-icon [icon]="['fas', 'left-right']" class="mr-1"></fa-icon>Rango
             </button>
             @if (groupRangeMode) {
-              <button (click)="clearGroupRangeSelection()" class="px-2 py-1 text-[10px] font-bold rounded-lg bg-error/10 text-error border border-error/30 transition-all cursor-pointer min-h-11 inline-flex items-center">
+              <button (click)="clearGroupRangeSelection()" class="px-2 py-1 text-xs font-bold rounded-lg bg-error/10 text-error-text border border-error/30 transition-all cursor-pointer min-h-11 inline-flex items-center">
                 Cancelar
               </button>
             }
           </div>
-          <button (click)="groupNextMonth()" class="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">
+          <button type="button" aria-label="Mes siguiente" (click)="groupNextMonth()" class="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">
             <fa-icon [icon]="['fas', 'chevron-right']" class="text-sm text-on-surface-variant"></fa-icon>
           </button>
         </div>
 
         @if (groupRangeMode) {
-          <div class="mb-2 px-2 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold text-center">
+          <div class="mb-2 px-2 py-1.5 rounded-lg bg-primary/10 text-primary-text text-xs font-semibold text-center">
             {{ groupRangeStartStr ? 'Selecciona la fecha final del rango' : 'Selecciona la fecha inicial del rango' }}
           </div>
         }
 
         <div class="grid grid-cols-7 mb-1">
           @for (wd of ['Lu','Ma','Mi','Ju','Vi','Sa','Do']; track wd) {
-            <div class="text-center text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider py-1">{{ wd }}</div>
+            <div class="text-center text-xs font-bold text-on-surface-variant uppercase tracking-wider py-1">{{ wd }}</div>
           }
         </div>
 
-        @for (week of groupCalendarDays; track week) {
+        @for (week of groupCalendarDays; track $index) {
           <div class="grid grid-cols-7">
-            @for (day of week; track day.date) {
+            @for (day of week; track day.date.getTime()) {
               <button type="button"
                 (click)="toggleGroupCalendarDate(day)"
                 [disabled]="day.disabled"
-                class="relative h-9 text-sm font-medium rounded-lg transition-all duration-150 mx-0.5 my-[1px]
+                [attr.aria-label]="day.day + ' de ' + groupMonths[day.date.getMonth()]" [attr.aria-pressed]="day.selected"
+                class="relative h-11 text-sm font-medium rounded-lg transition-all duration-150 mx-0.5 my-[1px]
                   {{ day.disabled ? 'text-on-surface-variant/20 cursor-not-allowed' : '' }}
                   {{ !day.disabled && day.selected ? 'bg-primary text-on-primary shadow-soft' : '' }}
-                  {{ !day.disabled && !day.selected && day.date.getMonth() !== groupCalendarMonth.getMonth() ? 'text-on-surface-variant/30' : '' }}
+                  {{ !day.disabled && !day.selected && day.date.getMonth() !== groupCalendarMonth.getMonth() ? 'text-on-surface-variant' : '' }}
                   {{ !day.disabled && !day.selected && day.date.getMonth() === groupCalendarMonth.getMonth() ? 'text-on-surface hover:bg-surface-container-high' : '' }}">
                 {{ day.day }}
               </button>
@@ -858,10 +854,10 @@
       @if ((groupForm.dates || []).length > 0) {
         <div class="mt-3 flex flex-wrap gap-1.5">
           @for (d of groupForm.dates; track d) {
-            <button type="button" (click)="removeGroupDate(d)"
-              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors cursor-pointer">
+            <button type="button" (click)="removeGroupDate(d)" [attr.aria-label]="'Quitar la fecha ' + d"
+              class="inline-flex items-center gap-1.5 px-3 min-h-11 rounded-full bg-primary/10 text-primary-text text-xs font-medium hover:bg-primary/20 transition-colors cursor-pointer">
               {{ d }}
-              <fa-icon [icon]="['fas', 'xmark']" class="text-[10px]"></fa-icon>
+              <fa-icon [icon]="['fas', 'xmark']" class="text-xs"></fa-icon>
             </button>
           }
         </div>
@@ -870,11 +866,11 @@
 
     <div class="grid grid-cols-2 gap-4">
       <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Inicio <span class="text-[9px] font-normal text-on-surface-variant/60">(opcional)</span></label>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Inicio <span class="text-xs font-normal text-on-surface-variant">(opcional)</span></label>
         <input type="time" [(ngModel)]="groupForm.start_time" class="input-field text-sm w-full">
       </div>
       <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Fin <span class="text-[9px] font-normal text-on-surface-variant/60">(opcional)</span></label>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Fin <span class="text-xs font-normal text-on-surface-variant">(opcional)</span></label>
         <input type="time" [(ngModel)]="groupForm.end_time" class="input-field text-sm w-full">
       </div>
     </div>
@@ -882,15 +878,15 @@
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Pacientes del Grupo</label>
       <div class="relative mb-2">
-        <fa-icon [icon]="['fas', 'magnifying-glass']" class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-on-surface-variant/50"></fa-icon>
+        <fa-icon [icon]="['fas', 'magnifying-glass']" class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-on-surface-variant"></fa-icon>
         <input type="text" [(ngModel)]="groupSearchQuery" placeholder="Buscar paciente..."
           class="input-field text-sm w-full pl-9">
       </div>
       <div class="max-h-48 overflow-y-auto border border-border/20 rounded-xl p-2 space-y-1">
         @if (groupPatientsLoading) {
-          <p class="text-xs text-on-surface-variant/60 text-center py-4"><app-spinner class="inline"></app-spinner> Cargando pacientes...</p>
+          <p class="text-xs text-on-surface-variant text-center py-4" role="status"><app-spinner class="inline"></app-spinner> Cargando pacientes…</p>
         } @else if (groupFilteredPatients.length === 0) {
-          <p class="text-xs text-on-surface-variant/50 text-center py-4">
+          <p class="text-xs text-on-surface-variant text-center py-4">
             @if (!groupForm.therapist_id) {
               Selecciona un terapeuta para cargar sus pacientes
             } @else {
@@ -902,7 +898,7 @@
             <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-surface-container-high cursor-pointer transition-colors"
               [class.bg-primary-container/10]="groupForm.member_ids?.includes(p.id)">
               <input type="checkbox" [checked]="groupForm.member_ids?.includes(p.id)"
-                (change)="toggleGroupMember(p.id)" class="rounded text-primary focus:ring-primary" />
+                (change)="toggleGroupMember(p.id)" class="rounded text-primary-text focus:ring-primary" />
               <span class="text-sm text-on-surface">{{ p.username }}</span>
             </label>
           }
@@ -912,7 +908,7 @@
 
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Notas</label>
-      <textarea [(ngModel)]="groupForm.notes" class="input-field text-sm w-full" rows="2" placeholder="Notas opcionales sobre el grupo"></textarea>
+      <textarea aria-label="Notas" [(ngModel)]="groupForm.notes" class="input-field text-sm w-full" rows="2" placeholder="Notas opcionales sobre el grupo"></textarea>
     </div>
   </div>
 
@@ -924,7 +920,7 @@
 
 <!-- Groups List Section -->
 @if (patientGroups.length > 0) {
-<div class="card animate-fade-in" style="animation-delay: 0.25s">
+<div class="card groups-section">
   <div class="p-6">
     <h3 class="text-h3 text-on-surface flex items-center gap-2 mb-4">
       <fa-icon [icon]="['fas', 'object-group']" class="text-secondary"></fa-icon>
@@ -937,10 +933,10 @@
           <div class="flex items-start justify-between mb-2">
             <h4 class="text-sm font-bold text-on-surface">{{ g.name }}</h4>
             <div class="flex gap-1">
-              <button (click)="openGroupModal(g)" class="w-7 h-7 rounded-lg hover:bg-primary/10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all cursor-pointer">
+              <button type="button" [attr.aria-label]="'Editar el grupo ' + g.name" title="Editar grupo" (click)="openGroupModal(g)" class="w-11 h-11 rounded-lg hover:bg-primary/10 flex items-center justify-center text-on-surface-variant hover:text-primary-text transition-all cursor-pointer">
                 <fa-icon [icon]="['fas', 'pen']" class="text-xs"></fa-icon>
               </button>
-              <button (click)="deleteGroup(g.id)" class="w-7 h-7 rounded-lg hover:bg-error/10 flex items-center justify-center text-on-surface-variant hover:text-error transition-all cursor-pointer">
+              <button type="button" [attr.aria-label]="'Eliminar el grupo ' + g.name" title="Eliminar grupo" (click)="deleteGroup(g.id)" class="w-11 h-11 rounded-lg hover:bg-error/10 flex items-center justify-center text-on-surface-variant hover:text-error-text transition-all cursor-pointer">
                 <fa-icon [icon]="['fas', 'trash']" class="text-xs"></fa-icon>
               </button>
             </div>
@@ -967,27 +963,27 @@
 </div>
 }
 
-<!-- Editar Datos del Paciente Modal -->
-<app-modal [isOpen]="showEditPatientModal" title="Editar Datos del Paciente" (close)="cancelEditPatientDetails()">
+<!-- Editar datos del paciente Modal -->
+<app-modal [isOpen]="showEditPatientModal" title="Editar datos del paciente" (close)="cancelEditPatientDetails()">
   @if (patientDetailLoading) {
-    <div class="py-8 text-center"><app-spinner></app-spinner></div>
+    <div class="py-8 text-center" role="status"><app-spinner></app-spinner><span class="sr-only">Cargando…</span></div>
   } @else {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div>
-        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">DNI</label>
-        <input type="text" [ngModel]="patientDetailForm['document_number']" (ngModelChange)="patientDetailForm['document_number'] = $event" class="input-field text-xs" placeholder="12345678">
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">DNI</label>
+        <input aria-label="DNI" type="text" [ngModel]="patientDetailForm['document_number']" (ngModelChange)="patientDetailForm['document_number'] = $event" class="input-field text-xs" placeholder="12345678">
       </div>
       <div>
-        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Telefono</label>
-        <input type="text" [ngModel]="patientDetailForm['phone']" (ngModelChange)="patientDetailForm['phone'] = $event" class="input-field text-xs" placeholder="999888777">
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Teléfono</label>
+        <input aria-label="Teléfono" type="text" [ngModel]="patientDetailForm['phone']" (ngModelChange)="patientDetailForm['phone'] = $event" class="input-field text-xs" placeholder="999888777">
       </div>
       <div>
-        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Fecha Nacimiento</label>
-        <input type="date" [ngModel]="patientDetailForm['date_of_birth']" (ngModelChange)="patientDetailForm['date_of_birth'] = $event" class="input-field text-xs">
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Fecha Nacimiento</label>
+        <input aria-label="Fecha Nacimiento" type="date" [ngModel]="patientDetailForm['date_of_birth']" (ngModelChange)="patientDetailForm['date_of_birth'] = $event" class="input-field text-xs">
       </div>
       <div>
-        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Sexo</label>
-        <select [ngModel]="patientDetailForm['sex']" (ngModelChange)="patientDetailForm['sex'] = $event" class="input-field text-xs">
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Sexo</label>
+        <select aria-label="Sexo" [ngModel]="patientDetailForm['sex']" (ngModelChange)="patientDetailForm['sex'] = $event" class="input-field text-xs">
           <option value="">No especificado</option>
           <option value="M">Masculino</option>
           <option value="F">Femenino</option>
@@ -995,12 +991,12 @@
         </select>
       </div>
       <div>
-        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Nombre Apoderado</label>
-        <input type="text" [ngModel]="patientDetailForm['guardian_name']" (ngModelChange)="patientDetailForm['guardian_name'] = $event" class="input-field text-xs" placeholder="Nombre completo">
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Nombre Apoderado</label>
+        <input aria-label="Nombre Apoderado" type="text" [ngModel]="patientDetailForm['guardian_name']" (ngModelChange)="patientDetailForm['guardian_name'] = $event" class="input-field text-xs" placeholder="Nombre completo">
       </div>
       <div>
-        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Tipo Apoderado</label>
-        <select [ngModel]="patientDetailForm['guardian_type']" (ngModelChange)="patientDetailForm['guardian_type'] = $event" class="input-field text-xs">
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Tipo Apoderado</label>
+        <select aria-label="Tipo Apoderado" [ngModel]="patientDetailForm['guardian_type']" (ngModelChange)="patientDetailForm['guardian_type'] = $event" class="input-field text-xs">
           <option value="">No especificado</option>
           <option value="padre">Padre</option>
           <option value="madre">Madre</option>
@@ -1009,35 +1005,35 @@
         </select>
       </div>
       <div>
-        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">DNI Apoderado</label>
-        <input type="text" [ngModel]="patientDetailForm['guardian_dni']" (ngModelChange)="patientDetailForm['guardian_dni'] = $event" class="input-field text-xs" placeholder="12345678">
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">DNI Apoderado</label>
+        <input aria-label="DNI Apoderado" type="text" [ngModel]="patientDetailForm['guardian_dni']" (ngModelChange)="patientDetailForm['guardian_dni'] = $event" class="input-field text-xs" placeholder="12345678">
       </div>
       <div>
-        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Contacto Apoderado</label>
-        <input type="text" [ngModel]="patientDetailForm['guardian_contact']" (ngModelChange)="patientDetailForm['guardian_contact'] = $event" class="input-field text-xs" placeholder="Telefono o email">
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Contacto Apoderado</label>
+        <input aria-label="Contacto Apoderado" type="text" [ngModel]="patientDetailForm['guardian_contact']" (ngModelChange)="patientDetailForm['guardian_contact'] = $event" class="input-field text-xs" placeholder="Teléfono o email">
       </div>
       <div class="md:col-span-2">
-        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Diagnostico</label>
-        <input type="text" [ngModel]="patientDetailForm['preliminary_diagnosis']" (ngModelChange)="patientDetailForm['preliminary_diagnosis'] = $event" class="input-field text-xs" placeholder="Diagnostico preliminar">
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Diagnóstico</label>
+        <input aria-label="Diagnóstico" type="text" [ngModel]="patientDetailForm['preliminary_diagnosis']" (ngModelChange)="patientDetailForm['preliminary_diagnosis'] = $event" class="input-field text-xs" placeholder="Diagnóstico preliminar">
       </div>
       <div class="md:col-span-2">
-        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Objetivos de Terapia</label>
-        <textarea [ngModel]="patientDetailForm['therapy_goals']" (ngModelChange)="patientDetailForm['therapy_goals'] = $event" rows="2" class="input-field text-xs" placeholder="Objetivos..."></textarea>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Objetivos de Terapia</label>
+        <textarea aria-label="Objetivos de Terapia" [ngModel]="patientDetailForm['therapy_goals']" (ngModelChange)="patientDetailForm['therapy_goals'] = $event" rows="2" class="input-field text-xs" placeholder="Objetivos..."></textarea>
       </div>
       <div class="md:col-span-2">
-        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Notas</label>
-        <textarea [ngModel]="patientDetailForm['notes']" (ngModelChange)="patientDetailForm['notes'] = $event" rows="2" class="input-field text-xs" placeholder="Notas adicionales..."></textarea>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Notas</label>
+        <textarea aria-label="Notas" [ngModel]="patientDetailForm['notes']" (ngModelChange)="patientDetailForm['notes'] = $event" rows="2" class="input-field text-xs" placeholder="Notas adicionales..."></textarea>
       </div>
     </div>
     @if (patientDetailStatus) {
-    <p class="text-xs mt-2" [class.text-success]="patientDetailStatus === 'Guardado correctamente'" [class.text-error]="patientDetailStatus !== 'Guardado correctamente'">
+    <p class="text-xs mt-2" [class.text-success]="patientDetailStatus === 'Guardado correctamente'" [class.text-error-text]="patientDetailStatus !== 'Guardado correctamente'">
       {{ patientDetailStatus }}
     </p>
     }
+  }
     <div modal-footer>
-      <app-button variant="ghost" label="Cancelar" size="sm" (clicked)="cancelEditPatientDetails()"></app-button>
-      <app-button variant="primary" label="Guardar Datos" [icon]="['fas', 'floppy-disk']" size="sm"
+      <app-button variant="ghost" label="Cancelar" (clicked)="cancelEditPatientDetails()"></app-button>
+      <app-button variant="primary" label="Guardar Datos" [icon]="['fas', 'floppy-disk']"
         (clicked)="savePatientDetails()" [loading]="patientDetailSaving"></app-button>
     </div>
-  }
 </app-modal>

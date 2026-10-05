@@ -1,13 +1,14 @@
 <div class="confirm-backdrop" (click)="cancel.emit()">
-  <div class="confirm-panel" (click)="$event.stopPropagation()">
+  <div class="confirm-panel" (click)="$event.stopPropagation()" appFocusTrap role="alertdialog" aria-modal="true" tabindex="-1"
+    aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message" (keydown.escape)="cancel.emit()">
     <div class="confirm-icon"
       [class.confirm-icon--danger]="state().options.variant === 'danger'"
       [class.confirm-icon--warning]="state().options.variant === 'warning'"
       [class.confirm-icon--primary]="state().options.variant === 'primary'">
       <fa-icon [icon]="state().options.icon || ['fas', 'triangle-exclamation']" class="text-2xl"></fa-icon>
     </div>
-    <h3 class="confirm-title">{{ state().options.title }}</h3>
-    <p class="confirm-message">{{ state().options.message }}</p>
+    <h3 class="confirm-title" id="confirm-dialog-title">{{ state().options.title }}</h3>
+    <p class="confirm-message" id="confirm-dialog-message">{{ state().options.message }}</p>
     <div class="confirm-actions">
       <app-button variant="secondary" [label]="state().options.cancelText || 'Cancelar'" (clicked)="cancel.emit()"></app-button>
       <app-button [variant]="state().options.variant === 'danger' ? 'danger' : 'primary'" [label]="state().options.confirmText || 'Confirmar'" (clicked)="confirm.emit()"></app-button>

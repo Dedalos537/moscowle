@@ -1,10 +1,11 @@
 import { Component, input, output, ChangeDetectionStrategy, ChangeDetectorRef, effect, inject } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { FocusTrap } from '../../directives/focus-trap';
 
 @Component({
   selector: 'app-modal',
   standalone: true,
-  imports: [FontAwesomeModule],
+  imports: [FontAwesomeModule, FocusTrap],
   templateUrl: './modal.html',
   styleUrl: './modal.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -15,6 +16,10 @@ export class Modal {
   allowOverflow = input(false);
 
   close = output<void>();
+
+  /** Id estable del título: el panel lo referencia con aria-labelledby. */
+  private static seq = 0;
+  readonly titleId = `modal-title-${++Modal.seq}`;
 
   private cdr = inject(ChangeDetectorRef);
 

@@ -1,5 +1,5 @@
 @if (message() && visible) {
-  <div class="flex items-center gap-3 p-4 border rounded-lg animate-fade-in" [class]="alertClasses">
+  <div class="flex items-center gap-3 p-4 border rounded-lg animate-fade-in" [class]="alertClasses" [attr.role]="type() === 'error' || type() === 'warning' ? 'alert' : 'status'">
     <fa-icon [icon]="icon" class="text-lg shrink-0"></fa-icon>
     <span class="text-sm font-medium flex-1">{{ message() }}</span>
     @if (dismissible()) {

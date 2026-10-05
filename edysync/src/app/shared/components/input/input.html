@@ -16,6 +16,10 @@
       [value]="value()"
       (input)="onInput($event)"
       [placeholder]="placeholder()"
+      [attr.aria-label]="label() ? null : (ariaLabel() || null)"
+      [attr.inputmode]="inputMode() || null"
+      [attr.aria-invalid]="error() ? 'true' : null"
+      [attr.aria-describedby]="error() ? (id() ? id() + '-error' : null) : null"
       class="w-full bg-surface-container-lowest text-on-surface border border-border rounded-lg px-4 py-2.5 text-sm outline-none transition-all duration-200"
       [class.pl-10]="icon()"
       [class.!border-error]="error()"
@@ -24,6 +28,6 @@
   </div>
 
   @if (error()) {
-    <span class="text-xs font-medium text-error mt-0.5">{{ error() }}</span>
+    <span class="text-xs font-medium text-error-text mt-0.5" role="alert" [id]="id() ? id() + '-error' : null">{{ error() }}</span>
   }
 </div>

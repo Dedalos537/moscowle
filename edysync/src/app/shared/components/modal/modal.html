@@ -1,12 +1,21 @@
 @if (isOpen()) {
   <div class="modal-overlay">
-    <div class="modal-backdrop" (click)="closeModal()"></div>
+    <div class="modal-backdrop" aria-hidden="true" (click)="closeModal()"></div>
 
-    <div class="modal-panel" [class.modal-panel--allow-overflow]="allowOverflow()">
+    <div
+      class="modal-panel"
+      [class.modal-panel--allow-overflow]="allowOverflow()"
+      appFocusTrap
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      [attr.aria-labelledby]="titleId"
+      (keydown.escape)="closeModal()"
+    >
       <div class="modal-header">
-        <h3 class="modal-title">{{ title() }}</h3>
-        <button class="modal-close" (click)="closeModal()">
-          <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
+        <h3 class="modal-title" [id]="titleId">{{ title() }}</h3>
+        <button type="button" class="modal-close" aria-label="Cerrar" (click)="closeModal()">
+          <fa-icon [icon]="['fas', 'xmark']" aria-hidden="true"></fa-icon>
         </button>
       </div>
 

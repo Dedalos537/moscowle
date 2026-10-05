@@ -1,22 +1,32 @@
 @if (isOpen()) {
   <div class="drawer-overlay">
-    <div class="drawer-backdrop" (click)="closeDrawer()"></div>
+    <div class="drawer-backdrop" aria-hidden="true" (click)="closeDrawer()"></div>
 
-    <div class="drawer-panel {{ sizeClass }}" [style.max-width]="customWidth">
+    <div
+      class="drawer-panel {{ sizeClass }}"
+      [style.max-width]="customWidth"
+      appFocusTrap
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      [attr.aria-labelledby]="hasCustomHeader || !title() ? null : titleId"
+      [attr.aria-label]="hasCustomHeader || !title() ? (title() || 'Panel') : null"
+      (keydown.escape)="closeDrawer()"
+    >
       <div class="drawer-header">
         @if (hasCustomHeader) {
           <ng-content select="[drawer-header]"></ng-content>
         } @else {
           @if (title()) {
-            <h3 class="drawer-title">
+            <h3 class="drawer-title" [id]="titleId">
               @if (icon()) {
                 <fa-icon [icon]="icon()!" [class]="iconColor()"></fa-icon>
               }
               {{ title() }}
             </h3>
           }
-          <button class="drawer-close" (click)="closeDrawer()">
-            <fa-icon [icon]="['fas', 'xmark']" class="drawer-close-icon"></fa-icon>
+          <button type="button" class="drawer-close" aria-label="Cerrar" (click)="closeDrawer()">
+            <fa-icon [icon]="['fas', 'xmark']" class="drawer-close-icon" aria-hidden="true"></fa-icon>
           </button>
         }
       </div>

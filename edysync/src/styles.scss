@@ -53,6 +53,14 @@ body { font-size: 16px; }
   --color-accent: #d97757;
   --color-accent-container: #fce4d6;
 
+  /* Variantes de TEXTO con >=4.5:1 sobre la superficie (los tokens base de estado quedan para rellenos). */
+  --color-primary-text: #3f6212;
+  --color-success-text: #2e7d32;
+  --color-warning-text: #8a4b00;
+  --color-info-text: #2563eb;
+  --color-error-text: #ba1a1a;
+  --color-tertiary-text: #6b4f12;
+
   --font-headline: Manrope, sans-serif;
   --font-body: Manrope, sans-serif;
   --font-label: Manrope, sans-serif;
@@ -72,6 +80,7 @@ body { font-size: 16px; }
   --color-background: #121314;
   --color-surface-dim: #1e1f20;
   --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
   --color-surface-container-high: #2a2b2d;
   --color-surface: #1e1f20;
   --color-primary-fixed: #a5d087;
@@ -98,6 +107,12 @@ body { font-size: 16px; }
   --color-surface-container-highest: #373839;
   --color-accent: #d97757;
   --color-accent-container: #4a2a1a;
+  --color-primary-text: #a5d087;
+  --color-success-text: #8fd694;
+  --color-warning-text: #ffb95c;
+  --color-info-text: #a8c8ff;
+  --color-error-text: #ffb4ab;
+  --color-tertiary-text: #e6c27a;
   --color-inverse-on-surface: #1a1c16;
 
   --color-surface-tint: #a5d087;
@@ -502,6 +517,55 @@ body { font-size: 16px; }
   --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
+/* Insignias de estado y rol. Cada par fondo/texto supera 4.5:1 en claro y oscuro (verificado por cálculo WCAG).
+   No reutilizan los tokens *-container: esos no tienen versión oscura y los usa Alert. */
+:root {
+  --badge-primary-bg: #c4e89e;   --badge-primary-fg: #1f3800;
+  --badge-success-bg: #dcedc8;   --badge-success-fg: #0b3d0e;
+  --badge-warning-bg: #fff3cd;   --badge-warning-fg: #5c3a00;
+  --badge-info-bg: #d1e4ff;      --badge-info-fg: #00305f;
+  --badge-error-bg: #ffdad6;     --badge-error-fg: #410002;
+  --badge-tertiary-bg: #efe1c8;  --badge-tertiary-fg: #3b2f12;
+  --badge-neutral-bg: #e1e4d7;   --badge-neutral-fg: #191d15;
+}
+
+.dark {
+  --badge-primary-bg: #1a3a00;   --badge-primary-fg: #c4e89e;
+  --badge-success-bg: #1b4d20;   --badge-success-fg: #c8f0c9;
+  --badge-warning-bg: #5c3a00;   --badge-warning-fg: #ffe2b0;
+  --badge-info-bg: #00468c;      --badge-info-fg: #d1e4ff;
+  --badge-error-bg: #93000a;     --badge-error-fg: #ffdad6;
+  --badge-tertiary-bg: #4a3a12;  --badge-tertiary-fg: #f3dfae;
+  --badge-neutral-bg: #3e4040;   --badge-neutral-fg: #e2e2e2;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.125rem 0.625rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.25rem;
+  background-color: var(--badge-bg, var(--badge-neutral-bg));
+  color: var(--badge-fg, var(--badge-neutral-fg));
+}
+.badge--primary { --badge-bg: var(--badge-primary-bg); --badge-fg: var(--badge-primary-fg); }
+.badge--success { --badge-bg: var(--badge-success-bg); --badge-fg: var(--badge-success-fg); }
+.badge--warning { --badge-bg: var(--badge-warning-bg); --badge-fg: var(--badge-warning-fg); }
+.badge--info { --badge-bg: var(--badge-info-bg); --badge-fg: var(--badge-info-fg); }
+.badge--error { --badge-bg: var(--badge-error-bg); --badge-fg: var(--badge-error-fg); }
+.badge--tertiary { --badge-bg: var(--badge-tertiary-bg); --badge-fg: var(--badge-tertiary-fg); }
+.badge--neutral { --badge-bg: var(--badge-neutral-bg); --badge-fg: var(--badge-neutral-fg); }
+
+/* Foco visible para los controles que no son <app-button>. :where mantiene especificidad 0:
+   cualquier componente que defina su propio foco lo sigue sobrescribiendo. */
+:where(a, button, [role='button'], summary, [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline: 2px solid var(--color-primary-text);
+  outline-offset: 2px;
+}
+
 button, .btn-primary, .btn-secondary, .btn-ghost, .btn-danger {
   transition: transform var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast);
 }
@@ -514,7 +578,11 @@ input, select, textarea, .input-field {
 }
 input:focus, select:focus, textarea:focus, .input-field:focus {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
-  border-color: var(--color-primary);
+  border-color: var(--color-primary-text);
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible, .input-field:focus-visible {
+  outline: 2px solid var(--color-primary-text);
+  outline-offset: 1px;
 }
 
 .app-button {

@@ -28,6 +28,8 @@ export class Select implements ControlValueAccessor, OnInit, OnDestroy {
   options = input<SelectOption[]>([]);
   placeholder = input<string>('Seleccionar...');
   label = input<string>('');
+  /** Nombre accesible del combobox cuando no hay <label> visible (filtros, campos dentro de tarjetas). */
+  ariaLabel = input<string>('');
   disabled = input(false);
   multiple = input(false);
   searchable = input(false);
@@ -222,6 +224,7 @@ export class Select implements ControlValueAccessor, OnInit, OnDestroy {
         }
         break;
       case 'Escape':
+        event.stopPropagation(); // el dialogo contenedor no debe cerrarse
         event.preventDefault();
         this.close();
         break;

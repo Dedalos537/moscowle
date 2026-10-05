@@ -1,9 +1,20 @@
-<div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-  @for (card of cards; track card.key; let i = $index) {
-    <div class="stat-card animate-fade-in"
-         [class]="'stat-card--' + card.variant">
-      <p class="text-[10px] sm:text-label-caps text-on-surface-variant">{{ card.label }}</p>
-      <p class="text-xl sm:text-h3 mt-0.5 sm:mt-1" style="color: var(--card-color, var(--color-on-surface))">{{ stats()[card.key] }}</p>
-    </div>
+<div class="stats" role="group" aria-label="Resumen de usuarios: pulsa una tarjeta para filtrar el directorio">
+  @for (card of cards; track card.key) {
+    <button
+      type="button"
+      class="stat-card"
+      [class]="'stat-card stat-card--' + card.tone"
+      [attr.aria-pressed]="activeKey() === card.key"
+      (click)="selected.emit(card.key)"
+    >
+      <span class="stat-card__value">{{ card.value(stats()) }}</span>
+      <span class="stat-card__label">{{ card.label }}</span>
+      <span class="stat-card__hint">{{ card.hint }}</span>
+    </button>
   }
 </div>
+
+<p class="stats-roles">
+  Terapeutas <strong>{{ stats().therapists }}</strong> · Supervisores <strong>{{ stats().supervisors }}</strong> ·
+  Administradores <strong>{{ stats().admins }}</strong> · Retirados <strong>{{ stats().retired }}</strong>
+</p>

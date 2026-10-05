@@ -112,3 +112,10 @@
     padding: 1rem 1.5rem;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop,
+  .modal-panel {
+    animation: none;
+  }
+}

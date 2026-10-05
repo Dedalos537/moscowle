@@ -1,11 +1,12 @@
 import { Component, input, output, ContentChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
+import { FocusTrap } from '../../directives/focus-trap';
 
 @Component({
   selector: 'app-drawer',
   standalone: true,
-  imports: [FontAwesomeModule],
+  imports: [FontAwesomeModule, FocusTrap],
   templateUrl: './drawer.html',
   styleUrl: './drawer.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,6 +22,9 @@ export class Drawer {
   private headerElement?: ElementRef;
 
   close = output<void>();
+
+  private static seq = 0;
+  readonly titleId = `drawer-title-${++Drawer.seq}`;
 
   get hasCustomHeader(): boolean {
     const el = this.headerElement?.nativeElement;

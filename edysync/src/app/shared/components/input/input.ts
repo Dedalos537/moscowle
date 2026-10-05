@@ -18,6 +18,10 @@ export class Input {
   value = input<string | number>('');
   error = input<string>();
   icon = input<IconProp>();
+  /** Nombre accesible cuando no hay <label> visible (p. ej. el buscador). */
+  ariaLabel = input<string>('');
+  /** Tipo de teclado en móvil: 'search', 'numeric', etc. */
+  inputMode = input<string>('');
 
   valueChange = output<string | number>();
 

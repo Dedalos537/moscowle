@@ -1,3 +1,4 @@
+import calendar
 import json
 import os
 import uuid
@@ -121,10 +122,10 @@ def api_expenses():
         try:
             start_date = f'{month}-01'
             y, m = int(month[:4]), int(month[5:7])
-            if m == 12:
-                end_date = f'{y + 1}-01-01'
-            else:
-                end_date = f'{y:04d}-{m + 1:02d}-01'
+            # Fin de mes explicito (ultimo dia 23:59:59): comparar con el dia 1 del mes siguiente es
+            # inclusivo en MySQL ('2031-08-01' se convierte a 00:00:00) y arrastraba gastos del dia 1.
+            last_day = calendar.monthrange(y, m)[1]
+            end_date = f'{y:04d}-{m:02d}-{last_day:02d} 23:59:59'
         except (ValueError, IndexError):
             start_date = None
             end_date = None
