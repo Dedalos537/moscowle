@@ -428,6 +428,17 @@ def api_get_session(session_id):
     )
 
 
+def _session_denied(appt):
+    """True si el usuario actual no puede gestionar esta sesion: un terapista solo
+    toca las suyas; admin/supervisor, cualquiera; el resto, ninguna."""
+    if current_user.role in ('admin', 'supervisor'):
+        return False
+    return not (current_user.role == 'terapista' and appt.therapist_id == current_user.id)
+
+
+_SESSION_FORBIDDEN = ({'success': False, 'message': 'No tienes permiso para esta sesión'}, 403)
+
+
 @api_bp.route('/sessions/<int:session_id>', methods=['PUT'])
 @login_required
 def api_update_session(session_id):
@@ -446,6 +457,8 @@ def api_update_session(session_id):
     existing_appt = Appointment.query.get(session_id)
     if not existing_appt:
         return jsonify({'success': False, 'message': 'Esa sesión no existe'}), 404
+    if _session_denied(existing_appt):
+        return jsonify(_SESSION_FORBIDDEN[0]), 403
     if 'start_time' in data or 'end_time' in data:
         start_time = data.get('start_time', existing_appt.start_time)
         end_time = data.get('end_time', existing_appt.end_time or (existing_appt.start_time + timedelta(hours=1)))
@@ -486,6 +499,10 @@ def api_delete_session(session_id):
     if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
+    target = Appointment.query.get(session_id)
+    if target and _session_denied(target):
+        return jsonify(_SESSION_FORBIDDEN[0]), 403
+
     try:
         success = appointment_service.delete_session(session_id, current_user.id)
         if not success:
@@ -503,6 +520,10 @@ def api_cancel_session(session_id):
 
     if current_user.role not in ['terapista', 'admin']:
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+
+    target = Appointment.query.get(session_id)
+    if target and _session_denied(target):
+        return jsonify(_SESSION_FORBIDDEN[0]), 403
 
     data = request.get_json(silent=True) or {}
     reason = sanitize_text(data.get('reason', ''), 500)
@@ -592,7 +613,7 @@ def complete_session(session_id):
     appt = Appointment.query.get(session_id)
     if not appt:
         return jsonify({'error': 'Sesión no encontrada'}), 404
-    if current_user.id != appt.therapist_id:
+    if _session_denied(appt):
         return jsonify({'error': 'Acceso denegado'}), 403
 
     if appt.status != 'completed':
@@ -1044,6 +1065,10 @@ def get_session_audit(appointment_id):
     if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
+    appt_guard = Appointment.query.get(appointment_id)
+    if appt_guard and _session_denied(appt_guard):
+        return jsonify({'success': False, 'error': 'No tienes permiso para esta sesión'}), 403
+
     try:
         from app.models import SessionAudit
 
@@ -1097,6 +1122,10 @@ def get_session_audit(appointment_id):
 def compare_session_live(appointment_id):
     if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    appt_guard = Appointment.query.get(appointment_id)
+    if appt_guard and _session_denied(appt_guard):
+        return jsonify({'success': False, 'error': 'No tienes permiso para esta sesión'}), 403
 
     from app.models import SessionAudit
     from app.services.audit_service import compute_similarity_vectorial
@@ -1161,6 +1190,10 @@ def get_session_program(appointment_id):
     if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
+    appt_guard = Appointment.query.get(appointment_id)
+    if appt_guard and _session_denied(appt_guard):
+        return jsonify({'success': False, 'error': 'No tienes permiso para esta sesión'}), 403
+
     from app.models import SessionAudit
 
     audit = SessionAudit.query.filter_by(appointment_id=appointment_id).first()
@@ -1182,6 +1215,10 @@ def get_session_program(appointment_id):
 def get_session_objectives(appointment_id):
     if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    appt_guard = Appointment.query.get(appointment_id)
+    if appt_guard and _session_denied(appt_guard):
+        return jsonify({'success': False, 'error': 'No tienes permiso para esta sesión'}), 403
 
     from app.models import SessionAudit
 
