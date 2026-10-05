@@ -136,6 +136,28 @@ def _parse_paren_args(args_str):
     return result
 
 
+def tool_result_context(tool_name, result_str, already_executed=False):
+    """Bloque de contexto tras una tool real para una síntesis fiel:
+    conteo primero, copia exacta y honestidad con resultados truncados."""
+    lines = [
+        f'[REAL Tool {tool_name} result — use ONLY this data, do NOT invent anything]:',
+        str(result_str),
+        '',
+        'RESPONDE ASÍ (obligatorio):',
+        '1. Si preguntaron cuántos, empieza con el conteo EXACTO: "Hay N ..." '
+        '(usa el campo count o la longitud real de la lista).',
+        '2. Luego lista los valores EXACTAMENTE como aparecen arriba; nunca inventes, '
+        'complete ni fusiones nombres/correos.',
+        '3. Si el resultado indica "Showing X of Y" o viene cortado, dilo: "mostrando X de Y".',
+        '4. No afirmes estados (activo/inactivo, permisos, montos) salvo que estén en los '
+        'datos; si falta un campo, di "no disponible".',
+        '5. Responde en español, conciso, sin mencionar herramientas ni procesos internos.',
+    ]
+    if already_executed:
+        lines.append(f'6. {tool_name} YA fue ejecutada: NO la llames de nuevo; responde ahora.')
+    return '\n'.join(lines)
+
+
 def _parse_text_tool_call(text):
     """Extract tool name and args from various tool call formats."""
     # Try strict pattern first
@@ -714,13 +736,39 @@ def _build_group_session_args(message):
     }
 
 
+_ROLE_SYNONYMS = {
+    'terapista': ('terapeuta', 'terapeutas', 'terapista', 'terapistas'),
+    'jugador': ('paciente', 'pacientes', 'jugador', 'jugadores'),
+    'admin': ('admin', 'administrador', 'administradora', 'administradores'),
+    'supervisor': ('supervisor', 'supervisora', 'supervisores'),
+}
+
+
+def _extract_role_arg(message, tool_name):
+    """arg_spec='role': {'role': valor} si el mensaje nombra un rol del enum.
+
+    El valor se resuelve SIEMPRE contra el enum real de la tool definida en
+    TOOL_REGISTRY; si el mensaje no nombra ningún rol (o no existe en el enum)
+    devuelve {} y la tool corre sin filtro."""
+    props = ((TOOL_REGISTRY.get(tool_name) or {}).get('parameters') or {}).get('properties') or {}
+    enum = (props.get('role') or {}).get('enum') or []
+    if not enum:
+        return {}
+    msg = (message or '').lower()
+    for value in enum:
+        for syn in _ROLE_SYNONYMS.get(value, (value,)):
+            if re.search(r'\b' + re.escape(syn), msg):
+                return {'role': value}
+    return {}
+
+
 def _force_intent_tool(message, local_tools, user_role):
     """Si el router local no llamó ninguna tool para un reporte inequívoco,
     fuerza la ejecución determinista de la tool elegida por el índice
     GENERADO (``tool_intents.match_intent``), sin keywords hardcodeadas.
 
     Solo decide la tool: los argumentos los resuelven los extractores
-    genéricos de fecha/mes/grupo de este módulo."""
+    genéricos de fecha/mes/grupo/rol de este módulo."""
     if not local_tools:
         return None
     allowed = {t['function']['name'] for t in local_tools}
@@ -736,6 +784,8 @@ def _force_intent_tool(message, local_tools, user_role):
         resolved_args = _build_group_session_args(message)
         if not resolved_args:
             return None
+    elif arg_spec == 'role':
+        resolved_args = _extract_role_arg(message, tool_name)
     else:
         resolved_args = {}
     return (tool_name, resolved_args or {})
@@ -1019,11 +1069,7 @@ class MCPService:
                     messages.append(
                         {
                             'role': 'user',
-                            'content': (
-                                f'[REAL Tool {tool_name} result — use ONLY this data, do NOT invent anything]:\n'
-                                f'{result_str}\n\n'
-                                f'Respond to the user using ONLY the exact values above, copying names and numbers EXACTLY as given (never adapt, translate or merge names/emails). If a field is missing, say "no disponible".'
-                            ),
+                            'content': tool_result_context(tool_name, result_str),
                         }
                     )
                     if local_mode:
@@ -1096,11 +1142,7 @@ class MCPService:
                             messages.append(
                                 {
                                     'role': 'user',
-                                    'content': (
-                                        f'[REAL Tool {tool_name} result — use ONLY this data, do NOT invent anything]:\n'
-                                        f'{result_str}\n\n'
-                                        f'Respond to the user using ONLY the exact values above, copying names and numbers EXACTLY as given (never adapt, translate or merge names/emails). If a field is missing, say "no disponible".'
-                                    ),
+                                    'content': tool_result_context(tool_name, result_str),
                                 }
                             )
                             continue

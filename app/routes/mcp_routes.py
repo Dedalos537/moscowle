@@ -29,6 +29,7 @@ from app.services.mcp_service import (
     _trim_tool_result,
     resolve_system_prompt,
     strip_tool_calls,
+    tool_result_context,
 )
 from app.services.mcp_trace import TraceBuilder
 from app.services.tools_registry import (
@@ -482,15 +483,7 @@ def mcp_chat_stream():
                         messages.append(
                             {
                                 'role': 'user',
-                                'content': (
-                                    f'[REAL Tool {cname} result — use ONLY this data, do NOT invent anything]:\n'
-                                    f'{last_result_str}\n\n'
-                                    f'IMPORTANT: {cname} was ALREADY executed successfully. '
-                                    f'Do NOT call the tool again. Respond to the user now using '
-                                    f'ONLY the exact values above, copying names and numbers EXACTLY as given '
-                                    f'(never adapt, translate or merge names/emails). '
-                                    f'If a field is missing, say "no disponible".'
-                                ),
+                                'content': tool_result_context(cname, last_result_str, already_executed=True),
                             }
                         )
 
@@ -585,14 +578,7 @@ def mcp_chat_stream():
                                 messages.append(
                                     {
                                         'role': 'user',
-                                        'content': (
-                                            f'[REAL Tool {tool_name} result — use ONLY this data, '
-                                            f'do NOT invent anything]:\n'
-                                            f'{last_result_str}\n\n'
-                                            f'Respond to the user using ONLY the exact values above, '
-                                            f'copying names and numbers EXACTLY as given '
-                                            f'If a field is missing, say "no disponible".'
-                                        ),
+                                        'content': tool_result_context(tool_name, last_result_str),
                                     }
                                 )
                                 continue
@@ -641,14 +627,7 @@ def mcp_chat_stream():
                             messages.append(
                                 {
                                     'role': 'user',
-                                    'content': (
-                                        f'[REAL Tool {tool_name} result — use ONLY this data, '
-                                        f'do NOT invent anything]:\n'
-                                        f'{result_str}\n\n'
-                                        f'Respond to the user using ONLY the exact values above, '
-                                        f'copying names and numbers EXACTLY as given '
-                                        f'If a field is missing, say "no disponible".'
-                                    ),
+                                    'content': tool_result_context(tool_name, result_str),
                                 }
                             )
 
@@ -711,14 +690,7 @@ def mcp_chat_stream():
                                         messages.append(
                                             {
                                                 'role': 'user',
-                                                'content': (
-                                                    f'[REAL Tool {tn} result — use ONLY this data, '
-                                                    'do NOT invent anything]:\n'
-                                                    f'{last_result_str}\n\n'
-                                                    f'Respond to the user using ONLY the exact values above, '
-                                                    'copying names and numbers EXACTLY as given '
-                                                    f'If a field is missing, say "no disponible".'
-                                                ),
+                                                'content': tool_result_context(tn, last_result_str),
                                             }
                                         )
                                         continue
@@ -762,14 +734,7 @@ def mcp_chat_stream():
                                     messages.append(
                                         {
                                             'role': 'user',
-                                            'content': (
-                                                f'[REAL Tool {tn} result — use ONLY this data, '
-                                                'do NOT invent anything]:\n'
-                                                f'{result_str}\n\n'
-                                                f'Respond to the user using ONLY the exact values above, '
-                                                'copying names and numbers EXACTLY as given '
-                                                f'If a field is missing, say "no disponible".'
-                                            ),
+                                            'content': tool_result_context(tn, result_str),
                                         }
                                     )
                                     chips = _next_action_chips(tn)

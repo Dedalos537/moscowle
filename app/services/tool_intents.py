@@ -445,6 +445,10 @@ def _arg_spec(entry: dict) -> str | None:
         return 'month'
     if 'date' in params or 'day' in params:
         return 'date'
+    # Tool con filtro de rol real (enum): el caller resuelve el valor desde el
+    # mensaje ('cuántos terapeutas' -> role=terapista) contra ese mismo enum.
+    if 'role' in params and (params.get('role') or {}).get('enum'):
+        return 'role'
     return None
 
 
