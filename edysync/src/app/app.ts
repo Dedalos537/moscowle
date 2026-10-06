@@ -70,21 +70,27 @@ export class App implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Sondea el backend. Un solo fallo no basta para mostrar «Servidor no disponible»: durante un despliegue el servicio
+   * se reinicia unos segundos, así que se reintenta antes de rendirse.
+   */
   private async checkBackend(): Promise<boolean> {
     const base = environment.apiBaseUrl || '';
-    try {
+    const attempts = 3;
+    for (let i = 0; i < attempts; i++) {
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 15000);
-      const res = await fetch(`${base}/api/public/app-key`, {
-        method: 'HEAD',
-        signal: ctrl.signal,
-        cache: 'no-store',
-      });
-      clearTimeout(timer);
-      return res.ok;
-    } catch {
-      return false;
+      const timer = setTimeout(() => ctrl.abort(), 8000);
+      try {
+        const res = await fetch(`${base}/api/public/app-key`, { method: 'HEAD', signal: ctrl.signal, cache: 'no-store' });
+        if (res.ok) return true;
+      } catch {
+        // sin respuesta: se reintenta
+      } finally {
+        clearTimeout(timer);
+      }
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, 2000));
     }
+    return false;
   }
 
   retryPage() {
