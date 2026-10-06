@@ -1,6 +1,26 @@
 <div class="settings-page">
+  <div class="settings-hub">
+    <nav class="settings-nav" aria-label="Secciones de configuración">
+      @for (g of groups; track g.label) {
+        <p class="settings-nav__group">{{ g.label }}</p>
+        <ul class="settings-nav__list">
+          @for (item of g.items; track item.id) {
+            <li>
+              <button type="button" class="settings-nav__item" [class.is-active]="section === item.id"
+                [attr.aria-current]="section === item.id ? 'page' : null" (click)="goTo(item.id)">
+                <fa-icon [icon]="item.icon" class="settings-nav__icon" aria-hidden="true"></fa-icon>
+                <span>{{ item.label }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </nav>
+
+    <div class="settings-content">
   <div class="settings-cards-grid">
   <!-- ═══════════════════════ APARIENCIA ═══════════════════════ -->
+  @if (section === 'apariencia') {
   <section class="settings-card">
     <div class="settings-card__header">
       <div class="settings-card__icon settings-card__icon--green">
@@ -140,42 +160,12 @@
         </div>
       </div>
 
-      <div class="setting-divider"></div>
-
-      <!-- Estilo / etiquetas de la barra lateral -->
-      <div class="setting-item">
-        <div class="setting-item__left">
-          <div class="setting-item__icon setting-item__icon--primary">
-            <fa-icon [icon]="['fas', 'table-cells-large']"></fa-icon>
-          </div>
-          <div class="setting-item__text">
-            <span class="setting-item__label">Barra lateral</span>
-            <span class="setting-item__desc">Mostrar solo logos o iconos con subtítulos</span>
-          </div>
-        </div>
-        <div class="flex gap-1 bg-surface-container-high rounded-lg p-1 shrink-0">
-          <button
-            type="button"
-            class="text-[11px] py-1.5 px-3 rounded-md font-bold transition-all"
-            [class]="sidebarDisplay() === 'icons' ? 'bg-primary text-on-primary' : 'text-on-surface-variant'"
-            (click)="setSidebarDisplay('icons')"
-          >
-            Logos
-          </button>
-          <button
-            type="button"
-            class="text-[11px] py-1.5 px-3 rounded-md font-bold transition-all"
-            [class]="sidebarDisplay() === 'labels' ? 'bg-primary text-on-primary' : 'text-on-surface-variant'"
-            (click)="setSidebarDisplay('labels')"
-          >
-            Subtítulos
-          </button>
-        </div>
-      </div>
     </div>
   </section>
+  }
 
   <!-- ═══════════════════════ NOTIFICACIONES ═══════════════════════ -->
+  @if (section === 'notificaciones') {
   <section class="settings-card">
     <div class="settings-card__header">
       <div class="settings-card__icon settings-card__icon--amber">
@@ -319,8 +309,10 @@
       }
     </div>
   </section>
+  }
 
   <!-- ═══════════════════════ CUENTA: FOTO Y HUELLA ═══════════════════════ -->
+  @if (section === 'cuenta') {
   <section class="settings-card">
     <div class="settings-card__header">
       <div class="settings-card__icon settings-card__icon--blue">
@@ -336,9 +328,39 @@
       <app-fingerprint-card></app-fingerprint-card>
     </div>
   </section>
+  }
   </div>
 
+  @if (isSystemSection) {
+    <app-visor-funcionamiento [embedded]="true" [tab]="systemTab"></app-visor-funcionamiento>
+  }
+
+  @if (section === 'herramientas') {
+    <section class="settings-card">
+      <div class="settings-card__header">
+        <div class="settings-card__icon settings-card__icon--blue"><fa-icon [icon]="['fas', 'wrench']"></fa-icon></div>
+        <div>
+          <h2 class="settings-card__title">Herramientas de administración</h2>
+          <p class="settings-card__subtitle">Procesos que se ejecutan a demanda</p>
+        </div>
+      </div>
+      <div class="settings-card__body">
+        @for (t of tools; track t.path) {
+          <a class="tool-link" [routerLink]="t.path">
+            <span class="setting-item__icon setting-item__icon--primary"><fa-icon [icon]="t.icon"></fa-icon></span>
+            <span class="tool-link__text">
+              <span class="setting-item__label">{{ t.label }}</span>
+              <span class="setting-item__desc">{{ t.desc }}</span>
+            </span>
+            <fa-icon [icon]="['fas', 'chevron-right']" class="tool-link__chevron" aria-hidden="true"></fa-icon>
+          </a>
+        }
+      </div>
+    </section>
+  }
+
   <!-- Save button -->
+  @if (section === 'notificaciones') {
   <div class="settings-save-bar">
     <button type="button" class="save-btn" (click)="saveAll()" [class.save-btn--saving]="saving" [disabled]="saving">
       @if (saving) {
@@ -352,5 +374,8 @@
         <span>Guardar cambios</span>
       }
     </button>
+  </div>
+  }
+    </div>
   </div>
 </div>

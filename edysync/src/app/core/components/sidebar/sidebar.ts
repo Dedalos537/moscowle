@@ -50,9 +50,8 @@ export class Sidebar implements OnInit, OnDestroy {
     { path: '/admin/games', label: 'Admin Juegos', subtitle: 'Terapia recreativa', icon: ['fas', 'gamepad'] },
     { path: '/admin/reports', label: 'Admin Reportes', subtitle: 'Estadísticas', icon: ['fas', 'chart-bar'], supervisor: true },
     { path: '/admin/messages', label: 'Admin Mensajes', subtitle: 'Comunicación', icon: ['fas', 'envelope'], supervisor: true },
-    { path: '/admin/visor-funcionamiento', label: 'Centro de Operaciones', subtitle: 'Monitoreo', icon: ['fas', 'desktop'], supervisor: true },
     { path: '/admin/kanban', label: 'Kanban', subtitle: 'Tablero de tareas', icon: ['fas', 'table-columns'], supervisor: true },
-    { path: '/admin/settings', label: 'Configuración', subtitle: 'Preferencias', icon: ['fas', 'gear'] },
+    { path: '/admin/settings', label: 'Configuración', subtitle: 'Cuenta y sistema', icon: ['fas', 'gear'], supervisor: true },
   ];
 
   private readonly therapistItems: NavItem[] = [

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnChanges, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, SimpleChanges, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -19,7 +19,7 @@ import { Incidents } from '../incidents/incidents';
 import { BotPanel } from '../bot-panel/bot-panel';
 import { QRCodeComponent } from 'angularx-qrcode';
 
-type TabId = 'backend' | 'logs' | 'csp' | 'tokens' | 'incidents' | 'llm' | 'notifications' | 'bot';
+export type TabId = 'backend' | 'logs' | 'csp' | 'tokens' | 'incidents' | 'llm' | 'notifications' | 'bot';
 
 interface PasswordResetRow {
   id: number;
@@ -82,7 +82,11 @@ interface AIProviderForm {
   animations: [fadeInUp, scaleIn, listStagger, cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class VisorFuncionamiento implements OnInit, OnDestroy {
+export class VisorFuncionamiento implements OnInit, OnChanges, OnDestroy {
+  /** Dentro de Configuración: la navegación la pone la página contenedora y aquí se oculta la barra de pestañas. */
+  embedded = input(false);
+  tab = input<TabId | null>(null);
+
   activeTab: TabId = 'backend';
 
   private headerService = inject(HeaderService);
@@ -180,12 +184,21 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   private waPoll: Subscription | null = null;
   private waIdlePoll: Subscription | null = null;
 
+  ngOnChanges(changes: SimpleChanges) {
+    const t = this.tab();
+    if (changes['tab'] && t && t !== this.activeTab) this.switchTab(t);
+  }
+
   ngOnInit() {
-    this.headerService.setConfig({
-      title: 'Centro de Operaciones',
-      subtitle: 'Métricas, logs y seguridad del sistema',
-      icon: ['fas', 'desktop'],
-    });
+    const initial = this.tab();
+    if (initial) this.switchTab(initial);
+    if (!this.embedded()) {
+      this.headerService.setConfig({
+        title: 'Centro de Operaciones',
+        subtitle: 'Métricas, logs y seguridad del sistema',
+        icon: ['fas', 'desktop'],
+      });
+    }
     this.loadServerStatus();
     this.loadPasswordResets();
     this.loadLogs();
@@ -194,7 +207,7 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.headerService.reset();
+    if (!this.embedded()) this.headerService.reset();
     this.subs.unsubscribe();
     this.logsRefreshSub?.unsubscribe();
     this.stopQrPolling();

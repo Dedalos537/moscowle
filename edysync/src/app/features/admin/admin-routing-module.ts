@@ -48,8 +48,9 @@ const routes: Routes = [
       { path: 'profile', component: Profile },
       { path: 'yape-import', component: YapeImport },
       { path: 'ai', component: AiTraining },
-      { path: 'visor-funcionamiento', loadComponent: () => import('./pages/visor-funcionamiento/visor-funcionamiento').then(m => m.VisorFuncionamiento) },
-      { path: 'operations', redirectTo: 'visor-funcionamiento', pathMatch: 'full' },
+      // El Centro de Operaciones vive ahora dentro de Configuración (sección «Sistema»); las URLs antiguas siguen funcionando.
+      { path: 'visor-funcionamiento', redirectTo: 'settings?section=backend', pathMatch: 'full' },
+      { path: 'operations', redirectTo: 'settings?section=backend', pathMatch: 'full' },
       { path: 'incidents', component: Incidents },
       { path: 'incidents/:id', component: IncidentDetailPage },
       { path: 'password-resets', component: PasswordResets },

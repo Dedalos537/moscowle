@@ -1,5 +1,6 @@
 <div class="visor-page" @fadeInUp>
 
+  @if (!embedded()) {
   <div class="chrome-tab-bar">
     <button class="chrome-tab" [class.active]="activeTab === 'backend'" (click)="switchTab('backend')">
       <fa-icon [icon]="['fas', 'server']"></fa-icon>
@@ -42,6 +43,7 @@
       <div class="chrome-tab-indicator"></div>
     </button>
   </div>
+  }
 
   @if (activeTab === 'backend') {
     <div class="tab-section">
