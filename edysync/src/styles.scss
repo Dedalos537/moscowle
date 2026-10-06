@@ -131,7 +131,23 @@ body { font-size: 16px; }
 
 .dark * {
   border-color: var(--color-outline-variant);
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Transición suave SOLO durante el cambio de tema (la pone ThemeService unos 350 ms).
+   Antes `.dark *` animaba colores en todos los elementos todo el tiempo: recálculo de estilos constante al hacer scroll/hover. */
+.theme-switching,
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+/* Tarjeta destacada oscura: no usa tokens que se invierten con el tema (antes `bg-on-primary-container` era blanco en modo oscuro
+   y el texto blanco quedaba invisible). Sigue el color principal elegido. */
+.surface-hero {
+  background: color-mix(in srgb, var(--color-primary) 32%, #0b1406);
+  color: #fff;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 @utility text-h1 {

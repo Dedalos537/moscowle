@@ -217,6 +217,24 @@ import { NotificationPreferences } from '../../../core/models/notification';
               </button>
             </div>
 
+            <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0">
+                  <fa-icon [icon]="['fas', 'bullseye']" class="text-on-surface-variant text-sm"></fa-icon>
+                </div>
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-on-surface">Halo del puntero</p>
+                  <p class="text-xs text-on-surface-variant">Un aro que indica dónde está el cursor</p>
+                </div>
+              </div>
+              <button type="button" class="pref-switch" (click)="settings.toggleCursorHalo()"
+                [class.pref-switch--on]="settings.cursorHalo()"
+                [attr.aria-label]="settings.cursorHalo() ? 'Desactivar halo del puntero' : 'Activar halo del puntero'"
+                [attr.aria-pressed]="settings.cursorHalo()">
+                <span class="pref-switch__knob"></span>
+              </button>
+            </div>
+
             @if (userRole() === 'admin') {
               <div class="border-t border-border/20 pt-3 mt-3">
                 <div class="px-3 mb-2">

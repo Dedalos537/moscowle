@@ -40,6 +40,7 @@ export class GlobalSettingsService {
   fontSize = signal<FontSize>((this.loadLocal('edysync_font_size') as FontSize) || 'medium');
   primaryColor = signal<string>(this.loadLocal('edysync_primary_color') || 'green');
   sidebarPinned = signal<boolean>(this.loadLocal('edysync_sidebar_pinned') === 'true');
+  cursorHalo = signal<boolean>(this.loadLocal('edysync_cursor_halo') !== 'false');
   sidebarDisplay = signal<SidebarDisplay>((this.loadLocal('edysync_sidebar_display') as SidebarDisplay) || 'labels');
 
   /** Public: re-fetch preferences from API (e.g. after login / auth detection). */
@@ -82,6 +83,12 @@ export class GlobalSettingsService {
     this.saveLocal('edysync_primary_color', colorName);
     this.applyPrimaryColor(colorName);
     this.saveToAPI({ primary_color: colorName });
+  }
+
+  toggleCursorHalo(): void {
+    const next = !this.cursorHalo();
+    this.cursorHalo.set(next);
+    this.saveLocal('edysync_cursor_halo', String(next));
   }
 
   setSidebarPinned(pinned: boolean): void {

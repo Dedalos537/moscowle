@@ -9,11 +9,12 @@ import { FloatingUiService } from '../../../../core/services/floating-ui.service
 import { Alert } from '../../../../shared/components/alert/alert';
 import { PreferencesMenu } from '../../../../shared/components/preferences-menu/preferences-menu';
 import { base64urlToBuffer, serializeWebauthnCredential } from '../../../../shared/utils/webauthn';
+import { Logo } from '../../../../shared/components/logo/logo';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Alert, PreferencesMenu],
+  imports: [Logo, CommonModule, FormsModule, RouterModule, FontAwesomeModule, Alert, PreferencesMenu],
   templateUrl: './login.html',
   styleUrl: './login.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

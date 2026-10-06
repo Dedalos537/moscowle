@@ -16,6 +16,7 @@ import { ChatSessionService, ChatSession, ChatSessionMessage } from '../../../co
 import { ChatConfirmDialog, PendingAction } from '../chat-confirm-dialog/chat-confirm-dialog';
 import { environment } from '../../../../environments/environment';
 import DOMPurify from 'dompurify';
+import { Logo } from '../logo/logo';
 
 const ALLOWED_REDIRECT_PREFIXES = ['/', '/admin/', '/therapist/', '/patient/', '/auth/'];
 
@@ -81,7 +82,7 @@ const FA_ICON_MAP: Record<string, string> = {
 @Component({
   selector: 'app-ai-chat',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, ChatConfirmDialog],
+  imports: [Logo, CommonModule, FormsModule, FontAwesomeModule, ChatConfirmDialog],
   templateUrl: './ai-chat.html',
   styleUrl: './ai-chat.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

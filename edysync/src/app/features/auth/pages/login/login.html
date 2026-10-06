@@ -16,7 +16,7 @@
 
       <div class="text-center mb-8">
           <div class="login-logo w-20 h-20 mx-auto mb-4">
-              <img src="assets/img/logo.svg" alt="Logo Centro de Terapias" class="w-full h-full object-contain">
+              <app-logo class="w-full h-full object-contain" role="img" aria-label="Centro Juan Pablo II"></app-logo>
           </div>
           <h1 class="text-h2 text-on-surface transition-colors">Centro de Terapias</h1>
           <h2 class="text-h3 text-on-surface-variant transition-colors">Juan Pablo II</h2>
@@ -136,7 +136,7 @@
   @if (guideVisible) {
     <div class="guide-character" [style.top.px]="guidePos.top" [style.left.px]="guidePos.left">
       <div class="guide-avatar">
-        <img src="assets/img/logo.svg" alt="Guía">
+        <app-logo role="img" aria-label="Centro Juan Pablo II"></app-logo>
       </div>
       <div class="guide-bubble">
         <span class="guide-text">{{ guideText }}</span>

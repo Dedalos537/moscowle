@@ -1,0 +1,52 @@
+// El contenedor se posiciona con transform (sin layout); el anillo interior se escala para los estados.
+.halo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  z-index: 2147483000; // por encima de modales y menús
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform;
+  transition: opacity 150ms ease;
+
+  &[data-visible='true'] {
+    opacity: 1;
+  }
+
+  &__ring {
+    position: absolute;
+    left: -1.125rem;
+    top: -1.125rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 9999px;
+    border: 2px solid color-mix(in srgb, var(--color-primary) 75%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+    transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1), background-color 140ms ease;
+  }
+
+  &[data-hover='true'] &__ring {
+    transform: scale(1.35);
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  }
+
+  &[data-pressed='true'] &__ring {
+    transform: scale(0.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .halo,
+  .halo__ring {
+    transition: none;
+  }
+}
+
+// En pantallas táctiles (sin puntero fino) no se muestra nunca.
+@media (pointer: coarse) {
+  .halo {
+    display: none;
+  }
+}

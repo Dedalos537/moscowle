@@ -1,10 +1,11 @@
 import { Component, input, ChangeDetectionStrategy } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { Logo } from '../logo/logo';
 
 @Component({
   selector: 'app-spinner',
   standalone: true,
-  imports: [FontAwesomeModule],
+  imports: [Logo, FontAwesomeModule],
   templateUrl: './spinner.html',
   styleUrl: './spinner.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

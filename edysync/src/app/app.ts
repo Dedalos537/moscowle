@@ -12,11 +12,13 @@ import { ServerDownGame } from './shared/components/server-down-game/server-down
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { environment } from '../environments/environment';
+import { Logo } from './shared/components/logo/logo';
+import { CursorHalo } from './shared/components/cursor-halo/cursor-halo';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterModule, FontAwesomeModule, SplashScreen, AlertModal, ToastContainer, RecordingOverlay, ServerDownGame],
+  imports: [CursorHalo, Logo, RouterModule, FontAwesomeModule, SplashScreen, AlertModal, ToastContainer, RecordingOverlay, ServerDownGame],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })

@@ -59,7 +59,14 @@ export class ThemeService implements OnDestroy {
     this.setTheme(next);
   }
 
+  private switchTimer: ReturnType<typeof setTimeout> | null = null;
+
   private setTheme(theme: string) {
+    // La transición de colores se activa solo unos instantes, no de forma permanente.
+    const root = document.documentElement;
+    root.classList.add('theme-switching');
+    if (this.switchTimer) clearTimeout(this.switchTimer);
+    this.switchTimer = setTimeout(() => root.classList.remove('theme-switching'), 350);
     this.themeSubject.next(theme);
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
