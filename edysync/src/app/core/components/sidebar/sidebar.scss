@@ -9,16 +9,18 @@
   border-right: 1px solid var(--color-border-accent, var(--color-border));
   display: flex;
   flex-direction: column;
-  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+  // Ease-out exponencial: arranca rápido y asienta suave. El ancho es lo único que se anima en el contenedor.
+  transition: width 280ms cubic-bezier(0.16, 1, 0.3, 1),
               background-color 0.3s ease;
   overflow: visible;
   flex-shrink: 0;
   z-index: 30;
   position: relative;
+  contain: layout style;
 }
 
-/* Pinned: full width with inline labels */
-.sidebar--pinned {
+/* Expandida: icono + título + subtítulo */
+.sidebar--expanded {
   width: 16rem;
 }
 
@@ -41,6 +43,11 @@
 }
 
 .sidebar-brand-name {
+  // Ancho fijo + opacidad: el aside recorta mientras crece, así el texto no se re-maqueta en cada fotograma.
+  flex: none;
+  width: 11rem;
+  opacity: 0;
+  transition: opacity 140ms ease;
   font-weight: 800;
   color: var(--color-primary);
   letter-spacing: -0.01em;
@@ -48,6 +55,11 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.sidebar--expanded .sidebar-brand-name {
+  opacity: 1;
+  transition-delay: 90ms;
 }
 
 /* ── Navigation ────────────────────────────────────── */
@@ -83,9 +95,8 @@
 
 .nav-link--active {
   background-color: var(--color-nav-active-bg, color-mix(in srgb, var(--color-primary) 10%, transparent));
-  color: var(--color-primary);
-  border-left: 3px solid var(--color-nav-active-border, var(--color-primary));
-  padding-left: calc(0.75rem - 3px);
+  color: var(--color-primary-text, var(--color-primary));
+  font-weight: 700;
 }
 
 .nav-link-icon {
@@ -99,8 +110,17 @@
 .nav-link-text {
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  flex: none;
+  width: 11rem;
   overflow: hidden;
+  opacity: 0;
+  // Al cerrar se desvanece enseguida; al abrir aparece cuando ya hay sitio.
+  transition: opacity 120ms ease;
+}
+
+.sidebar--expanded .nav-link-text {
+  opacity: 1;
+  transition-delay: 90ms;
 }
 
 .nav-link-label {
@@ -141,13 +161,12 @@
   padding: 0.5rem 0.875rem;
   background: var(--color-surface-container-lowest, #fff);
   border: 1px solid var(--color-border);
-  border-left: 3px solid var(--color-primary);
   border-radius: 0 var(--radius) var(--radius) 0;
-  box-shadow: 4px 2px 12px rgba(0, 0, 0, 0.1),
-              2px 1px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: 4px 2px 12px color-mix(in srgb, var(--color-on-surface) 14%, transparent),
+              2px 1px 4px color-mix(in srgb, var(--color-on-surface) 8%, transparent);
   z-index: 1000;
   pointer-events: none;
-  animation: tab-slide 0.12s ease-out;
+  animation: tab-slide 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes tab-slide {
@@ -217,9 +236,6 @@
     transform: translateX(0);
     width: 16rem;
   }
-  .sidebar--pinned {
-    width: 16rem;
-  }
   .sidebar-overlay {
     display: block;
     position: fixed;
@@ -231,8 +247,21 @@
   .nav-link-expand {
     display: none;
   }
-  /* Show labels when sidebar is open on mobile */
-  .nav-link-text {
-    display: flex;
+  /* En móvil el panel siempre es ancho: título y subtítulo visibles */
+  .nav-link-text,
+  .sidebar-brand-name {
+    opacity: 1;
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .nav-link-text,
+  .sidebar-brand-name {
+    transition: none;
+  }
+  .nav-link-expand {
+    animation: none;
   }
 }

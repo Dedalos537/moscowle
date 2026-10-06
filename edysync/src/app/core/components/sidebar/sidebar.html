@@ -4,14 +4,13 @@
 <aside
   class="sidebar"
   [class.sidebar--open]="isOpen"
-  [class.sidebar--pinned]="effectivePinned">
+  [class.sidebar--expanded]="expanded"
+  aria-label="Navegación principal">
 
   <!-- Brand / Logo -->
   <div class="sidebar-brand">
     <app-logo class="sidebar-logo-img"></app-logo>
-    @if (effectivePinned) {
-      <span class="sidebar-brand-name">Centro Juan Pablo II</span>
-    }
+    <span class="sidebar-brand-name">Centro Juan Pablo II</span>
   </div>
 
   <!-- Navigation -->
@@ -23,26 +22,26 @@
         #rla="routerLinkActive"
         class="nav-link"
         [class.nav-link--active]="rla.isActive"
-        [class.nav-link--hovered]="hoveredIndex === i && !pinned()"
+        [attr.aria-current]="rla.isActive ? 'page' : null"
         (click)="sidebarService.close()"
         (mouseenter)="onItemHover(i)"
         (mouseleave)="onItemLeave()"
-        [title]="!effectivePinned ? item.label : null">
-        <fa-icon [icon]="item.icon" class="nav-link-icon"></fa-icon>
+        (focus)="onItemHover(i)"
+        (blur)="onItemLeave()"
+        [attr.aria-label]="expanded ? null : item.label + (item.subtitle ? ', ' + item.subtitle : '')">
+        <fa-icon [icon]="item.icon" class="nav-link-icon" aria-hidden="true"></fa-icon>
 
-        <!-- Inline text when pinned (labels mode) OR when open on mobile -->
-        @if (effectivePinned || isOpen) {
-          <div class="nav-link-text">
-            <span class="nav-link-label">{{ item.label }}</span>
-            @if (item.subtitle) {
-              <span class="nav-link-sub">{{ item.subtitle }}</span>
-            }
-          </div>
-        }
+        <!-- El texto siempre existe: se muestra/oculta con una transición, sin insertarlo ni quitarlo del DOM -->
+        <div class="nav-link-text" [attr.aria-hidden]="!expanded && !isOpen">
+          <span class="nav-link-label">{{ item.label }}</span>
+          @if (item.subtitle) {
+            <span class="nav-link-sub">{{ item.subtitle }}</span>
+          }
+        </div>
 
-        <!-- Expanded tab on hover (not pinned, not open on mobile) -->
-        @if (!effectivePinned && !isOpen && hoveredIndex === i) {
-          <div class="nav-link-expand">
+        <!-- Pestaña flotante en la barra compacta -->
+        @if (!expanded && !isOpen && hoveredIndex === i) {
+          <div class="nav-link-expand" aria-hidden="true">
             <span class="nav-link-expand__label">{{ item.label }}</span>
             @if (item.subtitle) {
               <span class="nav-link-expand__sub">{{ item.subtitle }}</span>

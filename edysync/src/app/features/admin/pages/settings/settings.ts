@@ -43,7 +43,6 @@ export class Settings implements OnInit, OnDestroy {
   get fontSize() { return this.settings.fontSize; }
   get primaryColor() { return this.settings.primaryColor; }
   get hideCharts() { return this.settings.hideCharts; }
-  get sidebarPinned() { return this.settings.sidebarPinned; }
   get sidebarDisplay() { return this.settings.sidebarDisplay; }
   get notifPrefs() { return this.notifService.preferences() ?? this.notifService.defaultPrefs; }
 
@@ -146,10 +145,6 @@ export class Settings implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  toggleSidebarPinned(): void {
-    this.settings.setSidebarPinned(!this.sidebarPinned());
-    this.cdr.markForCheck();
-  }
 
   setSidebarDisplay(mode: 'icons' | 'labels'): void {
     this.settings.setSidebarDisplay(mode);

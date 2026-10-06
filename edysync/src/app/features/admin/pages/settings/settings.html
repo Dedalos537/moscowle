@@ -75,16 +75,17 @@
       <div class="setting-item">
         <div class="setting-item__left">
           <div class="setting-item__icon setting-item__icon--primary">
-            <fa-icon [icon]="['fas', 'thumbtack']"></fa-icon>
+            <fa-icon [icon]="['fas', 'table-cells-large']"></fa-icon>
           </div>
           <div class="setting-item__text">
-            <span class="setting-item__label">Anclar sidebar</span>
-            <span class="setting-item__desc">Mantener menú lateral expandido</span>
+            <span class="setting-item__label">Barra lateral</span>
+            <span class="setting-item__desc">{{ sidebarDisplay() === 'icons' ? 'Compacta: solo iconos' : 'Ancha: iconos con subtítulos' }}</span>
           </div>
         </div>
-        <button type="button" class="toggle" [class.toggle--on]="sidebarPinned()" (click)="toggleSidebarPinned()">
-          <span class="toggle__thumb"></span>
-        </button>
+        <div class="flex gap-1 rounded-lg p-1" role="group" aria-label="Barra lateral">
+          <button type="button" class="font-btn" [class.font-btn--active]="sidebarDisplay() === 'icons'" [attr.aria-pressed]="sidebarDisplay() === 'icons'" (click)="setSidebarDisplay('icons')">Iconos</button>
+          <button type="button" class="font-btn" [class.font-btn--active]="sidebarDisplay() === 'labels'" [attr.aria-pressed]="sidebarDisplay() === 'labels'" (click)="setSidebarDisplay('labels')">Subtítulos</button>
+        </div>
       </div>
 
       <div class="setting-divider"></div>

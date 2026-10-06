@@ -30,7 +30,6 @@ export class Sidebar implements OnInit, OnDestroy {
   private settings = inject(GlobalSettingsService);
   private router = inject(Router);
   hideCharts = this.settings.hideCharts;
-  pinned = this.settings.sidebarPinned;
   sidebarDisplay = this.settings.sidebarDisplay;
 
   userRole: string = '';
@@ -42,13 +41,12 @@ export class Sidebar implements OnInit, OnDestroy {
 
   private subs = new Subscription();
 
-  readonly allItems: NavItem[] = [
+  private readonly adminItems: NavItem[] = [
     { path: '/admin/dashboard', label: 'Panel Admin', subtitle: 'Resumen general', icon: ['fas', 'gauge-high'], supervisor: true },
     { path: '/admin/sessions', label: 'Sesiones Globales', subtitle: 'Todas las sesiones', icon: ['fas', 'calendar-days'], supervisor: true },
     { path: '/admin/users', label: 'Admin Usuarios', subtitle: 'Gestión de usuarios', icon: ['fas', 'users'] },
     { path: '/admin/sedes', label: 'Sedes', subtitle: 'Sucursales', icon: ['fas', 'building'], supervisor: true },
     { path: '/admin/finanzas', label: 'Finanzas', subtitle: 'Ingresos y gastos', icon: ['fas', 'building-columns'], supervisor: true },
-
     { path: '/admin/games', label: 'Admin Juegos', subtitle: 'Terapia recreativa', icon: ['fas', 'gamepad'] },
     { path: '/admin/reports', label: 'Admin Reportes', subtitle: 'Estadísticas', icon: ['fas', 'chart-bar'], supervisor: true },
     { path: '/admin/messages', label: 'Admin Mensajes', subtitle: 'Comunicación', icon: ['fas', 'envelope'], supervisor: true },
@@ -57,14 +55,42 @@ export class Sidebar implements OnInit, OnDestroy {
     { path: '/admin/settings', label: 'Configuración', subtitle: 'Preferencias', icon: ['fas', 'gear'] },
   ];
 
+  private readonly therapistItems: NavItem[] = [
+    { path: '/therapist/dashboard', label: 'Dashboard', subtitle: 'Resumen del día', icon: ['fas', 'desktop'] },
+    { path: '/therapist/patients', label: 'Mis Pacientes', subtitle: 'Seguimiento', icon: ['fas', 'user-group'] },
+    { path: '/therapist/sessions', label: 'Mis Sesiones', subtitle: 'Agenda', icon: ['fas', 'calendar-days'] },
+    { path: '/therapist/games', label: 'Juegos', subtitle: 'Terapia recreativa', icon: ['fas', 'gamepad'] },
+    { path: '/therapist/reports', label: 'Reportes', subtitle: 'Informes', icon: ['fas', 'chart-bar'] },
+    { path: '/therapist/analytics', label: 'Analíticas IA', subtitle: 'Resultados', icon: ['fas', 'brain'] },
+    { path: '/therapist/incidents', label: 'Incidencias', subtitle: 'Reportes de incidentes', icon: ['fas', 'triangle-exclamation'] },
+    { path: '/therapist/messages', label: 'Mensajes', subtitle: 'Comunicación', icon: ['fas', 'envelope'] },
+    { path: '/therapist/kanban', label: 'Kanban', subtitle: 'Tablero de tareas', icon: ['fas', 'table-columns'] },
+    { path: '/therapist/profile', label: 'Mi Perfil', subtitle: 'Foto y seguridad', icon: ['fas', 'circle-user'] },
+  ];
+
+  private readonly patientItems: NavItem[] = [
+    { path: '/patient/dashboard', label: 'Mi Panel', subtitle: 'Resumen', icon: ['fas', 'house'] },
+    { path: '/patient/sessions', label: 'Mis Sesiones', subtitle: 'Tus citas', icon: ['fas', 'calendar-days'] },
+    { path: '/patient/calendar', label: 'Calendario', subtitle: 'Próximas citas', icon: ['fas', 'calendar-day'] },
+    { path: '/patient/progress', label: 'Mi Progreso', subtitle: 'Avances', icon: ['fas', 'chart-line'] },
+    { path: '/patient/payments', label: 'Pagos', subtitle: 'Cuotas y recibos', icon: ['fas', 'file-invoice-dollar'] },
+    { path: '/patient/my-therapist', label: 'Mi Terapeuta', subtitle: 'Contacto', icon: ['fas', 'user-doctor'] },
+    { path: '/patient/incidents', label: 'Incidencias', subtitle: 'Reportes', icon: ['fas', 'triangle-exclamation'] },
+    { path: '/patient/kanban', label: 'Mis Tareas', subtitle: 'Pendientes', icon: ['fas', 'table-columns'] },
+    { path: '/patient/messages', label: 'Mensajes', subtitle: 'Comunicación', icon: ['fas', 'envelope'] },
+    { path: '/patient/profile', label: 'Mi Perfil', subtitle: 'Foto y seguridad', icon: ['fas', 'circle-user'] },
+  ];
+
+  /** Menú según el rol: el mismo componente (y las mismas preferencias de barra) para todos los usuarios. */
   get navItems(): NavItem[] {
-    let items = this.allItems;
-    if (this.userRole === 'supervisor') {
-      items = items.filter(i => i.supervisor);
-    }
-    if (this.hideCharts()) {
-      items = items.filter(i => !i.hideWhenNoCharts);
-    }
+    const role = this.userRole;
+    let items: NavItem[];
+    if (role === 'terapista' || role === 'terapeuta') items = this.therapistItems;
+    else if (role === 'jugador') items = this.patientItems;
+    else if (role === 'admin' || role === 'supervisor') items = this.adminItems;
+    else items = [];
+    if (role === 'supervisor') items = items.filter((i) => i.supervisor);
+    if (this.hideCharts()) items = items.filter((i) => !i.hideWhenNoCharts);
     return items;
   }
 
@@ -73,18 +99,13 @@ export class Sidebar implements OnInit, OnDestroy {
     return this.sidebarDisplay() === 'labels';
   }
 
-  /** Pinned only takes effect when labels are shown (icons-only mode keeps a compact rail). */
-  get effectivePinned(): boolean {
-    return this.pinned() && this.labelsVisible;
+  /** Barra ancha (icono + título + subtítulo) o compacta (solo iconos). Una sola preferencia: «Barra lateral». */
+  get expanded(): boolean {
+    return this.labelsVisible;
   }
 
   private hideChartsEffect = effect(() => {
     this.hideCharts();
-    this.cdr.markForCheck();
-  });
-
-  private pinnedEffect = effect(() => {
-    this.pinned();
     this.cdr.markForCheck();
   });
 
@@ -125,7 +146,7 @@ export class Sidebar implements OnInit, OnDestroy {
   }
 
   onItemHover(index: number) {
-    if (!this.effectivePinned) {
+    if (!this.expanded) {
       this.hoveredIndex = index;
       this.cdr.markForCheck();
     }

@@ -8,9 +8,9 @@ import { ConfirmService } from '../../services/confirm.service';
 import { SidebarService } from '../../services/sidebar.service';
 import { ThemeService } from '../../services/theme.service';
 import { WakeLockService } from '../../services/wake-lock.service';
-import { HelpButton } from '../../../shared/contextual-help/components/help-button/help-button';
 import { HelpPanel } from '../../../shared/contextual-help/components/help-panel/help-panel';
 import { Header } from '../../components/header/header';
+import { Sidebar } from '../../components/sidebar/sidebar';
 import { Spinner } from '../../../shared/components/spinner/spinner';
 import { Button } from '../../../shared/components/button/button';
 import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
@@ -18,7 +18,7 @@ import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm
 @Component({
   selector: 'app-patient-layout',
   standalone: true,
-  imports: [RouterModule, CommonModule, FontAwesomeModule, Header, Spinner, Button, ConfirmDialog, HelpButton, HelpPanel],
+  imports: [RouterModule, CommonModule, FontAwesomeModule, Header, Spinner, Button, ConfirmDialog, HelpPanel, Sidebar],
   templateUrl: './patient-layout.html',
   styleUrl: './patient-layout.scss',
   animations: [routeAnimations],

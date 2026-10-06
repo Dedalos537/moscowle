@@ -12,7 +12,7 @@ import { AsyncPipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ThemeService, type ThemeSchedule } from '../../../core/services/theme.service';
-import { GlobalSettingsService } from '../../../core/services/global-settings.service';
+import { GlobalSettingsService, COLOR_PRESETS, type FontSize } from '../../../core/services/global-settings.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ChatLink } from '../chat-link/chat-link';
@@ -141,12 +141,13 @@ import { NotificationPreferences } from '../../../core/models/notification';
                   </div>
                   <div class="min-w-0">
                     <p class="text-sm font-semibold text-on-surface">Barra lateral</p>
-                    <p class="text-xs text-on-surface-variant">{{ settings.sidebarDisplay() === 'icons' ? 'Solo logos' : 'Iconos con subtítulos' }}</p>
+                    <p class="text-xs text-on-surface-variant">{{ settings.sidebarDisplay() === 'icons' ? 'Compacta: solo iconos' : 'Ancha: iconos con subtítulos' }}</p>
                   </div>
                 </div>
                 <div class="flex gap-1 bg-surface-container-high rounded-lg p-1 shrink-0">
                   <button
                     (click)="setSidebarDisplay('icons')"
+                    [attr.aria-pressed]="settings.sidebarDisplay() === 'icons'"
                     class="text-[10px] py-1.5 px-2.5 rounded-md font-bold transition-all"
                     [class]="settings.sidebarDisplay() === 'icons' ? 'bg-primary text-on-primary' : 'text-on-surface-variant'"
                   >
@@ -154,6 +155,7 @@ import { NotificationPreferences } from '../../../core/models/notification';
                   </button>
                   <button
                     (click)="setSidebarDisplay('labels')"
+                    [attr.aria-pressed]="settings.sidebarDisplay() === 'labels'"
                     class="text-[10px] py-1.5 px-2.5 rounded-md font-bold transition-all"
                     [class]="settings.sidebarDisplay() === 'labels' ? 'bg-primary text-on-primary' : 'text-on-surface-variant'"
                   >
@@ -161,6 +163,58 @@ import { NotificationPreferences } from '../../../core/models/notification';
                   </button>
                 </div>
               </div>
+            </div>
+
+            <div class="px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                  <div class="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0">
+                    <fa-icon [icon]="['fas', 'text-height']" class="text-on-surface-variant text-sm"></fa-icon>
+                  </div>
+                  <p class="text-sm font-semibold text-on-surface">Tamaño del texto</p>
+                </div>
+                <div class="flex gap-1 bg-surface-container-high rounded-lg p-1 shrink-0" role="group" aria-label="Tamaño del texto">
+                  @for (f of fontSizes; track f.value) {
+                    <button type="button" (click)="settings.setFontSize(f.value)"
+                      class="text-[10px] py-1.5 px-2.5 rounded-md font-bold transition-all"
+                      [class]="settings.fontSize() === f.value ? 'bg-primary text-on-primary' : 'text-on-surface-variant'"
+                      [attr.aria-pressed]="settings.fontSize() === f.value">{{ f.label }}</button>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <div class="px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
+              <div class="flex items-center gap-3 mb-2">
+                <div class="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0">
+                  <fa-icon [icon]="['fas', 'palette']" class="text-on-surface-variant text-sm"></fa-icon>
+                </div>
+                <p class="text-sm font-semibold text-on-surface">Color principal</p>
+              </div>
+              <div class="flex flex-wrap gap-2" role="group" aria-label="Color principal">
+                @for (c of colorPresets; track c.name) {
+                  <button type="button" (click)="settings.setPrimaryColor(c.name)"
+                    class="w-8 h-8 rounded-full border-2 transition-transform hover:scale-110"
+                    [style.background]="c.light"
+                    [style.border-color]="settings.primaryColor() === c.name ? 'var(--color-on-surface)' : 'transparent'"
+                    [attr.aria-label]="c.label" [attr.aria-pressed]="settings.primaryColor() === c.name"></button>
+                }
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0">
+                  <fa-icon [icon]="['fas', 'chart-line']" class="text-on-surface-variant text-sm"></fa-icon>
+                </div>
+                <p class="text-sm font-semibold text-on-surface">Ocultar gráficos</p>
+              </div>
+              <button type="button" class="pref-switch" (click)="settings.toggleHideCharts()"
+                [class.pref-switch--on]="settings.hideCharts()"
+                [attr.aria-label]="settings.hideCharts() ? 'Mostrar gráficos' : 'Ocultar gráficos'"
+                [attr.aria-pressed]="settings.hideCharts()">
+                <span class="pref-switch__knob"></span>
+              </button>
             </div>
 
             @if (userRole() === 'admin') {
@@ -560,6 +614,13 @@ export class PreferencesMenu {
     this.schedule.set(this.theme.getSchedule());
     this.cdr.markForCheck();
   }
+
+  readonly fontSizes: { value: FontSize; label: string }[] = [
+    { value: 'small', label: 'A-' },
+    { value: 'medium', label: 'A' },
+    { value: 'large', label: 'A+' },
+  ];
+  readonly colorPresets = COLOR_PRESETS;
 
   setSidebarDisplay(mode: 'icons' | 'labels'): void {
     this.settings.setSidebarDisplay(mode);

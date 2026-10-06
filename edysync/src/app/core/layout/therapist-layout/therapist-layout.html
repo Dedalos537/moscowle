@@ -19,90 +19,15 @@
   }
 }
 
-@if (sidebarOpen) {
-  <div class="fixed inset-0 z-30 bg-black/40 md:hidden" (click)="sidebarService.close()"></div>
-}
-
-<div class="flex h-screen bg-background text-on-surface overflow-hidden transition-colors duration-300">
-  <aside class="w-64 h-screen bg-surface-container-lowest border-r border-border flex flex-col transition-colors duration-300 flex-shrink-0 z-20"
-         [class.sidebar-mobile]="true"
-         [class.sidebar-mobile--open]="sidebarOpen">
-    <div class="h-20 flex items-center px-6 border-b border-border/50 shrink-0">
-      <div class="flex items-center gap-3">
-        <img src="assets/img/logo.svg" alt="Logo" class="w-10 h-10 object-contain">
-        <div class="flex flex-col">
-          <span class="font-extrabold text-primary tracking-tight text-lg leading-tight">Centro Juan Pablo II</span>
-          <span class="text-label-caps text-on-surface-variant">Terapeuta</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="px-3 pt-4 pb-2">
-      <span class="text-label-caps text-outline px-4">Navegación</span>
-    </div>
-
-    <nav class="flex-1 overflow-y-auto px-2 space-y-0.5 custom-scrollbar">
-      <a routerLink="/therapist/dashboard" routerLinkActive="active" #rld="routerLinkActive"
-         class="nav-link" [class.active]="rld.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'desktop']" [class.!text-primary-container]="rld.isActive"></fa-icon>
-        <span>Dashboard</span>
-      </a>
-      <a routerLink="/therapist/patients" routerLinkActive="active" #rlpt="routerLinkActive"
-         class="nav-link" [class.active]="rlpt.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'user-group']" [class.!text-primary-container]="rlpt.isActive"></fa-icon>
-        <span>Mis Pacientes</span>
-      </a>
-      <a routerLink="/therapist/sessions" routerLinkActive="active" #rls="routerLinkActive"
-         class="nav-link" [class.active]="rls.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'calendar-days']" [class.!text-primary-container]="rls.isActive"></fa-icon>
-        <span>Mis Sesiones</span>
-      </a>
-      <a routerLink="/therapist/games" routerLinkActive="active" #rlg="routerLinkActive"
-         class="nav-link" [class.active]="rlg.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'gamepad']" [class.!text-primary-container]="rlg.isActive"></fa-icon>
-        <span>Juegos</span>
-      </a>
-      <a routerLink="/therapist/reports" routerLinkActive="active" #rlr="routerLinkActive"
-         class="nav-link" [class.active]="rlr.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'chart-bar']" [class.!text-primary-container]="rlr.isActive"></fa-icon>
-        <span>Reportes</span>
-      </a>
-      <a routerLink="/therapist/analytics" routerLinkActive="active" #rla="routerLinkActive"
-         class="nav-link" [class.active]="rla.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'brain']" [class.!text-primary-container]="rla.isActive"></fa-icon>
-        <span>Analíticas IA</span>
-      </a>
-      <a routerLink="/therapist/incidents" routerLinkActive="active" #rli="routerLinkActive"
-         class="nav-link" [class.active]="rli.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'triangle-exclamation']" [class.!text-primary-container]="rli.isActive"></fa-icon>
-        <span>Incidencias</span>
-      </a>
-      <a routerLink="/therapist/messages" routerLinkActive="active" #rlm="routerLinkActive"
-         class="nav-link" [class.active]="rlm.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'envelope']" [class.!text-primary-container]="rlm.isActive"></fa-icon>
-        <span>Mensajes</span>
-      </a>
-      <a routerLink="/therapist/kanban" routerLinkActive="active" #rlk="routerLinkActive"
-         class="nav-link" [class.active]="rlk.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'table-columns']" [class.!text-primary-container]="rlk.isActive"></fa-icon>
-        <span>Kanban</span>
-      </a>
-      <a routerLink="/therapist/profile" routerLinkActive="active" #rlpf="routerLinkActive"
-         class="nav-link" [class.active]="rlpf.isActive" (click)="sidebarService.close()">
-        <fa-icon [icon]="['fas', 'circle-user']" [class.!text-primary-container]="rlpf.isActive"></fa-icon>
-        <span>Mi Perfil</span>
-      </a>
-    </nav>
-  </aside>
-
-  <div class="flex-1 flex flex-col h-screen overflow-hidden relative">
-    <app-header class="z-10"></app-header>
-    <main class="flex-1 overflow-y-auto p-2 md:p-3 lg:p-4 custom-scrollbar relative">
+<div class="layout">
+  <app-sidebar class="layout__sidebar"></app-sidebar>
+  <div class="layout__main">
+    <app-header class="layout__header"></app-header>
+    <main class="layout__content">
       <div [@routeAnimations]="prepareRoute()">
         <router-outlet></router-outlet>
       </div>
     </main>
-    <app-help-button></app-help-button>
     <app-help-panel></app-help-panel>
   </div>
 </div>
