@@ -97,6 +97,31 @@ export class AuthService {
     return this.http.post<any>('/api/auth/webauthn/register/verify', { credential, device_name }).pipe(timeout(60000));
   }
 
+  /** Foto de perfil propia (cualquier rol). El backend la recorta a cuadrado y devuelve su URL versionada. */
+  uploadAvatar(file: File): Observable<{ success: boolean; avatar: string }> {
+    const body = new FormData();
+    body.append('file', file);
+    return this.http
+      .post<{ success: boolean; avatar: string }>('/api/profile/avatar', body)
+      .pipe(tap((res) => this.patchUser({ avatar: res.avatar })));
+  }
+
+  removeAvatar(): Observable<{ success: boolean }> {
+    return this.http.delete<{ success: boolean }>('/api/profile/avatar').pipe(tap(() => this.patchUser({ avatar: null })));
+  }
+
+  private patchUser(patch: Record<string, unknown>): void {
+    const current = this.currentUserSubject.value;
+    if (!current) return;
+    const next = { ...current, ...patch };
+    try {
+      localStorage.setItem('user', JSON.stringify(next));
+    } catch {
+      // almacenamiento no disponible: se actualiza solo en memoria
+    }
+    this.currentUserSubject.next(next);
+  }
+
   getCredentials(): Observable<any> {
     return this.http.get<any>('/api/auth/webauthn/credentials').pipe(timeout(15000));
   }

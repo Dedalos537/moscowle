@@ -1,0 +1,19 @@
+<section class="au" aria-labelledby="au-title">
+  <app-avatar [src]="user?.avatar" [name]="user?.username || ''" size="xl"></app-avatar>
+  <div class="au__body">
+    <h3 id="au-title" class="au__title">Foto de perfil</h3>
+    <p class="au__hint">JPG, PNG o WebP de hasta 5 MB. Se recorta en cuadrado.</p>
+    <div class="au__actions">
+      <label class="au__btn au__btn--primary" [class.is-busy]="busy">
+        <input type="file" class="sr-only" accept="image/jpeg,image/png,image/webp" (change)="onFile($event)" [disabled]="busy" />
+        {{ busy ? 'Procesando…' : (user?.avatar ? 'Cambiar foto' : 'Subir foto') }}
+      </label>
+      @if (user?.avatar) {
+        <button type="button" class="au__btn" (click)="remove()" [disabled]="busy">Quitar foto</button>
+      }
+    </div>
+    @if (error) {
+      <p class="au__error" role="alert">{{ error }}</p>
+    }
+  </div>
+</section>

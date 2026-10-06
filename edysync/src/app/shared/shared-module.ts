@@ -19,17 +19,20 @@ import { ProgressBar } from './components/progress-bar/progress-bar';
 import { PillStatus } from './components/pill-status/pill-status';
 import { CollapsiblePanel } from './components/collapsible-panel/collapsible-panel';
 import { Select } from './components/select/select';
+import { Avatar } from './components/avatar/avatar';
+import { AvatarUploader } from './components/avatar-uploader/avatar-uploader';
+import { FingerprintCard } from './components/fingerprint-card/fingerprint-card';
 
 @NgModule({
   imports: [
     CommonModule, FormsModule, FontAwesomeModule,
     Button, Card, Input, Spinner, Alert, Modal, Chip, ChatLink,
-    ProgressBar, PillStatus, CollapsiblePanel, Select,
+    ProgressBar, PillStatus, CollapsiblePanel, Select, Avatar, AvatarUploader, FingerprintCard,
   ],
   exports: [
     CommonModule, FormsModule, FontAwesomeModule,
     Button, Card, Input, Spinner, Alert, Modal, Chip, ChatLink,
-    ProgressBar, PillStatus, CollapsiblePanel, Select,
+    ProgressBar, PillStatus, CollapsiblePanel, Select, Avatar, AvatarUploader, FingerprintCard,
   ]
 })
 export class SharedModule {

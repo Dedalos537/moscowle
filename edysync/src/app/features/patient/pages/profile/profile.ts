@@ -1,4 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { AvatarUploader } from '../../../../shared/components/avatar-uploader/avatar-uploader';
+import { FingerprintCard } from '../../../../shared/components/fingerprint-card/fingerprint-card';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -11,7 +13,7 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
 @Component({
   selector: 'app-patient-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, AvatarUploader, FingerprintCard],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

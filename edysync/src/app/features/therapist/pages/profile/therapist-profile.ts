@@ -1,4 +1,6 @@
 import { CommonModule } from '@angular/common';
+import { AvatarUploader } from '../../../../shared/components/avatar-uploader/avatar-uploader';
+import { FingerprintCard } from '../../../../shared/components/fingerprint-card/fingerprint-card';
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -16,7 +18,7 @@ import { Button } from '../../../../shared/components/button/button';
 @Component({
   selector: 'app-therapist-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Card, Input, Select, Alert, Button],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Card, Input, Select, Alert, Button, AvatarUploader, FingerprintCard],
   templateUrl: './therapist-profile.html',
   styleUrl: './therapist-profile.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

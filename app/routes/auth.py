@@ -218,6 +218,7 @@ def api_login():
                         'username': user.username,
                         'role': user.role,
                         'login_code': user.login_code,
+                        'avatar': user.avatar,
                         'timezone': getattr(user, 'timezone', None) or 'America/Lima',
                     },
                 }
@@ -261,6 +262,7 @@ def api_auth_me():
                 'username': current_user.username,
                 'role': current_user.role,
                 'login_code': getattr(current_user, 'login_code', None),
+                'avatar': getattr(current_user, 'avatar', None),
                 'timezone': getattr(current_user, 'timezone', None) or 'America/Lima',
             }
         )

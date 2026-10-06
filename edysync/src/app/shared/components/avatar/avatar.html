@@ -1,0 +1,7 @@
+<span class="avatar" [class]="'avatar--' + size()" role="img" [attr.aria-label]="name() ? 'Foto de ' + name() : 'Foto de perfil'">
+  @if (url()) {
+    <span class="avatar__img" [style.background-image]="'url(&quot;' + url() + '&quot;)'"></span>
+  } @else {
+    <span class="avatar__initials" aria-hidden="true">{{ initials() }}</span>
+  }
+</span>

@@ -6,6 +6,11 @@
     <p class="text-sm text-on-surface-variant">Actualiza tu informacion personal y contrasena</p>
   </div>
 
+  <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 border border-border/20 space-y-8">
+    <app-avatar-uploader></app-avatar-uploader>
+    <app-fingerprint-card></app-fingerprint-card>
+  </div>
+
   <app-card title="Informacion Personal">
     <div class="space-y-4">
       <app-input id="profile-username" label="Nombre de Usuario" [(value)]="username"></app-input>

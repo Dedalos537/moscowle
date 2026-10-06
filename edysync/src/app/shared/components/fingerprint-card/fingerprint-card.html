@@ -1,0 +1,42 @@
+<section class="fp" aria-labelledby="fp-title">
+  <h3 id="fp-title" class="fp__title">Huella digital</h3>
+  <p class="fp__hint">Ingresa con tu huella, rostro o el sensor de este dispositivo, sin escribir la contraseña.</p>
+
+  @if (!supported) {
+    <p class="fp__note">Este navegador no admite huella digital. Prueba con Chrome, Edge o Safari actualizados.</p>
+  } @else {
+    <div class="fp__register">
+      <label class="fp__label" for="fp-device">Nombre del dispositivo (opcional)</label>
+      <div class="fp__row">
+        <input id="fp-device" class="fp__input" type="text" maxlength="120" placeholder="Ej: Mi laptop"
+               [value]="deviceName" (input)="deviceName = $any($event.target).value" (keydown.enter)="register()" />
+        <button type="button" class="fp__btn" (click)="register()" [disabled]="registering">
+          {{ registering ? 'Esperando tu huella…' : 'Registrar este dispositivo' }}
+        </button>
+      </div>
+    </div>
+
+    @if (error) {
+      <p class="fp__error" role="alert">{{ error }}</p>
+    }
+
+    <h4 class="fp__subtitle">Dispositivos registrados</h4>
+    @if (loading) {
+      <p class="fp__note">Cargando…</p>
+    } @else if (credentials.length === 0) {
+      <p class="fp__note">Aún no registraste ninguno. La huella queda ligada a este sitio web y a este dispositivo.</p>
+    } @else {
+      <ul class="fp__list">
+        @for (c of credentials; track c.id) {
+          <li class="fp__item">
+            <div>
+              <span class="fp__name">{{ c.device_name || 'Dispositivo' }}</span>
+              <span class="fp__date">Registrado el {{ c.created_at | date: 'dd/MM/yyyy' }}</span>
+            </div>
+            <button type="button" class="fp__remove" (click)="remove(c)" [attr.aria-label]="'Eliminar ' + (c.device_name || 'dispositivo')">Eliminar</button>
+          </li>
+        }
+      </ul>
+    }
+  }
+</section>

@@ -14,11 +14,12 @@ import { Spinner } from '../../../shared/components/spinner/spinner';
 import { NotificationService } from '../../services/notification.service';
 import { CATEGORY_ICONS, CATEGORY_COLORS, CATEGORY_LABELS, NotificationGroup } from '../../models/notification';
 import { PreferencesMenu } from '../../../shared/components/preferences-menu/preferences-menu';
+import { Avatar } from '../../../shared/components/avatar/avatar';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, FontAwesomeModule, Button, Spinner, PreferencesMenu],
+  imports: [CommonModule, FontAwesomeModule, Button, Spinner, PreferencesMenu, Avatar],
   templateUrl: './header.html',
   styleUrl: './header.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -159,6 +160,14 @@ export class Header implements OnInit, OnDestroy {
       this.showNotifications = false;
       this.router.navigateByUrl(link);
     }
+  }
+
+  /** Ruta de "Mi perfil" según el rol (admin y supervisor comparten el área admin). */
+  goProfile() {
+    const role = this.user?.role;
+    const area = role === 'admin' || role === 'supervisor' ? 'admin' : role === 'terapista' ? 'therapist' : 'patient';
+    this.showUserMenu = false;
+    this.router.navigateByUrl(`/${area}/profile`);
   }
 
   toggleUserMenu() {

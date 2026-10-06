@@ -543,8 +543,10 @@ def create_app(config_class=None):
     csrf.exempt(telegram_bp)
 
     from app.routes.kanban_routes import kanban_bp
+    from app.routes.profile_avatar import avatar_bp
 
     csrf.exempt(kanban_bp)
+    csrf.exempt(avatar_bp)
 
     from app.routes.webauthn import webauthn_bp
 
@@ -816,6 +818,7 @@ def create_app(config_class=None):
         ('admin_ai', 'app.routes.admin_ai', 'bp'),
         ('telegram', 'app.routes.telegram_routes', 'telegram_bp'),
         ('kanban', 'app.routes.kanban_routes', 'kanban_bp'),
+        ('profile_avatar', 'app.routes.profile_avatar', 'avatar_bp'),
         ('webauthn', 'app.routes.webauthn', 'webauthn_bp'),
         ('deploy', 'app.routes.deploy_routes', 'deploy_bp'),
         ('crm', 'app.routes.crm_routes', 'crm_bp'),
@@ -959,6 +962,7 @@ def create_app_lite():
     from app.routes.kanban_routes import kanban_bp
     from app.routes.main import main_bp
     from app.routes.mcp_routes import mcp_bp
+    from app.routes.profile_avatar import avatar_bp
     from app.routes.public_routes import public_bp
     from app.routes.telegram_routes import telegram_bp
     from app.routes.uploads import uploads_bp
@@ -971,6 +975,7 @@ def create_app_lite():
     csrf.exempt(telegram_bp)
     csrf.exempt(uploads_bp)
     csrf.exempt(kanban_bp)
+    csrf.exempt(avatar_bp)
     csrf.exempt(webauthn_bp)
     csrf.exempt(crm_bp)
 

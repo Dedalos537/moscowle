@@ -1,4 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { AvatarUploader } from '../../../../shared/components/avatar-uploader/avatar-uploader';
+import { FingerprintCard } from '../../../../shared/components/fingerprint-card/fingerprint-card';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -17,7 +19,7 @@ import { Alert } from '../../../../shared/components/alert/alert';
   styleUrl: './profile.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Input, Card, Alert],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Input, Card, Alert, AvatarUploader, FingerprintCard],
 })
 export class Profile implements OnInit, OnDestroy {
   username = '';

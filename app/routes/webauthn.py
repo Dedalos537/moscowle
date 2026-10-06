@@ -104,6 +104,7 @@ def webauthn_login_verify():
                 'username': user.username,
                 'role': user.role,
                 'login_code': user.login_code,
+                'avatar': user.avatar,
                 'timezone': getattr(user, 'timezone', None) or 'America/Lima',
             },
         }
