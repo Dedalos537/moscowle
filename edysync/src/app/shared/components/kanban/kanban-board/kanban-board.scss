@@ -6,6 +6,168 @@
   width: 100%;
 }
 
+.kb-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.kb-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
+}
+
+.kb-summary {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-on-surface-variant);
+  font-variant-numeric: tabular-nums;
+
+  &__alert {
+    font-weight: 700;
+    color: var(--color-error-text);
+  }
+}
+
+.kb-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 1.25rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 150ms ease;
+
+  &:hover {
+    filter: brightness(0.95);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+.kb-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.kb-filter {
+  min-height: 2.5rem;
+  max-width: 100%;
+  padding: 0 0.75rem;
+  border: 1px solid var(--color-outline);
+  border-radius: 0.75rem;
+  background: var(--color-surface-container-lowest);
+  color: var(--color-on-surface);
+  font: inherit;
+  font-size: 0.8125rem;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+.kb-scope {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 0.75rem;
+  background: var(--color-surface-container-high);
+
+  &__btn {
+    min-height: 2rem;
+    padding: 0 0.75rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--color-on-surface-variant);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &.is-active {
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.kb-clear {
+  min-height: 2.5rem;
+  padding: 0 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--color-on-surface-variant);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--color-on-surface);
+  }
+}
+
+.kb-error {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--badge-error-bg);
+  color: var(--badge-error-fg);
+  font-size: 0.875rem;
+
+  p {
+    margin: 0;
+  }
+
+  .kb-clear {
+    color: inherit;
+  }
+}
+
+.kb-skeleton {
+  height: 5.5rem;
+  border-radius: 0.75rem;
+  background: var(--color-surface-container-high);
+  animation: kb-pulse 1.4s ease-in-out infinite;
+
+  &--short {
+    height: 3.5rem;
+  }
+}
+
+@keyframes kb-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
 .kanban-columns {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -64,20 +226,62 @@
 
   &__empty {
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 2rem 1rem;
-    opacity: 0.6;
+
+    p {
+      margin: 0;
+      font-size: 0.8125rem;
+      text-align: center;
+      color: var(--color-on-surface-variant);
+    }
   }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-on-surface);
+  }
+
+  &__dot {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 9999px;
+    background: var(--col-color, var(--color-outline));
+  }
+
+  &__count {
+    min-width: 1.5rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    background: var(--color-surface-container-high);
+    color: var(--color-on-surface);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+
+    &.is-empty {
+      color: var(--color-on-surface-variant);
+    }
+  }
+
+  &[data-col='in-progress'] { --col-color: var(--color-warning); }
+  &[data-col='review'] { --col-color: var(--color-primary); }
+  &[data-col='done'] { --col-color: var(--color-success); }
 }
 
 // CDK DragDrop styles
 .cdk-drag-preview {
   border-radius: 0.75rem;
   box-shadow:
-    0 10px 25px -5px rgba(0, 0, 0, 0.1),
-    0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    0 10px 25px -5px color-mix(in srgb, var(--color-on-surface) 22%, transparent),
+    0 8px 10px -6px color-mix(in srgb, var(--color-on-surface) 22%, transparent);
   opacity: 0.92;
   transform: rotate(2deg);
 }
@@ -91,6 +295,6 @@
 }
 
 .kanban-column__body.cdk-drop-list-dragging {
-  background: var(--color-primary-container);
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
   border-radius: 0.75rem;
 }

@@ -7,10 +7,13 @@ import {
   ChangeDetectorRef,
   inject,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { KanbanTaskCardComponent } from '../kanban-task-card/kanban-task-card';
 import { KanbanCreateModalComponent } from '../kanban-create-modal/kanban-create-modal';
+import { KanbanDetailModalComponent } from '../kanban-detail-modal/kanban-detail-modal';
+import { AuthService } from '../../../../core/services/auth.service';
+import { ToastService } from '../../../../core/services/toast.service';
+import { KanbanViewer, canManageTask } from '../kanban-labels';
 import { KanbanService, KanbanTask, KanbanAssignee, KanbanFilters } from '../../../../core/services/kanban.service';
 
 export interface KanbanColumn {
@@ -24,10 +27,10 @@ export interface KanbanColumn {
   selector: 'app-kanban-board',
   standalone: true,
   imports: [
-    CommonModule,
     DragDropModule,
     KanbanTaskCardComponent,
     KanbanCreateModalComponent,
+    KanbanDetailModalComponent,
   ],
   templateUrl: './kanban-board.html',
   styleUrl: './kanban-board.scss',
@@ -57,14 +60,26 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
 
   showCreateModal = false;
   selectedTaskDetail: KanbanTask | null = null;
+  editingTask: KanbanTask | null = null;
   showDetailModal = false;
   isLoading = false;
+  loaded = false;
+  loadError = false;
+  dragging = false;
+  viewer: KanbanViewer | null = null;
 
   private kanbanService = inject(KanbanService);
   private cdr = inject(ChangeDetectorRef);
+  private auth = inject(AuthService);
+  private toast = inject(ToastService);
+  private authSub: { unsubscribe(): void } | null = null;
   private pollingInterval: ReturnType<typeof setInterval> | null = null;
 
   ngOnInit() {
+    this.authSub = this.auth.currentUser$.subscribe((u) => {
+      this.viewer = u ? { id: u.id, role: u.role } : null;
+      this.cdr.markForCheck();
+    });
     if (this.viewMode() === 'admin') this.loadAssignees();
     this.loadTasks();
     this.startPolling();
@@ -116,7 +131,34 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.authSub?.unsubscribe();
     this.stopPolling();
+  }
+
+  get canWrite(): boolean {
+    return this.viewMode() !== 'patient';
+  }
+
+  get totalTasks(): number {
+    return this.columns.reduce((n, c) => n + c.tasks.length, 0);
+  }
+
+  get expiredCount(): number {
+    return this.columns.filter((c) => c.id !== 'done').reduce((n, c) => n + c.tasks.filter((t) => t.is_expired).length, 0);
+  }
+
+  get unassignedCount(): number {
+    return this.columns.reduce((n, c) => n + c.tasks.filter((t) => !t.assigned_to_id).length, 0);
+  }
+
+  get hasActiveFilters(): boolean {
+    const f = this.filters;
+    return !!(f.therapy_type || f.priority || f.role || f.assigned_to || f.scope === 'mine');
+  }
+
+  clearFilters() {
+    this.filters = { therapy_type: '', priority: '', role: '', assigned_to: '', scope: 'all' };
+    this.loadTasks();
   }
 
   loadTasks() {
@@ -128,32 +170,44 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
           col.tasks = tasks.filter((t) => t.column === col.id);
         });
         this.isLoading = false;
+        this.loaded = true;
+        this.loadError = false;
         this.cdr.markForCheck();
       },
       error: () => {
         this.isLoading = false;
+        this.loadError = true;
         this.cdr.markForCheck();
       },
     });
   }
 
+  onDragStarted() {
+    this.dragging = true;
+  }
+
   onDrop(event: CdkDragDrop<KanbanTask[]>) {
+    this.dragging = false;
+    const fail = () => {
+      this.toast.show('No se pudo guardar el cambio. Se recargó el tablero.', 'error');
+      this.loadTasks();
+    };
     if (event.previousContainer === event.container) {
       const tasks = event.container.data;
       moveItemInArray(tasks, event.previousIndex, event.currentIndex);
-      tasks.forEach((t, i) => (t.position = i));
-      tasks.forEach((t) =>
-        this.kanbanService.updateTask(t.id, { position: t.position }).subscribe()
-      );
+      tasks.forEach((t, i) => {
+        if (t.position !== i) {
+          t.position = i;
+          this.kanbanService.updateTask(t.id, { position: i }).subscribe({ error: fail });
+        }
+      });
     } else {
       const task = event.previousContainer.data[event.previousIndex];
       event.previousContainer.data.splice(event.previousIndex, 1);
       event.container.data.splice(event.currentIndex, 0, task);
       task.column = event.container.id as KanbanTask['column'];
       event.container.data.forEach((t, i) => (t.position = i));
-      this.kanbanService
-        .updateTask(task.id, { column: task.column, position: task.position })
-        .subscribe();
+      this.kanbanService.updateTask(task.id, { column: task.column, position: task.position }).subscribe({ next: () => this.loadTasks(), error: fail });
     }
     this.cdr.markForCheck();
   }
@@ -174,6 +228,17 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
     this.loadTasks();
   }
 
+  canReassign(task: KanbanTask | null): boolean {
+    return !!task && canManageTask(task, this.viewer);
+  }
+
+  openEdit(task: KanbanTask) {
+    this.closeTaskDetail();
+    this.editingTask = task;
+    this.showCreateModal = true;
+    this.cdr.markForCheck();
+  }
+
   openTaskDetail(task: KanbanTask) {
     this.selectedTaskDetail = task;
     this.showDetailModal = true;
@@ -187,17 +252,20 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   }
 
   openCreateModal() {
+    this.editingTask = null;
     this.showCreateModal = true;
     this.cdr.markForCheck();
   }
 
   closeCreateModal() {
     this.showCreateModal = false;
+    this.editingTask = null;
     this.cdr.markForCheck();
   }
 
   onTaskCreated() {
     this.showCreateModal = false;
+    this.editingTask = null;
     this.loadTasks();
   }
 
@@ -211,7 +279,10 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   }
 
   private startPolling() {
-    this.pollingInterval = setInterval(() => this.loadTasks(), 10_000);
+    // Se pausa mientras se arrastra o hay un modal abierto para no pisar lo que el usuario está haciendo.
+    this.pollingInterval = setInterval(() => {
+      if (!this.dragging && !this.showCreateModal && !this.showDetailModal) this.loadTasks();
+    }, 10_000);
   }
 
   private stopPolling() {

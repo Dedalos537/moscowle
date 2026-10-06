@@ -1,203 +1,103 @@
-@if (isOpen()) {
-  <div class="modal-overlay" (click)="onBackdropClick($event)">
-    <div class="modal-card">
-      <!-- Header -->
-      <div class="flex items-center justify-between mb-6">
-        <h3 class="text-xl font-bold text-on-surface font-headline">
-          {{ editTask() ? 'Editar Tarea' : 'Nueva Tarea' }}
-        </h3>
-        <button (click)="onClose()" class="p-2 rounded-full hover:bg-surface-container-high transition-colors">
-          <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-          </svg>
-        </button>
+<app-modal [isOpen]="isOpen()" [title]="isEdit ? 'Editar tarea' : 'Nueva tarea'" (close)="onClose()">
+  <form id="kanban-form" class="kb-form" (ngSubmit)="onSubmit()" novalidate>
+    <div class="kb-field">
+      <label class="kb-label" for="kb-title">Título</label>
+      <input id="kb-title" class="kb-control" type="text" name="title" [(ngModel)]="title" required maxlength="255"
+             [attr.aria-invalid]="titleInvalid" aria-describedby="kb-title-err" placeholder="Qué hay que hacer" />
+      @if (titleInvalid) {
+        <p id="kb-title-err" class="kb-error" role="alert">Escribe un título para la tarea.</p>
+      }
+    </div>
+
+    <div class="kb-field">
+      <label class="kb-label" for="kb-desc">Descripción</label>
+      <textarea id="kb-desc" class="kb-control kb-control--area" name="description" rows="3" [(ngModel)]="description"
+                placeholder="Detalles, pasos o contexto"></textarea>
+    </div>
+
+    <fieldset class="kb-field kb-fieldset">
+      <legend class="kb-label">Prioridad</legend>
+      <div class="kb-segment">
+        @for (p of priorities; track p.value) {
+          <label class="kb-segment__item">
+            <input type="radio" name="priority" [value]="p.value" [(ngModel)]="priority" />
+            <span>{{ p.label }}</span>
+          </label>
+        }
       </div>
+    </fieldset>
 
-      <!-- Form -->
-      <form (ngSubmit)="onSubmit()" class="space-y-4">
-        <!-- Title -->
-        <div>
-          <label class="block text-sm font-medium text-on-surface-variant mb-1">Título *</label>
-          <input
-            type="text"
-            [(ngModel)]="title"
-            name="title"
-            required
-            class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
-                   border border-outline-variant focus:outline-none focus:ring-2
-                   focus:ring-primary/40 transition-colors"
-            placeholder="Nombre de la tarea"
-          />
-        </div>
+    <div class="kb-field">
+      <label class="kb-label" for="kb-audience">Asignar a</label>
+      @if (!isEdit) {
+        <select id="kb-audience" class="kb-control" name="audience" [(ngModel)]="audience">
+          @for (opt of audienceOptions; track opt.value) {
+            <option [ngValue]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+      }
+      @if (!audience && (!isEdit || canReassign())) {
+        <select class="kb-control" [class.kb-control--stacked]="!isEdit" name="assigned_to_id" [(ngModel)]="assigned_to_id"
+                [attr.aria-label]="isEdit ? 'Asignada a' : 'Usuario asignado'" [attr.id]="isEdit ? 'kb-audience' : null">
+          <option [ngValue]="null">{{ assigneeEmptyLabel }}</option>
+          @for (user of users; track user.id) {
+            <option [ngValue]="user.id">{{ user.username }} · {{ roleLabel(user.role) }}</option>
+          }
+        </select>
+      } @else if (audience) {
+        <p class="kb-hint">Se creará una copia para cada destinatario, cada una con su propio avance.</p>
+      }
+    </div>
 
-        <!-- Description -->
-        <div>
-          <label class="block text-sm font-medium text-on-surface-variant mb-1">Descripción</label>
-          <textarea
-            [(ngModel)]="description"
-            name="description"
-            rows="3"
-            class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
-                   border border-outline-variant focus:outline-none focus:ring-2
-                   focus:ring-primary/40 transition-colors resize-none"
-            placeholder="Detalles de la tarea..."
-          ></textarea>
-        </div>
+    <div class="kb-row">
+      <div class="kb-field">
+        <label class="kb-label" for="kb-therapy">Tipo de terapia</label>
+        <select id="kb-therapy" class="kb-control" name="therapy_type" [(ngModel)]="therapy_type">
+          <option value="">Sin tipo</option>
+          @for (t of therapyOptions; track t.value) {
+            <option [value]="t.value">{{ t.label }}</option>
+          }
+        </select>
+      </div>
+      <div class="kb-field">
+        <label class="kb-label" for="kb-minutes">Tiempo límite (min)</label>
+        <input id="kb-minutes" class="kb-control" type="number" inputmode="numeric" min="0" name="max_minutes"
+               [(ngModel)]="max_minutes" placeholder="0 = sin límite" />
+      </div>
+    </div>
 
-        <!-- Therapy Type + Priority row -->
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-sm font-medium text-on-surface-variant mb-1">Tipo de Terapia</label>
-            <select
-              [(ngModel)]="therapy_type"
-              name="therapy_type"
-              class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
-                     border border-outline-variant focus:outline-none focus:ring-2
-                     focus:ring-primary/40 transition-colors"
-            >
-              <option value="">Sin tipo</option>
-              <option value="terapia_lenguaje">Terapia de Lenguaje</option>
-              <option value="terapia_ocupacional">Terapia Ocupacional</option>
-              <option value="psicologia">Psicología</option>
-              <option value="neuropsicologia">Neuropsicología</option>
-              <option value="fisioterapia">Fisioterapia</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-on-surface-variant mb-1">Prioridad</label>
-            <div class="flex gap-2 mt-1">
-              <label class="flex items-center gap-1.5 cursor-pointer">
-                <input type="radio" [(ngModel)]="priority" name="priority" [value]="1" class="accent-red-500" />
-                <span class="text-sm text-red-500 font-medium">Alta</span>
-              </label>
-              <label class="flex items-center gap-1.5 cursor-pointer">
-                <input type="radio" [(ngModel)]="priority" name="priority" [value]="2" class="accent-amber-500" />
-                <span class="text-sm text-amber-500 font-medium">Media</span>
-              </label>
-              <label class="flex items-center gap-1.5 cursor-pointer">
-                <input type="radio" [(ngModel)]="priority" name="priority" [value]="3" class="accent-green-500" />
-                <span class="text-sm text-green-500 font-medium">Baja</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- Assigned to + Session row -->
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-sm font-medium text-on-surface-variant mb-1" for="kb-audience">Asignar a</label>
-            @if (!editTask()) {
-            <select
-              id="kb-audience"
-              [(ngModel)]="audience"
-              name="audience"
-              class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
-                     border border-outline-variant focus:outline-none focus:ring-2
-                     focus:ring-primary/40 transition-colors mb-2"
-            >
-              @for (opt of audienceOptions; track opt.value) {
-                <option [value]="opt.value">{{ opt.label }}</option>
-              }
-            </select>
-            }
-            @if (!audience || editTask()) {
-            <select
-              [(ngModel)]="assigned_to_id"
-              name="assigned_to_id"
-              aria-label="Usuario asignado"
-              class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
-                     border border-outline-variant focus:outline-none focus:ring-2
-                     focus:ring-primary/40 transition-colors"
-            >
-              <option [ngValue]="null">Tarea personal (para mí)</option>
-              @for (user of users; track user.id) {
-                <option [ngValue]="user.id">{{ user.username }} · {{ roleLabel(user.role) }}</option>
-              }
-            </select>
-            } @else {
-              <p class="text-xs text-on-surface-variant">Se creará una copia para cada destinatario, con su propio avance.</p>
-            }
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-on-surface-variant mb-1">Vincular a Sesión</label>
-            <select
-              [(ngModel)]="session_id"
-              name="session_id"
-              class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
-                     border border-outline-variant focus:outline-none focus:ring-2
-                     focus:ring-primary/40 transition-colors"
-            >
+    @if (sessions.length > 0 || sedes.length > 0) {
+      <div class="kb-row">
+        @if (sessions.length > 0) {
+          <div class="kb-field">
+            <label class="kb-label" for="kb-session">Vincular a sesión</label>
+            <select id="kb-session" class="kb-control" name="session_id" [(ngModel)]="session_id">
               <option [ngValue]="null">Sin sesión</option>
-              @for (session of sessions; track session.id) {
-                <option [ngValue]="session.id">{{ session.title || 'Sesión #' + session.id }}</option>
+              @for (s of sessions; track s.id) {
+                <option [ngValue]="s.id">{{ sessionLabel(s) }}</option>
               }
             </select>
           </div>
-        </div>
-
-        <!-- Timer + Sede row -->
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-sm font-medium text-on-surface-variant mb-1">Tiempo límite (min)</label>
-            <input
-              type="number"
-              [(ngModel)]="max_minutes"
-              name="max_minutes"
-              min="0"
-              class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
-                     border border-outline-variant focus:outline-none focus:ring-2
-                     focus:ring-primary/40 transition-colors"
-              placeholder="0 = sin límite"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-on-surface-variant mb-1">Sede</label>
-            <select
-              [(ngModel)]="sede_id"
-              name="sede_id"
-              class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
-                     border border-outline-variant focus:outline-none focus:ring-2
-                     focus:ring-primary/40 transition-colors"
-            >
+        }
+        @if (sedes.length > 0) {
+          <div class="kb-field">
+            <label class="kb-label" for="kb-sede">Sede</label>
+            <select id="kb-sede" class="kb-control" name="sede_id" [(ngModel)]="sede_id">
               <option [ngValue]="null">Todas</option>
               @for (sede of sedes; track sede.id) {
-                <option [ngValue]="sede.id">{{ sede.nombre }}</option>
+                <option [ngValue]="sede.id">{{ sede.name }}</option>
               }
             </select>
           </div>
-        </div>
+        }
+      </div>
+    }
+  </form>
 
-        <!-- Actions -->
-        <div class="flex justify-end gap-3 pt-2">
-          <button
-            type="button"
-            (click)="onClose()"
-            class="px-5 py-2.5 rounded-2xl text-on-surface-variant font-medium
-                   hover:bg-surface-container-high transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            [disabled]="!title.trim() || isSaving"
-            class="px-6 py-2.5 rounded-2xl bg-primary text-on-primary font-semibold
-                   hover:shadow-lg hover:shadow-primary/25 active:scale-[0.97]
-                   transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            @if (isSaving) {
-              <span class="inline-flex items-center gap-2">
-                <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                </svg>
-                Guardando...
-              </span>
-            } @else {
-              {{ editTask() ? 'Guardar Cambios' : 'Crear Tarea' }}
-            }
-          </button>
-        </div>
-      </form>
-    </div>
+  <div modal-footer>
+    <app-button variant="ghost" label="Cancelar" (clicked)="onClose()"></app-button>
+    <button type="submit" form="kanban-form" class="kb-submit" [disabled]="isSaving">
+      {{ isSaving ? 'Guardando…' : (isEdit ? 'Guardar cambios' : 'Crear tarea') }}
+    </button>
   </div>
-}
+</app-modal>

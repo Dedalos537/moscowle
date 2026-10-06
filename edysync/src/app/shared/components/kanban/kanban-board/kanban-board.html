@@ -1,146 +1,110 @@
-<section class="kanban-board">
-  <!-- Header -->
-  <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-    <h2 class="text-2xl font-bold text-on-surface font-headline">
-      Tablero de Tareas
-    </h2>
-
-    <div class="flex flex-wrap items-center gap-3">
-      <!-- Filtros de usuario (solo admin/supervisor) -->
-      @if (isAdminView) {
-        <div class="inline-flex rounded-xl bg-surface-container-high p-1" role="group" aria-label="Alcance del tablero">
-          <button type="button" class="px-3 min-h-9 rounded-lg text-xs font-bold transition-colors"
-                  [class.bg-primary]="filters.scope === 'all'" [class.text-on-primary]="filters.scope === 'all'"
-                  [class.text-on-surface-variant]="filters.scope !== 'all'"
-                  [attr.aria-pressed]="filters.scope === 'all'" (click)="setScope('all')">Todos</button>
-          <button type="button" class="px-3 min-h-9 rounded-lg text-xs font-bold transition-colors"
-                  [class.bg-primary]="filters.scope === 'mine'" [class.text-on-primary]="filters.scope === 'mine'"
-                  [class.text-on-surface-variant]="filters.scope !== 'mine'"
-                  [attr.aria-pressed]="filters.scope === 'mine'" (click)="setScope('mine')">Mis tareas</button>
-        </div>
-        @if (filters.scope === 'all') {
-          <select aria-label="Tipo de usuario" class="px-3 py-2 text-sm rounded-xl bg-surface-container text-on-surface
-               border border-outline-variant focus:outline-none focus:ring-2
-               focus:ring-primary/40 transition-colors"
-                  [value]="filters.role" (change)="onFilterChange('role', $any($event.target).value)">
-            @for (r of roleOptions; track r.value) { <option [value]="r.value">{{ r.label }}</option> }
-          </select>
-          <select aria-label="Usuario" class="px-3 py-2 text-sm rounded-xl bg-surface-container text-on-surface
-               border border-outline-variant focus:outline-none focus:ring-2
-               focus:ring-primary/40 transition-colors"
-                  [value]="filters.assigned_to" (change)="onFilterChange('assigned_to', $any($event.target).value)">
-            <option value="">Todos los usuarios</option>
-            <option value="unassigned">Sin asignar</option>
-            @for (u of filteredAssignees; track u.id) { <option [value]="u.id">{{ u.username }}</option> }
-          </select>
-        }
-      }
-
-      <select aria-label="Tipo de terapia" class="px-3 py-2 text-sm rounded-xl bg-surface-container text-on-surface
-               border border-outline-variant focus:outline-none focus:ring-2
-               focus:ring-primary/40 transition-colors"
-              [value]="filters.therapy_type" (change)="onFilterChange('therapy_type', $any($event.target).value)">
-        <option value="">Todos los tipos</option>
-        <option value="terapia_lenguaje">Terapia de Lenguaje</option>
-        <option value="terapia_ocupacional">Terapia Ocupacional</option>
-        <option value="psicologia">Psicología</option>
-        <option value="neuropsicologia">Neuropsicología</option>
-        <option value="fisioterapia">Fisioterapia</option>
-      </select>
-
-      <select aria-label="Prioridad" class="px-3 py-2 text-sm rounded-xl bg-surface-container text-on-surface
-               border border-outline-variant focus:outline-none focus:ring-2
-               focus:ring-primary/40 transition-colors"
-              [value]="filters.priority" (change)="onFilterChange('priority', $any($event.target).value)">
-        <option value="">Todas las prioridades</option>
-        <option value="urgent">Urgente</option>
-        <option value="medium">Media</option>
-        <option value="low">Baja</option>
-      </select>
-
-      @if (viewMode() !== 'patient') {
-        <button
-          class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl
-                 bg-primary text-on-primary font-semibold text-sm
-                 hover:shadow-lg hover:shadow-primary/25
-                 active:scale-[0.97] transition-all duration-200"
-          (click)="openCreateModal()"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          Nueva Tarea
-        </button>
+<section class="kanban-board" aria-labelledby="kb-heading">
+  <header class="kb-header">
+    <div>
+      <h2 id="kb-heading" class="kb-title">Tablero de tareas</h2>
+      @if (loaded) {
+        <p class="kb-summary" aria-live="polite">
+          {{ totalTasks }} {{ totalTasks === 1 ? 'tarea' : 'tareas' }}
+          @if (expiredCount > 0) { · <span class="kb-summary__alert">{{ expiredCount }} {{ expiredCount === 1 ? 'vencida' : 'vencidas' }}</span> }
+          @if (isAdminView && unassignedCount > 0) { · {{ unassignedCount }} sin asignar }
+        </p>
       }
     </div>
+
+    @if (canWrite) {
+      <button type="button" class="kb-new" (click)="openCreateModal()">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Nueva tarea
+      </button>
+    }
   </header>
 
-  <!-- Stats row -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-    @for (col of columns; track col.id) {
-      <div
-        class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-surface-container
-               border border-outline-variant/50"
-      >
-        <span
-          class="w-3 h-3 rounded-full shrink-0"
-          [style.background]="col.color"
-        ></span>
-        <div>
-          <p class="text-xs font-medium text-on-surface-variant uppercase tracking-wide">
-            {{ col.title }}
-          </p>
-          <p class="text-lg font-bold text-on-surface tabular-nums">
-            {{ col.tasks.length }}
-          </p>
-        </div>
+  <div class="kb-filters" role="group" aria-label="Filtros del tablero">
+    @if (isAdminView) {
+      <div class="kb-scope" role="group" aria-label="Alcance del tablero">
+        <button type="button" class="kb-scope__btn" [class.is-active]="filters.scope === 'all'"
+                [attr.aria-pressed]="filters.scope === 'all'" (click)="setScope('all')">Todos</button>
+        <button type="button" class="kb-scope__btn" [class.is-active]="filters.scope === 'mine'"
+                [attr.aria-pressed]="filters.scope === 'mine'" (click)="setScope('mine')">Mis tareas</button>
       </div>
+      @if (filters.scope === 'all') {
+        <select class="kb-filter" aria-label="Tipo de usuario" [value]="filters.role"
+                (change)="onFilterChange('role', $any($event.target).value)">
+          @for (r of roleOptions; track r.value) { <option [value]="r.value">{{ r.label }}</option> }
+        </select>
+        <select class="kb-filter" aria-label="Usuario" [value]="filters.assigned_to"
+                (change)="onFilterChange('assigned_to', $any($event.target).value)">
+          <option value="">Todos los usuarios</option>
+          <option value="unassigned">Sin asignar</option>
+          @for (u of filteredAssignees; track u.id) { <option [value]="u.id">{{ u.username }}</option> }
+        </select>
+      }
+    }
+
+    <select class="kb-filter" aria-label="Tipo de terapia" [value]="filters.therapy_type"
+            (change)="onFilterChange('therapy_type', $any($event.target).value)">
+      <option value="">Todas las terapias</option>
+      <option value="terapia_lenguaje">Terapia de Lenguaje</option>
+      <option value="terapia_ocupacional">Terapia Ocupacional</option>
+      <option value="psicologia">Psicología</option>
+      <option value="neuropsicologia">Neuropsicología</option>
+      <option value="fisioterapia">Fisioterapia</option>
+    </select>
+
+    <select class="kb-filter" aria-label="Prioridad" [value]="filters.priority"
+            (change)="onFilterChange('priority', $any($event.target).value)">
+      <option value="">Todas las prioridades</option>
+      <option value="urgent">Alta</option>
+      <option value="medium">Media</option>
+      <option value="low">Baja</option>
+    </select>
+
+    @if (hasActiveFilters) {
+      <button type="button" class="kb-clear" (click)="clearFilters()">Quitar filtros</button>
     }
   </div>
 
-  <!-- Kanban columns -->
-  <div
-    class="kanban-columns"
-    cdkDropListGroup
-  >
+  @if (loadError) {
+    <div class="kb-error" role="alert">
+      <p>No se pudieron cargar las tareas.</p>
+      <button type="button" class="kb-clear" (click)="loadTasks()">Reintentar</button>
+    </div>
+  }
+
+  <div class="kanban-columns" cdkDropListGroup [attr.aria-busy]="isLoading && !loaded">
     @for (col of columns; track col.id) {
-      <div class="kanban-column">
-        <!-- Column header -->
+      <div class="kanban-column" [attr.data-col]="col.id">
         <div class="kanban-column__header">
-          <div class="flex items-center gap-2">
-            <span
-              class="w-2.5 h-2.5 rounded-full"
-              [style.background]="col.color"
-            ></span>
-            <h3 class="text-sm font-semibold text-on-surface uppercase tracking-wide">
-              {{ col.title }}
-            </h3>
-          </div>
-          <span
-            class="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2
-                   text-xs font-bold rounded-full"
-            [class]="col.tasks.length > 0
-              ? 'bg-surface-container-high text-on-surface'
-              : 'bg-surface-container-low text-on-surface-variant'"
-          >
-            {{ col.tasks.length }}
-          </span>
+          <h3 class="kanban-column__title">
+            <span class="kanban-column__dot" aria-hidden="true"></span>
+            {{ col.title }}
+          </h3>
+          <span class="kanban-column__count" [class.is-empty]="col.tasks.length === 0" [attr.aria-label]="col.tasks.length + ' tareas'">{{ col.tasks.length }}</span>
         </div>
 
-        <!-- Drop list -->
         <div
           cdkDropList
           [cdkDropListData]="col.tasks"
           [id]="col.id"
           [cdkDropListConnectedTo]="getConnectedLists(col.id)"
+          [cdkDropListDisabled]="!canWrite"
           (cdkDropListDropped)="onDrop($event)"
           class="kanban-column__body"
         >
+          @if (!loaded && isLoading) {
+            <div class="kb-skeleton" aria-hidden="true"></div>
+            <div class="kb-skeleton kb-skeleton--short" aria-hidden="true"></div>
+          }
           @for (task of col.tasks; track task.id) {
             <app-kanban-task-card
               cdkDrag
+              [cdkDragDisabled]="!canWrite"
+              (cdkDragStarted)="onDragStarted()"
               [task]="task"
               [viewMode]="viewMode()"
+              [viewer]="viewer"
               (taskClicked)="openTaskDetail($event)"
               (taskMoved)="onTaskMoved()"
               (taskDeleted)="onTaskDeleted()"
@@ -148,13 +112,9 @@
             ></app-kanban-task-card>
           }
 
-          @if (col.tasks.length === 0) {
+          @if (loaded && col.tasks.length === 0) {
             <div class="kanban-column__empty">
-              <svg class="w-8 h-8 text-outline-variant/50 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-              </svg>
-              <p class="text-sm text-on-surface-variant/60">No hay tareas</p>
+              <p>{{ hasActiveFilters ? 'Ninguna tarea coincide con los filtros' : 'Sin tareas aquí' }}</p>
             </div>
           }
         </div>
@@ -163,12 +123,25 @@
   </div>
 </section>
 
-<!-- Create modal -->
+@if (showDetailModal && selectedTaskDetail) {
+  <app-kanban-detail-modal
+    [task]="selectedTaskDetail"
+    [viewMode]="viewMode()"
+    [viewer]="viewer"
+    (close)="closeTaskDetail()"
+    (edit)="openEdit($event)"
+    (changed)="loadTasks()"
+  ></app-kanban-detail-modal>
+}
+
 @if (showCreateModal) {
   <app-kanban-create-modal
     [isOpen]="showCreateModal"
     [viewMode]="viewMode()"
+    [editTask]="editingTask"
+    [canReassign]="!editingTask || canReassign(editingTask)"
     (close)="closeCreateModal()"
     (created)="onTaskCreated()"
+    (updated)="onTaskCreated()"
   ></app-kanban-create-modal>
 }

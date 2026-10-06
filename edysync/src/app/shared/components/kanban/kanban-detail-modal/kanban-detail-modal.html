@@ -1,0 +1,78 @@
+<app-modal [isOpen]="true" [title]="task().title" (close)="close.emit()">
+  <div class="kd">
+    <div class="kd__badges">
+      <span class="badge" [class]="priority.badge">Prioridad {{ priority.label.toLowerCase() }}</span>
+      <span class="badge badge--neutral">{{ columnLabel() }}</span>
+      @if (task().is_expired && task().column !== 'done') {
+        <span class="badge badge--error">Vencida</span>
+      }
+    </div>
+
+    @if (task().description) {
+      <p class="kd__description">{{ task().description }}</p>
+    } @else {
+      <p class="kd__empty">Sin descripción.</p>
+    }
+
+    <dl class="kd__facts">
+      <div><dt>Asignada a</dt><dd>{{ task().assigned_to_name || 'Sin asignar' }}</dd></div>
+      <div><dt>Creada por</dt><dd>{{ task().created_by_name || '—' }}</dd></div>
+      @if (therapy) { <div><dt>Tipo de terapia</dt><dd>{{ therapy }}</dd></div> }
+      @if (task().sede_name) { <div><dt>Sede</dt><dd>{{ task().sede_name }}</dd></div> }
+      @if (task().session_id) { <div><dt>Sesión vinculada</dt><dd>#{{ task().session_id }}</dd></div> }
+      <div><dt>Tiempo límite</dt><dd>{{ task().max_minutes > 0 ? task().max_minutes + ' min' : 'Sin límite' }}</dd></div>
+      @if (task().timer_start) { <div><dt>Iniciada</dt><dd>{{ when(task().timer_start) }}</dd></div> }
+      <div><dt>Creada</dt><dd>{{ when(task().created_at) }}</dd></div>
+      <div><dt>Actualizada</dt><dd>{{ when(task().updated_at) }}</dd></div>
+    </dl>
+
+    @if (canWrite) {
+      <div class="kd__section">
+        <label class="kd__label" for="kd-column">Mover a</label>
+        <select id="kd-column" class="kd__select" [value]="task().column" (change)="onColumnChange($any($event.target).value)">
+          @for (c of columns; track c.value) {
+            <option [value]="c.value">{{ c.label }}</option>
+          }
+        </select>
+      </div>
+    }
+
+    <div class="kd__section">
+      <div class="kd__section-head">
+        <h4 class="kd__label">Adjuntos</h4>
+        @if (canWrite) {
+          <label class="kd__upload" [class.kd__upload--busy]="uploading">
+            <input type="file" class="sr-only" (change)="onFileSelected($event)" [disabled]="uploading" />
+            {{ uploading ? 'Subiendo…' : 'Adjuntar archivo' }}
+          </label>
+        }
+      </div>
+      @if (loadingAttachments) {
+        <p class="kd__empty">Cargando adjuntos…</p>
+      } @else if (attachments.length === 0) {
+        <p class="kd__empty">Esta tarea no tiene adjuntos.</p>
+      } @else {
+        <ul class="kd__files">
+          @for (a of attachments; track a.id) {
+            <li>
+              <button type="button" class="kd__file" (click)="download(a)" [attr.aria-label]="'Descargar ' + a.filename">
+                <span class="kd__file-name">{{ a.filename }}</span>
+                <span class="kd__file-size">{{ formatBytes(a.size) }}</span>
+              </button>
+              @if (canWrite) {
+                <button type="button" class="kd__file-remove" (click)="removeAttachment(a)" [attr.aria-label]="'Quitar ' + a.filename">Quitar</button>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </div>
+
+  <div modal-footer>
+    <app-button variant="ghost" label="Cerrar" (clicked)="close.emit()"></app-button>
+    @if (canWrite) {
+      <app-button variant="primary" label="Editar" [icon]="['fas', 'pen']" (clicked)="edit.emit(task())"></app-button>
+    }
+  </div>
+</app-modal>
