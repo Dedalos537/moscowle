@@ -6,13 +6,40 @@
     </h2>
 
     <div class="flex flex-wrap items-center gap-3">
-      <!-- Filters -->
-      <select
-        class="px-3 py-2 text-sm rounded-xl bg-surface-container text-on-surface
+      <!-- Filtros de usuario (solo admin/supervisor) -->
+      @if (isAdminView) {
+        <div class="inline-flex rounded-xl bg-surface-container-high p-1" role="group" aria-label="Alcance del tablero">
+          <button type="button" class="px-3 min-h-9 rounded-lg text-xs font-bold transition-colors"
+                  [class.bg-primary]="filters.scope === 'all'" [class.text-on-primary]="filters.scope === 'all'"
+                  [class.text-on-surface-variant]="filters.scope !== 'all'"
+                  [attr.aria-pressed]="filters.scope === 'all'" (click)="setScope('all')">Todos</button>
+          <button type="button" class="px-3 min-h-9 rounded-lg text-xs font-bold transition-colors"
+                  [class.bg-primary]="filters.scope === 'mine'" [class.text-on-primary]="filters.scope === 'mine'"
+                  [class.text-on-surface-variant]="filters.scope !== 'mine'"
+                  [attr.aria-pressed]="filters.scope === 'mine'" (click)="setScope('mine')">Mis tareas</button>
+        </div>
+        @if (filters.scope === 'all') {
+          <select aria-label="Tipo de usuario" class="px-3 py-2 text-sm rounded-xl bg-surface-container text-on-surface
                border border-outline-variant focus:outline-none focus:ring-2
                focus:ring-primary/40 transition-colors"
-        (change)="loadTasks()"
-      >
+                  [value]="filters.role" (change)="onFilterChange('role', $any($event.target).value)">
+            @for (r of roleOptions; track r.value) { <option [value]="r.value">{{ r.label }}</option> }
+          </select>
+          <select aria-label="Usuario" class="px-3 py-2 text-sm rounded-xl bg-surface-container text-on-surface
+               border border-outline-variant focus:outline-none focus:ring-2
+               focus:ring-primary/40 transition-colors"
+                  [value]="filters.assigned_to" (change)="onFilterChange('assigned_to', $any($event.target).value)">
+            <option value="">Todos los usuarios</option>
+            <option value="unassigned">Sin asignar</option>
+            @for (u of filteredAssignees; track u.id) { <option [value]="u.id">{{ u.username }}</option> }
+          </select>
+        }
+      }
+
+      <select aria-label="Tipo de terapia" class="px-3 py-2 text-sm rounded-xl bg-surface-container text-on-surface
+               border border-outline-variant focus:outline-none focus:ring-2
+               focus:ring-primary/40 transition-colors"
+              [value]="filters.therapy_type" (change)="onFilterChange('therapy_type', $any($event.target).value)">
         <option value="">Todos los tipos</option>
         <option value="terapia_lenguaje">Terapia de Lenguaje</option>
         <option value="terapia_ocupacional">Terapia Ocupacional</option>
@@ -21,15 +48,12 @@
         <option value="fisioterapia">Fisioterapia</option>
       </select>
 
-      <select
-        class="px-3 py-2 text-sm rounded-xl bg-surface-container text-on-surface
+      <select aria-label="Prioridad" class="px-3 py-2 text-sm rounded-xl bg-surface-container text-on-surface
                border border-outline-variant focus:outline-none focus:ring-2
                focus:ring-primary/40 transition-colors"
-        (change)="loadTasks()"
-      >
+              [value]="filters.priority" (change)="onFilterChange('priority', $any($event.target).value)">
         <option value="">Todas las prioridades</option>
         <option value="urgent">Urgente</option>
-        <option value="high">Alta</option>
         <option value="medium">Media</option>
         <option value="low">Baja</option>
       </select>
@@ -143,6 +167,7 @@
 @if (showCreateModal) {
   <app-kanban-create-modal
     [isOpen]="showCreateModal"
+    [viewMode]="viewMode()"
     (close)="closeCreateModal()"
     (created)="onTaskCreated()"
   ></app-kanban-create-modal>

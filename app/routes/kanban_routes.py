@@ -9,6 +9,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from app.extensions import db
 from app.models import KanbanAttachment, KanbanTask, User
 from app.services.notification_service import NotificationService
+from app.services.patient_service import PatientService
 
 kanban_bp = Blueprint('kanban', __name__, url_prefix='/api/kanban')
 
@@ -111,6 +112,46 @@ def _require_staff():
     return user, None
 
 
+ADMIN_ROLES = ('admin', 'supervisor')
+THERAPIST_ROLES = ('terapista', 'terapeuta')
+PATIENT_ROLE = 'jugador'
+
+
+def _is_admin(user):
+    return user.role in ADMIN_ROLES
+
+
+def _current_user():
+    identity = get_jwt_identity()
+    user = db.session.get(User, int(identity)) if identity else None
+    if not user or not user.is_active:
+        return None, (jsonify({'success': False, 'message': 'Usuario no encontrado'}), 401)
+    return user, None
+
+
+def _can_access(user, task):
+    """Admin ve todo; el resto solo lo asignado a él o creado por él."""
+    return _is_admin(user) or user.id in (task.assigned_to_id, task.created_by_id)
+
+
+def _can_manage(user, task):
+    """Borrar o reasignar: admin o quien creó la tarea."""
+    return _is_admin(user) or task.created_by_id == user.id
+
+
+def _my_patient_ids(user):
+    return {p.id for p in PatientService().get_therapist_patients(user.id)}
+
+
+def _assignable_users(user):
+    """Usuarios a los que `user` puede asignar tareas: admin a cualquiera, terapeuta solo a sus pacientes."""
+    if _is_admin(user):
+        return User.query.filter(User.is_active == True).order_by(User.username.asc()).all()  # noqa: E712
+    if user.role in THERAPIST_ROLES:
+        return sorted(PatientService().get_therapist_patients(user.id), key=lambda u: (u.username or '').lower())
+    return []
+
+
 def _get_task_or_404(task_id):
     task = db.session.get(KanbanTask, task_id)
     if not task:
@@ -155,12 +196,22 @@ def _notify_kanban_task(task, event_type, title, message, priority='normal'):
         logger.exception('Error notifying kanban task %s', task.id)
 
 
+def _visible_query(user):
+    q = KanbanTask.query.filter_by(is_active=True)
+    if not _is_admin(user):
+        q = q.filter(db.or_(KanbanTask.assigned_to_id == user.id, KanbanTask.created_by_id == user.id))
+    return q
+
+
 @kanban_bp.route('/tasks', methods=['GET'])
 @jwt_required()
 def list_tasks():
+    user, err = _current_user()
+    if err:
+        return err
     try:
         filters = {}
-        q = KanbanTask.query.filter_by(is_active=True)
+        q = _visible_query(user)
         therapy_type = request.args.get('therapy_type')
         if therapy_type:
             q = q.filter_by(therapy_type=therapy_type)
@@ -172,14 +223,40 @@ def list_tasks():
                 filters['priority'] = PRIORITY_FILTER_MAP.get(prio_raw)
             if filters['priority']:
                 q = q.filter_by(priority=filters['priority'])
-        assigned_to = request.args.get('assigned_to')
-        if assigned_to and str(assigned_to).isdigit():
-            q = q.filter_by(assigned_to_id=int(assigned_to))
+        # Filtros por usuario/tipo de usuario: solo tienen sentido para admin; el resto ya ve únicamente lo suyo.
+        if _is_admin(user):
+            assigned_to = request.args.get('assigned_to')
+            role = request.args.get('role')
+            if request.args.get('mine') in ('1', 'true'):
+                q = q.filter(KanbanTask.assigned_to_id == user.id)
+            elif assigned_to == 'unassigned':
+                q = q.filter(KanbanTask.assigned_to_id.is_(None))
+            elif assigned_to and str(assigned_to).isdigit():
+                q = q.filter(KanbanTask.assigned_to_id == int(assigned_to))
+            elif role:
+                roles = THERAPIST_ROLES if role in THERAPIST_ROLES else (role,)
+                q = q.join(User, User.id == KanbanTask.assigned_to_id).filter(User.role.in_(roles))
         tasks = q.order_by(KanbanTask.column.asc(), KanbanTask.position.asc()).all()
         return jsonify([_task_dict(t) for t in tasks])
     except Exception as e:
         logger.error(f'Error listing kanban tasks: {e}', exc_info=True)
         return jsonify({'success': False, 'message': 'Error al cargar tareas', 'error': str(e)}), 500
+
+
+@kanban_bp.route('/assignees', methods=['GET'])
+@jwt_required()
+def list_assignees():
+    """Destinatarios válidos para el usuario actual (admin: todos; terapeuta: sus pacientes)."""
+    user, err = _require_staff()
+    if err:
+        return err
+    users = _assignable_users(user)
+    return jsonify(
+        {
+            'can_broadcast': True,
+            'users': [{'id': u.id, 'username': u.username, 'role': u.role} for u in users],
+        }
+    )
 
 
 @kanban_bp.route('/tasks', methods=['POST'])
@@ -224,37 +301,72 @@ def create_task():
             assigned_to_id = int(assigned_to_id) if assigned_to_id not in (None, '') else None
         except (TypeError, ValueError):
             assigned_to_id = None
+        # Tarea general (audience) = una copia por destinatario, cada una con su propio estado en su tablero.
+        audience = (data.get('audience') or '').strip() or None
+        allowed = {u.id: u for u in _assignable_users(user)}
+        if audience:
+            if audience == 'all':
+                recipients = (
+                    [u for u in allowed.values() if u.id != user.id] if _is_admin(user) else list(allowed.values())
+                )
+            elif audience in ('my_patients', PATIENT_ROLE):
+                recipients = [u for u in allowed.values() if u.role == PATIENT_ROLE]
+            else:
+                recipients = [
+                    u
+                    for u in allowed.values()
+                    if u.role == audience or (audience == 'terapista' and u.role in THERAPIST_ROLES)
+                ]
+            if not _is_admin(user) and audience not in ('my_patients', PATIENT_ROLE):
+                return jsonify({'success': False, 'message': 'Solo puedes asignar tareas a tus pacientes'}), 403
+            if not recipients:
+                return jsonify({'success': False, 'message': 'No hay destinatarios para esa audiencia'}), 400
+        elif assigned_to_id is None:
+            assigned_to_id = user.id  # tarea personal
+            recipients = []
+        else:
+            if assigned_to_id != user.id and assigned_to_id not in allowed:
+                return jsonify({'success': False, 'message': 'No puedes asignar tareas a ese usuario'}), 403
+            recipients = []
         session_id = data.get('session_id')
         try:
             session_id = int(session_id) if session_id not in (None, '') else None
         except (TypeError, ValueError):
             session_id = None
-        task = KanbanTask(
-            title=title,
-            description=data.get('description') or None,
-            therapy_type=data.get('therapy_type') or None,
-            session_id=session_id,
-            max_minutes=max_minutes,
-            column=column,
-            position=position,
-            priority=priority,
-            assigned_to_id=assigned_to_id,
-            sede_id=sede_id,
-            created_by_id=user.id,
-            timer_start=None,
-            is_expired=False,
-            created_at=_now(),
-            updated_at=_now(),
-        )
-        db.session.add(task)
-        db.session.commit()
-        if task.assigned_to_id and task.assigned_to_id != user.id:
-            _notify_kanban_task(
-                task,
-                'task_created',
-                'Nueva tarea asignada',
-                f'Te asignaron una nueva tarea: {task.title}',
+        targets = [r.id for r in recipients] if audience else [assigned_to_id]
+        created = []
+        for target_id in targets:
+            task = KanbanTask(
+                title=title,
+                description=data.get('description') or None,
+                therapy_type=data.get('therapy_type') or None,
+                session_id=session_id,
+                max_minutes=max_minutes,
+                column=column,
+                position=position,
+                priority=priority,
+                assigned_to_id=target_id,
+                sede_id=sede_id,
+                created_by_id=user.id,
+                timer_start=None,
+                is_expired=False,
+                created_at=_now(),
+                updated_at=_now(),
             )
+            db.session.add(task)
+            created.append(task)
+        db.session.commit()
+        for task in created:
+            if task.assigned_to_id and task.assigned_to_id != user.id:
+                _notify_kanban_task(
+                    task,
+                    'task_created',
+                    'Nueva tarea asignada',
+                    f'Te asignaron una nueva tarea: {task.title}',
+                )
+        if audience:
+            return jsonify({'created': len(created), 'tasks': [_task_dict(t) for t in created]}), 201
+        task = created[0]
         return jsonify(_task_dict(task)), 201
     except Exception as e:
         db.session.rollback()
@@ -271,8 +383,20 @@ def update_task(task_id):
     task, err = _get_task_or_404(task_id)
     if err:
         return err
+    if not _can_access(user, task):
+        return jsonify({'success': False, 'message': 'No tienes acceso a esta tarea'}), 403
     try:
         data = request.get_json(silent=True) or {}
+        if 'assigned_to_id' in data:
+            if not _can_manage(user, task):
+                return jsonify({'success': False, 'message': 'Solo quien creó la tarea puede reasignarla'}), 403
+            new_id = data['assigned_to_id']
+            if (
+                str(new_id).isdigit()
+                and int(new_id) != user.id
+                and int(new_id) not in {u.id for u in _assignable_users(user)}
+            ):
+                return jsonify({'success': False, 'message': 'No puedes asignar tareas a ese usuario'}), 403
         old_column = task.column
         editable = {
             'title': lambda v: (v or '').strip() or None,
@@ -330,6 +454,8 @@ def delete_task(task_id):
     task, err = _get_task_or_404(task_id)
     if err:
         return err
+    if not _can_manage(user, task):
+        return jsonify({'success': False, 'message': 'Solo quien creó la tarea o un admin puede eliminarla'}), 403
     try:
         recipient = _kanban_recipient(task)
         title = task.title
@@ -358,6 +484,8 @@ def extend_timer(task_id):
     task, err = _get_task_or_404(task_id)
     if err:
         return err
+    if not _can_access(user, task):
+        return jsonify({'success': False, 'message': 'No tienes acceso a esta tarea'}), 403
     try:
         data = request.get_json(silent=True) or {}
         minutes = int(data.get('minutes', 0))
@@ -379,9 +507,14 @@ def extend_timer(task_id):
 @kanban_bp.route('/tasks/<int:task_id>/attachments', methods=['GET'])
 @jwt_required()
 def list_attachments(task_id):
+    user, err = _current_user()
+    if err:
+        return err
     task, err = _get_task_or_404(task_id)
     if err:
         return err
+    if not _can_access(user, task):
+        return jsonify({'success': False, 'message': 'No tienes acceso a esta tarea'}), 403
     return jsonify([_attachment_dict(a) for a in task.attachments])
 
 
@@ -394,6 +527,8 @@ def upload_attachment(task_id):
     task, err = _get_task_or_404(task_id)
     if err:
         return err
+    if not _can_access(user, task):
+        return jsonify({'success': False, 'message': 'No tienes acceso a esta tarea'}), 403
     try:
         data = request.get_json(silent=True) or {}
         filename = (data.get('filename') or '').strip()
@@ -442,6 +577,8 @@ def delete_attachment(task_id):
     task, err = _get_task_or_404(task_id)
     if err:
         return err
+    if not _can_access(user, task):
+        return jsonify({'success': False, 'message': 'No tienes acceso a esta tarea'}), 403
     try:
         attachment_id = request.args.get('attachmentId')
         if not attachment_id:
@@ -461,17 +598,25 @@ def delete_attachment(task_id):
 @kanban_bp.route('/attachments/<int:att_id>', methods=['GET'])
 @jwt_required()
 def get_attachment(att_id):
+    user, err = _current_user()
+    if err:
+        return err
     att = db.session.get(KanbanAttachment, att_id)
     if not att:
         return jsonify({'success': False, 'message': 'Adjunto no encontrado'}), 404
+    if not att.task or not _can_access(user, att.task):
+        return jsonify({'success': False, 'message': 'No tienes acceso a este adjunto'}), 403
     return jsonify(_attachment_dict(att, include_data=True))
 
 
 @kanban_bp.route('/stats', methods=['GET'])
 @jwt_required()
 def get_stats():
+    user, err = _current_user()
+    if err:
+        return err
     try:
-        tasks = KanbanTask.query.filter_by(is_active=True).all()
+        tasks = _visible_query(user).all()
         by_column = {'todo': 0, 'in-progress': 0, 'review': 0, 'done': 0}
         expired = 0
         unassigned = 0

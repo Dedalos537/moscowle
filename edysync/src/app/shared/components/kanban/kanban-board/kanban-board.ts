@@ -11,7 +11,7 @@ import { CommonModule } from '@angular/common';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { KanbanTaskCardComponent } from '../kanban-task-card/kanban-task-card';
 import { KanbanCreateModalComponent } from '../kanban-create-modal/kanban-create-modal';
-import { KanbanService, KanbanTask } from '../../../../core/services/kanban.service';
+import { KanbanService, KanbanTask, KanbanAssignee, KanbanFilters } from '../../../../core/services/kanban.service';
 
 export interface KanbanColumn {
   id: string;
@@ -43,6 +43,18 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
     { id: 'done', title: 'Hecho', color: '#10b981', tasks: [] },
   ];
 
+  // Filtros. Los de usuario solo se muestran a admin/supervisor; para el resto el backend ya devuelve solo lo suyo.
+  filters = { therapy_type: '', priority: '', role: '', assigned_to: '', scope: 'all' as 'all' | 'mine' };
+  assignees: KanbanAssignee[] = [];
+
+  readonly roleOptions = [
+    { value: '', label: 'Todos los tipos de usuario' },
+    { value: 'terapista', label: 'Terapeutas' },
+    { value: 'jugador', label: 'Pacientes' },
+    { value: 'admin', label: 'Administradores' },
+    { value: 'supervisor', label: 'Supervisores' },
+  ];
+
   showCreateModal = false;
   selectedTaskDetail: KanbanTask | null = null;
   showDetailModal = false;
@@ -53,8 +65,54 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   private pollingInterval: ReturnType<typeof setInterval> | null = null;
 
   ngOnInit() {
+    if (this.viewMode() === 'admin') this.loadAssignees();
     this.loadTasks();
     this.startPolling();
+  }
+
+  get isAdminView(): boolean {
+    return this.viewMode() === 'admin';
+  }
+
+  /** Usuarios del selector, acotados al tipo de usuario elegido. */
+  get filteredAssignees(): KanbanAssignee[] {
+    const r = this.filters.role;
+    if (!r) return this.assignees;
+    return this.assignees.filter((u) => u.role === r || (r === 'terapista' && u.role === 'terapeuta'));
+  }
+
+  private loadAssignees() {
+    this.kanbanService.getAssignees().subscribe({
+      next: (res) => { this.assignees = res.users || []; this.cdr.markForCheck(); },
+      error: () => { this.assignees = []; },
+    });
+  }
+
+  onFilterChange(key: 'therapy_type' | 'priority' | 'role' | 'assigned_to', value: string) {
+    this.filters[key] = value;
+    // Elegir un tipo de usuario descarta un usuario que ya no pertenezca a él.
+    if (key === 'role' && this.filters.assigned_to && !this.filteredAssignees.some((u) => String(u.id) === this.filters.assigned_to)) {
+      this.filters.assigned_to = '';
+    }
+    this.loadTasks();
+  }
+
+  setScope(scope: 'all' | 'mine') {
+    this.filters.scope = scope;
+    this.loadTasks();
+  }
+
+  private buildFilters(): KanbanFilters {
+    const f = this.filters;
+    const out: KanbanFilters = {};
+    if (f.therapy_type) out.therapy_type = f.therapy_type;
+    if (f.priority) out.priority = f.priority;
+    if (this.isAdminView) {
+      if (f.scope === 'mine') out.mine = true;
+      else if (f.assigned_to) out.assigned_to = f.assigned_to === 'unassigned' ? 'unassigned' : Number(f.assigned_to);
+      else if (f.role) out.role = f.role;
+    }
+    return out;
   }
 
   ngOnDestroy() {
@@ -63,7 +121,7 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
 
   loadTasks() {
     this.isLoading = true;
-    this.kanbanService.getTasks().subscribe({
+    this.kanbanService.getTasks(this.buildFilters()).subscribe({
       next: (tasks) => {
         tasks.sort((a, b) => a.position - b.position);
         this.columns.forEach((col) => {

@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { KanbanService, KanbanTask } from '../../../../core/services/kanban.service';
+import { KanbanService, KanbanTask, KanbanAssignee } from '../../../../core/services/kanban.service';
 import { AdminService } from '../../../../core/services/admin.service';
 
 @Component({
@@ -21,6 +21,7 @@ import { AdminService } from '../../../../core/services/admin.service';
 export class KanbanCreateModalComponent implements OnInit {
   isOpen = input(false);
   editTask = input<KanbanTask | null>(null);
+  viewMode = input<'admin' | 'therapist' | 'patient'>('admin');
 
   close = output<void>();
   created = output<void>();
@@ -35,7 +36,8 @@ export class KanbanCreateModalComponent implements OnInit {
   assigned_to_id: number | null = null;
   sede_id: number | null = null;
 
-  users: any[] = [];
+  users: KanbanAssignee[] = [];
+  audience = '';
   sedes: any[] = [];
   sessions: any[] = [];
   isSaving = false;
@@ -60,9 +62,13 @@ export class KanbanCreateModalComponent implements OnInit {
   }
 
   private loadDropdowns() {
-    this.adminService.getUsers().subscribe(res => this.users = res.users || []);
-    this.adminService.getActiveSedes().subscribe(s => this.sedes = s);
-    this.adminService.getSessions().subscribe(s => this.sessions = s);
+    this.kanbanService.getAssignees().subscribe({
+      next: (res) => { this.users = res.users || []; this.cdr.markForCheck(); },
+      error: () => { this.users = []; },
+    });
+    // Sedes y sesiones son ayuda opcional: si el rol no puede leerlas, el formulario sigue funcionando.
+    this.adminService.getActiveSedes().subscribe({ next: (s) => { this.sedes = s; this.cdr.markForCheck(); }, error: () => {} });
+    this.adminService.getSessions().subscribe({ next: (s) => { this.sessions = s; this.cdr.markForCheck(); }, error: () => {} });
   }
 
   private populateForm(task: KanbanTask) {
@@ -85,6 +91,28 @@ export class KanbanCreateModalComponent implements OnInit {
     this.priority = 3;
     this.assigned_to_id = null;
     this.sede_id = null;
+    this.audience = '';
+  }
+
+  get audienceOptions(): { value: string; label: string }[] {
+    if (this.viewMode() === 'admin') {
+      return [
+        { value: '', label: 'Un usuario concreto' },
+        { value: 'terapista', label: 'Todos los terapeutas' },
+        { value: 'jugador', label: 'Todos los pacientes' },
+        { value: 'admin', label: 'Todos los administradores' },
+        { value: 'all', label: 'Todos los usuarios' },
+      ];
+    }
+    return [
+      { value: '', label: 'Un paciente concreto' },
+      { value: 'my_patients', label: 'Todos mis pacientes' },
+    ];
+  }
+
+  roleLabel(role: string): string {
+    const labels: Record<string, string> = { terapista: 'Terapeuta', terapeuta: 'Terapeuta', jugador: 'Paciente', admin: 'Admin', supervisor: 'Supervisor' };
+    return labels[role] || role;
   }
 
   onClose() {
@@ -110,6 +138,7 @@ export class KanbanCreateModalComponent implements OnInit {
       priority: this.priority,
       assigned_to_id: this.assigned_to_id,
       sede_id: this.sede_id,
+      ...(this.audience && !this.editTask() ? { audience: this.audience } : {}),
     };
 
     const obs = this.editTask()

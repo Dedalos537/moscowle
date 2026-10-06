@@ -85,19 +85,38 @@
         <!-- Assigned to + Session row -->
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-sm font-medium text-on-surface-variant mb-1">Asignar a</label>
+            <label class="block text-sm font-medium text-on-surface-variant mb-1" for="kb-audience">Asignar a</label>
+            @if (!editTask()) {
+            <select
+              id="kb-audience"
+              [(ngModel)]="audience"
+              name="audience"
+              class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
+                     border border-outline-variant focus:outline-none focus:ring-2
+                     focus:ring-primary/40 transition-colors mb-2"
+            >
+              @for (opt of audienceOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
+            }
+            @if (!audience || editTask()) {
             <select
               [(ngModel)]="assigned_to_id"
               name="assigned_to_id"
+              aria-label="Usuario asignado"
               class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
                      border border-outline-variant focus:outline-none focus:ring-2
                      focus:ring-primary/40 transition-colors"
             >
-              <option [ngValue]="null">Sin asignar</option>
+              <option [ngValue]="null">Tarea personal (para mí)</option>
               @for (user of users; track user.id) {
-                <option [ngValue]="user.id">{{ user.full_name || user.email }}</option>
+                <option [ngValue]="user.id">{{ user.username }} · {{ roleLabel(user.role) }}</option>
               }
             </select>
+            } @else {
+              <p class="text-xs text-on-surface-variant">Se creará una copia para cada destinatario, con su propio avance.</p>
+            }
           </div>
           <div>
             <label class="block text-sm font-medium text-on-surface-variant mb-1">Vincular a Sesión</label>

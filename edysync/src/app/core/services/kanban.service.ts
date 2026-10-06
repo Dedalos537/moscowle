@@ -37,6 +37,20 @@ export interface KanbanAttachment {
   created_at: string;
 }
 
+export interface KanbanFilters {
+  therapy_type?: string;
+  priority?: string;
+  assigned_to?: number | 'unassigned';
+  role?: string;
+  mine?: boolean;
+}
+
+export interface KanbanAssignee {
+  id: number;
+  username: string;
+  role: string;
+}
+
 export interface KanbanStats {
   total: number;
   by_column: Record<string, number>;
@@ -50,16 +64,24 @@ export class KanbanService {
 
   constructor(private http: HttpClient) {}
 
-  getTasks(filters?: { therapy_type?: string; priority?: number; assigned_to?: number }): Observable<KanbanTask[]> {
-    let params: any = {};
-    if (filters?.therapy_type) params.therapy_type = filters.therapy_type;
-    if (filters?.priority) params.priority = filters.priority;
-    if (filters?.assigned_to) params.assigned_to = filters.assigned_to;
+  getTasks(filters?: KanbanFilters): Observable<KanbanTask[]> {
+    const params: Record<string, string> = {};
+    if (filters?.therapy_type) params['therapy_type'] = filters.therapy_type;
+    if (filters?.priority) params['priority'] = filters.priority;
+    if (filters?.assigned_to) params['assigned_to'] = String(filters.assigned_to);
+    if (filters?.role) params['role'] = filters.role;
+    if (filters?.mine) params['mine'] = '1';
     return this.http.get<KanbanTask[]>(`${this.api}/tasks`, { params });
   }
 
-  createTask(data: Partial<KanbanTask>): Observable<KanbanTask> {
-    return this.http.post<KanbanTask>(`${this.api}/tasks`, data);
+  /** Destinatarios válidos: admin → todos los usuarios; terapeuta → solo sus pacientes. */
+  getAssignees(): Observable<{ users: KanbanAssignee[] }> {
+    return this.http.get<{ users: KanbanAssignee[] }>(`${this.api}/assignees`);
+  }
+
+  /** Con `audience` crea una copia por destinatario y responde `{ created, tasks }`. */
+  createTask(data: Partial<KanbanTask> & { audience?: string }): Observable<KanbanTask & { created?: number }> {
+    return this.http.post<KanbanTask & { created?: number }>(`${this.api}/tasks`, data);
   }
 
   updateTask(id: number, data: Partial<KanbanTask>): Observable<KanbanTask> {

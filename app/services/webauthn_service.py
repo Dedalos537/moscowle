@@ -1,7 +1,8 @@
 import os
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 
-from flask import current_app
+from flask import current_app, has_request_context, request
 from webauthn import (
     generate_authentication_options,
     generate_registration_options,
@@ -25,8 +26,35 @@ from app.models.webauthn import WebAuthnChallenge, WebAuthnCredential
 CHALLENGE_TTL_SECONDS = 300
 
 
-def rp_id():
+def _configured_rp_id():
     return current_app.config.get('WEBAUTHN_RP_ID', 'api-centrojuanpabloii.online')
+
+
+def _allowed_rp_ids():
+    """Dominios que pueden ser RP ID. Un sitio solo puede usar su propio dominio (o un padre) como rpId,
+    así que el frontend de cPanel (moscowle.centrojuanpabloii.com) necesita `centrojuanpabloii.com`."""
+    extra = current_app.config.get('WEBAUTHN_EXTRA_RP_IDS', ['centrojuanpabloii.com'])
+    if isinstance(extra, str):
+        extra = [e.strip() for e in extra.split(',') if e.strip()]
+    return [_configured_rp_id(), *extra]
+
+
+def _request_origin():
+    """Origen del navegador si su host está bajo un RP ID permitido y usa https; si no, None."""
+    origin = (request.headers.get('Origin') or '').strip().rstrip('/')
+    parsed = urlparse(origin)
+    host = parsed.hostname
+    if not host or parsed.scheme != 'https':
+        return None, None
+    for allowed in _allowed_rp_ids():
+        if host == allowed or host.endswith('.' + allowed):
+            return origin, allowed
+    return None, None
+
+
+def rp_id():
+    _, allowed = _request_origin() if has_request_context() else (None, None)
+    return allowed or _configured_rp_id()
 
 
 def rp_name():
@@ -37,7 +65,11 @@ def origins():
     value = current_app.config.get('WEBAUTHN_ORIGINS')
     if isinstance(value, str):
         value = [o.strip() for o in value.split(',') if o.strip()]
-    return value or [f'https://{rp_id()}']
+    result = list(value or [f'https://{_configured_rp_id()}'])
+    origin, _ = _request_origin() if has_request_context() else (None, None)
+    if origin and origin not in result:
+        result.append(origin)
+    return result
 
 
 def default_challenge():
