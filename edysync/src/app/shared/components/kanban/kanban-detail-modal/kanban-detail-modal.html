@@ -21,7 +21,9 @@
       @if (task().sede_name) { <div><dt>Sede</dt><dd>{{ task().sede_name }}</dd></div> }
       @if (task().session_id) { <div><dt>Sesión vinculada</dt><dd>#{{ task().session_id }}</dd></div> }
       <div><dt>Tiempo límite</dt><dd>{{ task().max_minutes > 0 ? task().max_minutes + ' min' : 'Sin límite' }}</dd></div>
-      @if (task().timer_start) { <div><dt>Iniciada</dt><dd>{{ when(task().timer_start) }}</dd></div> }
+      @if (task().max_minutes > 0) {
+        <div><dt>Tiempo usado</dt><dd>{{ usedLabel }}{{ task().timer_running ? ' · corriendo' : (task().column === 'done' ? ' · terminada' : ' · en pausa') }}</dd></div>
+      }
       <div><dt>Creada</dt><dd>{{ when(task().created_at) }}</dd></div>
       <div><dt>Actualizada</dt><dd>{{ when(task().updated_at) }}</dd></div>
     </dl>

@@ -28,12 +28,12 @@
   </button>
 
   @if (countdown) {
-    <div class="kanban-card__timer" [class.kanban-card__timer--warning]="urgency === 'warning'" [class.kanban-card__timer--expired]="urgency === 'expired'">
+    <div class="kanban-card__timer" [class.kanban-card__timer--paused]="paused" [class.kanban-card__timer--warning]="urgency === 'warning'" [class.kanban-card__timer--expired]="urgency === 'expired'">
       <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
       </svg>
       <span class="kanban-card__countdown">{{ countdown }}</span>
-      <span class="kanban-card__limit">de {{ task().max_minutes }} min</span>
+      <span class="kanban-card__limit">{{ paused ? 'en pausa · ' : '' }}de {{ task().max_minutes }} min</span>
     </div>
   }
 

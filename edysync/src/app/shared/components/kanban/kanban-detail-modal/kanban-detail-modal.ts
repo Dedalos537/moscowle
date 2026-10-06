@@ -56,6 +56,11 @@ export class KanbanDetailModalComponent implements OnInit {
     return therapyLabel(this.task().therapy_type);
   }
 
+  get usedLabel(): string {
+    const mins = Math.floor((this.task().elapsed_seconds || 0) / 60);
+    return `${mins} de ${this.task().max_minutes} min`;
+  }
+
   columnLabel(): string {
     return COLUMN_LABELS[this.task().column];
   }

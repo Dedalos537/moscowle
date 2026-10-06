@@ -106,6 +106,10 @@
     color: var(--badge-neutral-fg);
     font-size: 0.75rem;
 
+    &--paused {
+      opacity: 0.85;
+    }
+
     &--warning {
       background: var(--badge-warning-bg);
       color: var(--badge-warning-fg);

@@ -62,7 +62,8 @@
       <div class="kb-field">
         <label class="kb-label" for="kb-minutes">Tiempo límite (min)</label>
         <input id="kb-minutes" class="kb-control" type="number" inputmode="numeric" min="0" name="max_minutes"
-               [(ngModel)]="max_minutes" placeholder="0 = sin límite" />
+               [(ngModel)]="max_minutes" placeholder="0 = sin límite" aria-describedby="kb-minutes-help" />
+        <p id="kb-minutes-help" class="kb-hint">El reloj corre solo en «En progreso»: se pausa en «Revisión» y se detiene en «Hecho».</p>
       </div>
     </div>
 

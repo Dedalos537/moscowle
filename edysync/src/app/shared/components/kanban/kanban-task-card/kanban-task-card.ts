@@ -8,6 +8,7 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   computed,
+  effect,
 } from '@angular/core';
 import { KanbanService, KanbanTask } from '../../../../core/services/kanban.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
@@ -35,6 +36,8 @@ export class KanbanTaskCardComponent implements OnInit, OnDestroy {
   taskEdited = output<void>();
 
   countdown = '';
+  paused = false;
+  private fetchedAt = Date.now();
   urgency: Urgency = 'normal';
   readonly columnLabels = COLUMN_LABELS;
   readonly roleLabels = ROLE_LABELS;
@@ -49,30 +52,66 @@ export class KanbanTaskCardComponent implements OnInit, OnDestroy {
 
   otherColumns = computed<KanbanTask['column'][]>(() => this.allColumns.filter((c) => c !== this.task().column));
 
+  constructor() {
+    // Las tareas llegan reemplazadas por el sondeo: el reloj se resincroniza cada vez que cambia la tarea.
+    effect(() => {
+      this.task();
+      this.fetchedAt = Date.now();
+      this.syncTimer();
+    });
+  }
+
   ngOnInit() {
+    this.syncTimer();
+  }
+
+  ngOnDestroy() {
+    this.stopTick();
+  }
+
+  private stopTick() {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+  }
+
+  private syncTimer() {
+    this.stopTick();
     this.updateTimer();
-    if (this.task().timer_start && this.task().max_minutes > 0) {
+    if (this.task().timer_running) {
       this.timerInterval = setInterval(() => this.updateTimer(), 1000);
     }
   }
 
-  ngOnDestroy() {
-    if (this.timerInterval) clearInterval(this.timerInterval);
+  /** Marca de tiempo del servidor (UTC sin zona) → ms. */
+  private serverMs(iso: string): number {
+    return new Date(iso.endsWith('Z') ? iso : iso + 'Z').getTime();
   }
 
   private updateTimer() {
     const t = this.task();
-    if (!t.timer_start || !(t.max_minutes > 0) || t.column === 'done') {
+    this.paused = false;
+    if (!(t.max_minutes > 0) || t.column === 'done') {
       this.countdown = '';
-      this.urgency = t.is_expired && t.column !== 'done' ? 'expired' : 'normal';
+      this.urgency = 'normal';
+      this.cdr.markForCheck();
       return;
     }
-    const remaining = t.max_minutes * 60_000 - (Date.now() - new Date(t.timer_start.endsWith('Z') ? t.timer_start : t.timer_start + 'Z').getTime());
-    if (remaining <= 0) {
+    // elapsed_seconds ya incluye el tramo en curso al momento de la respuesta; se suma solo lo transcurrido desde entonces.
+    const running = t.timer_running && t.timer_start;
+    const base = t.elapsed_seconds || 0;
+    const sinceFetch = running ? Math.max(0, (Date.now() - this.fetchedAt) / 1000) : 0;
+    const remaining = (t.max_minutes * 60 - base - sinceFetch) * 1000;
+    this.paused = !t.timer_running && t.column !== 'todo';
+    if (t.column === 'todo' && base === 0) {
+      this.countdown = '';
+      this.urgency = 'normal';
+    } else if (remaining <= 0) {
       this.countdown = '00:00';
       this.urgency = 'expired';
     } else {
-      this.urgency = remaining < 5 * 60_000 ? 'warning' : 'normal';
+      this.urgency = !this.paused && remaining < 5 * 60_000 ? 'warning' : 'normal';
       this.countdown = this.formatTime(remaining);
     }
     this.cdr.markForCheck();

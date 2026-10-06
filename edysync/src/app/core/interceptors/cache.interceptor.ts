@@ -12,6 +12,8 @@ const EXCLUDED = [
   '/api/public/',
   '/api/time',
   '/api/auth/me',
+  // El tablero lo modifican otros usuarios: un caché de 5 min hacía que los cambios solo aparecieran al reiniciar sesión.
+  '/api/kanban',
   '/api/logout',
   '/api/login',
   '/api/sessions/current',

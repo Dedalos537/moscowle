@@ -14,6 +14,8 @@ class KanbanTask(db.Model, AuditMixin, SoftDeleteMixin):
     column = db.Column(db.String(20), default='todo', nullable=False, index=True)
     position = db.Column(db.Integer, default=0, nullable=False)
     timer_start = db.Column(db.DateTime, nullable=True)
+    # Segundos ya consumidos en tramos anteriores: el reloj solo corre en 'in-progress' y se congela al salir.
+    elapsed_seconds = db.Column(db.Integer, default=0, nullable=False, server_default='0')
     priority = db.Column(db.Integer, default=3, nullable=False)
     assigned_to_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
     sede_id = db.Column(db.Integer, db.ForeignKey('sede.id'), nullable=True, index=True)

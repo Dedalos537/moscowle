@@ -7,6 +7,8 @@
           {{ totalTasks }} {{ totalTasks === 1 ? 'tarea' : 'tareas' }}
           @if (expiredCount > 0) { · <span class="kb-summary__alert">{{ expiredCount }} {{ expiredCount === 1 ? 'vencida' : 'vencidas' }}</span> }
           @if (isAdminView && unassignedCount > 0) { · {{ unassignedCount }} sin asignar }
+          @if (lastUpdated) { · actualizado {{ lastUpdated.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) }} }
+          · <button type="button" class="kb-refresh" (click)="loadTasks()" [disabled]="isLoading">{{ isLoading ? 'Actualizando…' : 'Actualizar' }}</button>
         </p>
       }
     </div>

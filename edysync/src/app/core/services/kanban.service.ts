@@ -12,6 +12,9 @@ export interface KanbanTask {
   column: 'todo' | 'in-progress' | 'review' | 'done';
   position: number;
   timer_start: string | null;
+  /** Segundos consumidos (tramos congelados + tramo en curso); el reloj solo corre en 'in-progress'. */
+  elapsed_seconds: number;
+  timer_running: boolean;
   is_expired: boolean;
   priority: 1 | 2 | 3;
   assigned_to_id: number | null;

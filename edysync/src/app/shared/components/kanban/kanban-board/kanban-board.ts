@@ -64,6 +64,7 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   showDetailModal = false;
   isLoading = false;
   loaded = false;
+  lastUpdated: Date | null = null;
   loadError = false;
   dragging = false;
   viewer: KanbanViewer | null = null;
@@ -75,7 +76,12 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   private authSub: { unsubscribe(): void } | null = null;
   private pollingInterval: ReturnType<typeof setInterval> | null = null;
 
+  private onVisible = () => {
+    if (document.visibilityState === 'visible' && !this.dragging) this.loadTasks();
+  };
+
   ngOnInit() {
+    document.addEventListener('visibilitychange', this.onVisible);
     this.authSub = this.auth.currentUser$.subscribe((u) => {
       this.viewer = u ? { id: u.id, role: u.role } : null;
       this.cdr.markForCheck();
@@ -131,6 +137,7 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    document.removeEventListener('visibilitychange', this.onVisible);
     this.authSub?.unsubscribe();
     this.stopPolling();
   }
@@ -171,6 +178,7 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
         });
         this.isLoading = false;
         this.loaded = true;
+        this.lastUpdated = new Date();
         this.loadError = false;
         this.cdr.markForCheck();
       },
@@ -281,7 +289,7 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   private startPolling() {
     // Se pausa mientras se arrastra o hay un modal abierto para no pisar lo que el usuario está haciendo.
     this.pollingInterval = setInterval(() => {
-      if (!this.dragging && !this.showCreateModal && !this.showDetailModal) this.loadTasks();
+      if (document.visibilityState === 'visible' && !this.dragging && !this.showCreateModal && !this.showDetailModal) this.loadTasks();
     }, 10_000);
   }
 

@@ -2,6 +2,7 @@ import base64
 import contextlib
 import logging
 from datetime import UTC, datetime
+from types import SimpleNamespace
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -52,12 +53,43 @@ def _user_name(user_id):
     return user.username if user else None
 
 
+def _timer_running(task):
+    return bool(task.timer_start) and task.column == 'in-progress'
+
+
+def _elapsed_seconds(task, now=None):
+    """Tiempo consumido: tramos congelados + el tramo en curso (solo si la tarea está en progreso)."""
+    total = task.elapsed_seconds or 0
+    if _timer_running(task):
+        total += max(0, int(((now or _now()) - task.timer_start).total_seconds()))
+    return total
+
+
+def _freeze_timer(task):
+    """Congela el reloj al salir de 'in-progress' (revisión, hecho o de vuelta a por hacer)."""
+    if _timer_running(task):
+        task.elapsed_seconds = _elapsed_seconds(task)
+    task.timer_start = None
+
+
+def _apply_column(task, new_column):
+    """Cambia de columna manteniendo coherente el temporizador: corre solo en 'in-progress'."""
+    if new_column == task.column:
+        return
+    if task.column == 'in-progress':
+        _freeze_timer(task)
+    task.column = new_column
+    if new_column == 'in-progress':
+        task.timer_start = _now()
+    if new_column == 'done':
+        task.is_expired = False
+
+
 def _task_dict(task):
     now = _now()
     expired = False
-    if task.timer_start and task.max_minutes and task.max_minutes > 0:
-        elapsed_s = (now - task.timer_start).total_seconds()
-        expired = elapsed_s > task.max_minutes * 60
+    if task.max_minutes and task.max_minutes > 0 and task.column != 'done':
+        expired = _elapsed_seconds(task, now) > task.max_minutes * 60
     return {
         'id': task.id,
         'title': task.title,
@@ -68,6 +100,8 @@ def _task_dict(task):
         'column': task.column,
         'position': task.position,
         'timer_start': _safe_ts(task.timer_start),
+        'elapsed_seconds': _elapsed_seconds(task, now),
+        'timer_running': _timer_running(task),
         'is_expired': bool(task.is_expired) or expired,
         'priority': task.priority,
         'assigned_to_id': task.assigned_to_id,
@@ -159,11 +193,12 @@ def _get_task_or_404(task_id):
     return task, None
 
 
-def _kanban_recipient(task):
-    target_id = task.assigned_to_id or task.created_by_id
-    if not target_id:
-        return None
-    return db.session.get(User, target_id)
+def _kanban_recipients(task, actor):
+    """Quien debe enterarse de un cambio: el asignado y el creador, menos quien lo hizo.
+    Si el terapeuta mueve una tarea del admin, avisa al admin (antes solo se avisaba al asignado, o sea a sí mismo)."""
+    ids = {task.assigned_to_id, task.created_by_id} - {None, getattr(actor, 'id', None)}
+    users = [db.session.get(User, i) for i in ids]
+    return [u for u in users if u and u.is_active]
 
 
 def _kanban_link(recipient):
@@ -174,26 +209,24 @@ def _kanban_link(recipient):
     return '/app/patient/kanban'
 
 
-def _notify_kanban_task(task, event_type, title, message, priority='normal'):
-    recipient = _kanban_recipient(task)
-    if not recipient or not recipient.is_active:
-        return
-    try:
-        _notification_service.notify_user(
-            user_id=recipient.id,
-            title=title,
-            message=message,
-            notif_type='info',
-            link=_kanban_link(recipient),
-            category='system',
-            priority=priority,
-            icon='tasks',
-            event_type=event_type,
-            event_kwargs={'task_id': task.id},
-            metadata_json={'task_id': task.id, 'column': task.column},
-        )
-    except Exception:
-        logger.exception('Error notifying kanban task %s', task.id)
+def _notify_kanban_task(task, event_type, title, message, priority='normal', actor=None, recipients=None):
+    for recipient in recipients if recipients is not None else _kanban_recipients(task, actor):
+        try:
+            _notification_service.notify_user(
+                user_id=recipient.id,
+                title=title,
+                message=message,
+                notif_type='info',
+                link=_kanban_link(recipient),
+                category='system',
+                priority=priority,
+                icon='tasks',
+                event_type=event_type,
+                event_kwargs={'task_id': task.id},
+                metadata_json={'task_id': task.id, 'column': task.column},
+            )
+        except Exception:
+            logger.exception('Error notifying kanban task %s', task.id)
 
 
 def _visible_query(user):
@@ -357,13 +390,17 @@ def create_task():
             created.append(task)
         db.session.commit()
         for task in created:
+            if task.column == 'in-progress':
+                task.timer_start = _now()
             if task.assigned_to_id and task.assigned_to_id != user.id:
                 _notify_kanban_task(
                     task,
                     'task_created',
                     'Nueva tarea asignada',
-                    f'Te asignaron una nueva tarea: {task.title}',
+                    f'{user.username} te asignó una nueva tarea: {task.title}',
+                    recipients=[u for u in [db.session.get(User, task.assigned_to_id)] if u and u.is_active],
                 )
+        db.session.commit()
         if audience:
             return jsonify({'created': len(created), 'tasks': [_task_dict(t) for t in created]}), 201
         task = created[0]
@@ -418,25 +455,25 @@ def update_task(task_id):
         if 'title' in data and (data['title'] or '').strip():
             task.title = (data['title'] or '').strip()
         if 'column' in data and data['column'] in ALLOWED_COLUMNS:
-            task.column = data['column']
-        if task.column == 'in-progress' and not task.timer_start:
-            task.timer_start = _now()
-            task.is_expired = False
-        if task.column == 'done':
-            task.is_expired = False
+            _apply_column(task, data['column'])
         task.updated_at = _now()
         db.session.commit()
         if old_column != task.column and task.column in KANBAN_COLUMN_LABELS:
+            new_label = KANBAN_COLUMN_LABELS[task.column]
+            hint = {
+                'review': ' Está lista para tu revisión.',
+                'done': ' Quedó completada.',
+            }.get(task.column, '')
             _notify_kanban_task(
                 task,
                 'task_moved',
-                'Tarea de kanban actualizada',
+                f'Tarea en "{new_label}"' if task.column in ('review', 'done') else 'Tarea de kanban actualizada',
                 (
-                    f'Tarea "{task.title}" cambió de '
-                    f'"{KANBAN_COLUMN_LABELS.get(old_column, old_column)}" a '
-                    f'"{KANBAN_COLUMN_LABELS.get(task.column, task.column)}"'
+                    f'{user.username} movió "{task.title}" de '
+                    f'"{KANBAN_COLUMN_LABELS.get(old_column, old_column)}" a "{new_label}".{hint}'
                 ),
                 priority='high',
+                actor=user,
             )
         return jsonify(_task_dict(task))
     except Exception as e:
@@ -457,17 +494,18 @@ def delete_task(task_id):
     if not _can_manage(user, task):
         return jsonify({'success': False, 'message': 'Solo quien creó la tarea o un admin puede eliminarla'}), 403
     try:
-        recipient = _kanban_recipient(task)
+        recipients = _kanban_recipients(task, user)
         title = task.title
+        snapshot = SimpleNamespace(id=task.id, column=task.column)
         db.session.delete(task)
         db.session.commit()
-        if recipient and recipient.id != user.id and recipient.is_active:
-            _notify_kanban_task(
-                task,
-                'task_deleted',
-                'Tarea de kanban eliminada',
-                f'Tarea eliminada: {title}',
-            )
+        _notify_kanban_task(
+            snapshot,
+            'task_deleted',
+            'Tarea de kanban eliminada',
+            f'{user.username} eliminó la tarea: {title}',
+            recipients=recipients,
+        )
         return jsonify({'success': True, 'deleted_id': task_id})
     except Exception as e:
         db.session.rollback()
@@ -491,7 +529,7 @@ def extend_timer(task_id):
         minutes = int(data.get('minutes', 0))
         if minutes <= 0:
             return jsonify({'success': False, 'message': 'minutes debe ser mayor a 0'}), 400
-        if not task.timer_start:
+        if task.column == 'in-progress' and not task.timer_start:
             task.timer_start = _now()
         task.max_minutes = (task.max_minutes or 0) + minutes
         task.is_expired = False

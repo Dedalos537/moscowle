@@ -712,6 +712,25 @@ def create_app(config_class=None):
 
                 result = db.session.execute(
                     text(
+                        'SELECT COUNT(*) FROM information_schema.columns '
+                        "WHERE table_name = 'kanban_task' AND column_name = 'elapsed_seconds'"
+                    )
+                )
+                if result.scalar() == 0:
+                    db.session.execute(
+                        text('ALTER TABLE kanban_task ADD COLUMN elapsed_seconds INTEGER NOT NULL DEFAULT 0')
+                    )
+                    db.session.commit()
+                    app.logger.info('kanban_task.elapsed_seconds added')
+            except Exception as e:
+                app.logger.warning(f'kanban elapsed_seconds migration (non-fatal): {e}')
+                db.session.rollback()
+
+            try:
+                from sqlalchemy import text
+
+                result = db.session.execute(
+                    text(
                         "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'user' AND column_name = 'sex'"
                     )
                 )

@@ -140,3 +140,81 @@ def test_patient_sees_only_own_tasks_and_cannot_create(app, world):
     assert _titles(client) == ['Tarea paciente']
     assert _post(client, {'title': 'x'}).status_code == 403
     assert client.get('/api/kanban/stats').get_json()['total'] == 1
+
+
+def _move(client, tid, column):
+    return client.patch(
+        f'/api/kanban/tasks/{tid}', content_type='application/json', data=json.dumps({'column': column})
+    )
+
+
+def _task(client, tid):
+    return next(t for t in client.get('/api/kanban/tasks').get_json() if t['id'] == tid)
+
+
+def test_review_notifies_admin_who_created_the_task(app, world):
+    from app.models.notification_group import NotificationGroup, NotificationItem
+
+    client = _login(app, 'test@example.com', 'password123')
+    tid = _post(client, {'title': 'Informe mensual', 'assigned_to_id': world['sara'].id}).get_json()['id']
+    client = _login(app, 'sara@kbiso.test')
+    assert _move(client, tid, 'review').status_code == 200
+    group = NotificationGroup.query.filter_by(user_id=world['admin'].id, group_key=f'kanban:{tid}').first()
+    assert group is not None, 'el admin creador debe enterarse de que su tarea pasó a revisión'
+    last = NotificationItem.query.filter_by(group_id=group.id).order_by(NotificationItem.id.desc()).first()
+    assert 'Revisión' in last.message and 'Sara' in last.message
+    # quien mueve la tarea no se notifica a sí mismo
+    assert (
+        NotificationGroup.query.filter_by(user_id=world['sara'].id, group_key=f'kanban:{tid}').count() == 1
+    )  # solo el aviso de creación
+
+
+def test_timer_runs_only_in_progress_and_freezes_in_review(app, world):
+    from datetime import timedelta
+
+    from app.extensions import db
+    from app.routes.kanban_routes import _now
+
+    client = _login(app, 'test@example.com', 'password123')
+    tid = _post(client, {'title': 'Con límite', 'assigned_to_id': world['sara'].id, 'max_minutes': 60}).get_json()['id']
+    assert _task(client, tid)['timer_running'] is False
+
+    _move(client, tid, 'in-progress')
+    t = _task(client, tid)
+    assert t['timer_running'] is True
+
+    # simula 10 minutos de trabajo
+    row = db.session.get(KanbanTask, tid)
+    row.timer_start = _now() - timedelta(minutes=10)
+    db.session.commit()
+
+    _move(client, tid, 'review')
+    t = _task(client, tid)
+    assert t['timer_running'] is False and t['timer_start'] is None
+    frozen = t['elapsed_seconds']
+    assert 590 <= frozen <= 620
+
+    # en revisión no avanza ni vence aunque pase el tiempo
+    row = db.session.get(KanbanTask, tid)
+    assert row.timer_start is None
+    assert _task(client, tid)['elapsed_seconds'] == frozen
+
+    # al volver a progreso retoma desde lo consumido
+    _move(client, tid, 'in-progress')
+    t = _task(client, tid)
+    assert t['timer_running'] is True and t['elapsed_seconds'] >= frozen
+
+    _move(client, tid, 'done')
+    t = _task(client, tid)
+    assert t['timer_running'] is False and t['is_expired'] is False
+
+
+def test_extend_does_not_start_timer_outside_progress(app, world):
+    client = _login(app, 'test@example.com', 'password123')
+    tid = _post(client, {'title': 'Extender', 'assigned_to_id': world['sara'].id, 'max_minutes': 30}).get_json()['id']
+    r = client.patch(
+        f'/api/kanban/tasks/{tid}/extend', content_type='application/json', data=json.dumps({'minutes': 15})
+    )
+    assert r.status_code == 200
+    body = r.get_json()
+    assert body['max_minutes'] == 45 and body['timer_running'] is False
