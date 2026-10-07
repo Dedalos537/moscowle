@@ -5,6 +5,11 @@ Usage:
     python scripts/deploy_cpanel.py --backend    # Backend only
     python scripts/deploy_cpanel.py --frontend   # Frontend only
     python scripts/deploy_cpanel.py --dry-run    # Preview what would be uploaded
+    python scripts/deploy_cpanel.py --build      # Compila Angular (ng build) antes de subir el frontend
+    python scripts/deploy_cpanel.py --all        # --build + todo: lo mismo que hace el pipeline, en un comando
+
+La contrasena FTP se toma de (en este orden): variable FTP_PASS, archivo local `.deploy_cpanel.env`
+(ignorado por git, linea FTP_PASS=...) o se pide por teclado sin mostrarla.
 
 Structure on cPanel:
     /moscowle/                    <- Backend (Flask + Python)
@@ -23,9 +28,11 @@ Structure on cPanel:
 """
 
 import ftplib
+import getpass
 import io
 import os
 import re
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -35,6 +42,25 @@ from pathlib import Path
 FTP_HOST = os.environ.get('FTP_HOST', 'ftp.centrojuanpabloii.com')
 FTP_USER = os.environ.get('FTP_USER', 'centroju')
 FTP_PASS = os.environ.get('FTP_PASS', '')
+
+
+def _load_password():
+    """FTP_PASS del entorno, de .deploy_cpanel.env (gitignored) o por teclado. Nunca se imprime."""
+    if FTP_PASS:
+        return FTP_PASS
+    env_file = Path(__file__).resolve().parent.parent / '.deploy_cpanel.env'
+    if env_file.is_file():
+        for line in env_file.read_text().splitlines():
+            key, _, value = line.partition('=')
+            if key.strip() == 'FTP_PASS' and value.strip():
+                return value.strip().strip('"\'')
+    return getpass.getpass('Contrasena FTP (no se muestra): ') if sys.stdin.isatty() else ''
+
+
+def build_frontend():
+    print('Compilando Angular (produccion)...')
+    subprocess.run(['npx', 'ng', 'build'], cwd=PROJECT_ROOT / 'edysync', check=True)  # noqa: S607
+
 
 # ─── Remote paths ───
 REMOTE_BACKEND_DIR = '/moscowle'
@@ -327,14 +353,18 @@ def main():
     do_backend = not frontend_only
     do_frontend = not backend_only
 
-    if not FTP_PASS:
-        print('ERROR: falta la variable de entorno FTP_PASS (no se guarda en el repositorio).')
+    password = _load_password()
+    if not password:
+        print('ERROR: falta la contrasena FTP (variable FTP_PASS o archivo .deploy_cpanel.env).')
         sys.exit(1)
+
+    if ('--build' in sys.argv or '--all' in sys.argv) and do_frontend and not dry_run:
+        build_frontend()
 
     print(f'Connecting to {FTP_HOST}...')
     # FTPS: con FTP plano la contrasena viaja en claro.
     ftp = ftplib.FTP_TLS(FTP_HOST)  # noqa: S321 - FTPS explicito (TLS) con prot_p()
-    ftp.login(FTP_USER, FTP_PASS)
+    ftp.login(FTP_USER, password)
     ftp.prot_p()
     print('Connected!')
 
