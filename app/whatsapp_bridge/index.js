@@ -82,16 +82,19 @@ async function sendMessage(phone, text, lid = false) {
   const msgId = String(nextMsgId++);
   // Los contactos con identificador @lid no tienen teléfono visible: se les escribe a su propio jid.
   let jid;
+  let lidUnresolved = false;
   if (lid) {
     const lidUser = String(phone).replace(/\D/g, '');
     const pn = await resolvePn(lidUser);
     jid = pn ? `${pn}@s.whatsapp.net` : `${lidUser}@lid`;
+    lidUnresolved = !pn;
+    console.error(`[wa-lid] envio a lid, telefono resuelto=${pn ? 'si' : 'no'}`);
   } else jid = jidOf(phone);
 
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
-      settle(msgId, { ok: false, error: 'timeout' });
-    }, 30000);
+      settle(msgId, { ok: false, error: lidUnresolved ? 'lid_sin_telefono' : 'timeout' });
+    }, lidUnresolved ? 12000 : 30000);
     pending.set(msgId, { resolve, timer });
 
     queue = queue

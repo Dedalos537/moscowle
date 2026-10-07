@@ -44,6 +44,8 @@ _FRIENDLY = {
     'wa_404': 'WhatsApp no tiene ese numero',
     'wa_429': 'WhatsApp pidio parar: se mando demasiado rapido',
     'wa_500': 'WhatsApp fallo por su lado',
+    'lid_sin_telefono': 'WhatsApp no revela el telefono de este contacto, asi que no se le pudo escribir. Contestale desde el celular del centro',
+    'timeout': 'WhatsApp no confirmo el envio a tiempo',
 }
 
 
@@ -369,7 +371,9 @@ class WhatsAppService:
             # stderr trae los logs de pino. El puente corre en nivel warn,
             # asi que solo llegan avisos y errores: es el unico lugar donde
             # se ve por que se cae la sesion, asi que van a info.
-            (logger.warning if '[wa-upsert]' in line else logger.info)('[baileys] %s', line.rstrip())
+            (logger.warning if ('[wa-upsert]' in line or '[wa-lid]' in line) else logger.info)(
+                '[baileys] %s', line.rstrip()
+            )
 
     def _handle(self, msg):
         kind = msg.get('type')
