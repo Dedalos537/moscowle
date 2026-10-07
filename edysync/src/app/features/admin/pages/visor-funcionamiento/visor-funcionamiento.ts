@@ -17,7 +17,7 @@ import { Alert } from '../../../../shared/components/alert/alert';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { Incidents } from '../incidents/incidents';
 import { BotPanel } from '../bot-panel/bot-panel';
-import { QRCodeComponent } from 'angularx-qrcode';
+import { ChannelsPanel } from '../channels-panel/channels-panel';
 
 export type TabId = 'backend' | 'logs' | 'csp' | 'tokens' | 'incidents' | 'llm' | 'notifications' | 'bot';
 
@@ -76,7 +76,7 @@ interface AIProviderForm {
 @Component({
   selector: 'app-visor-funcionamiento',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input, Alert, Modal, Incidents, BotPanel, QRCodeComponent],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input, Alert, Modal, Incidents, BotPanel, ChannelsPanel],
   templateUrl: './visor-funcionamiento.html',
   styleUrl: './visor-funcionamiento.scss',
   animations: [fadeInUp, scaleIn, listStagger, cardEnter],

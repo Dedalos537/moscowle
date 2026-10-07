@@ -1,0 +1,113 @@
+<section class="ch" aria-labelledby="ch-title">
+  <header class="ch__head">
+    <div>
+      <h2 id="ch-title" class="ch__title">Canales de aviso</h2>
+      <p class="ch__sub">Por dónde sale cada mensaje del centro. Todo se guarda solo.</p>
+    </div>
+    <p class="ch__state" aria-live="polite" [attr.data-state]="saveState">
+      @switch (saveState) {
+        @case ('saving') { Guardando… }
+        @case ('saved') { ✓ Guardado }
+        @case ('error') { Revisa los campos marcados }
+        @default { {{ loading ? 'Cargando…' : 'Sin cambios pendientes' }} }
+      }
+    </p>
+  </header>
+
+  <div class="ch__cards">
+    <article class="ch-card" [class.is-ok]="wa?.connected" [class.is-bad]="wa?.banned">
+      <span class="ch-card__icon" aria-hidden="true"><fa-icon [icon]="['fab', 'whatsapp']"></fa-icon></span>
+      <div class="ch-card__body">
+        <h3 class="ch-card__name">WhatsApp</h3>
+        <p class="ch-card__status">
+          @if (wa?.connected) { Conectado · {{ wa?.phone ? '+' + wa.phone : 'número vinculado' }} }
+          @else if (wa?.banned) { Número bloqueado por WhatsApp }
+          @else { Sin vincular }
+        </p>
+      </div>
+    </article>
+
+    <article class="ch-card" [class.is-ok]="tgBotActive && tgLinked > 0">
+      <span class="ch-card__icon ch-card__icon--tg" aria-hidden="true"><fa-icon [icon]="['fab', 'telegram']"></fa-icon></span>
+      <div class="ch-card__body">
+        <h3 class="ch-card__name">Telegram</h3>
+        <p class="ch-card__status">
+          {{ tgBotActive === false ? 'Bot sin configurar' : (tgLinked + (tgLinked === 1 ? ' cuenta vinculada' : ' cuentas vinculadas')) }}
+        </p>
+      </div>
+      <button type="button" class="ch-card__link" (click)="openBot.emit()">Configurar bot</button>
+    </article>
+
+    <article class="ch-card" [class.is-ok]="!!form.destination">
+      <span class="ch-card__icon ch-card__icon--sms" aria-hidden="true"><fa-icon [icon]="['fas', 'comment-sms']"></fa-icon></span>
+      <div class="ch-card__body">
+        <h3 class="ch-card__name">SMS</h3>
+        <p class="ch-card__status">{{ form.destination ? 'Destino ' + form.destination : 'Sin número de destino' }}</p>
+      </div>
+    </article>
+  </div>
+
+  <section class="ch-block" aria-labelledby="ch-wa-title">
+    <div class="ch-block__head">
+      <div>
+        <h3 id="ch-wa-title" class="ch-block__title">Número de WhatsApp del centro</h3>
+        <p class="ch-block__sub">Se vincula una sola vez con un código QR; la sesión queda guardada en el servidor.</p>
+      </div>
+      @if (!wa?.connected) {
+        <button type="button" class="ch-btn" (click)="requestQr()" [disabled]="waQrLoading">{{ waQrLoading ? 'Generando…' : (waQr ? 'Generar otro QR' : 'Generar QR') }}</button>
+      } @else {
+        <button type="button" class="ch-btn ch-btn--ghost" (click)="loadWhatsapp()">Actualizar</button>
+      }
+    </div>
+    @if (waError) { <p class="ch-err" role="alert">{{ waError }}</p> }
+    @if (waQr) {
+      <div class="ch-qr">
+        <qrcode [elementType]="'canvas'" [qrdata]="waQr" [width]="224" [errorCorrectionLevel]="'M'" ariaLabel="Código QR para vincular WhatsApp" class="ch-qr__code"></qrcode>
+        <ol class="ch-qr__steps">
+          <li>En el celular abre WhatsApp.</li>
+          <li>Entra a <strong>Dispositivos vinculados</strong>.</li>
+          <li>Toca <strong>Vincular dispositivo</strong> y escanea este código.</li>
+        </ol>
+      </div>
+    }
+    @if (wa?.connected) {
+      <p class="ch-note">Los mensajes que escriban a este número aparecen en <strong>Bot de mensajería › Conversaciones</strong>, donde puedes contestarlos.</p>
+    }
+  </section>
+
+  <section class="ch-block" aria-labelledby="ch-msg-title">
+    <div class="ch-block__head">
+      <div>
+        <h3 id="ch-msg-title" class="ch-block__title">Mensajes de cobranza</h3>
+        <p class="ch-block__sub">Número que recibe los avisos y los textos que se envían. Déjalos vacíos para usar los predeterminados.</p>
+      </div>
+      <button type="button" class="ch-btn ch-btn--ghost" (click)="sendTest()" [disabled]="testing || dirty">{{ testing ? 'Enviando…' : 'Enviar prueba' }}</button>
+    </div>
+
+    <div class="ch-field">
+      <label class="ch-label" for="ch-dest">Número de destino (SMS)</label>
+      <input id="ch-dest" class="ch-input" type="tel" inputmode="tel" autocomplete="off" placeholder="+51 999 888 777"
+        [ngModel]="form.destination" name="destination" (ngModelChange)="setField('destination', $event)" (blur)="onBlur()"
+        [attr.aria-invalid]="!!errors.destination" aria-describedby="ch-dest-err" />
+      @if (errors.destination) { <p id="ch-dest-err" class="ch-err" role="alert">{{ errors.destination }}</p> }
+    </div>
+
+    @for (t of templates; track t.id) {
+      <div class="ch-field">
+        <label class="ch-label" [for]="'ch-' + t.id">{{ t.label }}</label>
+        <textarea [id]="'ch-' + t.id" class="ch-input ch-input--area" rows="3" [placeholder]="t.ph" [name]="t.id"
+          [ngModel]="form[t.id]" (ngModelChange)="setField(t.id, $event)" (blur)="onBlur()"
+          [attr.aria-invalid]="!!errors[t.id]"></textarea>
+        <div class="ch-vars" role="group" [attr.aria-label]="'Variables para ' + t.label">
+          @for (v of variables; track v.name) {
+            <button type="button" class="ch-chip" [title]="v.hint" (click)="insertVariable(t.id, v.name)">{{ '{' + v.name + '}' }}</button>
+          }
+        </div>
+        @if (errors[t.id]) { <p class="ch-err" role="alert">{{ errors[t.id] }}</p> }
+        @if (form[t.id] && !errors[t.id]) {
+          <p class="ch-preview"><span>Vista previa</span>{{ preview(form[t.id]) }}</p>
+        }
+      </div>
+    }
+  </section>
+</section>

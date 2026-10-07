@@ -2,12 +2,15 @@ import { Component, OnInit, OnDestroy, Output, EventEmitter, ChangeDetectionStra
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { Subscription } from 'rxjs';
+import { Subject, Subscription, debounceTime, interval } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Button } from '../../../../shared/components/button/button';
 import { Alert } from '../../../../shared/components/alert/alert';
+import { Switch } from '../../../../shared/components/switch/switch';
+import { LiveSyncService } from '../../../../core/services/live-sync.service';
+import { BotConversations } from '../bot-conversations/bot-conversations';
 
 interface BotForm {
   bot_name: string;
@@ -33,7 +36,7 @@ const EMPTY_FORM: BotForm = {
   intervention_enabled: true,
 };
 
-type TabId = 'dashboard' | 'config' | 'telegram' | 'faq' | 'webhook' | 'test';
+type TabId = 'dashboard' | 'conversations' | 'config' | 'telegram' | 'faq' | 'webhook' | 'test';
 
 interface TabDef {
   id: TabId;
@@ -45,7 +48,7 @@ interface TabDef {
 @Component({
   selector: 'app-bot-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Spinner, Button, Alert],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Spinner, Button, Alert, Switch, BotConversations],
   templateUrl: './bot-panel.html',
   styleUrl: './bot-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -54,7 +57,10 @@ export class BotPanel implements OnInit, OnDestroy {
   private admin = inject(AdminService);
   private auth = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
+  private live = inject(LiveSyncService);
   private subs = new Subscription();
+  private autosave$ = new Subject<void>();
+  unreadConv = 0;
 
   loading = true;
   error: string | null = null;
@@ -63,6 +69,7 @@ export class BotPanel implements OnInit, OnDestroy {
 
   tabs: TabDef[] = [
     { id: 'dashboard', label: 'Resumen', icon: ['fas', 'gauge-high'] },
+    { id: 'conversations', label: 'Conversaciones', icon: ['fas', 'comments'] },
     { id: 'config', label: 'Configuración', icon: ['fas', 'gear'] },
     { id: 'telegram', label: 'Telegram', icon: ['fab', 'telegram'] },
     { id: 'faq', label: 'FAQ', icon: ['fas', 'book'] },
@@ -89,9 +96,9 @@ export class BotPanel implements OnInit, OnDestroy {
   private savedForm: BotForm = { ...EMPTY_FORM };
   fieldErrors: Record<string, string> = {};
   saving = false;
-  saveSuccess = '';
+  saveState: 'idle' | 'saving' | 'saved' | 'error' = 'idle';
   saveError = '';
-  readonly limits = { persona: 1000, prompt: 8000 };
+  readonly limits = { persona: 1000, prompt: 20000 };
 
   // FAQ
   faqList: any[] = [];
@@ -145,6 +152,33 @@ export class BotPanel implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadDashboard();
+
+    // Autoguardado: lo escrito se guarda solo a los 0,8 s sin teclear; los interruptores guardan al instante.
+    this.subs.add(this.autosave$.pipe(debounceTime(800)).subscribe(() => this.saveConfig()));
+    // Cambios hechos por otra persona/pestaña (o por el propio bot): la pantalla se recarga sola.
+    this.subs.add(
+      this.live.watch(['bot_config', 'faq']).subscribe((scope) => {
+        if (scope === 'bot_config' && !this.dirty && !this.saving) this.loadDashboard(false);
+        if (scope === 'faq') { this.loadProposedFaqs(); if (this.faqList.length) this.loadFaq(); this.refreshBotCounts(); }
+      }),
+    );
+    // Insignia de mensajes sin leer en la pestaña Conversaciones.
+    this.refreshUnread();
+    this.subs.add(interval(8000).subscribe(() => { if (this.activeTab !== 'conversations') this.refreshUnread(); }));
+  }
+
+  private refreshUnread() {
+    this.admin.getBotConversations({}).subscribe({ next: (r) => { this.unreadConv = r.unread_total; this.cdr.markForCheck(); }, error: () => {} });
+  }
+
+  private refreshBotCounts() {
+    this.admin.getBotDashboard().subscribe({
+      next: (res) => {
+        if (this.bot) { this.bot.faq_count = res.bot?.faq_count; this.bot.proposed_faq_count = res.bot?.proposed_faq_count; }
+        this.cdr.markForCheck();
+      },
+      error: () => {},
+    });
   }
 
   ngOnDestroy() {
@@ -280,11 +314,17 @@ export class BotPanel implements OnInit, OnDestroy {
     return (Object.keys(this.form) as (keyof BotForm)[]).some((k) => this.form[k] !== this.savedForm[k]);
   }
 
-  revertForm() {
-    this.form = { ...this.savedForm };
-    this.fieldErrors = {};
+  /** Texto escrito: se guarda solo tras una pausa. */
+  onType() {
+    this.saveState = 'idle';
     this.saveError = '';
-    this.saveSuccess = '';
+    this.autosave$.next();
+  }
+
+  /** Interruptores y selecciones: guardan al instante. */
+  onToggle<K extends keyof BotForm>(key: K, value: BotForm[K]) {
+    this.form[key] = value;
+    this.saveConfig();
   }
 
   /** Lo que verá quien escriba /start: misma fórmula que el backend (identidad + presentación configuradas). */
@@ -300,42 +340,49 @@ export class BotPanel implements OnInit, OnDestroy {
 
   saveConfig() {
     if (this.saving || !this.dirty) return;
+    // Solo viaja lo que cambió: antes se reenviaba todo, incluido el texto heredado del entorno, y el servidor lo rechazaba.
+    const payload: Record<string, unknown> = {};
+    (Object.keys(this.form) as (keyof BotForm)[]).forEach((k) => {
+      if (this.form[k] !== this.savedForm[k]) payload[k] = k === 'auto_faq_threshold' ? Math.max(1, Math.min(50, Math.round(Number(this.form[k]) || 3))) : this.form[k];
+    });
+    const sent = { ...this.form };
     this.saving = true;
-    this.saveSuccess = '';
+    this.saveState = 'saving';
     this.saveError = '';
     this.fieldErrors = {};
     this.cdr.markForCheck();
-    const f = this.form;
     this.subs.add(
-      this.admin.updateTelegramConfig({
-        ...f,
-        auto_faq_threshold: Math.max(1, Math.min(50, Math.round(Number(f.auto_faq_threshold) || 3))),
-      }).subscribe({
+      this.admin.updateTelegramConfig(payload).subscribe({
         next: (res) => {
           const c = res?.config || {};
           this.bot = {
             ...this.bot,
-            name: c.bot_name ?? f.bot_name,
-            emoji: c.bot_emoji ?? f.bot_emoji,
-            persona_message: c.persona_message ?? f.persona_message,
-            system_prompt: c.system_prompt ?? f.system_prompt,
+            name: c.bot_name ?? sent.bot_name,
+            emoji: c.bot_emoji ?? sent.bot_emoji,
+            persona_message: c.persona_message ?? sent.persona_message,
+            system_prompt: c.system_prompt ?? sent.system_prompt,
             config: {
-              auto_faq_enabled: c.auto_faq_enabled ?? f.auto_faq_enabled,
-              auto_faq_threshold: c.auto_faq_threshold ?? f.auto_faq_threshold,
-              mcp_prompt_enabled: c.mcp_prompt_enabled ?? f.mcp_prompt_enabled,
-              notify_supervision_enabled: c.notify_supervision_enabled ?? f.notify_supervision_enabled,
-              intervention_enabled: c.intervention_enabled ?? f.intervention_enabled,
+              auto_faq_enabled: c.auto_faq_enabled ?? sent.auto_faq_enabled,
+              auto_faq_threshold: c.auto_faq_threshold ?? sent.auto_faq_threshold,
+              mcp_prompt_enabled: c.mcp_prompt_enabled ?? sent.mcp_prompt_enabled,
+              notify_supervision_enabled: c.notify_supervision_enabled ?? sent.notify_supervision_enabled,
+              intervention_enabled: c.intervention_enabled ?? sent.intervention_enabled,
             },
           };
-          this.initForm();
+          // Lo enviado pasa a ser «guardado»; lo que se escribió mientras tanto sigue pendiente.
+          Object.keys(payload).forEach((k) => ((this.savedForm as any)[k] = (sent as any)[k]));
           this.saving = false;
-          this.saveSuccess = 'Cambios guardados. El bot ya los usa.';
+          this.saveState = this.dirty ? 'idle' : 'saved';
           this.cdr.markForCheck();
+          if (this.dirty) this.autosave$.next();
+          else setTimeout(() => { if (this.saveState === 'saved') { this.saveState = 'idle'; this.cdr.markForCheck(); } }, 2200);
         },
         error: (err) => {
           this.saving = false;
+          this.saveState = 'error';
           this.fieldErrors = err?.error?.fields || {};
-          this.saveError = err?.error?.error || 'No se pudo guardar la configuración.';
+          const fields = Object.values(this.fieldErrors);
+          this.saveError = fields.length ? fields.join(' · ') : err?.error?.error || 'No se pudo guardar. Se reintentará al seguir editando.';
           this.cdr.markForCheck();
         },
       })

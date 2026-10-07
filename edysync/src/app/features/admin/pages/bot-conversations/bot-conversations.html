@@ -1,0 +1,110 @@
+<section class="bc" [class.is-thread]="mobileThread" aria-label="Conversaciones del bot">
+  <!-- ───────── Lista ───────── -->
+  <div class="bc-list">
+    <div class="bc-list__tools">
+      <label class="sr-only" for="bc-search">Buscar conversación</label>
+      <input id="bc-search" class="bc-search" type="search" placeholder="Buscar por nombre o mensaje" [ngModel]="search()" (ngModelChange)="onSearch($event)" />
+      <div class="bc-filters" role="group" aria-label="Canal">
+        <button type="button" class="bc-filter" [class.is-on]="filter() === ''" [attr.aria-pressed]="filter() === ''" (click)="setFilter('')">Todas</button>
+        <button type="button" class="bc-filter" [class.is-on]="filter() === 'telegram'" [attr.aria-pressed]="filter() === 'telegram'" (click)="setFilter('telegram')">Telegram</button>
+        <button type="button" class="bc-filter" [class.is-on]="filter() === 'whatsapp'" [attr.aria-pressed]="filter() === 'whatsapp'" (click)="setFilter('whatsapp')">WhatsApp</button>
+      </div>
+    </div>
+
+    <ul class="bc-items">
+      @if (loading()) {
+        @for (n of [1, 2, 3, 4]; track n) { <li class="bc-skel" aria-hidden="true"></li> }
+      } @else if (conversations().length === 0) {
+        <li class="bc-empty">
+          <fa-icon [icon]="['fas', 'comments']" aria-hidden="true"></fa-icon>
+          <p>Aún no hay conversaciones.</p>
+          <small>Cuando alguien le escriba al bot por Telegram o al número de WhatsApp del centro, aparecerá aquí en vivo.</small>
+        </li>
+      }
+      @for (c of conversations(); track c.id) {
+        <li>
+          <button type="button" class="bc-item" [class.is-active]="c.id === selectedId()" [attr.aria-current]="c.id === selectedId() ? 'true' : null" (click)="open(c.id)">
+            <span class="bc-avatar" aria-hidden="true">{{ initials(c.contact) }}<fa-icon class="bc-avatar__ch" [icon]="channelIcon(c)"></fa-icon></span>
+            <span class="bc-item__body">
+              <span class="bc-item__top">
+                <span class="bc-item__name">{{ c.contact }}</span>
+                <span class="bc-item__time">{{ time(c.timestamp) }}</span>
+              </span>
+              <span class="bc-item__preview">
+                @if (c.human_takeover) { <span class="bc-tag">Tú atiendes</span> }
+                {{ c.last_message || 'Sin mensajes' }}
+              </span>
+            </span>
+            @if (c.unread > 0) { <span class="bc-badge" [attr.aria-label]="c.unread + ' sin leer'">{{ c.unread > 9 ? '9+' : c.unread }}</span> }
+          </button>
+        </li>
+      }
+    </ul>
+  </div>
+
+  <!-- ───────── Hilo ───────── -->
+  <div class="bc-thread">
+    @if (selected(); as conv) {
+      <header class="bc-thread__head">
+        <button type="button" class="bc-back" (click)="back()" aria-label="Volver a la lista"><fa-icon [icon]="['fas', 'arrow-left']"></fa-icon></button>
+        <span class="bc-avatar bc-avatar--lg" aria-hidden="true">{{ initials(conv.contact) }}<fa-icon class="bc-avatar__ch" [icon]="channelIcon(conv)"></fa-icon></span>
+        <div class="bc-thread__who">
+          <h3 class="bc-thread__name">{{ conv.contact }}</h3>
+          <p class="bc-thread__meta">{{ conv.channel === 'whatsapp' ? 'WhatsApp' : 'Telegram' }}{{ conv.handle ? ' · ' + conv.handle : '' }}{{ conv.user_id ? ' · usuario de la plataforma' : '' }}</p>
+        </div>
+        <div class="bc-takeover">
+          <span class="bc-takeover__label" id="bc-takeover">{{ conv.human_takeover ? 'Atiendes tú' : 'Atiende el bot' }}</span>
+          <app-switch [checked]="conv.human_takeover" [disabled]="takeoverBusy || !interventionEnabled()" labelledby="bc-takeover" (changed)="toggleTakeover($event)"></app-switch>
+        </div>
+      </header>
+
+      <div class="bc-messages" #scroller (scroll)="onScroll()" role="log" aria-live="polite" aria-label="Mensajes">
+        @if (threadLoading()) {
+          <p class="bc-loading">Cargando mensajes…</p>
+        }
+        @for (m of messages(); track m.id; let i = $index) {
+          @if (showDay(i)) { <p class="bc-day">{{ dayLabel(m.created_at) }}</p> }
+          <div class="bc-msg" [class.is-in]="m.direction === 'in'" [class.is-bot]="m.sender === 'bot'" [class.is-admin]="m.sender === 'admin'" [class.is-failed]="m.status === 'failed'">
+            <div class="bc-bubble">
+              @if (m.direction === 'out') {
+                <span class="bc-bubble__who">{{ m.sender === 'admin' ? 'Tú' : 'Bot' }}</span>
+              }
+              <p class="bc-bubble__text">{{ m.text }}</p>
+              <span class="bc-bubble__time">{{ time(m.created_at) }}@if (m.status === 'failed') { · no se envió }</span>
+              @if (m.status === 'failed' && m.error) { <span class="bc-bubble__err">{{ m.error }}</span> }
+            </div>
+          </div>
+        }
+        @if (!threadLoading() && messages().length === 0) {
+          <p class="bc-loading">Esta conversación todavía no tiene mensajes.</p>
+        }
+      </div>
+
+      @if (newBelow) {
+        <button type="button" class="bc-newbelow" (click)="scrollToEnd(true)">Mensajes nuevos <fa-icon [icon]="['fas', 'arrow-down']" aria-hidden="true"></fa-icon></button>
+      }
+
+      <footer class="bc-composer">
+        @if (!interventionEnabled()) {
+          <p class="bc-composer__off">La intervención manual está desactivada en la configuración del bot. Actívala para poder responder.</p>
+        } @else {
+          @if (!conv.human_takeover) {
+            <p class="bc-composer__hint">El bot sigue contestando. Si escribes aquí, ambos podrían responder: activa «Atiendes tú» para que solo conteste una persona.</p>
+          }
+          <div class="bc-composer__row">
+            <label class="sr-only" for="bc-draft">Escribir mensaje</label>
+            <textarea #composer id="bc-draft" class="bc-composer__input" rows="1" maxlength="4000" placeholder="Escribe un mensaje a {{ conv.contact }}…" [(ngModel)]="draft" (keydown)="onComposerKey($event)"></textarea>
+            <button type="button" class="bc-send" (click)="send()" [disabled]="!draft.trim() || sending" aria-label="Enviar mensaje">
+              <fa-icon [icon]="['fas', sending ? 'spinner' : 'paper-plane']" aria-hidden="true"></fa-icon>
+            </button>
+          </div>
+        }
+      </footer>
+    } @else {
+      <div class="bc-placeholder">
+        <fa-icon [icon]="['fas', 'comments']" aria-hidden="true"></fa-icon>
+        <p>Elige una conversación para verla en vivo.</p>
+      </div>
+    }
+  </div>
+</section>

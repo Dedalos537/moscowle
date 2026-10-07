@@ -1,0 +1,102 @@
+<section class="np" aria-labelledby="np-title">
+  <header class="np__hero" [class.is-off]="!masterOn()">
+    <span class="np__hero-icon" aria-hidden="true"><fa-icon [icon]="['fas', masterOn() ? 'bell' : 'bell-slash']"></fa-icon></span>
+    <div class="np__hero-text">
+      <h3 id="np-title" class="np__hero-title">{{ masterOn() ? 'Notificaciones activadas' : 'Notificaciones en pausa' }}</h3>
+      <p class="np__hero-sub">
+        {{ masterOn() ? 'Recibes los avisos de las categorías que dejes encendidas.' : 'No recibirás ningún aviso hasta que las vuelvas a activar.' }}
+      </p>
+    </div>
+    <app-switch [checked]="masterOn()" labelledby="np-title" (changed)="set('notifications_enabled', $event)"></app-switch>
+  </header>
+
+  <p class="np__status" aria-live="polite">
+    @if (saving()) { Guardando… } @else if (justSaved()) { <span class="np__ok">✓ Guardado</span> } @else { Los cambios se guardan solos }
+  </p>
+
+  <div class="np__group" [class.is-muted]="!masterOn()">
+    <h4 class="np__group-title">Qué quieres recibir</h4>
+    @for (c of categories; track c.key) {
+      <div class="np__row">
+        <span class="np__row-icon" aria-hidden="true"><fa-icon [icon]="c.icon"></fa-icon></span>
+        <div class="np__row-text">
+          <span class="np__row-label" [id]="'np-' + c.key">{{ c.label }}</span>
+          <span class="np__row-hint">{{ c.hint }}</span>
+        </div>
+        <app-switch [checked]="!!prefs()[c.key]" [disabled]="!masterOn()" [labelledby]="'np-' + c.key" (changed)="set(c.key, $event)"></app-switch>
+      </div>
+    }
+  </div>
+
+  <div class="np__group" [class.is-muted]="!masterOn()">
+    <h4 class="np__group-title">Cómo te llegan</h4>
+
+    <div class="np__row">
+      <span class="np__row-icon" aria-hidden="true"><fa-icon [icon]="['fas', 'volume-high']"></fa-icon></span>
+      <div class="np__row-text">
+        <span class="np__row-label" id="np-sound">Sonido</span>
+        <span class="np__row-hint">Un tono corto al llegar un aviso nuevo</span>
+      </div>
+      <app-switch [checked]="!!prefs().sound_enabled" [disabled]="!masterOn()" labelledby="np-sound" (changed)="set('sound_enabled', $event)"></app-switch>
+    </div>
+
+    <div class="np__row">
+      <span class="np__row-icon" aria-hidden="true"><fa-icon [icon]="['fas', 'desktop']"></fa-icon></span>
+      <div class="np__row-text">
+        <span class="np__row-label" id="np-desktop">Avisos del navegador</span>
+        <span class="np__row-hint">Aparecen aunque la plataforma esté en segundo plano</span>
+      </div>
+      <app-switch [checked]="!!prefs().browser_notifications" [disabled]="!masterOn()" labelledby="np-desktop" (changed)="set('browser_notifications', $event)"></app-switch>
+    </div>
+
+    <div class="np__row">
+      <span class="np__row-icon" aria-hidden="true"><fa-icon [icon]="['fas', 'envelope-open-text']"></fa-icon></span>
+      <div class="np__row-text">
+        <span class="np__row-label" id="np-digest">Resumen diario</span>
+        <span class="np__row-hint">Un único mensaje con lo más importante del día</span>
+      </div>
+      <app-switch [checked]="!!prefs().digest_enabled" [disabled]="!masterOn()" labelledby="np-digest" (changed)="set('digest_enabled', $event)"></app-switch>
+    </div>
+
+    @if (prefs().digest_enabled && masterOn()) {
+      <div class="np__row np__row--sub">
+        <label class="np__row-label" for="np-digest-channel">Enviar el resumen por</label>
+        <select id="np-digest-channel" class="np__select" [value]="prefs().digest_channel" (change)="set('digest_channel', $any($event.target).value)">
+          @for (d of digestChannels; track d.value) {
+            <option [value]="d.value">{{ d.label }}</option>
+          }
+        </select>
+      </div>
+    }
+
+    <div class="np__row">
+      <span class="np__row-icon np__row-icon--tg" aria-hidden="true"><fa-icon [icon]="['fab', 'telegram']"></fa-icon></span>
+      <div class="np__row-text">
+        <span class="np__row-label" id="np-tg">Telegram</span>
+        <span class="np__row-hint">
+          @if (telegramAccounts.length === 0) { Sin cuenta vinculada: vincúlala en Foto y huella › Vincular chat }
+          @else { Avisos urgentes en {{ telegramAccounts.length }} {{ telegramAccounts.length === 1 ? 'cuenta vinculada' : 'cuentas vinculadas' }} }
+        </span>
+      </div>
+      <app-switch [checked]="telegramAllOn" [disabled]="!masterOn() || telegramAccounts.length === 0" labelledby="np-tg"
+        (changed)="telegramAccounts.length === 1 ? toggleTelegram(telegramAccounts[0].telegram_chat_id, $event) : null"></app-switch>
+    </div>
+
+    @if (telegramAccounts.length > 1) {
+      @for (a of telegramAccounts; track a.telegram_chat_id) {
+        <div class="np__row np__row--sub">
+          <span class="np__row-label" [id]="'np-tg-' + a.telegram_chat_id">{{ a.label }}</span>
+          <app-switch [checked]="a.notifications_enabled" [disabled]="!masterOn() || telegramBusy" [labelledby]="'np-tg-' + a.telegram_chat_id" (changed)="toggleTelegram(a.telegram_chat_id, $event)"></app-switch>
+        </div>
+      }
+    }
+  </div>
+
+  @if (isAdmin()) {
+    <button type="button" class="np__link" (click)="openChannels.emit()">
+      <fa-icon [icon]="['fab', 'whatsapp']" aria-hidden="true"></fa-icon>
+      Configurar WhatsApp y SMS del centro
+      <fa-icon [icon]="['fas', 'chevron-right']" aria-hidden="true"></fa-icon>
+    </button>
+  }
+</section>

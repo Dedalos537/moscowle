@@ -62,6 +62,9 @@
             @if (tab.id === 'faq' && faqList.length > 0) {
               <span class="bot-sidebar__badge">{{ faqList.length }}</span>
             }
+            @if (tab.id === 'conversations' && unreadConv > 0) {
+              <span class="bot-sidebar__badge" [attr.aria-label]="unreadConv + ' mensajes sin leer'">{{ unreadConv > 99 ? '99+' : unreadConv }}</span>
+            }
           </button>
         }
       </nav>
@@ -309,11 +312,19 @@
           </div>
         }
 
+        <!-- ══════ TAB: Conversaciones (en vivo) ═════════════════════ -->
+        @if (activeTab === 'conversations') {
+          <div class="bot-tab">
+            <app-bot-conversations [interventionEnabled]="bot?.config?.intervention_enabled !== false" (unreadChange)="unreadConv = $event"></app-bot-conversations>
+          </div>
+        }
+
         <!-- ══════ TAB: Configuración ════════════════════════════════ -->
         @if (activeTab === 'config') {
           <form class="bot-tab bot-cfg" (ngSubmit)="saveConfig()" novalidate>
-            @if (saveSuccess) { <app-alert type="success" [message]="saveSuccess"></app-alert> }
-            @if (saveError) { <app-alert type="error" [message]="saveError"></app-alert> }
+            <p class="bot-cfg__state" aria-live="polite" [attr.data-state]="saveState">
+              @switch (saveState) { @case ('saving') { Guardando… } @case ('saved') { ✓ Guardado: el bot ya lo usa } @case ('error') { {{ saveError }} } @default { Los cambios se guardan solos } }
+            </p>
 
             <div class="bot-cfg__cols">
               <div class="bot-cfg__main">
@@ -322,26 +333,26 @@
                   <div class="bot-config-grid">
                     <div class="bot-config-field">
                       <label class="bot-config-label" for="cfg-name">Nombre del bot</label>
-                      <input id="cfg-name" name="bot_name" type="text" maxlength="120" [(ngModel)]="form.bot_name" class="bot-config-input" [attr.aria-invalid]="!!fieldErrors['bot_name']" />
+                      <input id="cfg-name" name="bot_name" (ngModelChange)="onType()" type="text" maxlength="120" [(ngModel)]="form.bot_name" class="bot-config-input" [attr.aria-invalid]="!!fieldErrors['bot_name']" />
                       @if (fieldErrors['bot_name']) { <p class="bot-config-error" role="alert">{{ fieldErrors['bot_name'] }}</p> }
                     </div>
                     <div class="bot-config-field">
                       <label class="bot-config-label" for="cfg-emoji">Emoji</label>
-                      <input id="cfg-emoji" name="bot_emoji" type="text" maxlength="8" [(ngModel)]="form.bot_emoji" class="bot-config-input" [attr.aria-invalid]="!!fieldErrors['bot_emoji']" />
+                      <input id="cfg-emoji" name="bot_emoji" (ngModelChange)="onType()" type="text" maxlength="8" [(ngModel)]="form.bot_emoji" class="bot-config-input" [attr.aria-invalid]="!!fieldErrors['bot_emoji']" />
                       @if (fieldErrors['bot_emoji']) { <p class="bot-config-error" role="alert">{{ fieldErrors['bot_emoji'] }}</p> }
                     </div>
                   </div>
                   <div class="bot-config-field">
                     <label class="bot-config-label" for="cfg-persona">Mensaje de presentación</label>
                     <p class="bot-config-hint" id="cfg-persona-hint">Es lo primero que lee quien escribe /start. Si lo dejas vacío se usa el texto por defecto.</p>
-                    <textarea id="cfg-persona" name="persona_message" rows="3" [maxlength]="limits.persona" [(ngModel)]="form.persona_message" aria-describedby="cfg-persona-hint" class="bot-config-input bot-config-textarea"></textarea>
+                    <textarea id="cfg-persona" name="persona_message" (ngModelChange)="onType()" rows="3" [maxlength]="limits.persona" [(ngModel)]="form.persona_message" aria-describedby="cfg-persona-hint" class="bot-config-input bot-config-textarea"></textarea>
                     <p class="bot-config-hint bot-config-count">{{ form.persona_message.length }}/{{ limits.persona }}</p>
                     @if (fieldErrors['persona_message']) { <p class="bot-config-error" role="alert">{{ fieldErrors['persona_message'] }}</p> }
                   </div>
                   <div class="bot-config-field">
                     <label class="bot-config-label" for="cfg-prompt">Instrucciones del asistente (prompt del sistema)</label>
                     <p class="bot-config-hint" id="cfg-prompt-hint">Reemplaza el prompt por defecto en todas las respuestas del bot. Vacío = usa el predeterminado. Variables: {{ '{rol}' }}, {{ '{usuario}' }}, {{ '{user_id}' }}.</p>
-                    <textarea id="cfg-prompt" name="system_prompt" rows="10" [maxlength]="limits.prompt" [(ngModel)]="form.system_prompt" aria-describedby="cfg-prompt-hint" placeholder="(Opcional) Instrucciones personalizadas…" class="bot-config-input bot-config-textarea bot-config-textarea--mono"></textarea>
+                    <textarea id="cfg-prompt" name="system_prompt" (ngModelChange)="onType()" rows="10" [maxlength]="limits.prompt" [(ngModel)]="form.system_prompt" aria-describedby="cfg-prompt-hint" placeholder="(Opcional) Instrucciones personalizadas…" class="bot-config-input bot-config-textarea bot-config-textarea--mono"></textarea>
                     <p class="bot-config-hint bot-config-count">{{ form.system_prompt.length }}/{{ limits.prompt }}</p>
                     @if (fieldErrors['system_prompt']) { <p class="bot-config-error" role="alert">{{ fieldErrors['system_prompt'] }}</p> }
                   </div>
@@ -355,7 +366,7 @@
                       <div class="bot-toggle-label" id="t-faq">FAQ que crece sola</div>
                       <div class="bot-toggle-hint">Cuando una pregunta sin respuesta se repite, se propone como nueva FAQ para que la apruebes.</div>
                     </div>
-                    <label class="bot-switch"><input type="checkbox" name="auto_faq_enabled" aria-labelledby="t-faq" [(ngModel)]="form.auto_faq_enabled" /><span class="bot-switch__slider"></span></label>
+                    <app-switch [checked]="form.auto_faq_enabled" labelledby="t-faq" (changed)="onToggle('auto_faq_enabled', $event)"></app-switch>
                   </div>
 
                   <div class="bot-toggle-row" [class.is-muted]="!form.auto_faq_enabled">
@@ -363,7 +374,7 @@
                       <label class="bot-toggle-label" for="cfg-threshold">Repeticiones para proponer una FAQ</label>
                       <div class="bot-toggle-hint">Cuántas veces debe repetirse la misma pregunta.</div>
                     </div>
-                    <input id="cfg-threshold" name="auto_faq_threshold" type="number" min="1" max="50" inputmode="numeric" [(ngModel)]="form.auto_faq_threshold" [disabled]="!form.auto_faq_enabled" class="bot-config-input bot-config-number" />
+                    <input id="cfg-threshold" name="auto_faq_threshold" (ngModelChange)="onType()" type="number" min="1" max="50" inputmode="numeric" [(ngModel)]="form.auto_faq_threshold" [disabled]="!form.auto_faq_enabled" class="bot-config-input bot-config-number" />
                   </div>
 
                   <div class="bot-toggle-row">
@@ -371,7 +382,7 @@
                       <div class="bot-toggle-label" id="t-mcp">Autocorrección con registros</div>
                       <div class="bot-toggle-hint">Agrega al prompt la orden de leer los registros del servidor y corregirse ante un error.</div>
                     </div>
-                    <label class="bot-switch"><input type="checkbox" name="mcp_prompt_enabled" aria-labelledby="t-mcp" [(ngModel)]="form.mcp_prompt_enabled" /><span class="bot-switch__slider"></span></label>
+                    <app-switch [checked]="form.mcp_prompt_enabled" labelledby="t-mcp" (changed)="onToggle('mcp_prompt_enabled', $event)"></app-switch>
                   </div>
 
                   <div class="bot-toggle-row">
@@ -379,7 +390,7 @@
                       <div class="bot-toggle-label" id="t-sup">Avisar a supervisión</div>
                       <div class="bot-toggle-hint">Si el bot no sabe responder una pregunta, lo avisa en la campana a administradores y supervisores.</div>
                     </div>
-                    <label class="bot-switch"><input type="checkbox" name="notify_supervision_enabled" aria-labelledby="t-sup" [(ngModel)]="form.notify_supervision_enabled" /><span class="bot-switch__slider"></span></label>
+                    <app-switch [checked]="form.notify_supervision_enabled" labelledby="t-sup" (changed)="onToggle('notify_supervision_enabled', $event)"></app-switch>
                   </div>
 
                   <div class="bot-toggle-row">
@@ -387,7 +398,7 @@
                       <div class="bot-toggle-label" id="t-int">Responder como el bot desde el panel</div>
                       <div class="bot-toggle-hint">Habilita el botón «Responder» en las conversaciones de Telegram. Apagado, el servidor rechaza esas respuestas.</div>
                     </div>
-                    <label class="bot-switch"><input type="checkbox" name="intervention_enabled" aria-labelledby="t-int" [(ngModel)]="form.intervention_enabled" /><span class="bot-switch__slider"></span></label>
+                    <app-switch [checked]="form.intervention_enabled" labelledby="t-int" (changed)="onToggle('intervention_enabled', $event)"></app-switch>
                   </div>
                 </section>
               </div>
@@ -405,12 +416,6 @@
                   <div><dt>Propuestas por revisar</dt><dd>{{ bot?.proposed_faq_count ?? 0 }}</dd></div>
                 </dl>
               </aside>
-            </div>
-
-            <div class="bot-cfg__bar" [class.is-dirty]="dirty">
-              <span class="bot-cfg__bar-text" aria-live="polite">{{ dirty ? 'Tienes cambios sin guardar' : 'Todo guardado' }}</span>
-              <button type="button" class="bot-cfg__ghost" (click)="revertForm()" [disabled]="!dirty || saving">Descartar</button>
-              <button type="submit" class="bot-cfg__save" [disabled]="!dirty || saving">{{ saving ? 'Guardando…' : 'Guardar cambios' }}</button>
             </div>
           </form>
         }

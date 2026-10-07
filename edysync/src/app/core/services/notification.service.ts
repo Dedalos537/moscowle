@@ -1,6 +1,7 @@
 import { Injectable, signal, inject, OnDestroy, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, Subscription, interval, tap } from 'rxjs';
+import { Observable, Subscription, interval, tap, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { NotificationItem, NotificationPreferences, NotificationGroup, NotificationGroupItem } from '../models/notification';
 import { AdminService } from './admin.service';
 import { ChatService } from './chat.service';
@@ -275,10 +276,18 @@ export class NotificationService implements OnDestroy {
     });
   }
 
+  /**
+   * Guarda al instante: la pantalla se actualiza primero (optimista) y, si el servidor rechaza el cambio,
+   * vuelve al valor anterior y avisa. Antes el estado se actualizaba solo tras responder y el panel quedaba
+   * desincronizado cuando el servidor ignoraba un campo.
+   */
   updatePreferences(data: Partial<NotificationPreferences>): Observable<any> {
+    const previous = this.preferences();
+    this.preferences.update(p => ({ ...(p ?? this._defaultPrefs), ...data }));
     return this.adminService.updateNotificationPreferences(data).pipe(
-      tap(() => {
-        this.preferences.update(p => p ? { ...p, ...data } : { ...this._defaultPrefs, ...data });
+      catchError((err) => {
+        this.preferences.set(previous);
+        return throwError(() => err);
       }),
     );
   }

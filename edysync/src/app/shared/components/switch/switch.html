@@ -1,0 +1,13 @@
+<button
+  type="button"
+  class="sw"
+  role="switch"
+  [class.is-on]="checked()"
+  [attr.aria-checked]="checked()"
+  [attr.aria-label]="label() || null"
+  [attr.aria-labelledby]="labelledby()"
+  [disabled]="disabled()"
+  (click)="toggle()"
+>
+  <span class="sw__thumb"></span>
+</button>

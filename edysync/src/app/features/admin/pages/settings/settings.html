@@ -173,141 +173,12 @@
         <fa-icon [icon]="['fas', 'bell']"></fa-icon>
       </div>
       <div>
-        <h2 class="settings-card__title">Notificaciones</h2>
-        <p class="settings-card__subtitle">Gestiona cómo recibes las alertas</p>
+        <h2 class="settings-card__title">Mis notificaciones</h2>
+        <p class="settings-card__subtitle">Elige qué avisos recibes y por dónde. Se guarda al instante.</p>
       </div>
     </div>
-
-    <div class="settings-card__body">
-      <!-- Toggle maestro -->
-      <div class="setting-item setting-item--highlight">
-        <div class="setting-item__left">
-          <div class="setting-item__icon setting-item__icon--primary">
-            <fa-icon [icon]="['fas', 'bell']"></fa-icon>
-          </div>
-          <div class="setting-item__text">
-            <span class="setting-item__label setting-item__label--bold">Activar notificaciones</span>
-            <span class="setting-item__desc">Toggle maestro: On/Off</span>
-          </div>
-        </div>
-        <button type="button" class="toggle" [class.toggle--on]="notifPrefs.notifications_enabled" (click)="toggleNotificationsGlobal()">
-          <span class="toggle__thumb"></span>
-        </button>
-      </div>
-
-      @if (notifPrefs.notifications_enabled) {
-        <div class="setting-item">
-          <div class="setting-item__left">
-            <div class="setting-item__icon setting-item__icon--amber">
-              <fa-icon [icon]="['fas', 'money-bill-wave']"></fa-icon>
-            </div>
-            <span class="setting-item__label">Deudas</span>
-          </div>
-          <button type="button" class="toggle" [class.toggle--on]="notifPrefs.debt_enabled" (click)="toggleCategory('debt')">
-            <span class="toggle__thumb"></span>
-          </button>
-        </div>
-
-        <div class="setting-item">
-          <div class="setting-item__left">
-            <div class="setting-item__icon setting-item__icon--blue">
-              <fa-icon [icon]="['fas', 'calendar-days']"></fa-icon>
-            </div>
-            <span class="setting-item__label">Actividad</span>
-          </div>
-          <button type="button" class="toggle" [class.toggle--on]="notifPrefs.activity_enabled" (click)="toggleCategory('activity')">
-            <span class="toggle__thumb"></span>
-          </button>
-        </div>
-
-        <div class="setting-item">
-          <div class="setting-item__left">
-            <div class="setting-item__icon setting-item__icon--blue">
-              <fa-icon [icon]="['fas', 'gear']"></fa-icon>
-            </div>
-            <span class="setting-item__label">Sistema</span>
-          </div>
-          <button type="button" class="toggle" [class.toggle--on]="notifPrefs.system_enabled" (click)="toggleCategory('system')">
-            <span class="toggle__thumb"></span>
-          </button>
-        </div>
-
-        <div class="setting-item">
-          <div class="setting-item__left">
-            <div class="setting-item__icon setting-item__icon--red">
-              <fa-icon [icon]="['fas', 'triangle-exclamation']"></fa-icon>
-            </div>
-            <span class="setting-item__label">Alertas</span>
-          </div>
-          <button type="button" class="toggle" [class.toggle--on]="notifPrefs.alert_enabled" (click)="toggleCategory('alert')">
-            <span class="toggle__thumb"></span>
-          </button>
-        </div>
-
-        <div class="setting-item">
-          <div class="setting-item__left">
-            <div class="setting-item__icon setting-item__icon--purple">
-              <fa-icon [icon]="['fas', 'credit-card']"></fa-icon>
-            </div>
-            <span class="setting-item__label">Pagos</span>
-          </div>
-          <button type="button" class="toggle" [class.toggle--on]="notifPrefs.payment_enabled" (click)="toggleCategory('payment')">
-            <span class="toggle__thumb"></span>
-          </button>
-        </div>
-
-        <div class="setting-divider"></div>
-
-        <!-- Telegram -->
-        <div class="setting-item">
-          <div class="setting-item__left">
-            <div class="setting-item__icon setting-item__icon--telegram">
-              <fa-icon [icon]="['fab', 'telegram']"></fa-icon>
-            </div>
-            <div class="setting-item__text">
-              <span class="setting-item__label">Notif. Telegram</span>
-              <span class="setting-item__desc">
-                @if (telegramLoading) { Cargando… }
-                @else if (telegramAccounts.length === 0) { Sin cuenta vinculada }
-                @else { {{ telegramAccounts.length }} cuenta(s) vinculada(s) }
-              </span>
-            </div>
-          </div>
-          <button type="button" class="toggle"
-            [disabled]="telegramLoading || telegramToggling !== null || telegramAccounts.length === 0"
-            [class.toggle--on]="telegramAllEnabled()"
-            (click)="toggleTelegramNotifications()">
-            <span class="toggle__thumb"></span>
-          </button>
-        </div>
-
-        <div class="setting-item">
-          <div class="setting-item__left">
-            <div class="setting-item__icon setting-item__icon--primary">
-              <fa-icon [icon]="['fas', 'volume-high']"></fa-icon>
-            </div>
-            <span class="setting-item__label">Sonido</span>
-          </div>
-          <button type="button" class="toggle" [class.toggle--on]="notifPrefs.sound_enabled" (click)="toggleSound()">
-            <span class="toggle__thumb"></span>
-          </button>
-        </div>
-
-        <div class="setting-item">
-          <div class="setting-item__left">
-            <div class="setting-item__icon setting-item__icon--primary">
-              <fa-icon [icon]="['fas', 'desktop']"></fa-icon>
-            </div>
-            <div class="setting-item__text">
-              <span class="setting-item__label">Notif. Escritorio</span>
-              <span class="setting-item__desc">Notificaciones del navegador</span>
-            </div>
-          </div>
-          <button type="button" class="toggle" [class.toggle--on]="notifPrefs.browser_notifications" (click)="toggleBrowserNotif()">
-            <span class="toggle__thumb"></span>
-          </button>
-        </div>
-      }
+    <div class="settings-card__body settings-card__body--pad">
+      <app-notification-prefs [isAdmin]="true" (openChannels)="goTo('notifications')"></app-notification-prefs>
     </div>
   </section>
   }
@@ -360,23 +231,6 @@
     </section>
   }
 
-  <!-- Save button -->
-  @if (section === 'notificaciones') {
-  <div class="settings-save-bar">
-    <button type="button" class="save-btn" (click)="saveAll()" [class.save-btn--saving]="saving" [disabled]="saving">
-      @if (saving) {
-        <span class="save-spinner"></span>
-        <span>Guardando…</span>
-      } @else if (saved) {
-        <fa-icon [icon]="['fas', 'check']"></fa-icon>
-        <span>Guardado</span>
-      } @else {
-        <fa-icon [icon]="['fas', 'floppy-disk']"></fa-icon>
-        <span>Guardar cambios</span>
-      }
-    </button>
-  </div>
-  }
       </div>
     </div>
   </div>

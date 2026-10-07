@@ -475,6 +475,29 @@ export class AdminService {
     return this.http.post('/api/health/llm/settings', payload);
   }
 
+  // --- Conversaciones del bot (Telegram / WhatsApp) ---
+  getBotConversations(params: { channel?: string; q?: string } = {}): Observable<BotConversationList> {
+    const query: Record<string, string> = {};
+    if (params.channel) query['channel'] = params.channel;
+    if (params.q) query['q'] = params.q;
+    return this.http.get<BotConversationList>('/api/bot/conversations', { params: query });
+  }
+
+  getBotThread(id: number, afterId?: number, markRead = false): Observable<BotThread> {
+    const query: Record<string, string> = {};
+    if (afterId) query['after_id'] = String(afterId);
+    if (markRead) query['mark_read'] = '1';
+    return this.http.get<BotThread>(`/api/bot/conversations/${id}/messages`, { params: query });
+  }
+
+  sendBotMessage(id: number, text: string): Observable<{ status: string; message: BotMessage }> {
+    return this.http.post<{ status: string; message: BotMessage }>(`/api/bot/conversations/${id}/messages`, { text });
+  }
+
+  setBotTakeover(id: number, enabled: boolean): Observable<{ conversation: BotConversation }> {
+    return this.http.post<{ conversation: BotConversation }>(`/api/bot/conversations/${id}/takeover`, { enabled });
+  }
+
   getNotificationConfig(): Observable<any> {
     return this.http.get('/api/health/notifications/config');
   }
@@ -831,4 +854,41 @@ export class AdminService {
     return this.http.put(`/api/telegram/faq/${id}`, { approve: true });
   }
 
+}
+
+export interface BotConversation {
+  id: number;
+  channel: 'telegram' | 'whatsapp';
+  chat_key: string;
+  contact: string;
+  handle: string | null;
+  user_id: number | null;
+  human_takeover: boolean;
+  unread: number;
+  last_message: string | null;
+  timestamp: string | null;
+}
+
+export interface BotMessage {
+  id: number;
+  conversation_id: number;
+  direction: 'in' | 'out';
+  sender: 'contact' | 'bot' | 'admin';
+  kind: 'text' | 'voice' | 'image';
+  text: string;
+  admin_id: number | null;
+  status: 'sent' | 'failed';
+  error: string | null;
+  created_at: string;
+}
+
+export interface BotConversationList {
+  conversations: BotConversation[];
+  latest_message_id: number;
+  unread_total: number;
+}
+
+export interface BotThread {
+  conversation: BotConversation;
+  messages: BotMessage[];
 }

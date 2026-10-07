@@ -1,0 +1,53 @@
+:host {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.sw {
+  position: relative;
+  width: 2.75rem;
+  height: 1.625rem;
+  padding: 0;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--color-outline);
+  cursor: pointer;
+  transition: background-color 200ms ease;
+
+  &__thumb {
+    position: absolute;
+    top: 0.1875rem;
+    left: 0.1875rem;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 9999px;
+    background: var(--color-surface-container-lowest);
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--color-on-surface) 35%, transparent);
+    transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  &.is-on {
+    background: var(--color-primary);
+
+    .sw__thumb {
+      transform: translateX(1.125rem);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sw,
+  .sw__thumb {
+    transition: none;
+  }
+}

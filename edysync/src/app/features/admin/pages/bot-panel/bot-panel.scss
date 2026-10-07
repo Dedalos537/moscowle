@@ -989,6 +989,8 @@
   }
 
   // Barra de guardado pegada al pie de la hoja
+  &__state { margin: 0; min-height: 1.25rem; font-size: 0.8125rem; text-align: right; color: var(--color-on-surface-variant); &[data-state='saved'] { color: var(--color-success-text, var(--color-success)); font-weight: 700; } &[data-state='error'] { color: var(--color-error-text); font-weight: 700; } }
+
   &__bar {
     position: sticky;
     bottom: 0;
