@@ -297,6 +297,17 @@ def _bot_identity():
     return name, emoji
 
 
+def _bot_persona():
+    """Mensaje de presentación configurado (BotConfig.persona_message); vacío si no hay."""
+    try:
+        from app.models.bot_config import BotConfig
+
+        return (BotConfig.get_or_create().persona_message or '').strip()
+    except Exception:
+        logger.exception('No se pudo leer el mensaje de presentación del bot')
+        return ''
+
+
 def _bot_enabled():
     """Interruptor maestro del bot (BotConfig.enabled).
 
@@ -373,6 +384,39 @@ def _note_if_unanswered(result, text):
         note_unanswered(text)
     except Exception:
         logger.exception('No se pudo registrar la pregunta sin respuesta')
+    _notify_supervision_unanswered(text)
+
+
+def _notify_supervision_unanswered(text):
+    """BotConfig.notify_supervision_enabled: avisa a admin/supervisor (campana) de que el bot no supo responder.
+
+    Una sola notificación agrupada ('bot_unanswered') que va sumando casos, para no inundar la bandeja.
+    """
+    try:
+        from app.models.bot_config import BotConfig
+        from app.models.user import User
+        from app.services.notification_service import NotificationService
+
+        if not BotConfig.get_or_create().notify_supervision_enabled:
+            return
+        service = NotificationService()
+        snippet = ' '.join(str(text).split())[:140]
+        for user in User.query.filter(User.role.in_(('admin', 'supervisor')), User.is_active.is_(True)).all():
+            service.notify_user(
+                user_id=user.id,
+                title='Chasqui no supo responder',
+                message=f'Pregunta sin respuesta: «{snippet}»',
+                notif_type='info',
+                link='/app/admin/settings?section=bot',
+                category='system',
+                priority='normal',
+                icon='robot',
+                event_type='bot_unanswered',
+                event_kwargs={'scope': 'bot'},
+                skip_telegram=True,
+            )
+    except Exception:
+        logger.exception('No se pudo avisar a supervisión de una pregunta sin respuesta')
 
 
 def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
@@ -792,6 +836,7 @@ def handle_webhook_update(update):
 
 
 def _handle_start(chat_id, from_user, tg_user, bot_token):
+    BOT_NAME, BOT_EMOJI = _bot_identity()  # configurable desde el panel; las constantes del módulo son solo el respaldo
     from app import db
     from app.models.telegram_user import TelegramUser
 
@@ -820,7 +865,7 @@ def _handle_start(chat_id, from_user, tg_user, bot_token):
     send_telegram_message(
         chat_id,
         f'{BOT_EMOJI} *¡Bienvenido a {BOT_NAME}!*\n\n'
-        f'Soy tu asistente inteligente para el Centro Juan Pablo II.\n\n'
+        f'{_bot_persona() or "Soy tu asistente inteligente para el Centro Juan Pablo II."}\n\n'
         f'Para iniciar sesión:\n'
         f'1. Entra a la plataforma con tu usuario\n'
         f'2. Abre *Preferencias > Vincular chat* y pulsa *Generar código*\n'
@@ -869,6 +914,7 @@ def _login_failed(chat_id):
 
 
 def _handle_login(chat_id, text, from_user, tg_user, bot_token):
+    BOT_NAME, BOT_EMOJI = _bot_identity()  # configurable desde el panel; las constantes del módulo son solo el respaldo
     """/login CODIGO: liga el chat al usuario que genero el codigo en la web."""
     from app import db
     from app.models.chat_login_code import ChatLoginCode
@@ -954,6 +1000,7 @@ def _handle_link(chat_id, text, tg_user, bot_token):
 
 
 def _handle_unlink(chat_id, tg_user, bot_token):
+    BOT_NAME, BOT_EMOJI = _bot_identity()  # configurable desde el panel; las constantes del módulo son solo el respaldo
     from app import db
 
     if not tg_user or not tg_user.is_linked:
@@ -972,6 +1019,7 @@ def _handle_unlink(chat_id, tg_user, bot_token):
 
 
 def _handle_status(chat_id, tg_user, bot_token):
+    BOT_NAME, BOT_EMOJI = _bot_identity()  # configurable desde el panel; las constantes del módulo son solo el respaldo
     if not tg_user or not tg_user.is_linked:
         send_telegram_message(chat_id, '⚠️ No hay cuenta vinculada.', bot_token)
         return
@@ -991,6 +1039,7 @@ def _handle_status(chat_id, tg_user, bot_token):
 
 
 def _handle_help(chat_id, bot_token):
+    BOT_NAME, BOT_EMOJI = _bot_identity()  # configurable desde el panel; las constantes del módulo son solo el respaldo
     send_telegram_message(
         chat_id,
         f'{BOT_EMOJI} *{BOT_NAME} — Tu asistente inteligente*\n\n'
@@ -1131,6 +1180,7 @@ def _handle_notification_toggle(chat_id, tg_user, bot_token):
 
 
 def _handle_menu(chat_id, tg_user, bot_token):
+    BOT_NAME, BOT_EMOJI = _bot_identity()  # configurable desde el panel; las constantes del módulo son solo el respaldo
     """Handle /menu command — show inline keyboard with common operations."""
     if not tg_user or not tg_user.is_linked:
         send_telegram_message(
@@ -1167,7 +1217,7 @@ def _handle_menu(chat_id, tg_user, bot_token):
 
     send_telegram_message(
         chat_id,
-        f'🦜 *Menú de {BOT_NAME}*\n\nSelecciona una opción:',
+        f'{BOT_EMOJI} *Menú de {BOT_NAME}*\n\nSelecciona una opción:',
         bot_token,
         reply_markup=_json.dumps(keyboard),
     )

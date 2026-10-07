@@ -101,19 +101,20 @@ export const gridStagger = trigger('gridStagger', [
   ])
 ]);
 
+// Transición entre pantallas: la saliente se desvanece rápido mientras la entrante sube con ease-out exponencial.
+// Ambas ocurren a la vez (antes eran en serie: 180 ms + 300 ms de espera) y el estado es la ruta, así que solo se anima al cambiar de página.
 export const routeAnimations = trigger('routeAnimations', [
   transition('* <=> *', [
-    query(':enter', [
-      style({ opacity: 0 })
-    ], { optional: true }),
-    query(':leave', [
-      style({ position: 'absolute', inset: 0 }),
-      animate(`180ms ${EASE_IN}`, style({ opacity: 0 }))
-    ], { optional: true }),
-    query(':enter', [
-      animate(`300ms ${EASE}`, style({ opacity: 1 }))
-    ], { optional: true }),
-  ])
+    query(':enter', [style({ opacity: 0, transform: 'translateY(10px)' })], { optional: true }),
+    group([
+      query(
+        ':leave',
+        [style({ position: 'absolute', top: 0, left: 0, right: 0 }), animate('140ms ease-out', style({ opacity: 0 }))],
+        { optional: true },
+      ),
+      query(':enter', [animate('380ms 60ms cubic-bezier(0.16, 1, 0.3, 1)', style({ opacity: 1, transform: 'none' }))], { optional: true }),
+    ]),
+  ]),
 ]);
 
 export const cardEnter = trigger('cardEnter', [

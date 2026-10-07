@@ -15,12 +15,10 @@
          ═══════════════════════════════════════════════════════════════ -->
     <div class="bot-header">
       <div class="bot-header__brand">
-        <div class="bot-header__logo">
-          <app-logo style="width: 28px; height: 28px; --logo-color: #ffffff;"></app-logo>
-        </div>
-        <div>
-          <h2 class="bot-header__title">Chasqui <span class="bot-header__dot">·</span> Diego</h2>
-          <p class="bot-header__sub">{{ bot?.emoji || '🦜' }} Asistente del Centro Juan Pablo II</p>
+        <div class="bot-header__logo" aria-hidden="true">{{ bot?.emoji || '🤖' }}</div>
+        <div class="min-w-0">
+          <h2 class="bot-header__title">{{ bot?.name || 'Asistente' }}</h2>
+          <p class="bot-header__sub">{{ bot?.persona_message || 'Asistente virtual del Centro Juan Pablo II' }}</p>
         </div>
       </div>
       <div class="bot-header__actions">
@@ -54,7 +52,7 @@
     <div class="bot-body">
 
       <!-- ── Sidebar ──────────────────────────────────────────────── -->
-      <nav class="bot-sidebar">
+      <nav class="bot-sidebar" aria-label="Secciones del bot">
         @for (tab of tabs; track tab.id) {
           <button class="bot-sidebar__item"
                   [class.bot-sidebar__item--active]="activeTab === tab.id"
@@ -313,141 +311,108 @@
 
         <!-- ══════ TAB: Configuración ════════════════════════════════ -->
         @if (activeTab === 'config') {
-          <div class="bot-tab">
-            <div class="bot-section">
-              <h3 class="bot-section__title">
-                <fa-icon [icon]="['fas', 'gear']" class="text-primary"></fa-icon>
-                Configuración del Bot
-              </h3>
-              <p class="text-sm text-on-surface-variant mb-4">
-                Modifica el nombre, emoji, mensaje de bienvenida y prompt del sistema.
-              </p>
+          <form class="bot-tab bot-cfg" (ngSubmit)="saveConfig()" novalidate>
+            @if (saveSuccess) { <app-alert type="success" [message]="saveSuccess"></app-alert> }
+            @if (saveError) { <app-alert type="error" [message]="saveError"></app-alert> }
 
-              @if (saveSuccess) { <app-alert type="success" [message]="saveSuccess" class="mb-4"></app-alert> }
-              @if (saveError) { <app-alert type="error" [message]="saveError" class="mb-4"></app-alert> }
-
-              @if (!editing) {
-                <div class="bot-config-display">
-                  <div class="bot-config-row">
-                    <span class="bot-config-key">Nombre</span>
-                    <span class="bot-config-val">{{ bot?.name || '—' }}</span>
-                  </div>
-                  <div class="bot-config-row">
-                    <span class="bot-config-key">Emoji</span>
-                    <span class="bot-config-val text-lg">{{ bot?.emoji || '🦜' }}</span>
-                  </div>
-                  <div class="bot-config-row">
-                    <span class="bot-config-key">Token</span>
-                    <span class="bot-config-val font-mono text-xs">{{ bot?.bot_token_masked || '—' }}</span>
-                  </div>
-                  <div class="bot-config-row">
-                    <span class="bot-config-key">Mensaje de bienvenida</span>
-                    <span class="bot-config-val">{{ bot?.persona_message || '(usando prompt por defecto)' }}</span>
-                  </div>
-                  <div class="bot-config-row">
-                    <span class="bot-config-key">Prompt del sistema</span>
-                    <span class="bot-config-val text-xs font-mono whitespace-pre-wrap">{{ bot?.system_prompt || '(usando prompt por defecto)' }}</span>
-                  </div>
-                </div>
-                <app-button variant="primary" label="Editar Configuración" [icon]="['fas', 'pencil']" (clicked)="startEdit()" class="mt-4"></app-button>
-              } @else {
-                <div class="bot-config-grid">
-                  <div class="bot-config-field">
-                    <label class="bot-config-label">Nombre del bot</label>
-                    <input type="text" [(ngModel)]="editForm.bot_name" class="bot-config-input" />
+            <div class="bot-cfg__cols">
+              <div class="bot-cfg__main">
+                <section class="bot-section" aria-labelledby="cfg-identity">
+                  <h3 class="bot-section__title" id="cfg-identity">Identidad</h3>
+                  <div class="bot-config-grid">
+                    <div class="bot-config-field">
+                      <label class="bot-config-label" for="cfg-name">Nombre del bot</label>
+                      <input id="cfg-name" name="bot_name" type="text" maxlength="120" [(ngModel)]="form.bot_name" class="bot-config-input" [attr.aria-invalid]="!!fieldErrors['bot_name']" />
+                      @if (fieldErrors['bot_name']) { <p class="bot-config-error" role="alert">{{ fieldErrors['bot_name'] }}</p> }
+                    </div>
+                    <div class="bot-config-field">
+                      <label class="bot-config-label" for="cfg-emoji">Emoji</label>
+                      <input id="cfg-emoji" name="bot_emoji" type="text" maxlength="8" [(ngModel)]="form.bot_emoji" class="bot-config-input" [attr.aria-invalid]="!!fieldErrors['bot_emoji']" />
+                      @if (fieldErrors['bot_emoji']) { <p class="bot-config-error" role="alert">{{ fieldErrors['bot_emoji'] }}</p> }
+                    </div>
                   </div>
                   <div class="bot-config-field">
-                    <label class="bot-config-label">Emoji</label>
-                    <input type="text" [(ngModel)]="editForm.bot_emoji" class="bot-config-input" maxlength="4" />
+                    <label class="bot-config-label" for="cfg-persona">Mensaje de presentación</label>
+                    <p class="bot-config-hint" id="cfg-persona-hint">Es lo primero que lee quien escribe /start. Si lo dejas vacío se usa el texto por defecto.</p>
+                    <textarea id="cfg-persona" name="persona_message" rows="3" [maxlength]="limits.persona" [(ngModel)]="form.persona_message" aria-describedby="cfg-persona-hint" class="bot-config-input bot-config-textarea"></textarea>
+                    <p class="bot-config-hint bot-config-count">{{ form.persona_message.length }}/{{ limits.persona }}</p>
+                    @if (fieldErrors['persona_message']) { <p class="bot-config-error" role="alert">{{ fieldErrors['persona_message'] }}</p> }
                   </div>
+                  <div class="bot-config-field">
+                    <label class="bot-config-label" for="cfg-prompt">Instrucciones del asistente (prompt del sistema)</label>
+                    <p class="bot-config-hint" id="cfg-prompt-hint">Reemplaza el prompt por defecto en todas las respuestas del bot. Vacío = usa el predeterminado. Variables: {{ '{rol}' }}, {{ '{usuario}' }}, {{ '{user_id}' }}.</p>
+                    <textarea id="cfg-prompt" name="system_prompt" rows="10" [maxlength]="limits.prompt" [(ngModel)]="form.system_prompt" aria-describedby="cfg-prompt-hint" placeholder="(Opcional) Instrucciones personalizadas…" class="bot-config-input bot-config-textarea bot-config-textarea--mono"></textarea>
+                    <p class="bot-config-hint bot-config-count">{{ form.system_prompt.length }}/{{ limits.prompt }}</p>
+                    @if (fieldErrors['system_prompt']) { <p class="bot-config-error" role="alert">{{ fieldErrors['system_prompt'] }}</p> }
+                  </div>
+                </section>
+
+                <section class="bot-section" aria-labelledby="cfg-behaviour">
+                  <h3 class="bot-section__title" id="cfg-behaviour">Comportamiento</h3>
+
+                  <div class="bot-toggle-row">
+                    <div class="flex-1">
+                      <div class="bot-toggle-label" id="t-faq">FAQ que crece sola</div>
+                      <div class="bot-toggle-hint">Cuando una pregunta sin respuesta se repite, se propone como nueva FAQ para que la apruebes.</div>
+                    </div>
+                    <label class="bot-switch"><input type="checkbox" name="auto_faq_enabled" aria-labelledby="t-faq" [(ngModel)]="form.auto_faq_enabled" /><span class="bot-switch__slider"></span></label>
+                  </div>
+
+                  <div class="bot-toggle-row" [class.is-muted]="!form.auto_faq_enabled">
+                    <div class="flex-1">
+                      <label class="bot-toggle-label" for="cfg-threshold">Repeticiones para proponer una FAQ</label>
+                      <div class="bot-toggle-hint">Cuántas veces debe repetirse la misma pregunta.</div>
+                    </div>
+                    <input id="cfg-threshold" name="auto_faq_threshold" type="number" min="1" max="50" inputmode="numeric" [(ngModel)]="form.auto_faq_threshold" [disabled]="!form.auto_faq_enabled" class="bot-config-input bot-config-number" />
+                  </div>
+
+                  <div class="bot-toggle-row">
+                    <div class="flex-1">
+                      <div class="bot-toggle-label" id="t-mcp">Autocorrección con registros</div>
+                      <div class="bot-toggle-hint">Agrega al prompt la orden de leer los registros del servidor y corregirse ante un error.</div>
+                    </div>
+                    <label class="bot-switch"><input type="checkbox" name="mcp_prompt_enabled" aria-labelledby="t-mcp" [(ngModel)]="form.mcp_prompt_enabled" /><span class="bot-switch__slider"></span></label>
+                  </div>
+
+                  <div class="bot-toggle-row">
+                    <div class="flex-1">
+                      <div class="bot-toggle-label" id="t-sup">Avisar a supervisión</div>
+                      <div class="bot-toggle-hint">Si el bot no sabe responder una pregunta, lo avisa en la campana a administradores y supervisores.</div>
+                    </div>
+                    <label class="bot-switch"><input type="checkbox" name="notify_supervision_enabled" aria-labelledby="t-sup" [(ngModel)]="form.notify_supervision_enabled" /><span class="bot-switch__slider"></span></label>
+                  </div>
+
+                  <div class="bot-toggle-row">
+                    <div class="flex-1">
+                      <div class="bot-toggle-label" id="t-int">Responder como el bot desde el panel</div>
+                      <div class="bot-toggle-hint">Habilita el botón «Responder» en las conversaciones de Telegram. Apagado, el servidor rechaza esas respuestas.</div>
+                    </div>
+                    <label class="bot-switch"><input type="checkbox" name="intervention_enabled" aria-labelledby="t-int" [(ngModel)]="form.intervention_enabled" /><span class="bot-switch__slider"></span></label>
+                  </div>
+                </section>
+              </div>
+
+              <aside class="bot-cfg__preview" aria-label="Vista previa del saludo">
+                <h3 class="bot-section__title">Así saluda</h3>
+                <div class="bot-bubble">
+                  <p><strong>{{ previewEmoji }} ¡Bienvenido a {{ previewName }}!</strong></p>
+                  <p>{{ previewIntro }}</p>
+                  <p class="bot-bubble__muted">Para iniciar sesión: entra a la plataforma, abre <em>Preferencias › Vincular chat</em>, genera un código y escribe aquí <code>/login CÓDIGO</code>.</p>
                 </div>
-                <div class="bot-config-field">
-                  <label class="bot-config-label">Mensaje de presentación</label>
-                  <textarea [(ngModel)]="editForm.persona_message" rows="2" class="bot-config-input bot-config-textarea"></textarea>
-                </div>
-                <div class="bot-config-field">
-                  <label class="bot-config-label">Prompt del sistema</label>
-                  <p class="bot-config-hint">Instrucciones completas para la personalidad y acceso del bot. Si está vacío, usa el prompt por defecto. Tokens opcionales: {{ '{rol}' }}, {{ '{usuario}' }}, {{ '{user_id}' }}.</p>
-                  <textarea [(ngModel)]="editForm.system_prompt" rows="14" placeholder="(Opcional) Instrucciones personalizadas..."
-                    class="bot-config-input bot-config-textarea bot-config-textarea--mono"></textarea>
-                  <p class="bot-config-hint">Caracteres: {{ (editForm.system_prompt || '').length }}</p>
-                </div>
-                <div class="flex items-center gap-3 mt-4">
-                  <app-button variant="primary" label="Guardar" [icon]="['fas', 'floppy-disk']" [loading]="saving" (clicked)="saveConfig()"></app-button>
-                  <app-button variant="ghost" label="Cancelar" (clicked)="cancelEdit()"></app-button>
-                </div>
-              }
+                <dl class="bot-cfg__facts">
+                  <div><dt>Token</dt><dd class="font-mono">{{ bot?.bot_token_masked || '—' }}</dd></div>
+                  <div><dt>FAQ activas</dt><dd>{{ bot?.faq_count ?? 0 }}</dd></div>
+                  <div><dt>Propuestas por revisar</dt><dd>{{ bot?.proposed_faq_count ?? 0 }}</dd></div>
+                </dl>
+              </aside>
             </div>
 
-            <div class="bot-section">
-              <h3 class="bot-section__title">
-                <fa-icon [icon]="['fas', 'wand-magic-sparkles']" class="text-primary"></fa-icon>
-                Opciones Inteligentes (Chasqui)
-              </h3>
-              <p class="text-sm text-on-surface-variant mb-4">
-                La base de conocimientos crece con el uso y el bot puede supervisarse y autocorregirse.
-              </p>
-
-              @if (saveSuccess) { <app-alert type="success" [message]="saveSuccess" class="mb-4"></app-alert> }
-              @if (saveError) { <app-alert type="error" [message]="saveError" class="mb-4"></app-alert> }
-
-              <div class="bot-toggle-row">
-                <div class="flex-1">
-                  <div class="bot-toggle-label">FAQ auto-creciente</div>
-                  <div class="bot-toggle-hint">Detecta preguntas que el bot no responde y propone nuevas FAQ automáticamente.</div>
-                </div>
-                <label class="bot-switch">
-                  <input type="checkbox" [(ngModel)]="cfgAutoFaq" />
-                  <span class="bot-switch__slider"></span>
-                </label>
-              </div>
-
-              <div class="bot-toggle-row">
-                <div class="flex-1">
-                  <div class="bot-toggle-label">Umbral de repetición</div>
-                  <div class="bot-toggle-hint">Veces que una misma pregunta debe repetirse para proponerse como FAQ.</div>
-                </div>
-                <input type="number" [(ngModel)]="cfgFaqThreshold" min="1" class="bot-config-input w-20 text-center" />
-              </div>
-
-              <div class="bot-toggle-row">
-                <div class="flex-1">
-                  <div class="bot-toggle-label">Supervisión y autocorrección (MCP)</div>
-                  <div class="bot-toggle-hint">El prompt del bot incluye directivas para leer logs y autocorregirse ante errores.</div>
-                </div>
-                <label class="bot-switch">
-                  <input type="checkbox" [(ngModel)]="cfgMcpPrompt" />
-                  <span class="bot-switch__slider"></span>
-                </label>
-              </div>
-
-              <div class="bot-toggle-row">
-                <div class="flex-1">
-                  <div class="bot-toggle-label">Notificaciones a supervisión</div>
-                  <div class="bot-toggle-hint">Envía alertas a los dispositivos vinculados en eventos urgentes o de alto impacto.</div>
-                </div>
-                <label class="bot-switch">
-                  <input type="checkbox" [(ngModel)]="cfgNotifySupervision" />
-                  <span class="bot-switch__slider"></span>
-                </label>
-              </div>
-
-              <div class="bot-toggle-row">
-                <div class="flex-1">
-                  <div class="bot-toggle-label">Intervención en el chat</div>
-                  <div class="bot-toggle-hint">Permite responder manualmente a las conversaciones desde el panel.</div>
-                </div>
-                <label class="bot-switch">
-                  <input type="checkbox" [(ngModel)]="cfgIntervention" />
-                  <span class="bot-switch__slider"></span>
-                </label>
-              </div>
-
-              <div class="mt-4">
-                <app-button variant="primary" label="Guardar Opciones" [icon]="['fas', 'floppy-disk']" [loading]="saving" (clicked)="saveConfigToggles()"></app-button>
-              </div>
+            <div class="bot-cfg__bar" [class.is-dirty]="dirty">
+              <span class="bot-cfg__bar-text" aria-live="polite">{{ dirty ? 'Tienes cambios sin guardar' : 'Todo guardado' }}</span>
+              <button type="button" class="bot-cfg__ghost" (click)="revertForm()" [disabled]="!dirty || saving">Descartar</button>
+              <button type="submit" class="bot-cfg__save" [disabled]="!dirty || saving">{{ saving ? 'Guardando…' : 'Guardar cambios' }}</button>
             </div>
-          </div>
+          </form>
         }
 
         <!-- ══════ TAB: Telegram ══════════════════════════════════════ -->

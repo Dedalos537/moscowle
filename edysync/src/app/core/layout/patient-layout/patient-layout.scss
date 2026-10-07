@@ -70,3 +70,8 @@
     padding: 1.25rem 1.5rem 80px;
   }
 }
+
+.layout__content > div {
+  position: relative;
+  height: 100%;
+}

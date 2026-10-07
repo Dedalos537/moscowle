@@ -530,14 +530,34 @@ def bot_config_endpoint():
 
     check_write_access()
     data = request.get_json(silent=True) or {}
+    errors = {}
     if 'bot_name' in data:
-        cfg.bot_name = str(data['bot_name'])[:120]
+        name = str(data['bot_name'] or '').strip()
+        if not name:
+            errors['bot_name'] = 'El nombre no puede estar vacío'
+        else:
+            cfg.bot_name = name[:120]
     if 'bot_emoji' in data:
-        cfg.bot_emoji = str(data['bot_emoji'])[:16]
+        emoji = str(data['bot_emoji'] or '').strip()
+        if not emoji:
+            errors['bot_emoji'] = 'Elige un emoji'
+        else:
+            cfg.bot_emoji = emoji[:16]
     if 'persona_message' in data:
-        cfg.persona_message = data['persona_message']
+        persona = str(data['persona_message'] or '')
+        if len(persona) > 1000:
+            errors['persona_message'] = 'Máximo 1000 caracteres'
+        else:
+            cfg.persona_message = persona.strip()
     if 'system_prompt' in data:
-        cfg.system_prompt = data['system_prompt']
+        prompt = str(data['system_prompt'] or '')
+        if len(prompt) > 8000:
+            errors['system_prompt'] = 'Máximo 8000 caracteres'
+        else:
+            cfg.system_prompt = prompt.strip()
+    if errors:
+        db.session.rollback()
+        return jsonify({'error': 'Configuración inválida', 'fields': errors}), 400
     for key in (
         'enabled',
         'auto_faq_enabled',
@@ -551,7 +571,7 @@ def bot_config_endpoint():
         from contextlib import suppress
 
         with suppress(TypeError, ValueError):
-            cfg.auto_faq_threshold = max(1, int(data['auto_faq_threshold']))
+            cfg.auto_faq_threshold = max(1, min(50, int(data['auto_faq_threshold'])))
     db.session.commit()
     return jsonify({'status': 'ok', 'config': cfg.to_dict()})
 
@@ -783,6 +803,8 @@ def send_test():
 @admin_write_required
 def bot_reply():
     """Admin intervention: send a message to a Telegram chat directly from the panel."""
+    if not BotConfig.get_or_create().intervention_enabled:
+        return jsonify({'error': 'La intervención manual está desactivada en la configuración del bot'}), 403
     data = request.get_json(silent=True) or {}
     chat_id = data.get('chat_id')
     text = (data.get('text') or '').strip()

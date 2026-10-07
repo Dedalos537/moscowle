@@ -49,6 +49,7 @@
 }
 
 .layout__content > div {
+  position: relative;
   // Envoltorio de la animación de ruta: da alto definido a las páginas que se ajustan al viewport (p. ej. Configuración).
   height: 100%;
 }

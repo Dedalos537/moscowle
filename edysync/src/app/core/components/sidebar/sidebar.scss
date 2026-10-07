@@ -94,7 +94,6 @@
 }
 
 .nav-link--active {
-  background-color: var(--color-nav-active-bg, color-mix(in srgb, var(--color-primary) 10%, transparent));
   color: var(--color-primary-text, var(--color-primary));
   font-weight: 700;
 }
@@ -150,51 +149,65 @@
   margin-top: 0.05rem;
 }
 
-/* ── Expanded tab on hover (individual item) ───────── */
-.nav-link--hovered {
-  position: relative;
-  z-index: 10;
+/* ── Selector deslizante ───────────────────────────── */
+.nav-indicator {
+  position: absolute;
+  top: 0;
+  left: 0.5rem;
+  right: 0.5rem;
+  border-radius: var(--radius);
+  background: var(--color-nav-active-bg, color-mix(in srgb, var(--color-primary) 12%, transparent));
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform;
+  transition:
+    transform 360ms cubic-bezier(0.16, 1, 0.3, 1),
+    height 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 160ms ease;
+
+  &.is-ready { opacity: 1; }
+  &.is-snap { transition: opacity 160ms ease; }
 }
 
-.nav-link-expand {
+/* ── Pestaña flotante (barra compacta): una sola que baja/sube entre ítems ── */
+.nav-flyout {
   position: absolute;
-  left: 100%;
-  top: -0.125rem;
-  bottom: -0.125rem;
+  top: 0;
+  left: calc(100% - 1px);
+  z-index: 40;
   display: flex;
   flex-direction: column;
   justify-content: center;
   min-width: 12rem;
   max-width: 18rem;
-  padding: 0.5rem 0.875rem;
+  padding: 0 0.875rem;
   background: var(--color-surface-container-lowest, #fff);
   border: 1px solid var(--color-border);
   border-radius: 0 var(--radius) var(--radius) 0;
-  box-shadow: 4px 2px 12px color-mix(in srgb, var(--color-on-surface) 14%, transparent),
-              2px 1px 4px color-mix(in srgb, var(--color-on-surface) 8%, transparent);
-  z-index: 1000;
+  box-shadow: 4px 2px 12px color-mix(in srgb, var(--color-on-surface) 14%, transparent);
+  opacity: 0;
   pointer-events: none;
-  animation: tab-slide 160ms cubic-bezier(0.16, 1, 0.3, 1);
-}
+  will-change: transform;
+  transition:
+    transform 280ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 140ms ease;
 
-@keyframes tab-slide {
-  from { opacity: 0; transform: translateX(-6px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
+  &.is-visible { opacity: 1; }
+  &.is-snap { transition: opacity 140ms ease; }
 
-.nav-link-expand__label {
-  font-weight: 700;
-  font-size: 0.8125rem;
-  color: var(--color-on-surface);
-  white-space: nowrap;
-}
+  &__label {
+    font-weight: 700;
+    font-size: 0.8125rem;
+    color: var(--color-on-surface);
+    white-space: nowrap;
+  }
 
-.nav-link-expand__sub {
-  font-size: 0.6875rem;
-  color: var(--color-on-surface-variant);
-  opacity: 0.75;
-  white-space: nowrap;
-  margin-top: 0.125rem;
+  &__sub {
+    margin-top: 0.125rem;
+    font-size: 0.6875rem;
+    color: var(--color-on-surface-variant);
+    white-space: nowrap;
+  }
 }
 
 /* ── Footer ────────────────────────────────────────── */
@@ -252,9 +265,7 @@
     background-color: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(2px);
   }
-  .nav-link-expand {
-    display: none;
-  }
+  .nav-flyout { display: none; }
   /* En móvil el panel siempre es ancho: título y subtítulo visibles */
   .nav-link-text,
   .sidebar-brand-name {
@@ -269,7 +280,8 @@
   .sidebar-brand-name {
     transition: none;
   }
-  .nav-link-expand {
-    animation: none;
+  .nav-indicator,
+  .nav-flyout {
+    transition: none;
   }
 }

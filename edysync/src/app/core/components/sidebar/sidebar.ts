@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, QueryList, ViewChild, ViewChildren, inject, effect } from '@angular/core';
 import { Router, NavigationEnd, RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -26,7 +26,9 @@ interface NavItem {
   styleUrl: './sidebar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Sidebar implements OnInit, OnDestroy {
+export class Sidebar implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('navEl') navEl?: ElementRef<HTMLElement>;
+  @ViewChildren('navLink') navLinks?: QueryList<ElementRef<HTMLElement>>;
   private settings = inject(GlobalSettingsService);
   private router = inject(Router);
   hideCharts = this.settings.hideCharts;
@@ -36,8 +38,21 @@ export class Sidebar implements OnInit, OnDestroy {
   error: string | null = null;
   isOpen = false;
 
-  /** Index of hovered nav item (individual expand) */
+  /** Índice del ítem bajo el cursor */
   hoveredIndex: number | null = null;
+
+  // Selector deslizante: un único elemento que se desplaza hasta el ítem activo.
+  indicator = { y: 0, h: 0 };
+  indicatorReady = false;
+  indicatorSnap = true;
+
+  // Pestaña flotante (barra compacta): un único elemento que baja/sube siguiendo al cursor.
+  flyY = 0;
+  flyH = 0;
+  flyItem: NavItem | null = null;
+  flyVisible = false;
+  flySnap = false;
+  private hideTimer: ReturnType<typeof setTimeout> | null = null;
 
   private subs = new Subscription();
 
@@ -125,6 +140,7 @@ export class Sidebar implements OnInit, OnDestroy {
     this.subs.add(this.auth.currentUser$.subscribe(u => {
       this.userRole = u?.role || '';
       this.cdr.markForCheck();
+      this.scheduleIndicator();
     }));
     this.subs.add(this.sidebarService.open$.subscribe(open => {
       this.isOpen = open;
@@ -135,24 +151,85 @@ export class Sidebar implements OnInit, OnDestroy {
     this.subs.add(
       this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
         this.hoveredIndex = null;
+        this.flyVisible = false;
         this.cdr.markForCheck();
+        this.scheduleIndicator();
       })
     );
   }
 
-  ngOnDestroy() {
-    this.subs.unsubscribe();
+  ngAfterViewInit() {
+    this.scheduleIndicator();
   }
 
-  onItemHover(index: number) {
-    if (!this.expanded) {
-      this.hoveredIndex = index;
+  ngOnDestroy() {
+    this.subs.unsubscribe();
+    if (this.hideTimer) clearTimeout(this.hideTimer);
+  }
+
+  /** Ítem activo por la ruta actual (prefijo más largo). */
+  private activeIndex(): number {
+    const url = this.router.url.split(/[?#]/)[0];
+    let best = -1;
+    let len = 0;
+    this.navItems.forEach((it, i) => {
+      if ((url === it.path || url.startsWith(it.path + '/')) && it.path.length > len) {
+        best = i;
+        len = it.path.length;
+      }
+    });
+    return best;
+  }
+
+  private scheduleIndicator() {
+    // Espera al render de los ítems (el rol llega de forma asíncrona).
+    setTimeout(() => requestAnimationFrame(() => this.updateIndicator()), 0);
+  }
+
+  private updateIndicator() {
+    const links = this.navLinks?.toArray() ?? [];
+    const idx = this.activeIndex();
+    const el = idx >= 0 ? links[idx]?.nativeElement : null;
+    const first = !this.indicatorReady;
+    this.indicator = el ? { y: el.offsetTop, h: el.offsetHeight } : { y: this.indicator.y, h: 0 };
+    this.indicatorSnap = first; // la primera posición se fija sin animar: no debe «caer» desde arriba
+    this.indicatorReady = !!el;
+    this.cdr.markForCheck();
+    if (first && el) requestAnimationFrame(() => { this.indicatorSnap = false; this.cdr.markForCheck(); });
+  }
+
+  onNavScroll() {
+    if (this.flyVisible) {
+      this.flyVisible = false;
       this.cdr.markForCheck();
     }
   }
 
+  onItemHover(index: number) {
+    if (this.hideTimer) { clearTimeout(this.hideTimer); this.hideTimer = null; }
+    this.hoveredIndex = index;
+    if (!this.expanded && !this.isOpen) {
+      const el = this.navLinks?.toArray()[index]?.nativeElement;
+      const nav = this.navEl?.nativeElement;
+      if (el && nav) {
+        this.flyItem = this.navItems[index];
+        this.flyY = nav.offsetTop + el.offsetTop - nav.scrollTop;
+        this.flyH = el.offsetHeight;
+        if (!this.flyVisible) {
+          // Al aparecer se coloca sin deslizar; los siguientes ítems sí se recorren con transición.
+          this.flySnap = true;
+          this.flyVisible = true;
+          requestAnimationFrame(() => { this.flySnap = false; this.cdr.markForCheck(); });
+        }
+      }
+    }
+    this.cdr.markForCheck();
+  }
+
   onItemLeave() {
     this.hoveredIndex = null;
+    // Un pequeño retraso evita el parpadeo al pasar de un ítem al siguiente.
+    this.hideTimer = setTimeout(() => { this.flyVisible = false; this.cdr.markForCheck(); }, 90);
     this.cdr.markForCheck();
   }
 

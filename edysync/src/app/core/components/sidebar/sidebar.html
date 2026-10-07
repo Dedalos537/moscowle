@@ -14,9 +14,14 @@
   </div>
 
   <!-- Navigation -->
-  <nav class="sidebar-nav">
+  <nav class="sidebar-nav" #navEl (scroll)="onNavScroll()">
+    <span class="nav-indicator" aria-hidden="true"
+      [class.is-ready]="indicatorReady" [class.is-snap]="indicatorSnap"
+      [style.transform]="'translateY(' + indicator.y + 'px)'" [style.height.px]="indicator.h"></span>
+
     @for (item of navItems; track item.path; let i = $index) {
       <a
+        #navLink
         [routerLink]="item.path"
         routerLinkActive="nav-link--active"
         #rla="routerLinkActive"
@@ -38,19 +43,19 @@
             <span class="nav-link-sub">{{ item.subtitle }}</span>
           }
         </div>
-
-        <!-- Pestaña flotante en la barra compacta -->
-        @if (!expanded && !isOpen && hoveredIndex === i) {
-          <div class="nav-link-expand" aria-hidden="true">
-            <span class="nav-link-expand__label">{{ item.label }}</span>
-            @if (item.subtitle) {
-              <span class="nav-link-expand__sub">{{ item.subtitle }}</span>
-            }
-          </div>
-        }
       </a>
     }
   </nav>
+
+  <!-- Pestaña flotante de la barra compacta: una sola, que se desliza entre ítems -->
+  <div class="nav-flyout" aria-hidden="true"
+    [class.is-visible]="flyVisible && !expanded && !isOpen" [class.is-snap]="flySnap"
+    [style.transform]="'translateY(' + flyY + 'px)'" [style.height.px]="flyH">
+    <span class="nav-flyout__label">{{ flyItem?.label }}</span>
+    @if (flyItem?.subtitle) {
+      <span class="nav-flyout__sub">{{ flyItem?.subtitle }}</span>
+    }
+  </div>
 
   <!-- Footer -->
   <div class="sidebar-footer">

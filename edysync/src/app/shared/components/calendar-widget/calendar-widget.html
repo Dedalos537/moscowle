@@ -135,14 +135,12 @@
     @if (eventCount > 0) {
       <div class="agenda-list">
         @if (multiSelect()) {
-          <div class="flex items-center gap-2 px-3 py-1.5 border-b border-outline/20">
-            <input type="checkbox" class="w-4 h-4 accent-primary cursor-pointer"
-                   [checked]="areAllDaySessionsSelected()"
-                   (change)="toggleAllDaySessions(); $event.stopPropagation()">
-            <span class="text-xs font-semibold text-on-surface-variant">
-              {{ areAllDaySessionsSelected() ? 'Desmarcar todas' : 'Seleccionar todas' }}
+          <button type="button" class="cw-selectall" (click)="toggleAllDaySessions(); $event.stopPropagation()" [attr.aria-pressed]="areAllDaySessionsSelected()">
+            <span class="cw-check" [class.is-on]="areAllDaySessionsSelected()" aria-hidden="true">
+              <svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" /></svg>
             </span>
-          </div>
+            <span>{{ areAllDaySessionsSelected() ? 'Desmarcar todas' : 'Seleccionar todas' }}</span>
+          </button>
         }
         @for (event of selectedDayEvents; track event.id; let i = $index) {
           <button
@@ -151,12 +149,13 @@
             [style.animation-delay.ms]="i * 45"
             [class.clickable]="!readonly()"
             [class.selected]="isSessionSelected(event.id)"
-            (click)="onEventClick(event)"
+            [attr.aria-pressed]="multiSelect() ? isSessionSelected(event.id) : null"
+            (click)="multiSelect() ? toggleSessionSelect(event, $event) : onEventClick(event)"
           >
             @if (multiSelect()) {
-              <input type="checkbox" class="w-4 h-4 accent-primary shrink-0 cursor-pointer"
-                     [checked]="isSessionSelected(event.id)"
-                     (change)="toggleSessionSelect(event, $event)">
+              <span class="cw-check" [class.is-on]="isSessionSelected(event.id)" aria-hidden="true">
+                <svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" /></svg>
+              </span>
             }
             <div class="agenda-item-indicator" [class]="statusColor(event.status)" aria-hidden="true"></div>
             <div class="agenda-item-body">

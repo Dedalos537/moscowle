@@ -24,7 +24,7 @@
   <div class="layout__main">
     <app-header class="layout__header"></app-header>
     <main class="layout__content">
-      <div [@routeAnimations]="prepareRoute()">
+      <div [@routeAnimations]="prepareRoute()" [@.disabled]="reduceMotion">
         <router-outlet></router-outlet>
       </div>
     </main>

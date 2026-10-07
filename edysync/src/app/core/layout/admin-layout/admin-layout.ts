@@ -84,8 +84,12 @@ export class AdminLayout implements OnInit, OnDestroy {
     }
   }
 
-  prepareRoute() {
-    return;
+  /** Respeta «reducir movimiento»: sin transición entre pantallas. */
+  readonly reduceMotion = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+  /** El estado de la animación es la ruta (sin query): cambia de página → se anima; cambia de pestaña interna → no. */
+  prepareRoute(): string {
+    return this.router.url.split(/[?#]/)[0];
   }
 
 }

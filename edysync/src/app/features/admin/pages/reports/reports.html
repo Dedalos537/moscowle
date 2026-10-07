@@ -8,16 +8,7 @@
     </div>
   } @else {
 
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div>
-        <div class="flex items-center gap-3">
-          <fa-icon [icon]="['fas', 'chart-pie']" class="text-3xl text-primary"></fa-icon>
-          <div>
-            <h1 class="text-h2 text-on-surface">Reportes y Finanzas</h1>
-            <p class="text-body text-on-surface-variant mt-0.5">Resumen operativo y financiero del período actual</p>
-          </div>
-        </div>
-      </div>
+    <div class="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4">
       <div class="flex gap-2 flex-wrap">
         <app-button variant="primary" label="Análisis Llama AI" [icon]="['fas', 'brain']" [disabled]="aiGenerating" (clicked)="generateAIReport()"></app-button>
         <app-button variant="primary" label="Reporte Semanal" [icon]="['fas', 'envelope']" [disabled]="reportSending" (clicked)="sendWeeklyReport()"></app-button>

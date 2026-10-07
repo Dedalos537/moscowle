@@ -8,7 +8,30 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Button } from '../../../../shared/components/button/button';
 import { Alert } from '../../../../shared/components/alert/alert';
-import { Logo } from '../../../../shared/components/logo/logo';
+
+interface BotForm {
+  bot_name: string;
+  bot_emoji: string;
+  persona_message: string;
+  system_prompt: string;
+  auto_faq_enabled: boolean;
+  auto_faq_threshold: number;
+  mcp_prompt_enabled: boolean;
+  notify_supervision_enabled: boolean;
+  intervention_enabled: boolean;
+}
+
+const EMPTY_FORM: BotForm = {
+  bot_name: '',
+  bot_emoji: '',
+  persona_message: '',
+  system_prompt: '',
+  auto_faq_enabled: true,
+  auto_faq_threshold: 3,
+  mcp_prompt_enabled: true,
+  notify_supervision_enabled: true,
+  intervention_enabled: true,
+};
 
 type TabId = 'dashboard' | 'config' | 'telegram' | 'faq' | 'webhook' | 'test';
 
@@ -22,7 +45,7 @@ interface TabDef {
 @Component({
   selector: 'app-bot-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Spinner, Button, Alert, Logo],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Spinner, Button, Alert],
   templateUrl: './bot-panel.html',
   styleUrl: './bot-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,14 +58,6 @@ export class BotPanel implements OnInit, OnDestroy {
 
   loading = true;
   error: string | null = null;
-  debugLog: string[] = [];
-
-  private log(msg: string, data?: any) {
-    const entry = `[${new Date().toISOString()}] ${msg}`;
-    this.debugLog.push(entry);
-    console.log('[BotPanel DEBUG]', entry, data ?? '');
-    if (data) console.log(data);
-  }
 
   activeTab: TabId = 'dashboard';
 
@@ -69,12 +84,14 @@ export class BotPanel implements OnInit, OnDestroy {
   conversations: any[] = [];
   activity: any[] = [];
 
-  // Config editing
-  editing = false;
-  editForm: any = {};
+  // Configuración (identidad + opciones): un solo formulario, un solo guardado
+  form: BotForm = { ...EMPTY_FORM };
+  private savedForm: BotForm = { ...EMPTY_FORM };
+  fieldErrors: Record<string, string> = {};
   saving = false;
   saveSuccess = '';
   saveError = '';
+  readonly limits = { persona: 1000, prompt: 8000 };
 
   // FAQ
   faqList: any[] = [];
@@ -126,25 +143,8 @@ export class BotPanel implements OnInit, OnDestroy {
   autogrowMsg = '';
   autogrowErr = '';
 
-  // Config toggles
-  cfgAutoFaq = true;
-  cfgFaqThreshold = 3;
-  cfgMcpPrompt = true;
-  cfgNotifySupervision = true;
-  cfgIntervention = true;
-
   ngOnInit() {
-    this.log('ngOnInit started');
-    try {
-      this.loadDashboard();
-      this.checkAuth();
-      this.log('ngOnInit completed');
-    } catch (e: any) {
-      this.log('ngOnInit SYNC ERROR', e);
-      this.error = 'Error crítico en inicialización: ' + (e?.message || String(e));
-      this.loading = false;
-      this.cdr.markForCheck();
-    }
+    this.loadDashboard();
   }
 
   ngOnDestroy() {
@@ -161,15 +161,7 @@ export class BotPanel implements OnInit, OnDestroy {
     this.error = null;
   }
 
-  private checkAuth() {
-    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
-    if (!token) {
-      console.warn('[BotPanel] No auth token found');
-    }
-  }
-
   loadDashboard(showLoading = true) {
-    this.log('loadDashboard called', { showLoading });
     if (showLoading) {
       this.loading = true;
     }
@@ -179,27 +171,15 @@ export class BotPanel implements OnInit, OnDestroy {
     this.subs.add(
       this.admin.getBotDashboard().subscribe({
         next: (res) => {
-          this.log('Dashboard loaded successfully', res);
           this.bot = res.bot;
           this.channels = res.channels || {};
           this.conversations = res.conversations || [];
           this.activity = res.activity || [];
-          this.log('Data assigned', { bot: !!this.bot, channels: Object.keys(this.channels), convCount: this.conversations.length, activityCount: this.activity.length });
-          const cfg = res.bot?.config;
-          if (cfg) {
-            this.cfgAutoFaq = cfg.auto_faq_enabled;
-            this.cfgFaqThreshold = cfg.auto_faq_threshold;
-            this.cfgMcpPrompt = cfg.mcp_prompt_enabled;
-            this.cfgNotifySupervision = cfg.notify_supervision_enabled;
-            this.cfgIntervention = cfg.intervention_enabled;
-            this.log('Config toggles set', cfg);
-          }
+          this.initForm();
           this.loading = false;
           this.cdr.markForCheck();
-          this.log('Dashboard loading complete');
         },
         error: (err) => {
-          this.log('Dashboard load ERROR', { status: err?.status, statusText: err?.statusText, message: err?.message, error: err?.error });
           const status = err?.status;
           let msg = '';
           if (status === 401 || status === 403) {
@@ -219,21 +199,17 @@ export class BotPanel implements OnInit, OnDestroy {
   }
 
   private triggerAuthRefresh() {
-    this.log('Attempting token refresh...');
     this.auth.refreshToken().subscribe({
       next: (res) => {
-        this.log('Token refresh response', res);
         if (res.access_token) {
           localStorage.setItem('access_token', res.access_token);
         }
         if (res.refresh_token) {
           localStorage.setItem('refresh_token', res.refresh_token);
         }
-        this.log('Token refreshed, retrying dashboard load...');
         this.loadDashboard(false);
       },
       error: (err) => {
-        this.log('Token refresh failed', err);
         window.location.href = '/app/auth/login';
       },
     });
@@ -282,44 +258,86 @@ export class BotPanel implements OnInit, OnDestroy {
     );
   }
 
-  // ─── Config editing ────────────────────────────────────────────────
-  startEdit() {
-    this.editing = true;
-    this.editForm = {
+  // ─── Configuración ──────────────────────────────────────────────────
+  private initForm() {
+    const cfg = this.bot?.config || {};
+    this.form = {
       bot_name: this.bot?.name || '',
       bot_emoji: this.bot?.emoji || '',
       persona_message: this.bot?.persona_message || '',
       system_prompt: this.bot?.system_prompt || '',
+      auto_faq_enabled: cfg.auto_faq_enabled ?? true,
+      auto_faq_threshold: cfg.auto_faq_threshold ?? 3,
+      mcp_prompt_enabled: cfg.mcp_prompt_enabled ?? true,
+      notify_supervision_enabled: cfg.notify_supervision_enabled ?? true,
+      intervention_enabled: cfg.intervention_enabled ?? true,
     };
-    this.saveSuccess = '';
-    this.saveError = '';
+    this.savedForm = { ...this.form };
+    this.fieldErrors = {};
   }
 
-  cancelEdit() {
-    this.editing = false;
-    this.editForm = {};
+  get dirty(): boolean {
+    return (Object.keys(this.form) as (keyof BotForm)[]).some((k) => this.form[k] !== this.savedForm[k]);
+  }
+
+  revertForm() {
+    this.form = { ...this.savedForm };
+    this.fieldErrors = {};
+    this.saveError = '';
+    this.saveSuccess = '';
+  }
+
+  /** Lo que verá quien escriba /start: misma fórmula que el backend (identidad + presentación configuradas). */
+  get previewName(): string {
+    return this.form.bot_name.trim() || 'Asistente';
+  }
+  get previewEmoji(): string {
+    return this.form.bot_emoji.trim() || '🤖';
+  }
+  get previewIntro(): string {
+    return this.form.persona_message.trim() || 'Soy tu asistente inteligente para el Centro Juan Pablo II.';
   }
 
   saveConfig() {
+    if (this.saving || !this.dirty) return;
     this.saving = true;
     this.saveSuccess = '';
     this.saveError = '';
+    this.fieldErrors = {};
     this.cdr.markForCheck();
+    const f = this.form;
     this.subs.add(
       this.admin.updateTelegramConfig({
-        bot_name: this.editForm.bot_name,
-        bot_emoji: this.editForm.bot_emoji,
-        persona_message: this.editForm.persona_message,
-        system_prompt: this.editForm.system_prompt,
+        ...f,
+        auto_faq_threshold: Math.max(1, Math.min(50, Math.round(Number(f.auto_faq_threshold) || 3))),
       }).subscribe({
-        next: () => {
-          this.bot = { ...this.bot, ...this.editForm };
+        next: (res) => {
+          const c = res?.config || {};
+          this.bot = {
+            ...this.bot,
+            name: c.bot_name ?? f.bot_name,
+            emoji: c.bot_emoji ?? f.bot_emoji,
+            persona_message: c.persona_message ?? f.persona_message,
+            system_prompt: c.system_prompt ?? f.system_prompt,
+            config: {
+              auto_faq_enabled: c.auto_faq_enabled ?? f.auto_faq_enabled,
+              auto_faq_threshold: c.auto_faq_threshold ?? f.auto_faq_threshold,
+              mcp_prompt_enabled: c.mcp_prompt_enabled ?? f.mcp_prompt_enabled,
+              notify_supervision_enabled: c.notify_supervision_enabled ?? f.notify_supervision_enabled,
+              intervention_enabled: c.intervention_enabled ?? f.intervention_enabled,
+            },
+          };
+          this.initForm();
           this.saving = false;
-          this.editing = false;
-          this.saveSuccess = 'Configuración guardada';
+          this.saveSuccess = 'Cambios guardados. El bot ya los usa.';
           this.cdr.markForCheck();
         },
-        error: (err) => { this.saving = false; this.saveError = err.error?.error || 'Error al guardar'; this.cdr.markForCheck(); },
+        error: (err) => {
+          this.saving = false;
+          this.fieldErrors = err?.error?.fields || {};
+          this.saveError = err?.error?.error || 'No se pudo guardar la configuración.';
+          this.cdr.markForCheck();
+        },
       })
     );
   }
@@ -487,7 +505,7 @@ export class BotPanel implements OnInit, OnDestroy {
   }
 
   canReply(conv: any): boolean {
-    return conv.channel === 'telegram' && !!conv.chat_id;
+    return conv.channel === 'telegram' && !!conv.chat_id && this.bot?.config?.intervention_enabled !== false;
   }
 
   sendReply(conv: any) {
@@ -510,26 +528,6 @@ export class BotPanel implements OnInit, OnDestroy {
           this.replyErr = err.error?.error || err.message || 'Error al enviar';
           this.cdr.markForCheck();
         },
-      })
-    );
-  }
-
-  // ─── Config toggles save ────────────────────────────────────────────
-  saveConfigToggles() {
-    this.saving = true;
-    this.saveSuccess = '';
-    this.saveError = '';
-    this.cdr.markForCheck();
-    this.subs.add(
-      this.admin.updateTelegramConfig({
-        auto_faq_enabled: this.cfgAutoFaq,
-        auto_faq_threshold: this.cfgFaqThreshold,
-        mcp_prompt_enabled: this.cfgMcpPrompt,
-        notify_supervision_enabled: this.cfgNotifySupervision,
-        intervention_enabled: this.cfgIntervention,
-      }).subscribe({
-        next: () => { this.saving = false; this.saveSuccess = 'Opciones guardadas'; this.saveError = ''; this.cdr.markForCheck(); },
-        error: (err) => { this.saving = false; this.saveError = err.error?.error || 'Error al guardar'; this.cdr.markForCheck(); },
       })
     );
   }
