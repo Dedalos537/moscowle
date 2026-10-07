@@ -58,8 +58,8 @@ def _load_password():
 
 
 def build_frontend():
-    print('Compilando Angular (produccion)...')
-    subprocess.run(['npx', 'ng', 'build'], cwd=PROJECT_ROOT / 'edysync', check=True)  # noqa: S607
+    print('Compilando Angular (produccion, base href / para cPanel)...')
+    subprocess.run(['npx', 'ng', 'build', '--base-href', '/'], cwd=PROJECT_ROOT / 'edysync', check=True)  # noqa: S607
 
 
 # ─── Remote paths ───
@@ -358,7 +358,8 @@ def main():
         print('ERROR: falta la contrasena FTP (variable FTP_PASS o archivo .deploy_cpanel.env).')
         sys.exit(1)
 
-    if ('--build' in sys.argv or '--all' in sys.argv) and do_frontend and not dry_run:
+    # El dist por defecto usa base /app/ (nginx de Ubuntu); en cPanel cuelga de la raiz, asi que siempre se recompila.
+    if do_frontend and not dry_run:
         build_frontend()
 
     print(f'Connecting to {FTP_HOST}...')
