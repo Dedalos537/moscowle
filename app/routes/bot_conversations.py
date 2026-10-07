@@ -27,7 +27,7 @@ def _conversation_or_404(cid):
 @admin_required
 def list_conversations():
     channel = request.args.get('channel') or None
-    if channel not in (None, 'telegram', 'whatsapp'):
+    if channel not in (None, 'telegram', 'whatsapp', 'web'):
         return jsonify({'error': 'Canal inválido'}), 400
     rows = conversations.list_conversations(channel, request.args.get('q'), int(request.args.get('limit', 60) or 60))
     last = db.session.query(db.func.max(conversations.BotMessage.id)).scalar() or 0

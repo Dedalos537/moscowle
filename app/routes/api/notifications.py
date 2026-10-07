@@ -230,6 +230,7 @@ def notification_preferences():
                     'browser_notifications': getattr(prefs, 'browser_notifications', False),
                     'digest_enabled': getattr(prefs, 'digest_enabled', True),
                     'digest_channel': getattr(prefs, 'digest_channel', 'both'),
+                    'telegram_level': getattr(prefs, 'telegram_level', None) or 'important',
                 }
             )
         else:

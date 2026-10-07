@@ -10,6 +10,7 @@ from app import db
 from app.models.bot_config import BotConfig
 from app.models.faq import Faq
 from app.models.telegram_user import TelegramUser
+from app.services import telegram_polling
 from app.utils.decorators import admin_required, admin_write_required, check_write_access
 
 logger = logging.getLogger('app.telegram')
@@ -286,25 +287,86 @@ def unlink_account():
     return jsonify({'status': 'unlinked'})
 
 
+def _my_accounts(user_id):
+    return TelegramUser.query.filter_by(admin_user_id=user_id, is_linked=True, is_active=True).all()
+
+
+def _account_dict(t):
+    label = f'@{t.telegram_username}' if t.telegram_username else (t.telegram_first_name or 'Cuenta de Telegram')
+    return {
+        'telegram_chat_id': t.telegram_chat_id,
+        'label': label,
+        'notifications_enabled': bool(t.notifications_enabled),
+        'last_interaction': t.last_interaction_at.isoformat() if t.last_interaction_at else None,
+    }
+
+
+@telegram_bp.route('/my-accounts', methods=['GET'])
+@jwt_required()
+def my_accounts():
+    """Cuentas de Telegram vinculadas al usuario actual (cualquier rol): su propio ajuste, no el de otros."""
+    accounts = _my_accounts(int(get_jwt_identity()))
+    return jsonify(
+        {
+            'accounts': [_account_dict(t) for t in accounts],
+            'bot_configured': bool(current_app.config.get('TELEGRAM_BOT_TOKEN')),
+        }
+    )
+
+
 @telegram_bp.route('/notifications/toggle', methods=['POST'])
 @jwt_required()
-@admin_write_required
 def toggle_notifications():
-    """Enable/disable Telegram notifications."""
+    """Activa/desactiva las notificaciones por Telegram de una cuenta propia, o de todas si no se indica `telegram_chat_id`.
+
+    Antes exigía rol admin: terapeutas y pacientes no podían apagarlas aunque la pantalla se lo permitía.
+    """
     user_id = int(get_jwt_identity())
     data = request.get_json(silent=True) or {}
+    enabled = data.get('enabled')
+    if not isinstance(enabled, bool):
+        return jsonify({'error': 'enabled debe ser verdadero o falso'}), 400
     chat_id = data.get('telegram_chat_id')
-    enabled = data.get('enabled', True)
-
-    tg_user = TelegramUser.query.filter_by(admin_user_id=user_id, telegram_chat_id=chat_id, is_linked=True).first()
-
-    if not tg_user:
-        return jsonify({'error': 'No encontrado'}), 404
-
-    tg_user.notifications_enabled = bool(enabled)
+    accounts = _my_accounts(user_id)
+    if chat_id is not None:
+        accounts = [t for t in accounts if t.telegram_chat_id == chat_id]
+    if not accounts:
+        return jsonify({'error': 'No hay una cuenta de Telegram vinculada'}), 404
+    for t in accounts:
+        t.notifications_enabled = enabled
     db.session.commit()
+    return jsonify(
+        {'status': 'updated', 'notifications_enabled': enabled, 'accounts': [_account_dict(t) for t in accounts]}
+    )
 
-    return jsonify({'status': 'updated', 'notifications_enabled': tg_user.notifications_enabled})
+
+@telegram_bp.route('/notifications/test', methods=['POST'])
+@jwt_required()
+def test_notification():
+    """Manda un aviso de prueba a las cuentas vinculadas del usuario para comprobar que el canal funciona."""
+    from app.models.user import User
+    from app.services.telegram_bot_service import send_telegram_message
+
+    token = current_app.config.get('TELEGRAM_BOT_TOKEN')
+    if not token:
+        return jsonify({'error': 'El bot de Telegram no está configurado en el servidor'}), 503
+    user = db.session.get(User, int(get_jwt_identity()))
+    accounts = _my_accounts(user.id)
+    if not accounts:
+        return jsonify({'error': 'No tienes una cuenta de Telegram vinculada'}), 404
+    sent, muted = 0, 0
+    for t in accounts:
+        state = 'activadas' if t.notifications_enabled else 'DESACTIVADAS (no recibirás avisos reales hasta activarlas)'
+        ok = send_telegram_message(
+            t.telegram_chat_id,
+            f'🔔 *Prueba de notificación*\nHola {user.username}, el canal funciona. Tus notificaciones están {state}.',
+            token,
+        )
+        sent += 1 if ok else 0
+        muted += 0 if t.notifications_enabled else 1
+    if not sent:
+        return jsonify({'error': 'Telegram no entregó la prueba. Escribe /start al bot e inténtalo de nuevo.'}), 502
+    return jsonify({'status': 'sent', 'sent': sent, 'muted': muted})
 
 
 def _whatsapp_channel_status():
@@ -626,6 +688,26 @@ def faq_list():
     return jsonify([f.to_dict() for f in faqs])
 
 
+@telegram_bp.route('/faq/website', methods=['GET', 'PUT', 'POST'])
+@jwt_required()
+@admin_required
+def faq_website():
+    """GET: estado de la última sincronización · PUT: cambia la web de origen · POST: sincroniza ahora."""
+    from app.services import website_faq_sync
+
+    if request.method == 'GET':
+        return jsonify(website_faq_sync.status())
+    check_write_access()
+    if request.method == 'PUT':
+        try:
+            website_faq_sync.set_url((request.get_json(silent=True) or {}).get('url'))
+        except ValueError as exc:
+            return jsonify({'error': str(exc)}), 400
+        return jsonify(website_faq_sync.status())
+    result = website_faq_sync.sync()
+    return jsonify({**website_faq_sync.status(), **result}), (200 if result['ok'] else 502)
+
+
 @telegram_bp.route('/faq/proposed', methods=['GET'])
 @jwt_required()
 @admin_required
@@ -716,6 +798,7 @@ def webhook_status():
                 'last_error_message': result.get('last_error_message'),
                 'last_error_date': result.get('last_error_date'),
                 'max_connections': result.get('max_connections'),
+                'polling': telegram_polling.status()['polling'],
                 'raw': result,
             }
         )

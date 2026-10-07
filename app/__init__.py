@@ -544,6 +544,7 @@ def create_app(config_class=None):
 
     csrf.exempt(telegram_bp)
 
+    from app.routes.automation_routes import automation_bp
     from app.routes.bot_conversations import bot_conv_bp, live_bp
     from app.routes.kanban_routes import kanban_bp
     from app.routes.profile_avatar import avatar_bp
@@ -551,6 +552,7 @@ def create_app(config_class=None):
     csrf.exempt(kanban_bp)
     csrf.exempt(avatar_bp)
     csrf.exempt(bot_conv_bp)
+    csrf.exempt(automation_bp)
     csrf.exempt(live_bp)
 
     from app.routes.webauthn import webauthn_bp
@@ -720,6 +722,28 @@ def create_app(config_class=None):
                 result = db.session.execute(
                     text(
                         'SELECT COUNT(*) FROM information_schema.columns '
+                        "WHERE table_name = 'user_notification_preference' AND column_name = 'telegram_level'"
+                    )
+                )
+                if result.scalar() == 0:
+                    db.session.execute(
+                        text(
+                            'ALTER TABLE user_notification_preference '
+                            "ADD COLUMN telegram_level VARCHAR(12) NOT NULL DEFAULT 'important'"
+                        )
+                    )
+                    db.session.commit()
+                    app.logger.info('user_notification_preference.telegram_level added')
+            except Exception as e:
+                app.logger.warning(f'telegram_level migration (non-fatal): {e}')
+                db.session.rollback()
+
+            try:
+                from sqlalchemy import text
+
+                result = db.session.execute(
+                    text(
+                        'SELECT COUNT(*) FROM information_schema.columns '
                         "WHERE table_name = 'user_notification_preference' AND column_name = 'notifications_enabled'"
                     )
                 )
@@ -847,6 +871,7 @@ def create_app(config_class=None):
         ('kanban', 'app.routes.kanban_routes', 'kanban_bp'),
         ('profile_avatar', 'app.routes.profile_avatar', 'avatar_bp'),
         ('bot_conversations', 'app.routes.bot_conversations', 'bot_conv_bp'),
+        ('automation', 'app.routes.automation_routes', 'automation_bp'),
         ('live_sync', 'app.routes.bot_conversations', 'live_bp'),
         ('webauthn', 'app.routes.webauthn', 'webauthn_bp'),
         ('deploy', 'app.routes.deploy_routes', 'deploy_bp'),
@@ -928,6 +953,9 @@ def create_app(config_class=None):
 
             init_scheduler(app)
             app.logger.info('Scheduler initialized')
+            from app.services import telegram_polling
+
+            telegram_polling.start(app)
         except Exception as e:
             app.logger.error('Scheduler initialization failed: %s', e)
 
@@ -985,6 +1013,7 @@ def create_app_lite():
     from app.routes.admin_ai import bp as admin_ai_bp
     from app.routes.api import api_bp
     from app.routes.auth import auth_bp
+    from app.routes.automation_routes import automation_bp
     from app.routes.bot_conversations import bot_conv_bp, live_bp
     from app.routes.chat_routes import chat_bp
     from app.routes.crm_routes import crm_bp
@@ -1007,6 +1036,7 @@ def create_app_lite():
     csrf.exempt(kanban_bp)
     csrf.exempt(avatar_bp)
     csrf.exempt(bot_conv_bp)
+    csrf.exempt(automation_bp)
     csrf.exempt(live_bp)
     csrf.exempt(webauthn_bp)
     csrf.exempt(crm_bp)
@@ -1030,6 +1060,7 @@ def create_app_lite():
         avatar_bp,
         bot_conv_bp,
         live_bp,
+        automation_bp,
     ]:
         try:
             app.register_blueprint(bp)

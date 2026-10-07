@@ -373,39 +373,12 @@ def run_daily_notification_digest(app):
 
 
 def send_whatsapp_debt_reminders(app):
-    """Send WhatsApp reminders for overdue installments (daily at 9am)."""
+    """Recordatorios de cuotas vencidas a los apoderados (diario a las 9:00)."""
     with app.app_context():
         try:
-            from app.services.contract_service import ContractService
-            from app.services.whatsapp_service import whatsapp_service
+            from app.services.debt_reminder_service import DebtReminderService
 
-            cs = ContractService()
-            due = cs.get_due_installments()
-            sent = 0
-            for inst in due:
-                if not inst['patient_phone']:
-                    continue
-                if inst['reminder_sent'] and inst['days_overdue'] % 7 != 0:
-                    continue
-
-                result = whatsapp_service.send_installment_reminder(
-                    patient_name=inst['patient_name'],
-                    patient_phone=inst['patient_phone'],
-                    installment_number=inst['number'],
-                    due_date=inst['due_date'],
-                    amount=inst['remaining'],
-                    days_overdue=inst['days_overdue'],
-                )
-                if result.get('sent'):
-                    from app.models.contract import Installment
-
-                    installment = Installment.query.get(inst['installment_id'])
-                    if installment:
-                        installment.reminder_sent = True
-                        db.session.commit()
-                    sent += 1
-
-            print(f'WhatsApp reminders: {sent} sent, {len(due)} due')
+            print(f'Debt reminders: {DebtReminderService().run()}')
         except Exception as e:
             print(f'Error in send_whatsapp_debt_reminders: {e}')
             import traceback
@@ -471,7 +444,19 @@ def run_incident_escalation(app):
             print(f'Error in run_incident_escalation: {e}')
 
 
+def sync_website_faq(app):
+    """Refresca las FAQ del bot con lo que dice la web del centro."""
+    with app.app_context():
+        from app.services import website_faq_sync
+
+        website_faq_sync.sync()
+
+
 def init_scheduler(app):
+    scheduler.add_job(
+        func=lambda: sync_website_faq(app), trigger='cron', day_of_week='mon', hour=5, minute=0, id='website_faq_sync'
+    )
+
     scheduler.add_job(func=lambda: check_upcoming_payments(app), trigger='cron', hour=8, minute=0)
 
     scheduler.add_job(func=lambda: check_session_attendance(app), trigger='interval', minutes=30)

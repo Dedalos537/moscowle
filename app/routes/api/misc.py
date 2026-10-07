@@ -435,6 +435,25 @@ def contact_message():
                 )
             except Exception as exc:
                 current_app.logger.debug('contact admin notification failed: %s', exc)
+        try:
+            from app.services import bot_conversation_service as conversations
+
+            subject = (data.get('subject') or '').strip()
+            text = (
+                f'[{subject}] {data.get("message")}' if subject and subject != 'Consulta Web' else data.get('message')
+            )
+            conversations.log_message(
+                'web',
+                data.get('email', ''),
+                'in',
+                text,
+                'contact',
+                contact_name=f'{data.get("first_name")} {data.get("last_name")}'.strip(),
+                contact_handle=(data.get('email') or '').strip().lower(),
+            )
+        except Exception as exc:
+            current_app.logger.debug('contact conversation log failed: %s', exc)
+        return jsonify({'success': True, 'message': '¡Mensaje enviado exitosamente! Te responderemos pronto.'}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500

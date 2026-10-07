@@ -2,8 +2,9 @@ import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnDestroy, OnIni
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { QRCodeComponent } from 'angularx-qrcode';
-import { Subject, Subscription, debounceTime, interval } from 'rxjs';
-import { AdminService } from '../../../../core/services/admin.service';
+import { Subject, Subscription, debounceTime, distinctUntilChanged, interval, switchMap } from 'rxjs';
+import { Switch } from '../../../../shared/components/switch/switch';
+import { AdminService, type AutomationSettings } from '../../../../core/services/admin.service';
 import { LiveSyncService } from '../../../../core/services/live-sync.service';
 import { ToastService } from '../../../../core/services/toast.service';
 
@@ -24,7 +25,7 @@ const VARIABLES: { name: string; hint: string }[] = [
 @Component({
   selector: 'app-channels-panel',
   standalone: true,
-  imports: [FormsModule, FontAwesomeModule, QRCodeComponent],
+  imports: [FormsModule, FontAwesomeModule, QRCodeComponent, Switch],
   templateUrl: './channels-panel.html',
   styleUrl: './channels-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -66,7 +67,34 @@ export class ChannelsPanel implements OnInit, OnDestroy {
   tgLinked = 0;
   tgBotActive: boolean | null = null;
 
+  // Avisos a padres
+  readonly modes: { id: AutomationSettings['mode']; title: string; hint: string }[] = [
+    { id: 'all', title: 'Todos', hint: 'Cada familia recibe sus avisos' },
+    { id: 'pilot', title: 'Solo una familia', hint: 'Para probar sin molestar a nadie más' },
+    { id: 'off', title: 'Apagado', hint: 'No sale ningún aviso automático' },
+  ];
+  readonly kinds: { id: 'sessions' | 'debts' | 'whatsapp' | 'sms'; label: string; hint: string }[] = [
+    { id: 'sessions', label: 'Recordatorio de sesiones', hint: 'El día anterior a cada sesión' },
+    { id: 'debts', label: 'Cobranza de pagos', hint: 'Pagos vencidos y por vencer' },
+    { id: 'whatsapp', label: 'Por WhatsApp', hint: 'Desde el número vinculado del centro' },
+    { id: 'sms', label: 'Por SMS', hint: 'Como respaldo o si WhatsApp no está' },
+  ];
+  auto: AutomationSettings | null = null;
+  autoBusy = false;
+  autoTesting: 'whatsapp' | 'sms' | null = null;
+  pilotQuery = '';
+  pilotResults: { id: number; username: string; phone: string | null }[] = [];
+  private pilotSearch$ = new Subject<string>();
+
   ngOnInit() {
+    this.loadAutomation();
+    this.subs.add(
+      this.pilotSearch$.pipe(debounceTime(250), distinctUntilChanged(), switchMap((q) => this.admin.searchAutomationPatients(q))).subscribe((rows) => {
+        this.pilotResults = rows;
+        this.cdr.markForCheck();
+      }),
+    );
+    this.subs.add(this.live.watch(['channels']).subscribe(() => this.loadAutomation()));
     this.loadConfig();
     this.loadWhatsapp();
     this.loadTelegram();
@@ -229,6 +257,88 @@ export class ChannelsPanel implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
       error: () => { this.tgBotActive = null; this.cdr.markForCheck(); },
+    });
+  }
+
+  // ── Avisos a padres ──────────────────────────────────────────────────────
+  private loadAutomation() {
+    this.admin.getAutomation().subscribe({
+      next: (res) => { this.auto = res; this.cdr.markForCheck(); },
+      error: () => this.toast.show('No se pudo leer la configuración de avisos a padres.', 'error'),
+    });
+  }
+
+  patchAutomation(patch: Parameters<AdminService['updateAutomation']>[0]) {
+    if (!this.auto || this.autoBusy) return;
+    const before = this.auto;
+    this.auto = { ...this.auto, ...patch };
+    this.autoBusy = true;
+    this.cdr.markForCheck();
+    this.admin.updateAutomation(patch).subscribe({
+      next: (res) => {
+        this.auto = { ...res, last_24h: before.last_24h };
+        this.autoBusy = false;
+        this.saveState = 'saved';
+        this.cdr.markForCheck();
+        setTimeout(() => { if (this.saveState === 'saved') { this.saveState = 'idle'; this.cdr.markForCheck(); } }, 2200);
+      },
+      error: (err) => {
+        this.auto = before;
+        this.autoBusy = false;
+        this.toast.show(err?.error?.fields?.pilot_patient_id || err?.error?.error || 'No se pudo guardar el cambio.', 'error');
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  setFlag(id: 'sessions' | 'debts' | 'whatsapp' | 'sms', value: boolean) {
+    this.patchAutomation({ [id]: value });
+  }
+
+  setMode(mode: AutomationSettings['mode']) {
+    if (mode === 'pilot' && !this.auto?.pilot_patient_id) {
+      this.auto = this.auto && { ...this.auto, mode };
+      this.searchPilot('');
+      this.cdr.markForCheck();
+      return;
+    }
+    this.patchAutomation({ mode });
+  }
+
+  flag(id: 'sessions' | 'debts' | 'whatsapp' | 'sms'): boolean {
+    return !!this.auto?.[id];
+  }
+
+  searchPilot(q: string) {
+    this.pilotQuery = q;
+    this.pilotSearch$.next(q);
+  }
+
+  choosePilot(p: { id: number }) {
+    this.pilotResults = [];
+    this.pilotQuery = '';
+    this.patchAutomation({ mode: 'pilot', pilot_patient_id: p.id });
+  }
+
+  sent24(channel: string): number {
+    return this.auto?.last_24h?.[channel]?.['sent'] ?? 0;
+  }
+
+  testPilot(channel: 'whatsapp' | 'sms') {
+    if (this.autoTesting || !this.auto?.pilot_patient_id) return;
+    this.autoTesting = channel;
+    this.cdr.markForCheck();
+    this.admin.testAutomation(channel, this.auto.pilot_patient_id).subscribe({
+      next: (res) => {
+        this.autoTesting = null;
+        this.toast.show(`Prueba enviada al apoderado de ${res.patient}${res.phone ? ' (' + res.phone + ')' : ''}`, 'success');
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.autoTesting = null;
+        this.toast.show(err?.error?.reason || err?.error?.error || 'No se pudo enviar la prueba.', 'error');
+        this.cdr.markForCheck();
+      },
     });
   }
 }

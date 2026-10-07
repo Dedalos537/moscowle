@@ -3,11 +3,12 @@ import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subject, Subscription, interval, merge } from 'rxjs';
 import { AdminService, BotConversation, BotMessage } from '../../../../core/services/admin.service';
+import { ChatService } from '../../../../core/services/chat.service';
 import { LiveSyncService } from '../../../../core/services/live-sync.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { Switch } from '../../../../shared/components/switch/switch';
 
-type ChannelFilter = '' | 'telegram' | 'whatsapp';
+type ChannelFilter = '' | 'telegram' | 'whatsapp' | 'web';
 
 /**
  * Bandeja del bot: todas las conversaciones de Telegram y WhatsApp en vivo. El administrador puede leer el hilo,
@@ -32,6 +33,7 @@ export class BotConversations implements OnInit, OnDestroy {
 
   private admin = inject(AdminService);
   private live = inject(LiveSyncService);
+  private chat = inject(ChatService);
   private toast = inject(ToastService);
   private cdr = inject(ChangeDetectorRef);
   private subs = new Subscription();
@@ -63,7 +65,15 @@ export class BotConversations implements OnInit, OnDestroy {
     // Lista: cada 4 s; hilo abierto: cada 2,5 s; y al instante cuando el servidor avisa de un cambio.
     this.subs.add(merge(interval(4000), this.refreshNow$).subscribe(() => this.loadList()));
     this.subs.add(interval(2500).subscribe(() => this.pollThread()));
-    this.subs.add(this.live.watch(['conversations'], 3000).subscribe(() => { this.loadList(); this.pollThread(); }));
+    // Aviso inmediato por socket: no hay que esperar al siguiente ciclo de lectura.
+    this.chat.connect();
+    this.subs.add(
+      this.chat.botEvent$.subscribe((e) => {
+        this.loadList();
+        if (e.conversation_id === this.selectedId()) this.pollThread();
+      }),
+    );
+    this.subs.add(this.live.watch(['conversations'], 1500).subscribe(() => { this.loadList(); this.pollThread(); }));
   }
 
   ngOnDestroy() {
@@ -215,7 +225,12 @@ export class BotConversations implements OnInit, OnDestroy {
 
   // ── presentación ─────────────────────────────────────────────────────────
   channelIcon(c: BotConversation): [string, string] {
+    if (c.channel === 'web') return ['fas', 'globe'];
     return c.channel === 'whatsapp' ? ['fab', 'whatsapp'] : ['fab', 'telegram'];
+  }
+
+  channelName(c: BotConversation): string {
+    return c.channel === 'web' ? 'Página web' : c.channel === 'whatsapp' ? 'WhatsApp' : 'Telegram';
   }
 
   time(iso: string | null): string {

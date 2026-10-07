@@ -42,10 +42,77 @@
       <span class="ch-card__icon ch-card__icon--sms" aria-hidden="true"><fa-icon [icon]="['fas', 'comment-sms']"></fa-icon></span>
       <div class="ch-card__body">
         <h3 class="ch-card__name">SMS</h3>
-        <p class="ch-card__status">{{ form.destination ? 'Destino ' + form.destination : 'Sin número de destino' }}</p>
+        <p class="ch-card__status">{{ form.destination ? 'Pruebas a ' + form.destination : 'Avisa al apoderado de cada paciente' }}</p>
       </div>
     </article>
   </div>
+
+  <section class="ch-block" aria-labelledby="ch-auto-title">
+    <div class="ch-block__head">
+      <div>
+        <h3 id="ch-auto-title" class="ch-block__title">Avisos a padres</h3>
+        <p class="ch-block__sub">Los recordatorios de sesión y de pago salen al número de cada apoderado, no a uno fijo. Elige a quién avisar mientras pruebas.</p>
+      </div>
+    </div>
+
+    @if (auto) {
+      <div class="ch-modes" role="radiogroup" aria-label="A quién se avisa">
+        @for (m of modes; track m.id) {
+          <button type="button" role="radio" class="ch-mode" [class.is-on]="auto.mode === m.id" [attr.aria-checked]="auto.mode === m.id"
+            [class.is-off]="m.id === 'off'" [disabled]="autoBusy" (click)="setMode(m.id)">
+            <span class="ch-mode__title">{{ m.title }}</span>
+            <span class="ch-mode__hint">{{ m.hint }}</span>
+          </button>
+        }
+      </div>
+
+      @if (auto.mode === 'pilot') {
+        <div class="ch-pilot">
+          @if (auto.pilot_patient) {
+            <p class="ch-note">Solo recibirá avisos el apoderado de <strong>{{ auto.pilot_patient.username }}</strong>.</p>
+          } @else {
+            <p class="ch-note">Elige la familia que recibirá los avisos de prueba.</p>
+          }
+          <label class="ch-label" for="ch-pilot-q">{{ auto.pilot_patient ? 'Cambiar de paciente' : 'Buscar paciente' }}</label>
+          <input id="ch-pilot-q" class="ch-input" type="search" autocomplete="off" placeholder="Nombre o correo del paciente"
+            [ngModel]="pilotQuery" name="pilotQuery" (ngModelChange)="searchPilot($event)" (focus)="searchPilot(pilotQuery)" />
+          @if (pilotResults.length) {
+            <ul class="ch-results">
+              @for (p of pilotResults; track p.id) {
+                <li>
+                  <button type="button" class="ch-result" (click)="choosePilot(p)">
+                    <span>{{ p.username }}</span>
+                    <span class="ch-result__phone">{{ p.phone ? 'Avisa al ' + p.phone : 'Sin teléfono del apoderado' }}</span>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+          @if (auto.pilot_patient) {
+            <div class="ch-pilot__tests">
+              <button type="button" class="ch-btn ch-btn--ghost" (click)="testPilot('whatsapp')" [disabled]="!!autoTesting">{{ autoTesting === 'whatsapp' ? 'Enviando…' : 'Probar por WhatsApp' }}</button>
+              <button type="button" class="ch-btn ch-btn--ghost" (click)="testPilot('sms')" [disabled]="!!autoTesting">{{ autoTesting === 'sms' ? 'Enviando…' : 'Probar por SMS' }}</button>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="ch-kinds" [class.is-muted]="auto.mode === 'off'">
+        @for (k of kinds; track k.id) {
+          <div class="ch-kind">
+            <div class="ch-kind__text">
+              <span class="ch-kind__label" [id]="'ch-k-' + k.id">{{ k.label }}</span>
+              <span class="ch-kind__hint">{{ k.hint }}</span>
+            </div>
+            <app-switch [checked]="flag(k.id)" [disabled]="auto.mode === 'off' || autoBusy" [labelledby]="'ch-k-' + k.id" (changed)="setFlag(k.id, $event)"></app-switch>
+          </div>
+        }
+      </div>
+      <p class="ch-note">Últimas 24 h: {{ sent24('whatsapp') }} por WhatsApp · {{ sent24('sms') }} por SMS.</p>
+    } @else {
+      <p class="ch-note">Cargando…</p>
+    }
+  </section>
 
   <section class="ch-block" aria-labelledby="ch-wa-title">
     <div class="ch-block__head">
@@ -79,13 +146,13 @@
     <div class="ch-block__head">
       <div>
         <h3 id="ch-msg-title" class="ch-block__title">Mensajes de cobranza</h3>
-        <p class="ch-block__sub">Número que recibe los avisos y los textos que se envían. Déjalos vacíos para usar los predeterminados.</p>
+        <p class="ch-block__sub">Los textos que se envían. Déjalos vacíos para usar los predeterminados. El número de pruebas solo se usa en «Enviar prueba».</p>
       </div>
       <button type="button" class="ch-btn ch-btn--ghost" (click)="sendTest()" [disabled]="testing || dirty">{{ testing ? 'Enviando…' : 'Enviar prueba' }}</button>
     </div>
 
     <div class="ch-field">
-      <label class="ch-label" for="ch-dest">Número de destino (SMS)</label>
+      <label class="ch-label" for="ch-dest">Número de pruebas</label>
       <input id="ch-dest" class="ch-input" type="tel" inputmode="tel" autocomplete="off" placeholder="+51 999 888 777"
         [ngModel]="form.destination" name="destination" (ngModelChange)="setField('destination', $event)" (blur)="onBlur()"
         [attr.aria-invalid]="!!errors.destination" aria-describedby="ch-dest-err" />

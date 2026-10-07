@@ -1061,3 +1061,12 @@
 @media (prefers-reduced-motion: reduce) {
   .bot-sidebar__item::after { transition: none; }
 }
+
+.bot-websync {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem; padding: 0.75rem 1rem;
+  border: 1px solid var(--color-outline-variant); border-radius: 0.75rem; background: var(--color-surface-container-low);
+  &__text { display: flex; flex-direction: column; min-width: 0; font-size: 0.8125rem; color: var(--color-on-surface-variant); overflow-wrap: anywhere;
+    strong { color: var(--color-on-surface); font-size: 0.875rem; } }
+  &.is-bad { border-color: var(--badge-error-fg); }
+}
+@media (max-width: 640px) { .bot-websync { flex-direction: column; align-items: stretch; } }

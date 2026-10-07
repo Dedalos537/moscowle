@@ -75,12 +75,27 @@
         <span class="np__row-label" id="np-tg">Telegram</span>
         <span class="np__row-hint">
           @if (telegramAccounts.length === 0) { Sin cuenta vinculada: vincúlala en Foto y huella › Vincular chat }
-          @else { Avisos urgentes en {{ telegramAccounts.length }} {{ telegramAccounts.length === 1 ? 'cuenta vinculada' : 'cuentas vinculadas' }} }
+          @else { Avisos en {{ telegramAccounts.length }} {{ telegramAccounts.length === 1 ? 'cuenta vinculada' : 'cuentas vinculadas' }} }
         </span>
       </div>
       <app-switch [checked]="telegramAllOn" [disabled]="!masterOn() || telegramAccounts.length === 0" labelledby="np-tg"
-        (changed)="telegramAccounts.length === 1 ? toggleTelegram(telegramAccounts[0].telegram_chat_id, $event) : null"></app-switch>
+        (changed)="toggleTelegram(null, $event)"></app-switch>
     </div>
+
+    @if (telegramAccounts.length > 0 && masterOn()) {
+      <div class="np__row np__row--sub">
+        <label class="np__row-label" for="np-tg-level">Qué enviar a Telegram</label>
+        <select id="np-tg-level" class="np__select" [value]="prefs().telegram_level || 'important'" (change)="set('telegram_level', $any($event.target).value)">
+          @for (l of telegramLevels; track l.value) {
+            <option [value]="l.value">{{ l.label }}</option>
+          }
+        </select>
+      </div>
+      <div class="np__row np__row--sub">
+        <span class="np__row-hint">Comprueba que el bot te escribe</span>
+        <button type="button" class="np__test" [disabled]="testing || !telegramBot" (click)="sendTest()">{{ testing ? 'Enviando…' : 'Enviar prueba' }}</button>
+      </div>
+    }
 
     @if (telegramAccounts.length > 1) {
       @for (a of telegramAccounts; track a.telegram_chat_id) {

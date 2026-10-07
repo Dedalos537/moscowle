@@ -103,16 +103,18 @@ export class NotificationPrefs implements OnInit, OnDestroy {
   }
 
   // ── Telegram ─────────────────────────────────────────────────────────────
+  readonly telegramLevels: { value: 'all' | 'important'; label: string }[] = [
+    { value: 'important', label: 'Solo lo importante (alertas y deudas)' },
+    { value: 'all', label: 'Todos mis avisos' },
+  ];
+  telegramBot = true;
+  testing = false;
+
   private loadTelegram() {
-    this.admin.getTelegramStatus().subscribe({
-      next: (res: any) => {
-        this.telegramAccounts = (res?.linked_accounts || [])
-          .filter((a: any) => a.is_linked)
-          .map((a: any) => ({
-            telegram_chat_id: a.telegram_chat_id,
-            notifications_enabled: !!a.notifications_enabled,
-            label: a.telegram_username ? '@' + a.telegram_username : a.telegram_first_name || 'Cuenta de Telegram',
-          }));
+    this.admin.getMyTelegramAccounts().subscribe({
+      next: (res) => {
+        this.telegramAccounts = res.accounts;
+        this.telegramBot = res.bot_configured;
         this.cdr.markForCheck();
       },
       error: () => {
@@ -126,10 +128,13 @@ export class NotificationPrefs implements OnInit, OnDestroy {
     return this.telegramAccounts.length > 0 && this.telegramAccounts.every((a) => a.notifications_enabled);
   }
 
-  toggleTelegram(chatId: number, enabled: boolean) {
-    const acc = this.telegramAccounts.find((a) => a.telegram_chat_id === chatId);
-    if (!acc || this.telegramBusy) return;
-    acc.notifications_enabled = enabled; // optimista
+  /** Con una sola cuenta (o el interruptor general) cambia todas las cuentas; con varias, una a la vez. */
+  toggleTelegram(chatId: number | null, enabled: boolean) {
+    if (this.telegramBusy) return;
+    const before = this.telegramAccounts.map((a) => a.notifications_enabled);
+    this.telegramAccounts.forEach((a) => {
+      if (chatId === null || a.telegram_chat_id === chatId) a.notifications_enabled = enabled;
+    });
     this.telegramBusy = true;
     this.cdr.markForCheck();
     this.admin.toggleTelegramNotifications(chatId, enabled).subscribe({
@@ -139,9 +144,27 @@ export class NotificationPrefs implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
       error: () => {
-        acc.notifications_enabled = !enabled;
+        this.telegramAccounts.forEach((a, i) => (a.notifications_enabled = before[i]));
         this.telegramBusy = false;
         this.toast.show('No se pudo cambiar la notificación de Telegram.', 'error');
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  sendTest() {
+    if (this.testing) return;
+    this.testing = true;
+    this.cdr.markForCheck();
+    this.admin.sendTelegramTest().subscribe({
+      next: () => {
+        this.testing = false;
+        this.toast.show('Prueba enviada: revisa tu Telegram.', 'success');
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.testing = false;
+        this.toast.show(err?.error?.error || 'No se pudo enviar la prueba.', 'error');
         this.cdr.markForCheck();
       },
     });

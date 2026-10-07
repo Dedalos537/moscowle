@@ -88,9 +88,7 @@ class TestLinkAccountRequiresAdmin:
             content_type='application/json',
             data=json.dumps({'code': 'ABC123'}),
         )
-        assert resp.status_code == 403, (
-            f'un paciente pudo vincular su Telegram: {resp.status_code} {resp.get_json()}'
-        )
+        assert resp.status_code == 403, f'un paciente pudo vincular su Telegram: {resp.status_code} {resp.get_json()}'
         assert not TelegramUser.query.filter_by(link_code='ABC123', is_linked=True).first()
 
     def test_admin_si_puede_vincular(self, client, admin_user, session):
@@ -121,7 +119,7 @@ class TestAdminPanelRequiresAdmin:
         ('post', '/api/telegram/webhook/setup', {}),
         ('delete', '/api/telegram/webhook', None),
         ('post', '/api/telegram/unlink', {}),
-        ('post', '/api/telegram/notifications/toggle', {}),
+        # /notifications/toggle ya no es del panel: cada usuario gestiona SOLO sus cuentas (tests/test_telegram_notifications.py)
         ('post', '/api/telegram/reply', {'chat_id': 1, 'text': 'x'}),
         ('post', '/api/telegram/test', {'chat_id': 1}),
     ]
@@ -174,9 +172,7 @@ class TestWebhookDoesNotHardcodeAdminRole:
             tbs.process_text_message = original
             tbs.send_telegram_message = original_send
 
-        assert captured['role'] != 'admin', (
-            f"un usuario rol '{paciente.role}' ejecuto tools con role='admin'"
-        )
+        assert captured['role'] != 'admin', f"un usuario rol '{paciente.role}' ejecuto tools con role='admin'"
         assert captured['role'] == paciente.role
         assert captured['user_id'] == paciente.id
 

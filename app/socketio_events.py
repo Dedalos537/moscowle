@@ -21,6 +21,8 @@ def handle_connect():
         emit('users:online', {'user_ids': list(online_users.keys())})
 
         join_room(f'user_{user_id}')
+        if current_user.role in ('admin', 'supervisor'):
+            join_room('admins')  # avisos del bot en vivo
 
         chats = Chat.query.join(ChatParticipant).filter(ChatParticipant.user_id == user_id).all()
         for chat in chats:

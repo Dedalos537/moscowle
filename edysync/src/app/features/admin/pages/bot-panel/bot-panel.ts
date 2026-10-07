@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subject, Subscription, debounceTime, interval } from 'rxjs';
-import { AdminService } from '../../../../core/services/admin.service';
+import { AdminService, type WebsiteFaqStatus } from '../../../../core/services/admin.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Button } from '../../../../shared/components/button/button';
@@ -147,6 +147,8 @@ export class BotPanel implements OnInit, OnDestroy {
   // Proposed (auto-grown) FAQs
   proposedFaqs: any[] = [];
   proposedLoading = false;
+  webFaq: WebsiteFaqStatus | null = null;
+  webFaqBusy = false;
   autogrowMsg = '';
   autogrowErr = '';
 
@@ -190,6 +192,7 @@ export class BotPanel implements OnInit, OnDestroy {
     this.cdr.markForCheck();
     if (id === 'telegram' && !this.tgStatus) this.loadLinkedAccounts();
     if (id === 'webhook' && !this.webhookStatus) this.loadWebhookStatus();
+    if (id === 'faq' && !this.webFaq) this.loadWebFaq();
     if (id === 'faq' && this.faqList.length === 0) this.loadFaq();
     if (id === 'faq' && this.proposedFaqs.length === 0) this.loadProposedFaqs();
     this.error = null;
@@ -390,6 +393,26 @@ export class BotPanel implements OnInit, OnDestroy {
   }
 
   // ─── FAQ ────────────────────────────────────────────────────────────
+  loadWebFaq() {
+    this.subs.add(this.admin.getWebsiteFaq().subscribe({ next: (r) => { this.webFaq = r; this.cdr.markForCheck(); } }));
+  }
+
+  syncWebFaq() {
+    if (this.webFaqBusy) return;
+    this.webFaqBusy = true;
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.syncWebsiteFaq().subscribe({
+        next: (r) => { this.webFaq = r; this.webFaqBusy = false; this.loadFaq(); this.cdr.markForCheck(); },
+        error: (err) => {
+          this.webFaq = { ...(err?.error ?? {}), url: err?.error?.url ?? this.webFaq?.url ?? '', ok: false, error: err?.error?.error ?? 'No se pudo leer la página' };
+          this.webFaqBusy = false;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
+  }
+
   loadFaq() {
     this.faqLoading = true;
     this.cdr.markForCheck();

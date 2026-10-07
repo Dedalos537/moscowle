@@ -533,6 +533,18 @@
                 </div>
               </div>
 
+              <div class="bot-websync" [class.is-bad]="webFaq?.ok === false">
+                <div class="bot-websync__text">
+                  <strong>Datos de la página web</strong>
+                  <span>
+                    @if (webFaq?.ok === false) { No se pudo sincronizar: {{ webFaq?.error }} }
+                    @else if (webFaq?.at) { {{ webFaq?.url }} · {{ webFaq?.total }} respuestas al día · última lectura {{ webFaq?.at | date: 'dd/MM HH:mm' }} }
+                    @else { El bot aún no ha leído {{ webFaq?.url || 'la página del centro' }} (se actualiza sola cada semana) }
+                  </span>
+                </div>
+                <app-button variant="ghost" [label]="webFaqBusy ? 'Leyendo…' : 'Sincronizar ahora'" [icon]="['fas', 'rotate']" [disabled]="webFaqBusy" (clicked)="syncWebFaq()"></app-button>
+              </div>
+
               @if (showFaqForm) {
                 <div class="bot-section bot-section--inline">
                   <div class="flex items-center justify-between">

@@ -284,8 +284,12 @@ Centro de Terapias"""
             due_date_str = due_date.strftime('%d/%m/%Y') if due_date else 'N/A'
             message_body = self._get_sms_template_body(patient_name, amount, due_date_str, days_overdue)
 
-            destination = self._get_notification_destination()
-            target = phone_number or destination
+            # El aviso va al número del apoderado. Antes, sin número, caía al «número de destino» del
+            # administrador y el recordatorio de un padre llegaba a otra persona.
+            target = phone_number
+            if not target:
+                logger.warning(' SMS: el paciente no tiene número, no se envía')
+                return False
 
             if not target.startswith('+'):
                 target = f'+{target}'

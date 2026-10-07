@@ -70,6 +70,10 @@ export class ChatService {
   private _notificationEvent = new Subject<any>();
   notificationEvent$ = this._notificationEvent.asObservable();
 
+  private _botEvent = new Subject<{ conversation_id: number; channel: string }>();
+  /** Un mensaje nuevo del bot (Telegram, WhatsApp o web): la bandeja se actualiza al instante. */
+  botEvent$ = this._botEvent.asObservable();
+
   private _seenIds = new Set<number>();
 
   constructor(private http: HttpClient) {}
@@ -102,6 +106,8 @@ export class ChatService {
     this.socket.on('disconnect', () => {
       this._connectionStatus.next(false);
     });
+
+    this.socket.on('bot:message', (data: { conversation_id: number; channel: string }) => this._botEvent.next(data));
 
     this.socket.on('connect_error', (err: any) => {
       console.warn('Socket.IO connection error:', err?.message || err);

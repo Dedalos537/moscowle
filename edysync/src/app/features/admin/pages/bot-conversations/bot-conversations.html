@@ -8,6 +8,7 @@
         <button type="button" class="bc-filter" [class.is-on]="filter() === ''" [attr.aria-pressed]="filter() === ''" (click)="setFilter('')">Todas</button>
         <button type="button" class="bc-filter" [class.is-on]="filter() === 'telegram'" [attr.aria-pressed]="filter() === 'telegram'" (click)="setFilter('telegram')">Telegram</button>
         <button type="button" class="bc-filter" [class.is-on]="filter() === 'whatsapp'" [attr.aria-pressed]="filter() === 'whatsapp'" (click)="setFilter('whatsapp')">WhatsApp</button>
+        <button type="button" class="bc-filter" [class.is-on]="filter() === 'web'" [attr.aria-pressed]="filter() === 'web'" (click)="setFilter('web')">Web</button>
       </div>
     </div>
 
@@ -18,7 +19,7 @@
         <li class="bc-empty">
           <fa-icon [icon]="['fas', 'comments']" aria-hidden="true"></fa-icon>
           <p>Aún no hay conversaciones.</p>
-          <small>Cuando alguien le escriba al bot por Telegram o al número de WhatsApp del centro, aparecerá aquí en vivo.</small>
+          <small>Cuando alguien escriba por Telegram, WhatsApp o el formulario de la página web, aparecerá aquí en vivo.</small>
         </li>
       }
       @for (c of conversations(); track c.id) {
@@ -50,7 +51,7 @@
         <span class="bc-avatar bc-avatar--lg" aria-hidden="true">{{ initials(conv.contact) }}<fa-icon class="bc-avatar__ch" [icon]="channelIcon(conv)"></fa-icon></span>
         <div class="bc-thread__who">
           <h3 class="bc-thread__name">{{ conv.contact }}</h3>
-          <p class="bc-thread__meta">{{ conv.channel === 'whatsapp' ? 'WhatsApp' : 'Telegram' }}{{ conv.handle ? ' · ' + conv.handle : '' }}{{ conv.user_id ? ' · usuario de la plataforma' : '' }}</p>
+          <p class="bc-thread__meta">{{ channelName(conv) }}{{ conv.handle ? ' · ' + conv.handle : '' }}{{ conv.user_id ? ' · usuario de la plataforma' : '' }}</p>
         </div>
         <div class="bc-takeover">
           <span class="bc-takeover__label" id="bc-takeover">{{ conv.human_takeover ? 'Atiendes tú' : 'Atiende el bot' }}</span>
@@ -93,7 +94,7 @@
           }
           <div class="bc-composer__row">
             <label class="sr-only" for="bc-draft">Escribir mensaje</label>
-            <textarea #composer id="bc-draft" class="bc-composer__input" rows="1" maxlength="4000" placeholder="Escribe un mensaje a {{ conv.contact }}…" [(ngModel)]="draft" (keydown)="onComposerKey($event)"></textarea>
+            <textarea #composer id="bc-draft" class="bc-composer__input" rows="1" maxlength="4000" placeholder="{{ conv.channel === 'web' ? 'Responder por correo a ' : 'Escribe un mensaje a ' }}{{ conv.contact }}…" [(ngModel)]="draft" (keydown)="onComposerKey($event)"></textarea>
             <button type="button" class="bc-send" (click)="send()" [disabled]="!draft.trim() || sending" aria-label="Enviar mensaje">
               <fa-icon [icon]="['fas', sending ? 'spinner' : 'paper-plane']" aria-hidden="true"></fa-icon>
             </button>

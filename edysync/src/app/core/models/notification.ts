@@ -101,4 +101,5 @@ export interface NotificationPreferences {
   browser_notifications: boolean;
   digest_enabled: boolean;
   digest_channel: 'telegram' | 'email' | 'both';
+  telegram_level?: 'all' | 'important';
 }

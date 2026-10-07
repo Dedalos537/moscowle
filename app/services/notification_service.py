@@ -97,8 +97,8 @@ class NotificationService:
             room=f'user_{user_id}',
         )
 
-        # Telegram: only for urgent/high priority or when group count hits threshold
-        if not skip_telegram and (priority in ('urgent', 'high') or (group.count >= 5 and group.count % 5 == 0)):
+        # Telegram: según el nivel que eligió el usuario ('all' = todo; 'important' = urgentes/altas o avisos repetidos).
+        if not skip_telegram and self._telegram_wanted(prefs, priority, group):
             try:
                 if current_app.config.get('TELEGRAM_BOT_TOKEN'):
                     from app.services.telegram_bot_service import send_notification_to_telegram
@@ -279,6 +279,15 @@ class NotificationService:
         field = self._CATEGORY_GROUP.get(category)
         return True if field is None else bool(getattr(prefs, field, True))
 
+    @staticmethod
+    def _telegram_wanted(prefs, priority, group):
+        level = getattr(prefs, 'telegram_level', None) or 'important'
+        if level == 'all':
+            return True
+        return priority in ('urgent', 'high') or (group.count >= 5 and group.count % 5 == 0)
+
+    TELEGRAM_LEVELS = ('important', 'all')
+
     BOOL_PREFS = (
         'notifications_enabled',
         'debt_enabled',
@@ -301,6 +310,8 @@ class NotificationService:
                 raise ValueError(f'{field} debe ser verdadero o falso')
         if 'digest_channel' in data and data['digest_channel'] not in self.DIGEST_CHANNELS:
             raise ValueError('digest_channel inválido')
+        if 'telegram_level' in data and data['telegram_level'] not in self.TELEGRAM_LEVELS:
+            raise ValueError('telegram_level inválido')
 
         prefs = Pref.query.filter_by(user_id=user_id).first()
         if not prefs:
@@ -317,6 +328,7 @@ class NotificationService:
             'browser_notifications',
             'digest_enabled',
             'digest_channel',
+            'telegram_level',
         ]:
             if field in data:
                 setattr(prefs, field, data[field])

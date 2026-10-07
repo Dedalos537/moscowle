@@ -6,6 +6,7 @@ from flask import current_app
 
 from app.extensions import db
 from app.models import Appointment, User
+from app.services import automation_settings
 from app.services.messaging import MessagingService
 from app.services.sms_whatsapp_service import SMSWhatsAppService
 
@@ -14,11 +15,40 @@ logger = logging.getLogger(__name__)
 LIMA_TZ = ZoneInfo('America/Lima')
 
 
+class _BridgeMessenger:
+    """Canales reales del centro: WhatsApp por el puente (Baileys, el número vinculado por QR) y SMS por el gateway.
+
+    Antes el recordatorio de WhatsApp usaba pywhatkit/Twilio, que en el servidor no existen, así que nunca salía por el
+    número que el centro vinculó. Si el puente no está conectado se intenta el proveedor anterior como respaldo.
+    """
+
+    def __init__(self):
+        self._sms = SMSWhatsAppService()
+
+    def is_available(self):
+        from app.services.whatsapp_service import whatsapp_service
+
+        return bool(whatsapp_service.status().get('connected')) or self._sms.is_available()
+
+    def send_whatsapp_message(self, phone, body):
+        from app.services.whatsapp_service import whatsapp_service
+
+        try:
+            whatsapp_service.send_message(phone, body)
+            return True
+        except Exception as exc:
+            logger.warning('WhatsApp (puente) no envió el recordatorio: %s', exc)
+        return self._sms.send_whatsapp_message(phone, body)
+
+    def send_sms_message(self, phone, body):
+        return self._sms.send_sms_message(phone, body)
+
+
 class SessionReminderService:
     """Recordatorios de sesión: D-1, D-0 (WhatsApp + SMS al apoderado) y aviso de renovación."""
 
     def __init__(self):
-        self.messaging = SMSWhatsAppService()
+        self.messaging = _BridgeMessenger()
 
     def _recipient_phone(self, patient):
         # Mismo criterio que el CRM: el apoderado solo si trae un telefono,
@@ -64,6 +94,9 @@ class SessionReminderService:
             if not phone:
                 continue
             by_patient.setdefault(patient.id, {'appointments': []})['appointments'].append(appt)
+            # Interruptor global / modo prueba: si no se puede avisar a este paciente, no se marca nada como enviado.
+            if not any(automation_settings.allows(patient.id, 'sessions', ch)[0] for ch in ('whatsapp', 'sms')):
+                continue
 
             # Se marca como enviado SOLO si algun canal lo entrego: antes se marcaba
             # igual con el puente caido o sin proveedor y el recordatorio se perdia.
@@ -102,7 +135,7 @@ class SessionReminderService:
             + (f' en {location}.' if location else '.')
             + ('\n\nTe esperamos. Centro de Terapias')
         )
-        return self._dispatch(phone, body, counts)
+        return self._dispatch(phone, body, counts, patient.id)
 
     def _send_renewal_notices(self, by_patient, counts):
         today_local = datetime.now(LIMA_TZ).date()
@@ -129,20 +162,25 @@ class SessionReminderService:
                 'Te recomendamos renovar para no interrumpir tu terapia.\n\n'
                 'Centro de Terapias'
             )
-            if self._dispatch(phone, body, counts):
+            if self._dispatch(phone, body, counts, patient.id, kind='sessions'):
                 patient.renewal_notified_count = 2
 
-    def _dispatch(self, phone, body, counts):
-        """Envia por WhatsApp y SMS. Devuelve True si ALGUN canal lo entrego."""
+    def _dispatch(self, phone, body, counts, patient_id=None, kind='sessions'):
+        """Envia por WhatsApp y SMS. Devuelve True si ALGUN canal lo entrego.
+
+        Cada canal pasa por `automation_settings.allows`: interruptor global, modo prueba (un solo paciente) y
+        apagado por canal. Con `patient_id=None` (uso antiguo) no se filtra.
+        """
         delivered = False
-        if self.messaging.send_whatsapp_message(phone, body):
+        wa_ok = patient_id is None or automation_settings.allows(patient_id, kind, 'whatsapp')[0]
+        sms_ok_allowed = patient_id is None or automation_settings.allows(patient_id, kind, 'sms')[0]
+        if wa_ok and self.messaging.send_whatsapp_message(phone, body):
             counts['sent_whatsapp'] += 1
             delivered = True
-        # send_sms_message devuelve un dict desde que trae el id del
-        # proveedor. Contar el truthy del dict contaria tambien los fallos.
-        sms = self.messaging.send_sms_message(phone, body)
-        sms_ok = sms.get('ok') if isinstance(sms, dict) else bool(sms)
-        if sms_ok:
-            counts['sent_sms'] += 1
-            delivered = True
+        if sms_ok_allowed:
+            # send_sms_message devuelve un dict desde que trae el id del proveedor.
+            sms = self.messaging.send_sms_message(phone, body)
+            if sms.get('ok') if isinstance(sms, dict) else bool(sms):
+                counts['sent_sms'] += 1
+                delivered = True
         return delivered

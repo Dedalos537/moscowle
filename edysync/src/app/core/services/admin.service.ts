@@ -772,8 +772,44 @@ export class AdminService {
     return this.http.post('/api/telegram/unlink', { telegram_chat_id: chatId });
   }
 
-  toggleTelegramNotifications(chatId: number, enabled: boolean): Observable<any> {
-    return this.http.post('/api/telegram/notifications/toggle', { telegram_chat_id: chatId, enabled });
+  toggleTelegramNotifications(chatId: number | null, enabled: boolean): Observable<any> {
+    const body: { enabled: boolean; telegram_chat_id?: number } = { enabled };
+    if (chatId !== null) body.telegram_chat_id = chatId;
+    return this.http.post('/api/telegram/notifications/toggle', body);
+  }
+
+  // --- Avisos automáticos a padres ---
+  getAutomation(): Observable<AutomationSettings> {
+    return this.http.get<AutomationSettings>('/api/automation/settings');
+  }
+
+  updateAutomation(patch: Partial<Omit<AutomationSettings, 'pilot_patient' | 'last_24h'>>): Observable<AutomationSettings> {
+    return this.http.put<AutomationSettings>('/api/automation/settings', patch);
+  }
+
+  searchAutomationPatients(q: string): Observable<{ id: number; username: string; phone: string | null }[]> {
+    return this.http.get<{ id: number; username: string; phone: string | null }[]>('/api/automation/patients', { params: { q } });
+  }
+
+  testAutomation(channel: 'whatsapp' | 'sms', patientId?: number): Observable<{ status: string; phone: string | null; patient: string }> {
+    return this.http.post<{ status: string; phone: string | null; patient: string }>('/api/automation/test', { channel, patient_id: patientId });
+  }
+
+  // --- Sincronizar FAQ con la web ---
+  getWebsiteFaq(): Observable<WebsiteFaqStatus> {
+    return this.http.get<WebsiteFaqStatus>('/api/telegram/faq/website');
+  }
+
+  syncWebsiteFaq(): Observable<WebsiteFaqStatus> {
+    return this.http.post<WebsiteFaqStatus>('/api/telegram/faq/website', {});
+  }
+
+  getMyTelegramAccounts(): Observable<{ accounts: { telegram_chat_id: number; label: string; notifications_enabled: boolean }[]; bot_configured: boolean }> {
+    return this.http.get<{ accounts: { telegram_chat_id: number; label: string; notifications_enabled: boolean }[]; bot_configured: boolean }>('/api/telegram/my-accounts');
+  }
+
+  sendTelegramTest(): Observable<{ status: string }> {
+    return this.http.post<{ status: string }>('/api/telegram/notifications/test', {});
   }
 
   // --- Chasqui Bot Config ---
@@ -858,7 +894,7 @@ export class AdminService {
 
 export interface BotConversation {
   id: number;
-  channel: 'telegram' | 'whatsapp';
+  channel: 'telegram' | 'whatsapp' | 'web';
   chat_key: string;
   contact: string;
   handle: string | null;
@@ -891,4 +927,25 @@ export interface BotConversationList {
 export interface BotThread {
   conversation: BotConversation;
   messages: BotMessage[];
+}
+
+export interface AutomationSettings {
+  mode: 'all' | 'pilot' | 'off';
+  pilot_patient_id: number | null;
+  whatsapp: boolean;
+  sms: boolean;
+  sessions: boolean;
+  debts: boolean;
+  pilot_patient: { id: number; username: string } | null;
+  last_24h: Record<string, Record<string, number>>;
+}
+
+export interface WebsiteFaqStatus {
+  url: string;
+  ok?: boolean;
+  created?: number;
+  updated?: number;
+  total?: number;
+  at?: string;
+  error?: string | null;
 }
