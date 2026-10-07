@@ -271,6 +271,11 @@ export class Sessions implements OnInit, OnDestroy {
 
   // ── calendario → modales ────────────────────────────────────────────────
   onDayDblClick(date: Date) {
+    const holiday = this.holidaysMap.get(toLocalDateString(date));
+    if (holiday) {
+      this.toastService.show(`No se programan sesiones el ${date.getDate()}: es feriado (${holiday}).`, 'warning');
+      return;
+    }
     this.openCreateModal();
     this.createDates = [toLocalDateString(date)];
   }

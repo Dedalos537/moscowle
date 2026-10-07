@@ -163,6 +163,44 @@ def _valid_hhmm(value):
     return (h, m) if 0 <= h <= 23 and 0 <= m <= 59 else None
 
 
+def _notify_new_sessions(session_ids):
+    """Una sesión creada para hoy o mañana avisa al apoderado de inmediato.
+
+    El recordatorio programado corre una vez al día (8:30); lo creado después quedaba sin aviso. El servicio respeta
+    el interruptor de avisos, el modo piloto y marca lo enviado, así que no duplica.
+    """
+    if not session_ids or current_app.config.get('TESTING'):
+        return
+    try:
+        from zoneinfo import ZoneInfo
+
+        today = datetime.now(ZoneInfo('America/Lima')).date()
+        soon = {today, today + timedelta(days=1)}
+        rows = Appointment.query.filter(Appointment.id.in_(session_ids)).all()
+        if not any(a.start_time and _lima_date(a.start_time) in soon for a in rows):
+            return
+        import eventlet
+
+        app = current_app._get_current_object()
+
+        def _run():
+            with app.app_context():
+                from app.services.session_reminder_service import SessionReminderService
+
+                SessionReminderService().run()
+
+        eventlet.spawn(_run)
+    except Exception:
+        current_app.logger.exception('No se pudo avisar de las sesiones nuevas')
+
+
+def _lima_date(dt):
+    from zoneinfo import ZoneInfo
+
+    lima = ZoneInfo('America/Lima')
+    return (dt.replace(tzinfo=lima) if dt.tzinfo is None else dt.astimezone(lima)).date()
+
+
 @admin_bp.route('/api/sessions/batch', methods=['POST'])
 @login_required
 def batch_create_sessions():
@@ -310,6 +348,7 @@ def batch_create_sessions():
                     }
                 ), 409
             db.session.commit()
+            _notify_new_sessions(created_ids)
             message = f'Se crearon {created_count} sesiones.'
             if skipped_holidays:
                 message += f' Se omitieron feriados: {", ".join(skipped_holidays)}.'
@@ -386,6 +425,7 @@ def batch_create_sessions():
                 current_date_iter += timedelta(days=1)
 
         db.session.commit()
+        _notify_new_sessions(created_ids)
         return jsonify(
             {'success': True, 'message': f'Se crearon {created_count} sesiones, listo.', 'session_ids': created_ids}
         )

@@ -1,4 +1,4 @@
-import { Component, input, output, OnInit, OnChanges, SimpleChanges, NgZone, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, input, output, OnInit, effect, NgZone, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 export interface CalendarWidgetEvent {
@@ -35,7 +35,7 @@ interface DayCell {
   styleUrl: './calendar-widget.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CalendarWidget implements OnInit, OnChanges {
+export class CalendarWidget implements OnInit {
   events = input<CalendarWidgetEvent[]>([]);
   role = input<'admin' | 'therapist' | 'patient'>('admin');
   readonly = input(false);
@@ -65,16 +65,22 @@ export class CalendarWidget implements OnInit, OnChanges {
   private clickTimer: any = null;
   private lastClickedKey = '';
 
-  constructor(private cdr: ChangeDetectorRef) {}
+  private ready = false;
+
+  constructor(private cdr: ChangeDetectorRef) {
+    // Las sesiones y los feriados llegan por separado y en cualquier orden: la cuadrícula se rehace con cualquiera de los dos.
+    effect(() => {
+      this.events();
+      this.holidays();
+      if (!this.ready) return;
+      this.buildGrid();
+      this.cdr.markForCheck();
+    });
+  }
 
   ngOnInit() {
     this.buildGrid();
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['events'] && !changes['events'].firstChange) {
-      this.buildGrid();
-    }
+    this.ready = true;
   }
 
   get rangeLabel(): string {
