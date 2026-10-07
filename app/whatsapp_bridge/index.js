@@ -120,6 +120,11 @@ async function start() {
 
   // Mensajes entrantes (solo chats individuales): se reenvían al backend para el buzón del panel.
   sock.ev.on('messages.upsert', ({ messages, type }) => {
+    // Diagnóstico: cada evento de mensajes queda en el journal (stderr) con el tipo de identificador, sin el contenido.
+    for (const m of messages || []) {
+      console.error(`[wa-upsert] type=${type} fromMe=${Boolean(m.key?.fromMe)} jid=${String(m.key?.remoteJid || '').replace(/^\d+/, '#')} alt=${m.key?.remoteJidAlt ? 'si' : 'no'}`);
+      break;
+    }
     if (type !== 'notify') return;
     for (const m of messages || []) {
       try {

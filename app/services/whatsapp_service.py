@@ -369,7 +369,7 @@ class WhatsAppService:
             # stderr trae los logs de pino. El puente corre en nivel warn,
             # asi que solo llegan avisos y errores: es el unico lugar donde
             # se ve por que se cae la sesion, asi que van a info.
-            logger.info('[baileys] %s', line.rstrip())
+            (logger.warning if '[wa-upsert]' in line else logger.info)('[baileys] %s', line.rstrip())
 
     def _handle(self, msg):
         kind = msg.get('type')
@@ -392,6 +392,7 @@ class WhatsAppService:
             logger.info('WhatsApp conectado como %s', self.connected_phone)
 
         elif kind == 'incoming':
+            logger.warning('WhatsApp: mensaje entrante recibido del puente (lid=%s)', bool(msg.get('lid')))
             handler = self._incoming_handler
             if handler:
                 try:
