@@ -35,7 +35,8 @@ def handle_incoming(msg):
     text = (msg.get('text') or '').strip()
     if not phone or not text:
         return None
-    user = _known_user(phone)
+    is_lid = bool(msg.get('lid'))
+    user = None if is_lid else _known_user(phone)
     name = msg.get('name') or (user.username if user else None)
     saved = conversations.log_message(
         'whatsapp',
@@ -45,7 +46,7 @@ def handle_incoming(msg):
         'contact',
         kind=msg.get('kind') or 'text',
         contact_name=name,
-        contact_handle=f'+{phone}',
+        contact_handle=f'lid:{phone}' if is_lid else f'+{phone}',
         user_id=user.id if user else None,
     )
     if saved is None:
@@ -53,7 +54,7 @@ def handle_incoming(msg):
     live_sync.bump('conversations')
     _notify_staff(name or f'+{phone}', text)
     try:
-        _auto_reply(phone, text, name)
+        _auto_reply(phone, text, name, is_lid)
     except Exception:
         db.session.rollback()
         logger.exception('El bot no pudo contestar en WhatsApp')
@@ -137,7 +138,7 @@ def compose_reply(text):
     )
 
 
-def _auto_reply(phone, text, name):
+def _auto_reply(phone, text, name, is_lid=False):
     from app.models.bot_conversation import BotConversation
     from app.services.faq_service import note_unanswered
     from app.services.whatsapp_service import WhatsAppBridgeError, whatsapp_service
@@ -151,7 +152,7 @@ def _auto_reply(phone, text, name):
     if not solved:
         note_unanswered(text)
     try:
-        whatsapp_service.send_message(phone, reply)
+        whatsapp_service.send_message(phone, reply, lid=is_lid)
         conversations.log_message('whatsapp', phone, 'out', reply, 'bot')
     except WhatsAppBridgeError as exc:
         conversations.log_message('whatsapp', phone, 'out', reply, 'bot', status='failed', error=str(exc))

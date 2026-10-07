@@ -450,7 +450,7 @@ class WhatsAppService:
         except (BrokenPipeError, ValueError) as exc:
             raise WhatsAppBridgeError('El puente de WhatsApp no responde') from exc
 
-    def send_message(self, phone, message, timeout=35):
+    def send_message(self, phone, message, timeout=35, lid=False):
         """Envia y espera confirmacion. Devuelve dict con provider_message_id.
 
         Lanza WhatsAppBridgeError si no sale. No devuelve 'sent: True'
@@ -478,7 +478,7 @@ class WhatsAppService:
             self._pending[ref] = (event, box)
 
         try:
-            self._write({'type': 'send', 'ref': ref, 'phone': digits, 'message': message})
+            self._write({'type': 'send', 'ref': ref, 'phone': digits, 'message': message, 'lid': bool(lid)})
         except WhatsAppBridgeError:
             self._pending.pop(ref, None)
             raise

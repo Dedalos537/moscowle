@@ -57,11 +57,12 @@ function stopAll(error) {
   }
 }
 
-async function sendMessage(phone, text) {
+async function sendMessage(phone, text, lid = false) {
   if (!sock) return { ok: false, error: 'no_conectado' };
 
   const msgId = String(nextMsgId++);
-  const jid = jidOf(phone);
+  // Los contactos con identificador @lid no tienen teléfono visible: se les escribe a su propio jid.
+  const jid = lid ? `${String(phone).replace(/\D/g, '')}@lid` : jidOf(phone);
 
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
@@ -123,7 +124,13 @@ async function start() {
     for (const m of messages || []) {
       try {
         const jid = m.key?.remoteJid || '';
-        if (m.key?.fromMe || !jid.endsWith('@s.whatsapp.net')) continue; // grupos, estados y @lid se ignoran
+        if (m.key?.fromMe) continue;
+        // Chats individuales: con teléfono (@s.whatsapp.net) o con identificador @lid (WhatsApp lo usa para ocultar el número).
+        // Si un @lid trae el teléfono real en remoteJidAlt/senderPn, se usa ese. Grupos y estados se ignoran.
+        const alt = m.key?.remoteJidAlt || m.key?.senderPn || '';
+        const phoneJid = jid.endsWith('@s.whatsapp.net') ? jid : alt.endsWith('@s.whatsapp.net') ? alt : null;
+        const isLid = !phoneJid && jid.endsWith('@lid');
+        if (!phoneJid && !isLid) continue;
         const body = m.message || {};
         let text = body.conversation || body.extendedTextMessage?.text || body.imageMessage?.caption || '';
         let kind = 'text';
@@ -132,7 +139,8 @@ async function start() {
         else if (!text) continue; // reacciones, stickers, etc.
         send({
           type: 'incoming',
-          phone: jid.split('@')[0].split(':')[0],
+          phone: (phoneJid || jid).split('@')[0].split(':')[0],
+          lid: isLid,
           name: m.pushName || null,
           id: m.key?.id || null,
           kind,
@@ -222,7 +230,7 @@ function handleLine(line) {
   }
 
   if (msg.type === 'send') {
-    sendMessage(msg.phone, msg.message).then((r) => {
+    sendMessage(msg.phone, msg.message, Boolean(msg.lid)).then((r) => {
       send({ type: 'send_result', ref: msg.ref || null, ...r });
     });
   } else if (msg.type === 'ping') {

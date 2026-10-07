@@ -213,7 +213,7 @@ def send_as_admin(conv, text, admin):
             from app.services.whatsapp_service import WhatsAppBridgeError, whatsapp_service
 
             try:
-                whatsapp_service.send_message(conv.chat_key, text)
+                whatsapp_service.send_message(conv.chat_key, text, lid=(conv.contact_handle or '').startswith('lid:'))
             except WhatsAppBridgeError as exc:
                 error = str(exc)
         elif conv.channel == 'web':
