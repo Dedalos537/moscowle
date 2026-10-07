@@ -29,6 +29,21 @@ def _known_user(phone):
     return matches[0] if len(matches) == 1 else None
 
 
+def _user_by_display_name(name):
+    """Usuario activo cuyo nombre coincide exactamente (y es único) con el que muestra WhatsApp.
+
+    Solo sirve para saber a qué teléfono escribirle a un contacto que WhatsApp identifica sin número; el bot solo
+    contesta información pública, así que un error aquí no expone datos.
+    """
+    from app.models.user import User
+
+    name = (name or '').strip().lower()
+    if len(name) < 5:
+        return None
+    rows = User.query.filter(db.func.lower(User.username) == name, User.is_active.is_(True)).limit(2).all()
+    return rows[0] if len(rows) == 1 and rows[0].phone else None
+
+
 def handle_incoming(msg):
     """Procesa un evento `incoming` del puente (con app context ya activo)."""
     phone = conversations.normalize_key('whatsapp', msg.get('phone'))
@@ -36,7 +51,7 @@ def handle_incoming(msg):
     if not phone or not text:
         return None
     is_lid = bool(msg.get('lid'))
-    user = None if is_lid else _known_user(phone)
+    user = _user_by_display_name(msg.get('name')) if is_lid else _known_user(phone)
     name = msg.get('name') or (user.username if user else None)
     saved = conversations.log_message(
         'whatsapp',
@@ -146,14 +161,15 @@ def _auto_reply(phone, text, name, is_lid=False):
     conv = BotConversation.query.filter_by(channel='whatsapp', chat_key=phone).first()
     if not _bot_allowed(conv):
         return
-    whatsapp_service.send_typing(phone, lid=is_lid)
+    target, is_lid = conversations.whatsapp_target(conv)
+    whatsapp_service.send_typing(target, lid=is_lid)
     reply, solved = compose_reply(text)
     if not reply:
         return
     if not solved:
         note_unanswered(text)
     try:
-        whatsapp_service.send_message(phone, reply, lid=is_lid)
+        whatsapp_service.send_message(target, reply, lid=is_lid)
         conversations.log_message('whatsapp', phone, 'out', reply, 'bot')
     except WhatsAppBridgeError as exc:
         conversations.log_message('whatsapp', phone, 'out', reply, 'bot', status='failed', error=str(exc))

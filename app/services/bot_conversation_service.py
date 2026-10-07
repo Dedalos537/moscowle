@@ -189,6 +189,24 @@ def thread(conv, after_id=None, limit=200):
     return list(reversed(rows))
 
 
+def whatsapp_target(conv):
+    """(teléfono, es_lid) a quien escribirle por WhatsApp.
+
+    Si la persona tiene usuario en la plataforma y un teléfono registrado se usa ese: es el camino que funciona. El
+    identificador @lid (WhatsApp oculta el número) queda como último recurso.
+    """
+    is_lid = (conv.contact_handle or '').startswith('lid:')
+    if is_lid and conv.user_id:
+        from app.models.user import User
+        from app.services.messaging import MessagingService, _is_phone
+
+        user = db.session.get(User, conv.user_id)
+        phone = MessagingService.resolve_phone(user) if user else ''
+        if phone and _is_phone(phone):
+            return re.sub(r'\D', '', phone), False
+    return conv.chat_key, is_lid
+
+
 def send_as_admin(conv, text, admin):
     """Envía `text` a la persona por su canal. Devuelve (mensaje, error). El intento queda registrado siempre."""
     text = (text or '').strip()
