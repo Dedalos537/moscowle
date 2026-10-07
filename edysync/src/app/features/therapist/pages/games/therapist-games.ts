@@ -32,7 +32,7 @@ export class TherapistGames implements OnInit, OnDestroy {
   ngOnInit() {
     this.headerService.setConfig({
       title: 'Juegos',
-      subtitle: 'Catálogo de juegos disponibles',
+      subtitle: 'Explora los juegos disponibles para tus sesiones',
       icon: ['fas', 'gamepad'],
     });
     this.loadGames();

@@ -14,6 +14,8 @@ export class Modal {
   isOpen = input(false);
   title = input<string>('');
   allowOverflow = input(false);
+  /** Ancho del panel: sm 26rem · md 32rem (por defecto) · lg 44rem · xl 56rem. */
+  size = input<'sm' | 'md' | 'lg' | 'xl'>('md');
 
   close = output<void>();
 

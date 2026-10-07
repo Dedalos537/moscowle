@@ -1,12 +1,6 @@
 <div class="space-y-6 animate-fade-in-up" [@fadeInUp]>
 
-  <div class="flex items-center justify-between">
-    <div>
-      <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
-        <fa-icon [icon]="['fas', 'gamepad']" class="text-primary"></fa-icon> Juegos
-      </h2>
-      <p class="text-sm text-on-surface-variant">Gestiona los juegos HTML disponibles en la plataforma</p>
-    </div>
+  <div class="flex items-center justify-end">
     <app-button variant="primary" label="Subir Juego" [icon]="['fas', 'upload']" (clicked)="openUploadModal()"></app-button>
   </div>
 

@@ -46,4 +46,8 @@ export interface BatchSessionPayload {
   dates?: string[];
   sede?: string;
   session_type?: string;
+  notes?: string;
+  day_notes?: Record<string, string>;
+  group_id?: number;
+  unlock_past_dates?: boolean;
 }

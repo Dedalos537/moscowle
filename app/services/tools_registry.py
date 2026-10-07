@@ -557,6 +557,9 @@ def handle_get_sessions(start=None, end=None, therapist_id=None, **kwargs):
         qs = '&'.join(f'{k}={v}' for k, v in params.items())
         resp = _api_get(f'/admin/api/sessions?{qs}', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else []
+        if resp is not None and resp.status_code >= 400:
+            # El endpoint ahora valida el rango (máx. 100 días): el error llega al modelo en vez de perderse como lista vacía.
+            return {'error': (data or {}).get('error', 'No se pudieron consultar las sesiones')}
         items = _unwrap_items(data, 'sessions')
         return {'success': True, 'count': len(items), 'sessions': items}
     except Exception as e:

@@ -1,11 +1,4 @@
 <div class="space-y-6 animate-fade-in-up" [@fadeInUp]>
-  <div>
-    <h2 class="text-xl font-bold text-on-surface-variant flex items-center gap-2">
-      <fa-icon [icon]="['fas', 'gamepad']" class="text-primary"></fa-icon> Juegos
-    </h2>
-    <p class="text-sm text-on-surface-variant">Explora los juegos disponibles para tus sesiones</p>
-  </div>
-
   @if (loading) {
     <div class="flex justify-center py-16">
       <app-spinner size="md" colorClass="text-primary"></app-spinner>

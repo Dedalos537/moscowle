@@ -1,0 +1,291 @@
+:host {
+  display: block;
+}
+
+.mdp {
+  padding: 0.75rem;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 0.875rem;
+  background: var(--color-surface-container-low);
+
+  &__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  &__month {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--color-on-surface);
+    min-width: 8.5rem;
+    text-align: center;
+  }
+
+  &__nav {
+    width: 2.75rem;
+    height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 0.625rem;
+    background: transparent;
+    color: var(--color-on-surface-variant);
+    cursor: pointer;
+    transition: background-color 150ms ease, color 150ms ease;
+
+    &:hover {
+      background: var(--color-surface-container-high);
+      color: var(--color-on-surface);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+  }
+
+  &__range {
+    min-height: 2.25rem;
+    padding: 0 0.75rem;
+    border: 1px solid var(--color-outline-variant);
+    border-radius: 0.625rem;
+    background: transparent;
+    color: var(--color-on-surface-variant);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+
+    &.is-on {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: var(--color-on-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+  }
+
+  &__hint {
+    margin: 0 0 0.5rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.5rem;
+    background: var(--badge-primary-bg);
+    color: var(--badge-primary-fg);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    animation: mdp-rise 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  &__weekdays,
+  &__week {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  &__weekdays span {
+    padding: 0.25rem 0;
+    text-align: center;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-on-surface-variant);
+  }
+
+  // Al cambiar de mes la cuadrícula entra desde el lado de la navegación (se re-crea por data-month).
+  &__grid {
+    animation: mdp-slide-next 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+
+    &[data-dir='prev'] {
+      animation-name: mdp-slide-prev;
+    }
+  }
+
+  &__day {
+    position: relative;
+    height: 2.5rem;
+    margin: 1px;
+    border: 0;
+    border-radius: 0.625rem;
+    background: transparent;
+    color: var(--color-on-surface);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease, transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+
+    &:hover:not(:disabled):not(.is-selected) {
+      background: var(--color-surface-container-high);
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.92);
+    }
+
+    &.is-out {
+      color: var(--color-on-surface-variant);
+      opacity: 0.55;
+    }
+
+    &:disabled {
+      color: var(--color-on-surface-variant);
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    &.is-holiday {
+      text-decoration: line-through;
+      text-decoration-thickness: 1px;
+    }
+
+    &.is-pending {
+      outline: 2px dashed var(--color-primary);
+      outline-offset: -2px;
+    }
+
+    &.is-selected {
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+      font-weight: 700;
+      animation: mdp-pop 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+      z-index: 1;
+    }
+  }
+
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.75rem;
+    min-height: 2rem;
+  }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0 0.25rem 0 0.625rem;
+    min-height: 2rem;
+    border-radius: 9999px;
+    background: var(--badge-primary-bg);
+    color: var(--badge-primary-fg);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    animation: mdp-chip 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  &__chip-x {
+    width: 1.5rem;
+    height: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 9999px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-size: 0.6875rem;
+
+    &:hover {
+      background: color-mix(in srgb, currentColor 18%, transparent);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 1px;
+    }
+  }
+
+  &__empty {
+    font-size: 0.8125rem;
+    color: var(--color-on-surface-variant);
+  }
+
+  &__clear {
+    min-height: 2rem;
+    padding: 0 0.5rem;
+    border: 0;
+    background: none;
+    color: var(--color-on-surface-variant);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+
+  &__count {
+    margin-left: auto;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-on-surface-variant);
+
+    &.is-full {
+      color: var(--color-error-text);
+    }
+  }
+}
+
+@keyframes mdp-pop {
+  0% { transform: scale(0.8); }
+  100% { transform: scale(1); }
+}
+
+@keyframes mdp-chip {
+  from { opacity: 0; transform: scale(0.85) translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes mdp-rise {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes mdp-slide-next {
+  from { opacity: 0; transform: translateX(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes mdp-slide-prev {
+  from { opacity: 0; transform: translateX(-14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mdp__grid,
+  .mdp__day.is-selected,
+  .mdp__chip,
+  .mdp__hint {
+    animation: none;
+  }
+
+  .mdp__day {
+    transition: none;
+  }
+}

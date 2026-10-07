@@ -1,36 +1,51 @@
 <ng-template #headerActions>
-  <div class="flex items-center gap-1 sm:gap-2">
-    <button (click)="openCreateModal()"
-      class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-sm font-semibold rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors cursor-pointer whitespace-nowrap">
-      <fa-icon [icon]="['fas', 'plus']" class="text-[10px] sm:text-xs"></fa-icon>
-      <span class="hidden sm:inline">Nueva Programación</span>
-      <span class="sm:hidden">Nueva</span>
-    </button>
-  </div>
+  <button type="button" class="sx-new" (click)="openCreateModal()">
+    <fa-icon [icon]="['fas', 'plus']" aria-hidden="true"></fa-icon>
+    <span class="hidden sm:inline">Nueva programación</span>
+    <span class="sm:hidden">Nueva</span>
+  </button>
 </ng-template>
 
-<div class="space-y-6" [@fadeInUp]>
-
-  <div class="card p-3 sm:p-4">
-    <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
-      <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-        <label class="text-xs sm:text-sm font-semibold text-on-surface whitespace-nowrap">Filtrar por Terapeuta:</label>
-        <app-select [(ngModel)]="selectedTherapistId" (valueChange)="onTherapistFilterChange()" [options]="therapistOptions" class="w-full sm:w-56"></app-select>
-      </div>
-      <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-        <label class="text-xs sm:text-sm font-semibold text-on-surface whitespace-nowrap">Alumno:</label>
-        <app-select [(ngModel)]="selectedPatientId" (valueChange)="onPatientFilterChange()" [options]="patientFilterOptions" [searchable]="true" class="w-full sm:w-56"></app-select>
-      </div>
+<section class="sx" aria-label="Calendario global de sesiones">
+  <div class="sx-toolbar sx-rise" style="--i: 0" role="group" aria-label="Filtros del calendario">
+    <div class="sx-field">
+      <label class="sx-label" for="sx-filter-therapist">Terapeuta</label>
+      <app-select id="sx-filter-therapist" [(ngModel)]="selectedTherapistId" (valueChange)="onFilterChange()" [options]="therapistOptions" placeholder="Todos los terapeutas" ariaLabel="Filtrar por terapeuta"></app-select>
     </div>
+    <div class="sx-field">
+      <label class="sx-label" for="sx-filter-patient">Alumno</label>
+      <app-select id="sx-filter-patient" [(ngModel)]="selectedPatientId" (valueChange)="onFilterChange()" [options]="patientFilterOptions" [searchable]="true" placeholder="Todos los alumnos" ariaLabel="Filtrar por alumno"></app-select>
+    </div>
+    @if (hasFilters) {
+      <button type="button" class="sx-link" (click)="clearFilters()">Quitar filtros</button>
+    }
+    <p class="sx-count" aria-live="polite">
+      {{ widgetEvents.length }} {{ widgetEvents.length === 1 ? 'sesión' : 'sesiones' }} en este período
+    </p>
   </div>
 
-  <div class="min-h-[500px]">
+  <div class="sx-stage sx-rise" style="--i: 1" [attr.aria-busy]="refreshing || loading">
+    @if (refreshing) {
+      <div class="sx-progress" role="progressbar" aria-label="Actualizando sesiones"></div>
+    }
+
+    @if (loadError) {
+      <div class="sx-error" role="alert">
+        <p>No se pudieron cargar las sesiones.</p>
+        <button type="button" class="sx-link" (click)="requestLoad()">Reintentar</button>
+      </div>
+    }
+
     @if (loading) {
-      <div class="flex justify-center py-24">
-        <app-spinner size="md" colorClass="text-primary"></app-spinner>
+      <div class="sx-skeleton" aria-hidden="true">
+        @for (n of skeletonCells; track n) {
+          <span class="sx-skeleton__cell" [style.animation-delay.ms]="($index % 7) * 40"></span>
+        }
       </div>
     } @else {
       <app-calendar-widget
+        class="sx-cal"
+        [class.is-dim]="refreshing"
         [events]="widgetEvents"
         [role]="'admin'"
         [multiSelect]="multiSelectMode"
@@ -45,531 +60,386 @@
       ></app-calendar-widget>
     }
   </div>
-</div>
+</section>
 
-<app-modal [isOpen]="showCreateModal" title="Programar Sesiones" (close)="closeCreateModal()">
-  <div class="space-y-5">
-
-    <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Terapeuta <span class="text-error">*</span></label>
-      <app-select [(ngModel)]="createForm.therapist_id" (valueChange)="onTherapistSelectCreate()" [options]="therapistCreateOptions" class="text-sm"></app-select>
-    </div>
-
-    <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre de la Sesion</label>
-      <input type="text" [(ngModel)]="createForm.title" placeholder="Ej: Terapia de Lenguaje" class="input-field text-sm">
-    </div>
-
-    <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Tipo de Sesion</label>
-      <app-select [(ngModel)]="createForm.session_type" [options]="sessionTypeOptions" class="text-sm"></app-select>
-    </div>
-
-    @if (createForm.session_type === 'grupal') {
-      <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Grupo de Pacientes <span class="text-error">*</span></label>
-        <app-select [(ngModel)]="selectedGroupId" (valueChange)="onGroupSelect($event)" [options]="groupSelectOptions" [clearable]="true" class="text-sm"></app-select>
-        @if (selectedGroupId) {
-          <p class="text-xs text-on-surface-variant/60 mt-1">
-            {{ getGroupById(selectedGroupId)?.member_count || 0 }} pacientes · {{ getGroupById(selectedGroupId)?.start_time }} - {{ getGroupById(selectedGroupId)?.end_time }}
-          </p>
+<!-- ───────────── Crear ───────────── -->
+<app-modal [isOpen]="showCreateModal" title="Programar sesiones" size="lg" (close)="closeCreateModal()">
+  @if (createResult; as r) {
+    <div class="sx-result" role="status">
+      <svg class="sx-check" [class.is-failed]="r.failed" viewBox="0 0 52 52" aria-hidden="true">
+        <circle class="sx-check__ring" cx="26" cy="26" r="23" fill="none" />
+        @if (!r.failed) {
+          <path class="sx-check__tick" fill="none" d="M15 27 l8 8 l15 -17" />
+        } @else {
+          <path class="sx-check__tick" fill="none" d="M18 18 l16 16 M34 18 l-16 16" />
         }
-      </div>
-    } @else {
-      <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Paciente <span class="text-error">*</span></label>
-        <div class="relative">
-          <app-select [(ngModel)]="createForm.patient_id" [options]="patientCreateOptions" [disabled]="!createForm.therapist_id" [searchable]="true" class="text-sm"></app-select>
-          @if (patientsLoading) {
-            <app-spinner size="sm" colorClass="text-on-surface-variant"></app-spinner>
-          }
-        </div>
-        @if (!createForm.therapist_id) {
-          <p class="text-xs text-on-surface-variant/60 mt-1">Primero selecciona un terapeuta.</p>
-        }
-      </div>
-    }
-
-    <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sede <span class="text-error">*</span></label>
-      <app-select [(ngModel)]="createForm.sede" [options]="sedeCreateOptions" class="text-sm"></app-select>
-    </div>
-
-    <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Fechas <span class="text-error">*</span></label>
-      <p class="text-xs text-on-surface-variant/60 mb-2">Click para seleccionar dias individuales. Usa el boton "Rango" para seleccionar un bloque de dias consecutivos. Maximo 10 dias.</p>
-
-      <label class="flex items-center gap-2 mb-2 cursor-pointer">
-        <input type="checkbox" class="w-4 h-4 accent-primary" [checked]="unlockPastDates" (change)="toggleUnlockPast()">
-        <span class="text-xs text-on-surface-variant font-medium">Permitir crear sesiones en fechas pasadas</span>
-      </label>
-
-      <div class="bg-surface-container-low rounded-xl p-3 border border-border/30">
-        <div class="flex items-center justify-between mb-3">
-          <button (click)="prevMonth()" class="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">
-            <fa-icon [icon]="['fas', 'chevron-left']" class="text-sm text-on-surface-variant"></fa-icon>
-          </button>
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-bold text-on-surface">{{ calendarLabel }}</span>
-            <button (click)="toggleRangeMode()"
-              class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer min-h-11 inline-flex items-center"
-              [class.bg-primary]="rangeMode"
-              [class.text-on-primary]="rangeMode"
-              [class.border-primary]="rangeMode"
-              [class.bg-surface-container-high]="!rangeMode"
-              [class.text-on-surface-variant]="!rangeMode"
-              [class.border-border/30]="!rangeMode">
-              <fa-icon [icon]="['fas', 'left-right']" class="mr-1"></fa-icon>Rango
-            </button>
-            @if (rangeMode) {
-              <button (click)="clearRangeSelection()" class="px-2 py-1 text-[10px] font-bold rounded-lg bg-error/10 text-error border border-error/30 transition-all cursor-pointer min-h-11 inline-flex items-center">
-                Cancelar
-              </button>
+      </svg>
+      <h3 class="sx-result__title">{{ r.failed ? 'No se creó ninguna sesión' : r.created + (r.created === 1 ? ' sesión creada' : ' sesiones creadas') }}</h3>
+      @if (r.message && r.failed) {
+        <p class="sx-result__text">{{ r.message }}</p>
+      }
+      @if (r.holidays.length) {
+        <p class="sx-result__text">Se omitieron feriados: {{ r.holidays.join(', ') }}.</p>
+      }
+      @if (r.conflicts.length) {
+        <div class="sx-conflicts">
+          <p class="sx-conflicts__title">Se omitieron {{ r.conflicts.length }} por choque de horario</p>
+          <ul>
+            @for (c of r.conflicts; track $index) {
+              <li><strong>{{ conflictLabel(c) }}</strong> — {{ c.reason }}</li>
             }
-          </div>
-          <button (click)="nextMonth()" class="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">
-            <fa-icon [icon]="['fas', 'chevron-right']" class="text-sm text-on-surface-variant"></fa-icon>
-          </button>
-        </div>
-
-        @if (rangeMode) {
-          <div class="mb-2 px-2 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold text-center">
-            {{ rangeStartStr ? 'Selecciona la fecha final del rango' : 'Selecciona la fecha inicial del rango' }}
-          </div>
-        }
-
-        <div class="grid grid-cols-7 mb-1">
-          @for (wd of ['Lu','Ma','Mi','Ju','Vi','Sa','Do']; track wd) {
-            <div class="text-center text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider py-1">{{ wd }}</div>
-          }
-        </div>
-
-        @for (week of calendarDays; track week) {
-          <div class="grid grid-cols-7">
-            @for (day of week; track day.date) {
-              <button type="button"
-                (click)="toggleCalendarDate(day)"
-                [disabled]="day.disabled"
-                class="relative h-9 text-sm font-medium rounded-lg transition-all duration-150 mx-0.5 my-[1px]
-                  {{ day.disabled ? 'text-on-surface-variant/20 cursor-not-allowed' : '' }}
-                  {{ !day.disabled && day.selected ? 'bg-primary text-on-primary shadow-soft' : '' }}
-                  {{ !day.disabled && !day.selected && day.date.getMonth() !== calendarMonth.getMonth() ? 'text-on-surface-variant/30' : '' }}
-                  {{ !day.disabled && !day.selected && day.date.getMonth() === calendarMonth.getMonth() ? 'text-on-surface hover:bg-surface-container-high' : '' }}">
-                {{ day.day }}
-              </button>
-            }
-          </div>
-        }
-      </div>
-
-      @if (createForm.dates.length > 1) {
-        <div class="mt-3 space-y-2">
-          <p class="text-xs font-semibold text-on-surface-variant">Notas por dia (opcional)</p>
-          @for (d of createForm.dates; track d) {
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-on-surface-variant w-24 shrink-0">{{ d }}</span>
-              <input type="text" [ngModel]="createForm.dayNotes[d]" (ngModelChange)="createForm.dayNotes[d] = $event"
-                placeholder="Nota especifica para este dia..." class="input-field text-xs flex-1">
-            </div>
-          }
+          </ul>
         </div>
       }
     </div>
+  } @else {
+    <form id="sx-create-form" class="sx-form" (ngSubmit)="submitCreate()" novalidate>
+      <fieldset class="sx-fieldset" [disabled]="submitting">
+        <legend class="sx-legend">Participantes</legend>
 
-    <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Inicio <span class="text-error">*</span></label>
-        <input type="time" [(ngModel)]="createForm.start_time" class="input-field text-sm">
-      </div>
-      <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Fin <span class="text-error">*</span></label>
-        <input type="time" [(ngModel)]="createForm.end_time" class="input-field text-sm">
-      </div>
-    </div>
-
-    <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Comentarios</label>
-      <textarea [(ngModel)]="createForm.notes" class="input-field text-sm" rows="2" placeholder="Notas opcionales para las sesiones"></textarea>
-    </div>
-
-    <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Programación (.docx opcional)</label>
-      <label for="createProgramFileInput" class="flex items-center gap-3 p-3 border-2 border-dashed border-border/40 rounded-xl cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all">
-        <fa-icon [icon]="['fas', 'cloud-arrow-up']" class="text-2xl text-on-surface-variant/50"></fa-icon>
-        <div class="text-left">
-          <p class="text-sm font-medium text-on-surface">{{ createProgramFile ? createProgramFile.name : 'Subir documento Word' }}</p>
-          <p class="text-xs text-on-surface-variant/70">Se asignará a todas las sesiones seleccionadas</p>
-        </div>
-      </label>
-      <input type="file" id="createProgramFileInput" class="hidden" accept=".docx" (change)="onCreateFileSelected($event)">
-    </div>
-
-    <div class="rounded-xl border p-4" style="background:var(--color-info-container);border-color:var(--color-info)">
-      <div class="flex items-center gap-2 mb-2">
-        <fa-icon [icon]="['fas', 'circle-info']" style="color:var(--color-info)"></fa-icon>
-        <span class="text-sm font-bold" style="color:var(--color-on-info-container)">Requisitos de Grabación</span>
-      </div>
-      <ul class="text-xs space-y-1.5" style="color:var(--color-on-info-container)">
-        <li class="flex items-start gap-2">
-          <fa-icon [icon]="['fas', 'microphone']" class="mt-0.5 shrink-0"></fa-icon>
-          <span>La sesión será grabada automáticamente al iniciar el terapeuta</span>
-        </li>
-        <li class="flex items-start gap-2">
-          <fa-icon [icon]="['fas', 'clock']" class="mt-0.5 shrink-0"></fa-icon>
-          <span>La grabación se detendrá al finalizar la sesión programada</span>
-        </li>
-        <li class="flex items-start gap-2">
-          <fa-icon [icon]="['fas', 'file-audio']" class="mt-0.5 shrink-0"></fa-icon>
-          <span>Los fragmentos se transcriben cada 5 minutos en segundo plano</span>
-        </li>
-        <li class="flex items-start gap-2">
-          <fa-icon [icon]="['fas', 'magnifying-glass']" class="mt-0.5 shrink-0"></fa-icon>
-          <span>La auditoría IA se ejecuta periódicamente y al finalizar</span>
-        </li>
-      </ul>
-    </div>
-
-  </div>
-
-  @if (submitting) {
-    <div class="absolute inset-0 z-10 flex items-center justify-center bg-surface/60 backdrop-blur-sm rounded-xl">
-      <div class="flex flex-col items-center gap-4 px-8">
-        <app-spinner size="lg" colorClass="text-primary"></app-spinner>
-        <div class="w-full max-w-xs">
-          <app-progress-bar [value]="createProgress" [max]="100" size="md"></app-progress-bar>
-        </div>
-        <p class="text-sm font-medium text-on-surface text-center">
-          {{ programUploadingCreate ? 'Subiendo programas...' : 'Creando sesiones...' }}
-        </p>
-        <p class="text-xs text-on-surface-variant/70 text-center">{{ createProgress }}%</p>
-      </div>
-    </div>
-  }
-  <div modal-footer>
-    <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateModal()"></app-button>
-    <app-button variant="primary" [label]="submitting ? 'Creando...' : 'Crear Sesiones'" [icon]="submitting ? ['fas', 'spinner'] : ['fas', 'plus']" [disabled]="submitting" (clicked)="submitCreate()"></app-button>
-  </div>
-</app-modal>
-
-<app-modal [isOpen]="showEditModal" title="Editar Sesión" (close)="closeEditModal()">
-  <div class="flex items-center gap-3 px-4 py-3 bg-surface-container-low rounded-xl border border-outline mb-4">
-    <div class="w-9 h-9 rounded-full bg-primary-container/15 flex items-center justify-center shrink-0">
-      <fa-icon [icon]="['fas', 'calendar-days']" class="text-primary text-lg"></fa-icon>
-    </div>
-    <div class="min-w-0">
-      <p class="text-sm font-bold text-on-surface truncate">{{ editForm.title || 'Sin título' }}</p>
-      <p class="text-xs text-on-surface-variant truncate">{{ editForm.therapist }} &middot; {{ editForm.patient }} &middot; {{ editForm.date }}</p>
-    </div>
-    <span class="ml-auto px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0"
-          [class.bg-success-container]="editForm.status === 'completed'"
-          [class.text-on-success-container]="editForm.status === 'completed'"
-          [class.bg-info-container]="editForm.status === 'scheduled'"
-          [class.text-info]="editForm.status === 'scheduled'"
-          [class.bg-error-container]="editForm.status === 'cancelled'"
-          [class.text-error]="editForm.status === 'cancelled'">
-      {{ editForm.status }}
-    </span>
-  </div>
-
-  <div class="flex gap-2 mb-4">
-    <button (click)="closeEditModal(); openMoveModal({id: editForm.id, title: editForm.title, date: toDateStr(editForm.date), time: editForm.start_time, endTime: editForm.end_time, status: editForm.status, therapist: editForm.therapist, patient: editForm.patient})"
-      class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border/30 hover:bg-surface-container-high transition-colors cursor-pointer">
-      <fa-icon [icon]="['fas', 'up-down-left-right']" class="text-on-surface-variant"></fa-icon> Mover Fecha
-    </button>
-    <button (click)="closeEditModal(); openDetailModal({id: editForm.id, title: editForm.title, date: toDateStr(editForm.date), time: editForm.start_time, endTime: editForm.end_time, status: editForm.status, therapist: editForm.therapist, patient: editForm.patient})"
-      class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border/30 hover:bg-surface-container-high transition-colors cursor-pointer">
-      <fa-icon [icon]="['fas', 'eye']" class="text-on-surface-variant"></fa-icon> Ver Detalle
-    </button>
-  </div>
-
-  <div class="space-y-5">
-    <div>
-      <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Información General</p>
-      <div class="space-y-3">
-        <div>
-          <label class="text-xs font-medium text-on-surface-variant mb-1 block">Título</label>
-          <input type="text" [(ngModel)]="editForm.title" class="input-field text-sm w-full" placeholder="Título de la sesión">
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label class="text-xs font-medium text-on-surface-variant mb-1 block">Fecha</label>
-            <input type="date" [(ngModel)]="editForm.date" class="input-field text-sm w-full">
+        <div class="sx-grid">
+          <div class="sx-field">
+            <label class="sx-label" for="sx-type">Tipo de sesión</label>
+            <app-select id="sx-type" [(ngModel)]="createForm.session_type" name="session_type" [options]="sessionTypeOptions" ariaLabel="Tipo de sesión"></app-select>
           </div>
-          <div>
-            <label class="text-xs font-medium text-on-surface-variant mb-1 block">Hora Inicio</label>
-            <input type="time" [(ngModel)]="editForm.start_time" class="input-field text-sm w-full">
-          </div>
-          <div>
-            <label class="text-xs font-medium text-on-surface-variant mb-1 block">Hora Fin</label>
-            <input type="time" [(ngModel)]="editForm.end_time" class="input-field text-sm w-full">
-          </div>
-        </div>
-        <div>
-          <label class="text-xs font-medium text-on-surface-variant mb-1 block">Estado</label>
-          <app-select [(ngModel)]="editForm.status" [options]="statusOptions" class="text-sm w-full"></app-select>
-        </div>
-      </div>
-    </div>
-
-    <div class="border-t border-outline pt-5">
-      <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Programación de Sesión (.docx)</p>
-
-      @if (auditState) {
-        <div class="flex items-start gap-3 p-3 rounded-xl bg-success-container border border-success-container">
-          <fa-icon [icon]="['fas', 'circle-check']" class="text-success shrink-0 mt-0.5"></fa-icon>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-bold text-on-success-container">Programación subida</p>
-            <p class="text-xs text-success mt-0.5 truncate">{{ auditState.planned_text_preview || 'Documento adjunto exitosamente' }}</p>
-          </div>
-          <app-button variant="danger" [disabled]="programDeleting" (clicked)="deleteProgram()">
-            @if (!programDeleting) {
-              <fa-icon [icon]="['fas', 'trash-can']" class="text-lg"></fa-icon>
+          <div class="sx-field">
+            <label class="sx-label" for="sx-therapist">Terapeuta <span class="sx-req" aria-hidden="true">*</span></label>
+            <app-select id="sx-therapist" [(ngModel)]="createForm.therapist_id" name="therapist" (valueChange)="onTherapistSelectCreate()" [options]="therapistCreateOptions" ariaLabel="Terapeuta"></app-select>
+            @if (submitted && createErrors['therapist']) {
+              <p class="sx-err" role="alert">{{ createErrors['therapist'] }}</p>
             }
-            @if (programDeleting) {
-              <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'" class="text-lg"></fa-icon>
-            }
-          </app-button>
+          </div>
         </div>
-      }
 
-      @if (!auditState) {
-        <div class="mt-1">
-          <label for="programFileInput" class="flex flex-col items-center justify-center gap-2 p-5 border-2 border-dashed border-border/40 rounded-xl cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all">
-            <fa-icon [icon]="['fas', 'cloud-arrow-up']" class="text-3xl text-on-surface-variant/50"></fa-icon>
-            <div class="text-center">
-              <p class="text-sm font-medium text-on-surface">Subir documento Word</p>
-              <p class="text-xs text-on-surface-variant/70 mt-0.5">Solo archivos .docx</p>
-            </div>
+        @if (isGroupCreate) {
+          <div class="sx-field">
+            <label class="sx-label" for="sx-group">Grupo de pacientes <span class="sx-req" aria-hidden="true">*</span></label>
+            <app-select id="sx-group" [(ngModel)]="selectedGroupId" name="group" (valueChange)="onGroupSelect($event)" [options]="groupSelectOptions" [clearable]="true" ariaLabel="Grupo de pacientes"></app-select>
+            @if (selectedGroup; as g) {
+              <p class="sx-hint">{{ g.member_count || 0 }} pacientes · {{ g.start_time }} – {{ g.end_time }}</p>
+            }
+            @if (submitted && createErrors['patient']) {
+              <p class="sx-err" role="alert">{{ createErrors['patient'] }}</p>
+            }
+          </div>
+        } @else {
+          <div class="sx-field">
+            <label class="sx-label" for="sx-patient">Paciente <span class="sx-req" aria-hidden="true">*</span></label>
+            <app-select id="sx-patient" [(ngModel)]="createForm.patient_id" name="patient" [options]="patientCreateOptions" [disabled]="!createForm.therapist_id" [searchable]="true" ariaLabel="Paciente"></app-select>
+            @if (!createForm.therapist_id) {
+              <p class="sx-hint">Primero elige un terapeuta.</p>
+            } @else if (patientsLoading) {
+              <p class="sx-hint">Cargando pacientes…</p>
+            } @else if (!patients.length) {
+              <p class="sx-hint">Este terapeuta no tiene pacientes asignados.</p>
+            }
+            @if (submitted && createErrors['patient']) {
+              <p class="sx-err" role="alert">{{ createErrors['patient'] }}</p>
+            }
+          </div>
+        }
+
+        <div class="sx-grid">
+          <div class="sx-field">
+            <label class="sx-label" for="sx-title">Nombre de la sesión</label>
+            <input id="sx-title" class="input-field" type="text" name="title" [(ngModel)]="createForm.title" maxlength="120" placeholder="Ej: Terapia de lenguaje" />
+          </div>
+          <div class="sx-field">
+            <label class="sx-label" for="sx-sede">Sede</label>
+            <app-select id="sx-sede" [(ngModel)]="createForm.sede" name="sede" [options]="sedeCreateOptions" placeholder="Sin sede" ariaLabel="Sede"></app-select>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="sx-fieldset" [disabled]="submitting">
+        <legend class="sx-legend">Cuándo</legend>
+        <div class="sx-field">
+          <span class="sx-label" id="sx-dates-label">Fechas <span class="sx-req" aria-hidden="true">*</span></span>
+          <app-multi-date-picker [(dates)]="createDates" [max]="10" [allowPast]="unlockPastDates" [holidays]="holidaysMap" aria-labelledby="sx-dates-label"></app-multi-date-picker>
+          @if (submitted && createErrors['dates']) {
+            <p class="sx-err" role="alert">{{ createErrors['dates'] }}</p>
+          }
+          <label class="sx-check-row">
+            <input type="checkbox" [checked]="unlockPastDates" (change)="unlockPastDates = !unlockPastDates" />
+            <span>Permitir fechas pasadas (las sesiones quedan como completadas)</span>
           </label>
-          <input type="file" id="programFileInput" class="hidden" accept=".docx" (change)="onFileSelected($event)">
         </div>
-      }
 
-      @if (programUploading) {
-        <div class="mt-2 flex items-center gap-2 p-2.5 rounded-lg bg-info-container text-info text-sm">
-          <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'" class="text-lg"></fa-icon> Procesando documento...
+        <div class="sx-grid">
+          <div class="sx-field">
+            <label class="sx-label" for="sx-start">Hora de inicio <span class="sx-req" aria-hidden="true">*</span></label>
+            <input id="sx-start" class="input-field" type="time" name="start" [(ngModel)]="createForm.start_time" />
+            @if (submitted && createErrors['start']) {
+              <p class="sx-err" role="alert">{{ createErrors['start'] }}</p>
+            }
+          </div>
+          <div class="sx-field">
+            <label class="sx-label" for="sx-end">Hora de fin <span class="sx-req" aria-hidden="true">*</span></label>
+            <input id="sx-end" class="input-field" type="time" name="end" [(ngModel)]="createForm.end_time" />
+            @if (submitted && createErrors['end']) {
+              <p class="sx-err" role="alert">{{ createErrors['end'] }}</p>
+            }
+          </div>
         </div>
-      }
-      @if (programError) {
-        <div class="mt-2 flex items-center gap-2 p-2.5 rounded-lg bg-error-container text-error text-sm">
-          <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-lg"></fa-icon> {{ programError }}
-        </div>
-      }
-      @if (programSuccessMessage) {
-        <div class="mt-2 flex items-center gap-2 p-2.5 rounded-lg bg-success-container text-on-success-container text-sm">
-          <fa-icon [icon]="['fas', 'circle-check']" class="text-lg"></fa-icon> {{ programSuccessMessage }}
-        </div>
-      }
-    </div>
-  </div>
+      </fieldset>
 
-  <div class="border-t border-outline pt-3 mt-5">
-    <button (click)="deleteSession()" [disabled]="deleting"
-      class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-error rounded-lg border border-error/30 hover:bg-error-container/30 transition-colors cursor-pointer w-full justify-center">
-      @if (deleting) {
-        <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'" class="text-base"></fa-icon>
-        <span>Eliminando...</span>
-      } @else {
-        <fa-icon [icon]="['fas', 'trash-can']" class="text-base"></fa-icon>
-        <span>Eliminar Sesión</span>
-      }
-    </button>
-  </div>
+      <fieldset class="sx-fieldset" [disabled]="submitting">
+        <legend class="sx-legend">Detalles</legend>
+        <div class="sx-field">
+          <label class="sx-label" for="sx-notes">Comentarios para todas las sesiones</label>
+          <textarea id="sx-notes" class="input-field" name="notes" rows="2" [(ngModel)]="createForm.notes" placeholder="Opcional"></textarea>
+        </div>
 
-  <div modal-footer class="flex items-center justify-end">
-    <app-button variant="primary" [label]="submitting ? 'Guardando...' : 'Guardar Cambios'" [icon]="submitting ? ['fas', 'spinner'] : undefined" [disabled]="submitting" (clicked)="submitEdit()"></app-button>
+        @if (createDates.length > 1) {
+          <div class="sx-field">
+            <span class="sx-label">Nota por día (opcional)</span>
+            <div class="sx-daynotes">
+              @for (d of createDates; track d) {
+                <label class="sx-daynote">
+                  <span>{{ d }}</span>
+                  <input class="input-field" type="text" [name]="'dn-' + d" [ngModel]="dayNotes[d]" (ngModelChange)="dayNotes[d] = $event" placeholder="Nota solo para este día" />
+                </label>
+              }
+            </div>
+          </div>
+        }
+
+        <div class="sx-field">
+          <span class="sx-label" id="sx-prog-label">Programación (.docx, opcional)</span>
+          <label class="sx-drop" [class.has-file]="createProgramFile" for="sx-prog">
+            <fa-icon [icon]="['fas', createProgramFile ? 'file-word' : 'cloud-arrow-up']" aria-hidden="true"></fa-icon>
+            <span class="sx-drop__text">
+              <strong>{{ createProgramFile ? createProgramFile.name : 'Subir documento Word' }}</strong>
+              <small>Se asignará a todas las sesiones creadas</small>
+            </span>
+          </label>
+          <input id="sx-prog" class="sr-only" type="file" accept=".docx" aria-labelledby="sx-prog-label" (change)="onCreateFileSelected($event)" />
+        </div>
+
+        <details class="sx-details">
+          <summary>¿Cómo se graba una sesión?</summary>
+          <ul>
+            <li>La grabación empieza cuando el terapeuta inicia la sesión y se detiene al terminar el horario.</li>
+            <li>Los fragmentos se transcriben cada 5 minutos en segundo plano.</li>
+            <li>La auditoría de IA se ejecuta periódicamente y al finalizar.</li>
+          </ul>
+        </details>
+      </fieldset>
+
+      @if (submitting) {
+        <div class="sx-submit-progress" role="progressbar" [attr.aria-valuenow]="createProgress" aria-valuemin="0" aria-valuemax="100">
+          <span class="sx-submit-progress__bar" [style.transform]="'scaleX(' + createProgress / 100 + ')'"></span>
+          <span class="sx-submit-progress__label">{{ createProgress < 50 ? 'Creando sesiones…' : 'Asignando programación…' }}</span>
+        </div>
+      }
+    </form>
+  }
+
+  <div modal-footer class="sx-footer">
+    @if (createResult) {
+      <app-button variant="primary" label="Listo" (clicked)="closeCreateModal()"></app-button>
+    } @else {
+      <span class="sx-footer__summary" aria-live="polite">
+        @if (createCount > 0) { Se crearán <strong>{{ createCount }}</strong> {{ createCount === 1 ? 'sesión' : 'sesiones' }} }
+      </span>
+      <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateModal()"></app-button>
+      <button type="submit" form="sx-create-form" class="sx-submit" [disabled]="submitting">
+        {{ submitting ? 'Creando…' : 'Crear sesiones' }}
+      </button>
+    }
   </div>
 </app-modal>
 
-<app-modal [isOpen]="showMoveModal" title="Mover Sesion" (close)="closeMoveModal()">
-  <div class="space-y-4">
-    <div class="flex items-center gap-3 p-3 bg-surface-container-low rounded-xl border border-border/20">
-      <fa-icon [icon]="['fas', 'up-down-left-right']" class="text-primary text-lg"></fa-icon>
-      <div>
-        <p class="text-sm font-bold text-on-surface">{{ moveSessionTitle }}</p>
-        <p class="text-xs text-on-surface-variant">Selecciona la nueva fecha</p>
-      </div>
-    </div>
-    <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nueva Fecha</label>
-      <input type="date" [(ngModel)]="moveNewDate" class="input-field text-sm w-full">
-    </div>
-  </div>
-  <div modal-footer>
-    <app-button variant="ghost" label="Cancelar" (clicked)="closeMoveModal()"></app-button>
-    <app-button variant="primary" label="Mover Sesion" [icon]="['fas', 'up-down-left-right']" (clicked)="submitMove()"></app-button>
-  </div>
-</app-modal>
-
-<app-modal [isOpen]="showDetailModal" title="Detalle de Sesion" (close)="closeDetailModal()" size="lg">
+<!-- ───────────── Detalle ───────────── -->
+<app-modal [isOpen]="showDetailModal" title="Detalle de sesión" size="lg" (close)="closeDetailModal()">
   @if (detailLoading) {
-    <div class="flex justify-center py-12">
-      <app-spinner size="md" colorClass="text-primary"></app-spinner>
-    </div>
-  } @else if (detailSession) {
-    <div class="space-y-4">
-      <div class="flex items-center gap-3 p-4 bg-surface-container-low rounded-xl border border-border/20">
-        <div class="w-10 h-10 rounded-full bg-primary-container/15 flex items-center justify-center shrink-0">
-          <fa-icon [icon]="['fas', 'calendar-check']" class="text-primary text-lg"></fa-icon>
+    <div class="sx-modal-loading"><app-spinner size="md" colorClass="text-primary"></app-spinner></div>
+  } @else if (detailSession; as d) {
+    <div class="sx-detail">
+      <header class="sx-detail__head sx-rise" style="--i: 0">
+        <div class="min-w-0">
+          <h3 class="sx-detail__title">{{ d.title }}</h3>
+          <p class="sx-detail__who">{{ d.therapist }} · {{ d.patient }}</p>
         </div>
-        <div class="min-w-0 flex-1">
-          <p class="text-sm font-bold text-on-surface truncate">{{ detailSession.title }}</p>
-          <p class="text-xs text-on-surface-variant">{{ detailSession.therapist }} &middot; {{ detailSession.patient }}</p>
-        </div>
-        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0"
-          [class.bg-success-container]="detailSession.status === 'completed'"
-          [class.text-on-success-container]="detailSession.status === 'completed'"
-          [class.bg-info-container]="detailSession.status === 'scheduled'"
-          [class.text-info]="detailSession.status === 'scheduled'"
-          [class.bg-error-container]="detailSession.status === 'cancelled'"
-          [class.text-error]="detailSession.status === 'cancelled'">
-          {{ detailSession.status }}
-        </span>
-      </div>
+        <span class="badge" [class]="statusOf(d.status).badge">{{ statusOf(d.status).label }}</span>
+      </header>
 
-      <div class="grid grid-cols-2 gap-3">
-        <div class="p-3 bg-surface-container-high rounded-xl">
-          <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Fecha</span>
-          <p class="text-sm font-semibold text-on-surface mt-0.5">{{ detailSession.date }}</p>
-        </div>
-        <div class="p-3 bg-surface-container-high rounded-xl">
-          <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Horario</span>
-          <p class="text-sm font-semibold text-on-surface mt-0.5">{{ detailSession.time }} - {{ detailSession.endTime }}</p>
-        </div>
-      </div>
+      <dl class="sx-facts sx-rise" style="--i: 1">
+        <div><dt>Fecha</dt><dd>{{ d.date }}</dd></div>
+        <div><dt>Horario</dt><dd>{{ d.time }} – {{ d.endTime }}</dd></div>
+        @if (d.location) { <div><dt>Sede</dt><dd>{{ d.location }}</dd></div> }
+        @if (d.sessionType) { <div><dt>Tipo</dt><dd class="capitalize">{{ d.sessionType }}</dd></div> }
+      </dl>
 
-      @if (detailSession.auditExists && detailSession.audit) {
-        <div class="border border-border/20 rounded-xl overflow-hidden">
-          <div class="px-4 py-2.5 bg-surface-container-low border-b border-border/20">
-            <h4 class="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-2">
-              <fa-icon [icon]="['fas', 'robot']" class="text-primary"></fa-icon> Auditoria IA
-            </h4>
-          </div>
-          <div class="p-4 space-y-3">
-            @if (detailSession.audit.audit_score !== undefined) {
-              <div class="flex items-center gap-3">
-                <span class="text-xs text-on-surface-variant">Score:</span>
-                <div class="flex-1 h-2 bg-surface-container-highest rounded-full overflow-hidden">
-                  <div class="h-full rounded-full transition-all"
-                    [style.width.%]="detailSession.audit.audit_score"
-                    [class.bg-success]="detailSession.audit.audit_score >= 70"
-                    [class.bg-warning]="detailSession.audit.audit_score >= 40 && detailSession.audit.audit_score < 70"
-                    [class.bg-error]="detailSession.audit.audit_score < 40">
-                  </div>
-                </div>
-                <span class="text-sm font-bold text-on-surface">{{ detailSession.audit.audit_score }}%</span>
-              </div>
-            }
-            @if (detailSession.audit.planned_text_preview) {
-              <div>
-                <span class="text-[10px] font-bold text-on-surface-variant uppercase">Programacion</span>
-                <p class="text-xs text-on-surface mt-1 line-clamp-3">{{ detailSession.audit.planned_text_preview }}</p>
-              </div>
-            }
-            @if (detailSession.audit.feedback_notes) {
-              <div>
-                <span class="text-[10px] font-bold text-on-surface-variant uppercase">Notas del Terapeuta</span>
-                <p class="text-xs text-on-surface mt-1 line-clamp-3">{{ detailSession.audit.feedback_notes }}</p>
-              </div>
-            }
-          </div>
-        </div>
+      @if (d.notes) {
+        <section class="sx-block sx-rise" style="--i: 2">
+          <h4 class="sx-block__title">Comentarios</h4>
+          <p class="sx-block__text">{{ d.notes }}</p>
+        </section>
       }
 
-      @if (detailSession.hasProgram && detailSession.programText) {
-        <div class="border border-border/20 rounded-xl overflow-hidden">
-          <button (click)="detailShowProgram = !detailShowProgram"
-            class="w-full px-4 py-2.5 bg-surface-container-low border-b border-border/20 flex items-center justify-between cursor-pointer hover:bg-surface-container-high transition-colors">
-            <h4 class="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-2">
-              <fa-icon [icon]="['fas', 'file-word']" class="text-primary"></fa-icon> Programacion Completa
-            </h4>
-            <fa-icon [icon]="detailShowProgram ? ['fas', 'chevron-up'] : ['fas', 'chevron-down']" class="text-on-surface-variant text-xs"></fa-icon>
-          </button>
-          @if (detailShowProgram) {
-            <div class="p-4">
-              <div class="bg-surface-container-high rounded-xl p-4 text-sm text-on-surface whitespace-pre-wrap max-h-80 overflow-y-auto leading-relaxed">{{ detailSession.programText }}</div>
+      @if (d.auditExists && d.audit) {
+        <section class="sx-block sx-rise" style="--i: 3">
+          <h4 class="sx-block__title">Auditoría de IA</h4>
+          @if (d.audit.audit_score !== undefined && d.audit.audit_score !== null) {
+            <div class="sx-score">
+              <span class="sx-score__track" role="img" [attr.aria-label]="'Puntaje ' + d.audit.audit_score + ' de 100'">
+                <span class="sx-score__fill"
+                  [style.transform]="'scaleX(' + d.audit.audit_score / 100 + ')'"
+                  [class.is-good]="d.audit.audit_score >= 70"
+                  [class.is-mid]="d.audit.audit_score >= 40 && d.audit.audit_score < 70"
+                  [class.is-low]="d.audit.audit_score < 40"></span>
+              </span>
+              <span class="sx-score__value">{{ d.audit.audit_score }}%</span>
             </div>
           }
-        </div>
-      } @else if (!detailSession.auditExists) {
-        <div class="text-center py-6 text-on-surface-variant/50">
-          <fa-icon [icon]="['fas', 'clipboard-list']" class="text-3xl mb-2"></fa-icon>
-          <p class="text-sm">Sin datos disponibles para esta sesion</p>
-        </div>
+          @if (d.audit.feedback_notes) {
+            <p class="sx-block__text"><strong>Notas del terapeuta:</strong> {{ d.audit.feedback_notes }}</p>
+          }
+        </section>
+      }
+
+      @if (d.hasProgram && d.programText) {
+        <section class="sx-block sx-rise" style="--i: 4">
+          <button type="button" class="sx-block__toggle" (click)="detailShowProgram = !detailShowProgram" [attr.aria-expanded]="detailShowProgram">
+            <span class="sx-block__title">Programación completa</span>
+            <fa-icon [icon]="['fas', 'chevron-down']" class="sx-chevron" [class.is-open]="detailShowProgram" aria-hidden="true"></fa-icon>
+          </button>
+          <div class="sx-collapse" [class.is-open]="detailShowProgram">
+            <div class="sx-collapse__inner">
+              <pre class="sx-program">{{ d.programText }}</pre>
+            </div>
+          </div>
+        </section>
+      } @else if (!d.auditExists && !d.notes) {
+        <p class="sx-empty">Esta sesión aún no tiene programación ni auditoría.</p>
       }
     </div>
   }
-  <div modal-footer>
+  <div modal-footer class="sx-footer">
     <app-button variant="ghost" label="Cerrar" (clicked)="closeDetailModal()"></app-button>
+    @if (detailSession) {
+      <app-button variant="primary" label="Editar sesión" [icon]="['fas', 'pen']" (clicked)="editFromDetail()"></app-button>
+    }
   </div>
 </app-modal>
 
+<!-- ───────────── Editar ───────────── -->
+<app-modal [isOpen]="showEditModal" title="Editar sesión" size="lg" (close)="closeEditModal()">
+  <form id="sx-edit-form" class="sx-form" (ngSubmit)="submitEdit()" novalidate>
+    <p class="sx-edit-who">{{ editForm.therapist }} · {{ editForm.patient }}</p>
+
+    <fieldset class="sx-fieldset" [disabled]="submitting">
+      <legend class="sx-legend">Sesión</legend>
+      <div class="sx-field">
+        <label class="sx-label" for="sx-e-title">Título</label>
+        <input id="sx-e-title" class="input-field" type="text" name="title" [(ngModel)]="editForm.title" maxlength="200" />
+      </div>
+      <div class="sx-grid sx-grid--3">
+        <div class="sx-field">
+          <label class="sx-label" for="sx-e-date">Fecha</label>
+          <input id="sx-e-date" class="input-field" type="date" name="date" [(ngModel)]="editForm.date" />
+        </div>
+        <div class="sx-field">
+          <label class="sx-label" for="sx-e-start">Inicio</label>
+          <input id="sx-e-start" class="input-field" type="time" name="start" [(ngModel)]="editForm.start_time" />
+        </div>
+        <div class="sx-field">
+          <label class="sx-label" for="sx-e-end">Fin</label>
+          <input id="sx-e-end" class="input-field" type="time" name="end" [(ngModel)]="editForm.end_time" [attr.aria-invalid]="editTimesInvalid" />
+        </div>
+      </div>
+      @if (editTimesInvalid) {
+        <p class="sx-err" role="alert">La hora de fin debe ser posterior a la de inicio.</p>
+      }
+      <div class="sx-field">
+        <label class="sx-label" for="sx-e-status">Estado</label>
+        <app-select id="sx-e-status" [(ngModel)]="editForm.status" name="status" [options]="statusOptions" ariaLabel="Estado de la sesión"></app-select>
+      </div>
+      <div class="sx-field">
+        <label class="sx-label" for="sx-e-notes">Comentarios</label>
+        <textarea id="sx-e-notes" class="input-field" name="notes" rows="2" [(ngModel)]="editForm.notes"></textarea>
+      </div>
+      @if (editConflict) {
+        <div class="sx-conflict" role="alert">
+          <p>{{ editConflict }}</p>
+          <button type="button" class="sx-link" (click)="submitEdit(true)">Guardar de todos modos</button>
+        </div>
+      }
+    </fieldset>
+
+    <fieldset class="sx-fieldset">
+      <legend class="sx-legend">Programación (.docx)</legend>
+      @if (auditState) {
+        <div class="sx-program-ok">
+          <fa-icon [icon]="['fas', 'circle-check']" aria-hidden="true"></fa-icon>
+          <div class="min-w-0">
+            <strong>Programación subida</strong>
+            <p>{{ auditState.planned_text_preview || 'Documento adjunto' }}</p>
+          </div>
+          <button type="button" class="sx-link sx-link--danger" (click)="deleteProgram()" [disabled]="programDeleting">{{ programDeleting ? 'Quitando…' : 'Quitar' }}</button>
+        </div>
+      } @else {
+        <label class="sx-drop" for="sx-e-prog">
+          <fa-icon [icon]="['fas', 'cloud-arrow-up']" aria-hidden="true"></fa-icon>
+          <span class="sx-drop__text">
+            <strong>{{ programUploading ? 'Procesando documento…' : 'Subir documento Word' }}</strong>
+            <small>Solo archivos .docx</small>
+          </span>
+        </label>
+        <input id="sx-e-prog" class="sr-only" type="file" accept=".docx" (change)="onProgramSelected($event)" [disabled]="programUploading" />
+      }
+      @if (programError) { <p class="sx-err" role="alert">{{ programError }}</p> }
+      @if (programSuccessMessage) { <p class="sx-ok" role="status">{{ programSuccessMessage }}</p> }
+    </fieldset>
+
+    <button type="button" class="sx-danger" (click)="deleteSession()" [disabled]="deleting || submitting">
+      <fa-icon [icon]="['fas', 'trash-can']" aria-hidden="true"></fa-icon>
+      {{ deleting ? 'Eliminando…' : 'Eliminar sesión' }}
+    </button>
+  </form>
+
+  <div modal-footer class="sx-footer">
+    <app-button variant="ghost" label="Cancelar" (clicked)="closeEditModal()"></app-button>
+    <button type="submit" form="sx-edit-form" class="sx-submit" [disabled]="submitting || editTimesInvalid">
+      {{ submitting ? 'Guardando…' : 'Guardar cambios' }}
+    </button>
+  </div>
+</app-modal>
+
+<!-- ───────────── Selección múltiple ───────────── -->
 @if (multiSelectMode && selectedSessionIds.size > 0) {
-  <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] animate-slide-up">
-    <div class="flex items-center gap-3 px-5 py-3 bg-primary text-on-primary rounded-2xl shadow-lg">
-      <span class="text-sm font-bold">{{ selectedSessionIds.size }} sesión{{ selectedSessionIds.size > 1 ? 'es' : '' }}</span>
-      <div class="w-px h-5 bg-on-primary/30"></div>
-      <button (click)="openBulkProgramModal()"
-        class="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold bg-on-primary text-primary rounded-xl hover:bg-on-primary/90 transition-colors cursor-pointer">
-        <fa-icon [icon]="['fas', 'file-arrow-up']" class="text-xs"></fa-icon>
-        Asignar Programación
-      </button>
-    </div>
+  <div class="sx-bulk" role="region" aria-label="Acciones para las sesiones seleccionadas">
+    <span class="sx-bulk__count">{{ selectedSessionIds.size }} {{ selectedSessionIds.size === 1 ? 'sesión' : 'sesiones' }}</span>
+    <button type="button" class="sx-bulk__btn" (click)="openBulkProgramModal()">
+      <fa-icon [icon]="['fas', 'file-arrow-up']" aria-hidden="true"></fa-icon>
+      Asignar programación
+    </button>
   </div>
 }
 
-<app-modal [isOpen]="showBulkProgramModal" title="Asignar Programación a Múltiples Sesiones" (close)="closeBulkProgramModal()">
-  <div class="space-y-4">
-    <div class="flex items-center gap-3 p-3 bg-surface-container-low rounded-xl border border-border/20">
-      <fa-icon [icon]="['fas', 'check-double']" class="text-primary text-lg"></fa-icon>
-      <div>
-        <p class="text-sm font-bold text-on-surface">{{ selectedSessionIds.size }} sesión{{ selectedSessionIds.size > 1 ? 'es' : '' }} seleccionada{{ selectedSessionIds.size > 1 ? 's' : '' }}</p>
-        <p class="text-xs text-on-surface-variant mt-0.5">Se asignará el mismo documento de programación a todas las sesiones</p>
-      </div>
-    </div>
-
-    <div>
-      <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Documento de Programación (.docx)</p>
-      @if (!bulkProgramFile) {
-        <label for="bulkProgramFileInput" class="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-border/40 rounded-xl cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all">
-          <fa-icon [icon]="['fas', 'cloud-arrow-up']" class="text-3xl text-on-surface-variant/50"></fa-icon>
-          <div class="text-center">
-            <p class="text-sm font-medium text-on-surface">Subir documento Word</p>
-            <p class="text-xs text-on-surface-variant/70 mt-0.5">Solo archivos .docx</p>
-          </div>
-        </label>
-        <input type="file" id="bulkProgramFileInput" class="hidden" accept=".docx" (change)="onBulkFileSelected($event)">
-      } @else {
-        <div class="flex items-center gap-3 p-3 rounded-xl bg-success-container border border-success-container">
-          <fa-icon [icon]="['fas', 'file-word']" class="text-primary text-lg shrink-0"></fa-icon>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-bold text-on-success-container truncate">{{ bulkProgramFile.name }}</p>
-            <p class="text-xs text-success mt-0.5">{{ (bulkProgramFile.size / 1024).toFixed(0) }} KB</p>
-          </div>
-          <button (click)="bulkProgramFile = null" class="p-1.5 rounded-lg hover:bg-on-success-container/10 transition-colors cursor-pointer">
-            <fa-icon [icon]="['fas', 'xmark']" class="text-on-success-container text-sm"></fa-icon>
-          </button>
-        </div>
-      }
-    </div>
-
-    @if (bulkProgramError) {
-      <div class="flex items-center gap-2 p-2.5 rounded-lg bg-error-container text-error text-sm">
-        <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-lg"></fa-icon> {{ bulkProgramError }}
+<app-modal [isOpen]="showBulkProgramModal" title="Asignar programación" (close)="closeBulkProgramModal()">
+  <div class="sx-form">
+    <p class="sx-hint">Se asignará el mismo documento a {{ selectedSessionIds.size }} {{ selectedSessionIds.size === 1 ? 'sesión' : 'sesiones' }}.</p>
+    @if (!bulkProgramFile) {
+      <label class="sx-drop" for="sx-b-prog">
+        <fa-icon [icon]="['fas', 'cloud-arrow-up']" aria-hidden="true"></fa-icon>
+        <span class="sx-drop__text"><strong>Subir documento Word</strong><small>Solo archivos .docx</small></span>
+      </label>
+      <input id="sx-b-prog" class="sr-only" type="file" accept=".docx" (change)="onBulkFileSelected($event)" />
+    } @else {
+      <div class="sx-program-ok">
+        <fa-icon [icon]="['fas', 'file-word']" aria-hidden="true"></fa-icon>
+        <div class="min-w-0"><strong>{{ bulkProgramFile.name }}</strong><p>{{ (bulkProgramFile.size / 1024).toFixed(0) }} KB</p></div>
+        <button type="button" class="sx-link" (click)="bulkProgramFile = null">Cambiar</button>
       </div>
     }
-    @if (bulkProgramSuccess) {
-      <div class="flex items-center gap-2 p-2.5 rounded-lg bg-success-container text-on-success-container text-sm">
-        <fa-icon [icon]="['fas', 'circle-check']" class="text-lg"></fa-icon> {{ bulkProgramSuccess }}
-      </div>
-    }
+    @if (bulkProgramError) { <p class="sx-err" role="alert">{{ bulkProgramError }}</p> }
   </div>
-  <div modal-footer class="flex items-center justify-end gap-2">
+  <div modal-footer class="sx-footer">
     <app-button variant="ghost" label="Cancelar" (clicked)="closeBulkProgramModal()"></app-button>
-    <app-button variant="primary"
-      [label]="bulkProgramUploading ? 'Subiendo...' : 'Asignar a ' + selectedSessionIds.size + ' sesión(es)'"
-      [icon]="bulkProgramUploading ? ['fas', 'spinner'] : ['fas', 'file-arrow-up']"
-      [disabled]="!bulkProgramFile || bulkProgramUploading"
-      (clicked)="submitBulkProgram()"></app-button>
+    <button type="button" class="sx-submit" [disabled]="!bulkProgramFile || bulkProgramUploading" (click)="submitBulkProgram()">
+      {{ bulkProgramUploading ? 'Asignando…' : 'Asignar a ' + selectedSessionIds.size }}
+    </button>
   </div>
 </app-modal>

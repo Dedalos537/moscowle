@@ -224,11 +224,12 @@ export class AdminService {
     });
   }
 
-  getSessions(start?: string, end?: string, therapistId?: number): Observable<CalendarEvent[]> {
+  getSessions(start?: string, end?: string, therapistId?: number, patientId?: number): Observable<CalendarEvent[]> {
     let params = new HttpParams();
     if (start) params = params.set('start', start);
     if (end) params = params.set('end', end);
     if (therapistId) params = params.set('therapist_id', therapistId);
+    if (patientId) params = params.set('patient_id', patientId);
     return this.http.get<CalendarEvent[]>('/admin/api/sessions', { params });
   }
 
@@ -583,6 +584,14 @@ export class AdminService {
   // --- PROGRAM UPLOADS / AUDITS ---
   getSessionAudit(sessionId: number): Observable<any> {
     return this.http.get<any>(`/api/sessions/${sessionId}/audit`);
+  }
+
+  /** Un solo documento para varias sesiones, en una única petición. */
+  bulkAssignProgram(sessionIds: number[], file: File): Observable<{ success: boolean; updated: number; missing: number[] }> {
+    const formData = new FormData();
+    formData.append('program_file', file);
+    formData.append('session_ids', JSON.stringify(sessionIds));
+    return this.http.post<{ success: boolean; updated: number; missing: number[] }>('/admin/api/sessions/bulk-program', formData);
   }
 
   uploadSessionProgram(sessionId: number, currentFile: File): Observable<any> {

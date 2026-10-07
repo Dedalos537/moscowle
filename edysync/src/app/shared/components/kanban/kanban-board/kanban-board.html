@@ -1,7 +1,6 @@
-<section class="kanban-board" aria-labelledby="kb-heading">
+<section class="kanban-board" aria-label="Tablero de tareas">
   <header class="kb-header">
     <div>
-      <h2 id="kb-heading" class="kb-title">Tablero de tareas</h2>
       @if (loaded) {
         <p class="kb-summary" aria-live="polite">
           {{ totalTasks }} {{ totalTasks === 1 ? 'tarea' : 'tareas' }}

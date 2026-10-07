@@ -1,11 +1,11 @@
 <div class="calendar-widget">
 
   <div class="calendar-header">
-    <button class="nav-btn" (click)="prevMonth()" title="Mes anterior">
+    <button type="button" class="nav-btn" (click)="prevMonth()" title="Mes anterior" aria-label="Mes anterior">
       <fa-icon [icon]="['fas', 'chevron-left']"></fa-icon>
     </button>
     <div class="month-title">
-      <h3>{{ monthLabel }}</h3>
+      <h3 aria-live="polite">{{ monthLabel }}</h3>
       @if (todayButtonVisible) {
         <button class="today-btn" (click)="today()">Hoy</button>
       }
@@ -14,7 +14,7 @@
         <span class="range-toggle-label">Rango</span>
       </button>
     </div>
-    <button class="nav-btn" (click)="nextMonth()" title="Mes siguiente">
+    <button type="button" class="nav-btn" (click)="nextMonth()" title="Mes siguiente" aria-label="Mes siguiente">
       <fa-icon [icon]="['fas', 'chevron-right']"></fa-icon>
     </button>
   </div>
@@ -62,8 +62,10 @@
       }
     </div>
 
-    @for (week of weeks; track week) {
-      <div class="week-row">
+    @for (key of [monthLabel]; track key) {
+    <div class="weeks" [attr.data-dir]="direction">
+    @for (week of weeks; track week; let r = $index) {
+      <div class="week-row" [style.--r]="r">
         @for (cell of week; track cell.date.toISOString()) {
           <button
             class="day-cell"
@@ -75,6 +77,9 @@
             [class.range-end]="cell.isRangeEnd"
             [class.holiday]="!!cell.holidayName"
             [title]="cell.holidayName"
+            [attr.aria-label]="dayLabel(cell)"
+            [attr.aria-pressed]="cell.isSelected"
+            type="button"
             (click)="cell.holidayName ? null : onDayClick(cell, $event)"
           >
             <span class="day-number">{{ cell.day }}</span>
@@ -84,7 +89,7 @@
             @if (cell.events.length > 0 && !cell.isInRange) {
               <div class="event-dots">
                 @for (e of cell.events.slice(0, 3); track e.id) {
-                  <span class="event-dot" [class]="statusColor(e.status)"></span>
+                  <span class="event-dot" aria-hidden="true" [class]="statusColor(e.status)"></span>
                 }
                 @if (cell.events.length > 3) {
                   <span class="more-badge">+{{ cell.events.length - 3 }}</span>
@@ -94,6 +99,8 @@
           </button>
         }
       </div>
+    }
+    </div>
     }
   </div>
 
@@ -137,9 +144,11 @@
             </span>
           </div>
         }
-        @for (event of selectedDayEvents; track event.id) {
+        @for (event of selectedDayEvents; track event.id; let i = $index) {
           <button
+            type="button"
             class="agenda-item"
+            [style.animation-delay.ms]="i * 45"
             [class.clickable]="!readonly()"
             [class.selected]="isSessionSelected(event.id)"
             (click)="onEventClick(event)"
@@ -149,7 +158,7 @@
                      [checked]="isSessionSelected(event.id)"
                      (change)="toggleSessionSelect(event, $event)">
             }
-            <div class="agenda-item-indicator" [class]="statusColor(event.status)"></div>
+            <div class="agenda-item-indicator" [class]="statusColor(event.status)" aria-hidden="true"></div>
             <div class="agenda-item-body">
               <div class="agenda-item-title">{{ event.title }}</div>
               <div class="agenda-item-meta">
@@ -172,7 +181,7 @@
                 }
               </div>
             </div>
-            <span class="status-pill" [class]="statusBgClass(event.status)">{{ statusLabel(event.status) }}</span>
+            <span class="status-pill badge" [class]="statusBgClass(event.status)">{{ statusLabel(event.status) }}</span>
           </button>
         }
       </div>

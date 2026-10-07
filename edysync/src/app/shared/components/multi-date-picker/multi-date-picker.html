@@ -1,0 +1,70 @@
+<div class="mdp">
+  <div class="mdp__bar">
+    <button type="button" class="mdp__nav" (click)="step(-1)" aria-label="Mes anterior">
+      <fa-icon [icon]="['fas', 'chevron-left']" aria-hidden="true"></fa-icon>
+    </button>
+    <div class="mdp__title">
+      <span class="mdp__month" aria-live="polite">{{ label() }}</span>
+      <button type="button" class="mdp__range" [class.is-on]="rangeMode()" [attr.aria-pressed]="rangeMode()" (click)="toggleRange()">
+        <fa-icon [icon]="['fas', 'left-right']" aria-hidden="true"></fa-icon> Rango
+      </button>
+    </div>
+    <button type="button" class="mdp__nav" (click)="step(1)" aria-label="Mes siguiente">
+      <fa-icon [icon]="['fas', 'chevron-right']" aria-hidden="true"></fa-icon>
+    </button>
+  </div>
+
+  @if (rangeMode()) {
+    <p class="mdp__hint">{{ rangeStart() ? 'Elige la fecha final del rango' : 'Elige la fecha inicial del rango' }}</p>
+  }
+
+  <div class="mdp__weekdays" aria-hidden="true">
+    @for (wd of weekdays; track wd) {
+      <span>{{ wd }}</span>
+    }
+  </div>
+
+  @for (key of [label()]; track key) {
+  <div class="mdp__grid" [attr.data-dir]="direction()" role="grid" [attr.aria-label]="'Fechas de ' + key">
+    @for (week of weeks(); track $index) {
+      <div class="mdp__week" role="row">
+        @for (cell of week; track cell.date) {
+          <button
+            type="button"
+            role="gridcell"
+            class="mdp__day"
+            [class.is-out]="!cell.inMonth"
+            [class.is-selected]="isSelected(cell.date)"
+            [class.is-holiday]="!!cell.holiday"
+            [class.is-pending]="inPendingRange(cell.date)"
+            [disabled]="cell.disabled || (atLimit() && !isSelected(cell.date) && !rangeMode())"
+            [attr.aria-pressed]="isSelected(cell.date)"
+            [attr.aria-label]="cell.date + (cell.holiday ? ', feriado: ' + cell.holiday : '')"
+            [title]="cell.holiday || ''"
+            (click)="pick(cell)"
+          >{{ cell.day }}</button>
+        }
+      </div>
+    }
+  </div>
+  }
+
+  <p class="sr-only" aria-live="polite">{{ announce() }}</p>
+
+  <div class="mdp__chips" aria-label="Fechas elegidas">
+    @for (d of sorted(); track d) {
+      <span class="mdp__chip">
+        {{ pretty(d) }}
+        <button type="button" class="mdp__chip-x" (click)="toggle(d)" [attr.aria-label]="'Quitar ' + d">
+          <fa-icon [icon]="['fas', 'xmark']" aria-hidden="true"></fa-icon>
+        </button>
+      </span>
+    }
+    @if (dates().length === 0) {
+      <span class="mdp__empty">Aún no elegiste ninguna fecha (máximo {{ max() }}).</span>
+    } @else {
+      <button type="button" class="mdp__clear" (click)="clear()">Quitar todas</button>
+      <span class="mdp__count" [class.is-full]="atLimit()">{{ dates().length }}/{{ max() }}</span>
+    }
+  </div>
+</div>

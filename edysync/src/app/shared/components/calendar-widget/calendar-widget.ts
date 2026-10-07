@@ -167,13 +167,24 @@ export class CalendarWidget implements OnInit, OnChanges {
     return `${this.months[this.currentMonth.getMonth()]} ${this.currentMonth.getFullYear()}`;
   }
 
+  /** Sentido de la última navegación: orienta la animación de entrada de la cuadrícula. */
+  direction: 'next' | 'prev' = 'next';
+
+  dayLabel(cell: { date: Date; events: unknown[]; holidayName?: string | null }): string {
+    const d = cell.date.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' });
+    const n = cell.events.length;
+    return `${d}${n ? `, ${n} ${n === 1 ? 'sesión' : 'sesiones'}` : ''}${cell.holidayName ? `, feriado: ${cell.holidayName}` : ''}`;
+  }
+
   prevMonth() {
+    this.direction = 'prev';
     this.currentMonth = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth() - 1, 1);
     this.buildGrid();
     this.monthChange.emit(this.currentMonth);
   }
 
   nextMonth() {
+    this.direction = 'next';
     this.currentMonth = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth() + 1, 1);
     this.buildGrid();
     this.monthChange.emit(this.currentMonth);
@@ -411,9 +422,10 @@ export class CalendarWidget implements OnInit, OnChanges {
   get statusColor() {
     return (status: string) => {
       switch (status) {
-        case 'completed': return 'bg-success-container';
-        case 'cancelled': return 'bg-error-container';
-        default: return 'bg-info-container';
+        case 'completed': return 'bg-success';
+        case 'cancelled': return 'bg-error';
+        case 'in_progress': return 'bg-warning';
+        default: return 'bg-info';
       }
     };
   }
@@ -421,9 +433,10 @@ export class CalendarWidget implements OnInit, OnChanges {
   get statusBgClass() {
     return (status: string) => {
       switch (status) {
-        case 'completed': return 'bg-success-container text-success';
-        case 'cancelled': return 'bg-error-container text-error';
-        default: return 'bg-info-container text-info';
+        case 'completed': return 'badge--success';
+        case 'cancelled': return 'badge--error';
+        case 'in_progress': return 'badge--warning';
+        default: return 'badge--info';
       }
     };
   }
@@ -433,6 +446,7 @@ export class CalendarWidget implements OnInit, OnChanges {
       switch (status) {
         case 'completed': return 'Completada';
         case 'cancelled': return 'Cancelada';
+        case 'in_progress': return 'En curso';
         default: return 'Programada';
       }
     };

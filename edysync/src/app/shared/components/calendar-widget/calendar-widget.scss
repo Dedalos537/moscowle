@@ -364,14 +364,15 @@
 
   &.holiday {
     cursor: not-allowed;
-    background: var(--color-error-container);
+    // Tinte suave: el contenedor de error saturado (rojo oscuro en modo oscuro) dejaba el número casi ilegible.
+    background: color-mix(in srgb, var(--color-error) 12%, transparent);
 
     .day-number {
-      color: var(--color-error);
+      color: var(--color-error-text);
     }
 
     &:hover {
-      background: var(--color-error-container);
+      background: color-mix(in srgb, var(--color-error) 12%, transparent);
       transform: none;
     }
   }
@@ -698,7 +699,7 @@
 }
 
 .status-pill {
-  font-size: 0.5rem;
+  font-size: 0.625rem;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 20px;
@@ -706,7 +707,7 @@
   flex-shrink: 0;
 
   @media (min-width: 640px) {
-    font-size: 0.6rem;
+    font-size: 0.6875rem;
     padding: 3px 8px;
   }
 }
@@ -763,5 +764,47 @@
   .range-cancel-btn {
     min-width: 44px;
     min-height: 44px;
+  }
+}
+
+// ── Movimiento ──
+// La cuadrícula se vuelve a crear al cambiar de mes: entra desde el lado hacia el que se navega y las filas llegan escalonadas.
+.weeks {
+  display: contents;
+}
+
+.weeks .week-row {
+  animation: cwRise 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--r, 0) * 35ms);
+}
+
+.weeks[data-dir='prev'] .week-row {
+  animation-name: cwRisePrev;
+}
+
+@keyframes cwRise {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes cwRisePrev {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: none; }
+}
+
+.event-dot {
+  animation: cwDot 320ms 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes cwDot {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weeks .week-row,
+  .event-dot,
+  .agenda-item {
+    animation: none;
   }
 }

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
+import { HeaderService } from '../../../../core/services/header.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { Button } from '../../../../shared/components/button/button';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
@@ -30,13 +31,19 @@ export class Games implements OnInit, OnDestroy {
   statusText = '';
   private subscriptions: Subscription = new Subscription();
 
-  constructor(private admin: AdminService, private cdr: ChangeDetectorRef) {}
+  constructor(private admin: AdminService, private cdr: ChangeDetectorRef, private headerService: HeaderService) {}
 
   ngOnInit() {
+    this.headerService.setConfig({
+      title: 'Juegos',
+      subtitle: 'Gestiona los juegos HTML disponibles en la plataforma',
+      icon: ['fas', 'gamepad'],
+    });
     this.loadGames();
   }
 
   ngOnDestroy() {
+    this.headerService.reset();
     this.subscriptions.unsubscribe();
   }
 
