@@ -59,19 +59,28 @@ function stopAll(error) {
 
 // WhatsApp esconde el teléfono de algunos contactos tras un identificador @lid. Escribirle al @lid directo se queda colgado
 // en esta versión de Baileys, así que primero se busca el teléfono real en la tabla de equivalencias que guarda la sesión.
+function withTimeout(promise, ms, label) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(label)), ms); }),
+  ]).finally(() => clearTimeout(timer));
+}
+
 async function resolvePn(lidUser) {
   const lidJid = `${lidUser}@lid`;
+  const clean = (pn) => String(pn).split('@')[0].split(':')[0];
   try {
     const mapping = sock?.signalRepository?.lidMapping;
     if (mapping?.getPNForLID) {
-      const pn = await mapping.getPNForLID(lidJid);
-      if (pn) return String(pn).split('@')[0].split(':')[0];
+      const pn = await withTimeout(Promise.resolve(mapping.getPNForLID(lidJid)), 3000, 'resolve_timeout');
+      if (pn) return clean(pn);
     }
   } catch (_) {}
   try {
-    const got = await sock?.authState?.keys?.get('lid-mapping', [`${lidUser}_reverse`]);
+    const got = await withTimeout(Promise.resolve(sock?.authState?.keys?.get('lid-mapping', [`${lidUser}_reverse`])), 3000, 'resolve_timeout');
     const pn = got && got[`${lidUser}_reverse`];
-    if (pn) return String(pn).split('@')[0].split(':')[0];
+    if (pn) return clean(pn);
   } catch (_) {}
   return null;
 }
@@ -80,33 +89,29 @@ async function sendMessage(phone, text, lid = false) {
   if (!sock) return { ok: false, error: 'no_conectado' };
 
   const msgId = String(nextMsgId++);
-  // Los contactos con identificador @lid no tienen teléfono visible: se les escribe a su propio jid.
-  let jid;
-  let lidUnresolved = false;
-  if (lid) {
-    const lidUser = String(phone).replace(/\D/g, '');
-    const pn = await resolvePn(lidUser);
-    jid = pn ? `${pn}@s.whatsapp.net` : `${lidUser}@lid`;
-    lidUnresolved = !pn;
-    console.error(`[wa-lid] envio a lid, telefono resuelto=${pn ? 'si' : 'no'}`);
-  } else jid = jidOf(phone);
 
+  // El temporizador arranca YA: antes se esperaba la resolución del @lid sin tope y, si se colgaba, nunca se respondía.
   return new Promise((resolve) => {
+    let lidUnresolved = false;
     const timer = setTimeout(() => {
       settle(msgId, { ok: false, error: lidUnresolved ? 'lid_sin_telefono' : 'timeout' });
-    }, lidUnresolved ? 12000 : 30000);
+    }, 30000);
     pending.set(msgId, { resolve, timer });
 
+    // Un envío colgado no puede bloquear los siguientes: cada uno tiene su tope y la cola sigue siempre.
     queue = queue
-      .then(() =>
-        sock.sendMessage(jid, { text }, { messageId: msgId })
-      )
-      .then((info) => {
-        settle(msgId, {
-          ok: true,
-          provider_message_id: info?.key?.id || null,
-          jid: jid,
-        });
+      .catch(() => {})
+      .then(async () => {
+        let jid;
+        if (lid) {
+          const lidUser = String(phone).replace(/\D/g, '');
+          const pn = await resolvePn(lidUser);
+          jid = pn ? `${pn}@s.whatsapp.net` : `${lidUser}@lid`;
+          lidUnresolved = !pn;
+          console.error(`[wa-lid] envio a lid, telefono resuelto=${pn ? 'si' : 'no'}`);
+        } else jid = jidOf(phone);
+        const info = await withTimeout(sock.sendMessage(jid, { text }, { messageId: msgId }), lidUnresolved ? 10000 : 25000, lidUnresolved ? 'lid_sin_telefono' : 'timeout');
+        settle(msgId, { ok: true, provider_message_id: info?.key?.id || null, jid });
       })
       .catch((err) => {
         const code = err?.output?.statusCode;
