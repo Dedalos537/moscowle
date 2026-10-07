@@ -146,6 +146,7 @@ def _auto_reply(phone, text, name, is_lid=False):
     conv = BotConversation.query.filter_by(channel='whatsapp', chat_key=phone).first()
     if not _bot_allowed(conv):
         return
+    whatsapp_service.send_typing(phone, lid=is_lid)
     reply, solved = compose_reply(text)
     if not reply:
         return

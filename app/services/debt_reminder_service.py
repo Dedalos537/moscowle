@@ -36,7 +36,8 @@ class DebtReminderService:
             if not pid or not inst.get('patient_phone') or not self._should_remind(inst):
                 continue
             channels = [ch for ch in ('whatsapp', 'sms') if automation_settings.allows(pid, 'debts', ch)[0]]
-            if not channels:
+            email_ok = automation_settings.allows(pid, 'debts', 'email')[0]
+            if not channels and not email_ok:
                 counts['blocked'] += 1
                 continue
             due_str = (
@@ -58,6 +59,15 @@ class DebtReminderService:
                 if result.get('status') == 'sent':
                     delivered = True
                     break  # WhatsApp salió: no se duplica por SMS
+            if email_ok:
+                from app.models.user import User
+
+                patient = db.session.get(User, pid)
+                body = self.templates._get_whatsapp_template_body(*args)
+                if patient and MessagingService.send_email(
+                    patient, 'Recordatorio de pago · Centro Juan Pablo II', body
+                ):
+                    delivered = True
             if delivered:
                 installment = db.session.get(Installment, inst['installment_id'])
                 if installment:

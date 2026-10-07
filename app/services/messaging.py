@@ -93,6 +93,23 @@ class MessagingService:
         own = (getattr(patient, 'phone', None) or '').strip()
         return guardian if _is_phone(guardian) else own
 
+    @staticmethod
+    def resolve_email(patient):
+        """Correo del apoderado si guardian_contact trae uno; si no, el del paciente."""
+        guardian = (getattr(patient, 'guardian_contact', None) or '').strip()
+        own = (getattr(patient, 'email', None) or '').strip()
+        return guardian if '@' in guardian else (own if '@' in own else '')
+
+    @staticmethod
+    def send_email(patient, subject, body):
+        """Aviso por correo al apoderado. Devuelve True solo si el servidor de correo lo aceptó."""
+        from app.services.email_service import EmailService
+
+        address = MessagingService.resolve_email(patient)
+        if not address:
+            return False
+        return bool(EmailService.send_notification_email(subject, [address], body=body))
+
     def check_contactable(self, patient, channel='whatsapp'):
         """Devuelve (True, None) o (False, motivo en castellano)."""
         if patient is None:

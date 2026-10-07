@@ -451,6 +451,16 @@ class WhatsAppService:
         except (BrokenPipeError, ValueError) as exc:
             raise WhatsAppBridgeError('El puente de WhatsApp no responde') from exc
 
+    def send_typing(self, phone, lid=False, state='composing'):
+        """«Escribiendo…» en el chat de la persona. Mejor esfuerzo: nunca lanza."""
+        try:
+            if self.connected:
+                self._write(
+                    {'type': 'presence', 'phone': re.sub(r'\D', '', str(phone or '')), 'lid': bool(lid), 'state': state}
+                )
+        except Exception:
+            logger.debug('No se pudo enviar el indicador de escritura', exc_info=True)
+
     def send_message(self, phone, message, timeout=35, lid=False):
         """Envia y espera confirmacion. Devuelve dict con provider_message_id.
 

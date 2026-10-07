@@ -14,12 +14,13 @@ from app.models.system_setting import SystemSetting
 from app.services import live_sync
 
 MODES = ('all', 'pilot', 'off')
-FLAGS = ('whatsapp', 'sms', 'sessions', 'debts', 'whatsapp_bot')
+FLAGS = ('whatsapp', 'sms', 'email', 'sessions', 'debts', 'whatsapp_bot')
 DEFAULTS = {
     'mode': 'all',
     'pilot_patient_id': None,
     'whatsapp': True,
     'sms': True,
+    'email': True,
     'sessions': True,
     'debts': True,
     'whatsapp_bot': True,
@@ -107,7 +108,7 @@ def update(data, user_id=None):
 
 
 def allows(patient_id, kind, channel):
-    """¿Puede salir un aviso automático de tipo `kind` ('sessions'|'debts') por `channel` ('whatsapp'|'sms') a este paciente?
+    """¿Puede salir un aviso automático de tipo `kind` ('sessions'|'debts') por `channel` ('whatsapp'|'sms'|'email') a este paciente?
 
     Devuelve (True, None) o (False, motivo).
     """
@@ -118,6 +119,6 @@ def allows(patient_id, kind, channel):
         return False, 'Modo de prueba: solo recibe el paciente piloto'
     if kind in ('sessions', 'debts') and not cfg[kind]:
         return False, 'Este tipo de aviso está desactivado'
-    if channel in ('whatsapp', 'sms') and not cfg[channel]:
+    if channel in ('whatsapp', 'sms', 'email') and not cfg[channel]:
         return False, f'El canal {channel} está desactivado'
     return True, None

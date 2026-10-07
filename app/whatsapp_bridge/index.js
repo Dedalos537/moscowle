@@ -57,12 +57,36 @@ function stopAll(error) {
   }
 }
 
+// WhatsApp esconde el teléfono de algunos contactos tras un identificador @lid. Escribirle al @lid directo se queda colgado
+// en esta versión de Baileys, así que primero se busca el teléfono real en la tabla de equivalencias que guarda la sesión.
+async function resolvePn(lidUser) {
+  const lidJid = `${lidUser}@lid`;
+  try {
+    const mapping = sock?.signalRepository?.lidMapping;
+    if (mapping?.getPNForLID) {
+      const pn = await mapping.getPNForLID(lidJid);
+      if (pn) return String(pn).split('@')[0].split(':')[0];
+    }
+  } catch (_) {}
+  try {
+    const got = await sock?.authState?.keys?.get('lid-mapping', [`${lidUser}_reverse`]);
+    const pn = got && got[`${lidUser}_reverse`];
+    if (pn) return String(pn).split('@')[0].split(':')[0];
+  } catch (_) {}
+  return null;
+}
+
 async function sendMessage(phone, text, lid = false) {
   if (!sock) return { ok: false, error: 'no_conectado' };
 
   const msgId = String(nextMsgId++);
   // Los contactos con identificador @lid no tienen teléfono visible: se les escribe a su propio jid.
-  const jid = lid ? `${String(phone).replace(/\D/g, '')}@lid` : jidOf(phone);
+  let jid;
+  if (lid) {
+    const lidUser = String(phone).replace(/\D/g, '');
+    const pn = await resolvePn(lidUser);
+    jid = pn ? `${pn}@s.whatsapp.net` : `${lidUser}@lid`;
+  } else jid = jidOf(phone);
 
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
@@ -119,7 +143,7 @@ async function start() {
   sock.ev.on('creds.update', saveCreds);
 
   // Mensajes entrantes (solo chats individuales): se reenvían al backend para el buzón del panel.
-  sock.ev.on('messages.upsert', ({ messages, type }) => {
+  sock.ev.on('messages.upsert', async ({ messages, type }) => {
     // Diagnóstico: cada evento de mensajes queda en el journal (stderr) con el tipo de identificador, sin el contenido.
     for (const m of messages || []) {
       console.error(`[wa-upsert] type=${type} fromMe=${Boolean(m.key?.fromMe)} jid=${String(m.key?.remoteJid || '').replace(/^\d+/, '#')} alt=${m.key?.remoteJidAlt ? 'si' : 'no'}`);
@@ -134,8 +158,13 @@ async function start() {
         // Si un @lid trae el teléfono real en remoteJidAlt/senderPn, se usa ese. Grupos y estados se ignoran.
         const alt = m.key?.remoteJidAlt || m.key?.senderPn || '';
         const phoneJid = jid.endsWith('@s.whatsapp.net') ? jid : alt.endsWith('@s.whatsapp.net') ? alt : null;
-        const isLid = !phoneJid && jid.endsWith('@lid');
-        if (!phoneJid && !isLid) continue;
+        let resolved = phoneJid;
+        if (!resolved && jid.endsWith('@lid')) {
+          const pn = await resolvePn(jid.split('@')[0].split(':')[0]);
+          if (pn) resolved = `${pn}@s.whatsapp.net`;
+        }
+        const isLid = !resolved && jid.endsWith('@lid');
+        if (!resolved && !isLid) continue;
         const body = m.message || {};
         let text = body.conversation || body.extendedTextMessage?.text || body.imageMessage?.caption || '';
         let kind = 'text';
@@ -144,7 +173,7 @@ async function start() {
         else if (!text) continue; // reacciones, stickers, etc.
         send({
           type: 'incoming',
-          phone: (phoneJid || jid).split('@')[0].split(':')[0],
+          phone: (resolved || jid).split('@')[0].split(':')[0],
           lid: isLid,
           name: m.pushName || null,
           id: m.key?.id || null,
@@ -238,6 +267,16 @@ function handleLine(line) {
     sendMessage(msg.phone, msg.message, Boolean(msg.lid)).then((r) => {
       send({ type: 'send_result', ref: msg.ref || null, ...r });
     });
+  } else if (msg.type === 'presence') {
+    // «escribiendo…» mientras el bot prepara la respuesta (equivalente al «procesando» de Telegram).
+    (async () => {
+      try {
+        const lidUser = String(msg.phone).replace(/\D/g, '');
+        const pn = msg.lid ? await resolvePn(lidUser) : null;
+        const jid = msg.lid ? (pn ? `${pn}@s.whatsapp.net` : `${lidUser}@lid`) : jidOf(msg.phone);
+        await sock?.sendPresenceUpdate(msg.state === 'paused' ? 'paused' : 'composing', jid);
+      } catch (_) {}
+    })();
   } else if (msg.type === 'ping') {
     send({ type: 'pong', connected: Boolean(sock) });
   } else if (msg.type === 'status') {

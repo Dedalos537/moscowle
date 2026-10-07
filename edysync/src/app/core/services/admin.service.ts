@@ -791,7 +791,7 @@ export class AdminService {
     return this.http.get<{ id: number; username: string; phone: string | null }[]>('/api/automation/patients', { params: { q } });
   }
 
-  testAutomation(channel: 'whatsapp' | 'sms', patientId?: number, kind: 'session' | 'debt' = 'session'): Observable<{ status: string; phone: string | null; patient: string }> {
+  testAutomation(channel: 'whatsapp' | 'sms' | 'email', patientId?: number, kind: 'session' | 'debt' = 'session'): Observable<{ status: string; phone: string | null; patient: string }> {
     return this.http.post<{ status: string; phone: string | null; patient: string }>('/api/automation/test', { channel, patient_id: patientId, kind });
   }
 
@@ -934,6 +934,7 @@ export interface AutomationSettings {
   pilot_patient_id: number | null;
   whatsapp: boolean;
   sms: boolean;
+  email: boolean;
   sessions: boolean;
   debts: boolean;
   whatsapp_bot: boolean;

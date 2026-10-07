@@ -75,8 +75,8 @@ def send_test():
     """Envía un mensaje de prueba REAL al apoderado de un paciente (por defecto, el piloto)."""
     data = request.get_json(silent=True) or {}
     channel = (data.get('channel') or 'whatsapp').lower()
-    if channel not in ('whatsapp', 'sms'):
-        return jsonify({'error': 'El canal debe ser whatsapp o sms'}), 400
+    if channel not in ('whatsapp', 'sms', 'email'):
+        return jsonify({'error': 'El canal debe ser whatsapp, sms o email'}), 400
     patient_id = data.get('patient_id') or automation_settings.get()['pilot_patient_id']
     patient = db.session.get(User, int(patient_id)) if str(patient_id or '').isdigit() else None
     if not patient or patient.role != 'jugador':
@@ -98,6 +98,19 @@ def send_test():
             f'Hola {patient.username}, este es un mensaje de PRUEBA del Centro Juan Pablo II. '
             'Si lo recibiste, los avisos automáticos funcionan. No necesitas responder.'
         )
+    if channel == 'email':
+        address = MessagingService.resolve_email(patient)
+        if not address:
+            return jsonify({'error': 'El paciente y su apoderado no tienen correo registrado'}), 422
+        ok = MessagingService.send_email(patient, 'Prueba · Centro Juan Pablo II', text)
+        return jsonify(
+            {
+                'status': 'sent' if ok else 'failed',
+                'reason': None if ok else 'El servidor de correo no lo aceptó',
+                'phone': address,
+                'patient': patient.username,
+            }
+        ), (200 if ok else 502)
     result = MessagingService().send_to_patient(
         patient.id,
         text,

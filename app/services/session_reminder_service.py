@@ -43,6 +43,9 @@ class _BridgeMessenger:
     def send_sms_message(self, phone, body):
         return self._sms.send_sms_message(phone, body)
 
+    def send_email(self, patient, subject, body):
+        return MessagingService.send_email(patient, subject, body)
+
 
 class SessionReminderService:
     """Recordatorios de sesión: D-1, D-0 (WhatsApp + SMS al apoderado) y aviso de renovación."""
@@ -80,7 +83,7 @@ class SessionReminderService:
             .all()
         )
 
-        counts = {'sent_whatsapp': 0, 'sent_sms': 0, 'renewals': 0}
+        counts = {'sent_whatsapp': 0, 'sent_sms': 0, 'sent_email': 0, 'renewals': 0}
         by_patient = {}
 
         for appt in upcoming:
@@ -95,7 +98,9 @@ class SessionReminderService:
                 continue
             by_patient.setdefault(patient.id, {'appointments': []})['appointments'].append(appt)
             # Interruptor global / modo prueba: si no se puede avisar a este paciente, no se marca nada como enviado.
-            if not any(automation_settings.allows(patient.id, 'sessions', ch)[0] for ch in ('whatsapp', 'sms')):
+            if not any(
+                automation_settings.allows(patient.id, 'sessions', ch)[0] for ch in ('whatsapp', 'sms', 'email')
+            ):
                 continue
 
             # Se marca como enviado SOLO si algun canal lo entrego: antes se marcaba
@@ -182,5 +187,16 @@ class SessionReminderService:
             sms = self.messaging.send_sms_message(phone, body)
             if sms.get('ok') if isinstance(sms, dict) else bool(sms):
                 counts['sent_sms'] += 1
+                delivered = True
+        send_email = getattr(self.messaging, 'send_email', None)
+        if send_email and patient_id is not None and automation_settings.allows(patient_id, kind, 'email')[0]:
+            patient = db.session.get(User, patient_id)
+            subject = (
+                'Recordatorio de sesión · Centro Juan Pablo II'
+                if kind == 'sessions'
+                else 'Aviso · Centro Juan Pablo II'
+            )
+            if patient and send_email(patient, subject, body):
+                counts['sent_email'] = counts.get('sent_email', 0) + 1
                 delivered = True
         return delivered

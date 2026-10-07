@@ -73,16 +73,17 @@ export class ChannelsPanel implements OnInit, OnDestroy {
     { id: 'pilot', title: 'Solo una familia', hint: 'Para probar sin molestar a nadie más' },
     { id: 'off', title: 'Apagado', hint: 'No sale ningún aviso automático' },
   ];
-  readonly kinds: { id: 'sessions' | 'debts' | 'whatsapp' | 'sms' | 'whatsapp_bot'; label: string; hint: string }[] = [
+  readonly kinds: { id: 'sessions' | 'debts' | 'whatsapp' | 'sms' | 'email' | 'whatsapp_bot'; label: string; hint: string }[] = [
     { id: 'sessions', label: 'Recordatorio de sesiones', hint: 'El día anterior a cada sesión' },
     { id: 'debts', label: 'Cobranza de pagos', hint: 'Pagos vencidos y por vencer' },
     { id: 'whatsapp', label: 'Por WhatsApp', hint: 'Desde el número vinculado del centro' },
     { id: 'sms', label: 'Por SMS', hint: 'Como respaldo o si WhatsApp no está' },
+    { id: 'email', label: 'Por correo', hint: 'Al correo del apoderado (o del paciente si no hay)' },
     { id: 'whatsapp_bot', label: 'El bot contesta en WhatsApp', hint: 'Responde con las FAQ del centro; tú puedes tomar la conversación cuando quieras' },
   ];
   auto: AutomationSettings | null = null;
   autoBusy = false;
-  autoTesting: 'whatsapp' | 'sms' | null = null;
+  autoTesting: 'whatsapp' | 'sms' | 'email' | null = null;
   pilotQuery = '';
   pilotResults: { id: number; username: string; phone: string | null }[] = [];
   private pilotSearch$ = new Subject<string>();
@@ -199,16 +200,16 @@ export class ChannelsPanel implements OnInit, OnDestroy {
     this.testing = true;
     this.cdr.markForCheck();
     const results: string[] = [];
-    const run = (channel: 'whatsapp' | 'sms', next: () => void) =>
+    const run = (channel: 'whatsapp' | 'sms' | 'email', next: () => void) =>
       this.admin.testAutomation(channel, pid, 'debt').subscribe({
-        next: (res) => { results.push(`${channel === 'sms' ? 'SMS' : 'WhatsApp'} a ${res.phone ?? 'su apoderado'}`); next(); },
-        error: (err) => { results.push(`${channel === 'sms' ? 'SMS' : 'WhatsApp'}: ${err?.error?.reason || err?.error?.error || 'no salió'}`); next(); },
+        next: (res) => { results.push(`${channel === 'sms' ? 'SMS' : channel === 'email' ? 'Correo' : 'WhatsApp'} a ${res.phone ?? 'su apoderado'}`); next(); },
+        error: (err) => { results.push(`${channel === 'sms' ? 'SMS' : channel === 'email' ? 'Correo' : 'WhatsApp'}: ${err?.error?.reason || err?.error?.error || 'no salió'}`); next(); },
       });
-    run('whatsapp', () => run('sms', () => {
+    run('whatsapp', () => run('sms', () => run('email', () => {
       this.testing = false;
       this.toast.show(`Prueba de cobranza · ${results.join(' · ')}`, results.some((r) => r.includes(' a ')) ? 'success' : 'error');
       this.cdr.markForCheck();
-    }));
+    })));
   }
 
   // ── WhatsApp ─────────────────────────────────────────────────────────────
@@ -297,7 +298,7 @@ export class ChannelsPanel implements OnInit, OnDestroy {
     });
   }
 
-  setFlag(id: 'sessions' | 'debts' | 'whatsapp' | 'sms' | 'whatsapp_bot', value: boolean) {
+  setFlag(id: 'sessions' | 'debts' | 'whatsapp' | 'sms' | 'email' | 'whatsapp_bot', value: boolean) {
     this.patchAutomation({ [id]: value });
   }
 
@@ -311,7 +312,7 @@ export class ChannelsPanel implements OnInit, OnDestroy {
     this.patchAutomation({ mode });
   }
 
-  flag(id: 'sessions' | 'debts' | 'whatsapp' | 'sms' | 'whatsapp_bot'): boolean {
+  flag(id: 'sessions' | 'debts' | 'whatsapp' | 'sms' | 'email' | 'whatsapp_bot'): boolean {
     return !!this.auto?.[id];
   }
 
@@ -330,7 +331,7 @@ export class ChannelsPanel implements OnInit, OnDestroy {
     return this.auto?.last_24h?.[channel]?.['sent'] ?? 0;
   }
 
-  testPilot(channel: 'whatsapp' | 'sms') {
+  testPilot(channel: 'whatsapp' | 'sms' | 'email') {
     if (this.autoTesting || !this.auto?.pilot_patient_id) return;
     this.autoTesting = channel;
     this.cdr.markForCheck();

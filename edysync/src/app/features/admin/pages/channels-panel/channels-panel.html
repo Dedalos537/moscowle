@@ -92,6 +92,7 @@
             <div class="ch-pilot__tests">
               <button type="button" class="ch-btn ch-btn--ghost" (click)="testPilot('whatsapp')" [disabled]="!!autoTesting">{{ autoTesting === 'whatsapp' ? 'Enviando…' : 'Probar por WhatsApp' }}</button>
               <button type="button" class="ch-btn ch-btn--ghost" (click)="testPilot('sms')" [disabled]="!!autoTesting">{{ autoTesting === 'sms' ? 'Enviando…' : 'Probar por SMS' }}</button>
+              <button type="button" class="ch-btn ch-btn--ghost" (click)="testPilot('email')" [disabled]="!!autoTesting">{{ autoTesting === 'email' ? 'Enviando…' : 'Probar por correo' }}</button>
             </div>
           }
         </div>
