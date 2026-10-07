@@ -1,3 +1,9 @@
+:host {
+  // Un elemento personalizado es inline por defecto: sin esto el alto en % de la hoja no se resuelve y todo crece hacia abajo.
+  display: block;
+  height: 100%;
+}
+
 .settings-page {
   max-width: 900px;
   margin: 0 auto;

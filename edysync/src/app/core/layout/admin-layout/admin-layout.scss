@@ -48,6 +48,11 @@
   z-index: 10;
 }
 
+.layout__content > div {
+  // Envoltorio de la animación de ruta: da alto definido a las páginas que se ajustan al viewport (p. ej. Configuración).
+  height: 100%;
+}
+
 .layout__content {
   flex: 1;
   overflow-y: auto;
