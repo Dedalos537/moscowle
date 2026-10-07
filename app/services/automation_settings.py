@@ -14,8 +14,16 @@ from app.models.system_setting import SystemSetting
 from app.services import live_sync
 
 MODES = ('all', 'pilot', 'off')
-FLAGS = ('whatsapp', 'sms', 'sessions', 'debts')
-DEFAULTS = {'mode': 'all', 'pilot_patient_id': None, 'whatsapp': True, 'sms': True, 'sessions': True, 'debts': True}
+FLAGS = ('whatsapp', 'sms', 'sessions', 'debts', 'whatsapp_bot')
+DEFAULTS = {
+    'mode': 'all',
+    'pilot_patient_id': None,
+    'whatsapp': True,
+    'sms': True,
+    'sessions': True,
+    'debts': True,
+    'whatsapp_bot': True,
+}
 
 
 def _key(name):

@@ -61,3 +61,47 @@ def test_automation_modes(app):
     automation_settings.update({'mode': 'all'})
     assert automation_settings.allows(1, 'sessions', 'whatsapp')[0] is True
     db.session.rollback()
+
+
+def test_whatsapp_bot_answers_from_faq_and_greets(app):
+    from app.services import whatsapp_inbound
+
+    faq = Faq(
+        question='¿Aceptan seguro Rímac?',
+        answer='Sí, aceptamos Rímac',
+        category='x',
+        keywords='seguro rimac',
+        is_active=True,
+        source='manual',
+        status='active',
+    )
+    db.session.add(faq)
+    db.session.commit()
+    try:
+        text, solved = whatsapp_inbound.compose_reply('aceptan seguro rimac?')
+        assert solved and 'Rímac' in text
+    finally:
+        db.session.delete(faq)
+        db.session.commit()
+    greeting, solved = whatsapp_inbound.compose_reply('hola')
+    assert solved and 'asistente virtual' in greeting
+    fallback, solved = whatsapp_inbound.compose_reply(
+        'necesito cambiar la dirección de facturación de mi contrato anterior'
+    )
+    assert not solved and 'persona del centro' in fallback
+
+
+def test_whatsapp_bot_respects_takeover_and_switch(app):
+    from app.services import whatsapp_inbound
+
+    convs.log_message('whatsapp', '51999000111', 'in', 'hola', 'contact')
+    conv = BotConversation.query.filter_by(channel='whatsapp', chat_key='51999000111').first()
+    automation_settings.update({'mode': 'all', 'whatsapp_bot': True})
+    assert whatsapp_inbound._bot_allowed(conv) is True
+    conv.human_takeover = True
+    assert whatsapp_inbound._bot_allowed(conv) is False
+    conv.human_takeover = False
+    automation_settings.update({'whatsapp_bot': False})
+    assert whatsapp_inbound._bot_allowed(conv) is False
+    automation_settings.update({'whatsapp_bot': True})
+    db.session.rollback()

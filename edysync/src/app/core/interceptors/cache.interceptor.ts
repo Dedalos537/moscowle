@@ -17,6 +17,8 @@ const EXCLUDED = [
   '/api/logout',
   '/api/login',
   '/api/sessions/current',
+  // El calendario global cambia al crear/mover sesiones (POST /sessions/batch no invalida su clave): sin caché.
+  '/admin/api/sessions',
   '/api/auth/webauthn/'
 ];
 

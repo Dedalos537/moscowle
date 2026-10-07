@@ -104,7 +104,7 @@
               <span class="ch-kind__label" [id]="'ch-k-' + k.id">{{ k.label }}</span>
               <span class="ch-kind__hint">{{ k.hint }}</span>
             </div>
-            <app-switch [checked]="flag(k.id)" [disabled]="auto.mode === 'off' || autoBusy" [labelledby]="'ch-k-' + k.id" (changed)="setFlag(k.id, $event)"></app-switch>
+            <app-switch [checked]="flag(k.id)" [disabled]="(auto.mode === 'off' && k.id !== 'whatsapp_bot') || autoBusy" [labelledby]="'ch-k-' + k.id" (changed)="setFlag(k.id, $event)"></app-switch>
           </div>
         }
       </div>

@@ -73,11 +73,12 @@ export class ChannelsPanel implements OnInit, OnDestroy {
     { id: 'pilot', title: 'Solo una familia', hint: 'Para probar sin molestar a nadie más' },
     { id: 'off', title: 'Apagado', hint: 'No sale ningún aviso automático' },
   ];
-  readonly kinds: { id: 'sessions' | 'debts' | 'whatsapp' | 'sms'; label: string; hint: string }[] = [
+  readonly kinds: { id: 'sessions' | 'debts' | 'whatsapp' | 'sms' | 'whatsapp_bot'; label: string; hint: string }[] = [
     { id: 'sessions', label: 'Recordatorio de sesiones', hint: 'El día anterior a cada sesión' },
     { id: 'debts', label: 'Cobranza de pagos', hint: 'Pagos vencidos y por vencer' },
     { id: 'whatsapp', label: 'Por WhatsApp', hint: 'Desde el número vinculado del centro' },
     { id: 'sms', label: 'Por SMS', hint: 'Como respaldo o si WhatsApp no está' },
+    { id: 'whatsapp_bot', label: 'El bot contesta en WhatsApp', hint: 'Responde con las FAQ del centro; tú puedes tomar la conversación cuando quieras' },
   ];
   auto: AutomationSettings | null = null;
   autoBusy = false;
@@ -188,21 +189,26 @@ export class ChannelsPanel implements OnInit, OnDestroy {
       .replace(/\{(patient_name|amount|due_date_str|days_overdue)\}/g, (_m, k: keyof typeof SAMPLE) => String(SAMPLE[k]));
   }
 
+  /** Cobranza de prueba: usa tus plantillas con datos de ejemplo y la manda al apoderado del paciente de prueba. */
   sendTest() {
+    const pid = this.auto?.pilot_patient_id;
+    if (!pid) {
+      this.toast.show('Elige primero un paciente de prueba en «Avisos a padres › Solo una familia».', 'warning');
+      return;
+    }
     this.testing = true;
     this.cdr.markForCheck();
-    this.admin.testNotifications().subscribe({
-      next: (res: any) => {
-        this.testing = false;
-        this.toast.show(res?.status === 'ok' ? 'Prueba enviada correctamente' : 'Prueba enviada: revisa el SMS y WhatsApp del número de destino', 'success');
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.testing = false;
-        this.toast.show(err?.error?.error || 'No se pudo enviar la prueba.', 'error');
-        this.cdr.markForCheck();
-      },
-    });
+    const results: string[] = [];
+    const run = (channel: 'whatsapp' | 'sms', next: () => void) =>
+      this.admin.testAutomation(channel, pid, 'debt').subscribe({
+        next: (res) => { results.push(`${channel === 'sms' ? 'SMS' : 'WhatsApp'} a ${res.phone ?? 'su apoderado'}`); next(); },
+        error: (err) => { results.push(`${channel === 'sms' ? 'SMS' : 'WhatsApp'}: ${err?.error?.reason || err?.error?.error || 'no salió'}`); next(); },
+      });
+    run('whatsapp', () => run('sms', () => {
+      this.testing = false;
+      this.toast.show(`Prueba de cobranza · ${results.join(' · ')}`, results.some((r) => r.includes(' a ')) ? 'success' : 'error');
+      this.cdr.markForCheck();
+    }));
   }
 
   // ── WhatsApp ─────────────────────────────────────────────────────────────
@@ -291,7 +297,7 @@ export class ChannelsPanel implements OnInit, OnDestroy {
     });
   }
 
-  setFlag(id: 'sessions' | 'debts' | 'whatsapp' | 'sms', value: boolean) {
+  setFlag(id: 'sessions' | 'debts' | 'whatsapp' | 'sms' | 'whatsapp_bot', value: boolean) {
     this.patchAutomation({ [id]: value });
   }
 
@@ -305,7 +311,7 @@ export class ChannelsPanel implements OnInit, OnDestroy {
     this.patchAutomation({ mode });
   }
 
-  flag(id: 'sessions' | 'debts' | 'whatsapp' | 'sms'): boolean {
+  flag(id: 'sessions' | 'debts' | 'whatsapp' | 'sms' | 'whatsapp_bot'): boolean {
     return !!this.auto?.[id];
   }
 

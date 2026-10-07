@@ -791,8 +791,8 @@ export class AdminService {
     return this.http.get<{ id: number; username: string; phone: string | null }[]>('/api/automation/patients', { params: { q } });
   }
 
-  testAutomation(channel: 'whatsapp' | 'sms', patientId?: number): Observable<{ status: string; phone: string | null; patient: string }> {
-    return this.http.post<{ status: string; phone: string | null; patient: string }>('/api/automation/test', { channel, patient_id: patientId });
+  testAutomation(channel: 'whatsapp' | 'sms', patientId?: number, kind: 'session' | 'debt' = 'session'): Observable<{ status: string; phone: string | null; patient: string }> {
+    return this.http.post<{ status: string; phone: string | null; patient: string }>('/api/automation/test', { channel, patient_id: patientId, kind });
   }
 
   // --- Sincronizar FAQ con la web ---
@@ -936,6 +936,7 @@ export interface AutomationSettings {
   sms: boolean;
   sessions: boolean;
   debts: boolean;
+  whatsapp_bot: boolean;
   pilot_patient: { id: number; username: string } | null;
   last_24h: Record<string, Record<string, number>>;
 }

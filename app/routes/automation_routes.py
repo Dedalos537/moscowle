@@ -81,10 +81,23 @@ def send_test():
     patient = db.session.get(User, int(patient_id)) if str(patient_id or '').isdigit() else None
     if not patient or patient.role != 'jugador':
         return jsonify({'error': 'Elige un paciente para la prueba'}), 400
-    text = (
-        f'Hola {patient.username}, este es un mensaje de PRUEBA del Centro Juan Pablo II. '
-        'Si lo recibiste, los avisos automáticos funcionan. No necesitas responder.'
-    )
+    if (data.get('kind') or 'session') == 'debt':
+        # Cobranza de prueba: usa las plantillas configuradas con datos de ejemplo, para ver cómo llegará de verdad.
+        from app.services.sms_whatsapp_service import SMSWhatsAppService
+
+        templates = SMSWhatsAppService()
+        args = (patient.username, 120, datetime.now().strftime('%d/%m/%Y'), 3)
+        text = (
+            templates._get_whatsapp_template_body(*args)
+            if channel == 'whatsapp'
+            else templates._get_sms_template_body(*args)
+        )
+        text = f'[PRUEBA] {text}'
+    else:
+        text = (
+            f'Hola {patient.username}, este es un mensaje de PRUEBA del Centro Juan Pablo II. '
+            'Si lo recibiste, los avisos automáticos funcionan. No necesitas responder.'
+        )
     result = MessagingService().send_to_patient(
         patient.id,
         text,
