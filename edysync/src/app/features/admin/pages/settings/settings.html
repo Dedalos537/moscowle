@@ -17,7 +17,8 @@
       }
     </nav>
 
-    <div class="settings-content">
+    <div class="settings-pane" #pane>
+      <div class="settings-pane__inner" [class.settings-pane__inner--wide]="isSystemSection">
   <div class="settings-cards-grid">
   <!-- ═══════════════════════ APARIENCIA ═══════════════════════ -->
   @if (section === 'apariencia') {
@@ -376,6 +377,7 @@
     </button>
   </div>
   }
+      </div>
     </div>
   </div>
 </div>

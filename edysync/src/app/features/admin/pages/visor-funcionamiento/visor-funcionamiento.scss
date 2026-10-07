@@ -2,6 +2,19 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+
+  // Dentro de Configuración la que se desliza es la página de la derecha, no cada pestaña.
+  &--embedded {
+    height: auto;
+
+    .tab-section {
+      overflow: visible;
+    }
+
+    .tab-toolbar {
+      background: var(--color-surface-container-lowest);
+    }
+  }
 }
 
 // ── Chrome-style tab bar ──

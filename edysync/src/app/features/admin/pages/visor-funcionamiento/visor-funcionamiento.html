@@ -1,4 +1,4 @@
-<div class="visor-page" @fadeInUp>
+<div class="visor-page" [class.visor-page--embedded]="embedded()" @fadeInUp>
 
   @if (!embedded()) {
   <div class="chrome-tab-bar">
