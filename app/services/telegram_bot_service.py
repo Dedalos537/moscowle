@@ -57,23 +57,41 @@ def get_bot_username():
     return username
 
 
-def send_telegram_message(chat_id, text, bot_token=None, reply_markup=None, parse_mode='Markdown'):
-    """Send a text message to a Telegram chat and return the message_id."""
+def send_telegram_message(chat_id, text, bot_token=None, reply_markup=None, parse_mode='Markdown', log=True):
+    """Send a text message to a Telegram chat and return the message_id.
+
+    `log=True` deja el mensaje en el historial de la conversación (lo que el bot le dijo a la persona).
+    El envío manual de un administrador usa `log=False` y se registra a sí mismo con su autor.
+    """
     if not bot_token:
         return None
     payload = {
         'chat_id': chat_id,
         'text': text[:4096],
-        'parse_mode': parse_mode,
     }
+    if parse_mode:
+        payload['parse_mode'] = parse_mode
     if reply_markup:
         payload['reply_markup'] = reply_markup
     try:
         result = _tg_request('sendMessage', payload, bot_token)
-        return result.get('result', {}).get('message_id')
+        message_id = result.get('result', {}).get('message_id')
     except Exception as e:
         logger.error(f'Telegram sendMessage failed: {e}')
         return None
+    if log and message_id:
+        _log_conversation('out', chat_id, text, 'bot')
+    return message_id
+
+
+def _log_conversation(direction, chat_id, text, sender, **kwargs):
+    """Registra en el historial; un fallo aquí nunca debe afectar la respuesta al usuario."""
+    try:
+        from app.services import bot_conversation_service as conversations
+
+        conversations.log_message('telegram', str(chat_id), direction, text, sender, **kwargs)
+    except Exception:
+        logger.exception('No se pudo registrar el mensaje en el historial')
 
 
 def edit_telegram_message(chat_id, message_id, text, bot_token=None, parse_mode='Markdown'):
@@ -342,81 +360,14 @@ _BOT_OFF_ALLOWED = frozenset(
 )
 
 
-_FALLBACK_MARKERS = (
-    'no pude',
-    'no puedo',
-    'no tengo',
-    'no encontre',
-    'no encontré',
-    'no hay informacion',
-    'no hay información',
-    'no estoy seguro',
-    'lo siento',
-    'disculpa',
-    'no pude generar',
-    'sin informacion',
-    'sin información',
-)
-
-
 def _note_if_unanswered(result, text):
-    """Registra la pregunta como 'sin responder' solo si la IA no dio una respuesta util.
-
-    Antes se llamaba note_unanswered() ANTES de invocar al modelo, asi que toda
-    pregunta sin coincidencia fuerte de FAQ contaba como fallida aunque las
-    tools hubieran respondido con datos reales. Eso llenaba la cola de
-    propuestas con preguntas que el sistema ya sabia responder.
-    """
-    if not text or not isinstance(result, dict):
-        return
-    if result.get('error') or result.get('already_sent'):
-        return
-    if result.get('tool_calls'):
-        return
-    response = (result.get('response') or '').strip().lower()
-    if not response:
-        return
-    if len(response) > 15 and not any(marker in response for marker in _FALLBACK_MARKERS):
-        return
+    """Registra la pregunta como 'sin responder' solo si la IA no dio una respuesta util (lógica compartida)."""
     try:
-        from app.services.faq_service import note_unanswered
+        from app.services.faq_service import note_if_unanswered
 
-        note_unanswered(text)
+        note_if_unanswered(result, text, 'Telegram')
     except Exception:
         logger.exception('No se pudo registrar la pregunta sin respuesta')
-    _notify_supervision_unanswered(text)
-
-
-def _notify_supervision_unanswered(text):
-    """BotConfig.notify_supervision_enabled: avisa a admin/supervisor (campana) de que el bot no supo responder.
-
-    Una sola notificación agrupada ('bot_unanswered') que va sumando casos, para no inundar la bandeja.
-    """
-    try:
-        from app.models.bot_config import BotConfig
-        from app.models.user import User
-        from app.services.notification_service import NotificationService
-
-        if not BotConfig.get_or_create().notify_supervision_enabled:
-            return
-        service = NotificationService()
-        snippet = ' '.join(str(text).split())[:140]
-        for user in User.query.filter(User.role.in_(('admin', 'supervisor')), User.is_active.is_(True)).all():
-            service.notify_user(
-                user_id=user.id,
-                title='Chasqui no supo responder',
-                message=f'Pregunta sin respuesta: «{snippet}»',
-                notif_type='info',
-                link='/app/admin/settings?section=bot',
-                category='system',
-                priority='normal',
-                icon='robot',
-                event_type='bot_unanswered',
-                event_kwargs={'scope': 'bot'},
-                skip_telegram=True,
-            )
-    except Exception:
-        logger.exception('No se pudo avisar a supervisión de una pregunta sin respuesta')
 
 
 def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
@@ -659,6 +610,10 @@ def handle_webhook_update(update):
     if not chat_id:
         return
 
+    # Historial: todo lo que escribe la persona queda guardado y visible en vivo en el panel.
+    if _record_inbound(chat_id, msg):
+        return  # un administrador tomó la conversación: el bot no contesta
+
     # Interruptor maestro: si el bot esta apagado no responde a consultas,
     # pero deja gestionar la vinculacion y reencenderlo desde /menu.
     text = (msg.get('text') or '').strip()
@@ -833,6 +788,37 @@ def handle_webhook_update(update):
                 send_telegram_message(chat_id, response_text[i : i + 4000], bot_token)
         else:
             send_telegram_message(chat_id, response_text, bot_token)
+
+
+def _record_inbound(chat_id, msg):
+    """Guarda el mensaje entrante. Devuelve True si la conversación está tomada por una persona."""
+    try:
+        from app.services import bot_conversation_service as conversations
+
+        sender = msg.get('from') or {}
+        full_name = ' '.join(x for x in (sender.get('first_name'), sender.get('last_name')) if x) or None
+        handle = f'@{sender["username"]}' if sender.get('username') else None
+        if msg.get('voice') or msg.get('audio'):
+            kind, text = 'voice', '🎤 Nota de voz'
+        elif msg.get('photo'):
+            kind, text = 'image', ('🖼️ ' + msg['caption']) if msg.get('caption') else '🖼️ Imagen'
+        else:
+            kind, text = 'text', (msg.get('text') or '').strip()
+        if text:
+            conversations.log_message(
+                'telegram',
+                str(chat_id),
+                'in',
+                text,
+                'contact',
+                kind=kind,
+                contact_name=full_name,
+                contact_handle=handle,
+            )
+        return conversations.is_taken_over('telegram', str(chat_id))
+    except Exception:
+        logger.exception('No se pudo registrar el mensaje entrante')
+        return False
 
 
 def _handle_start(chat_id, from_user, tg_user, bot_token):

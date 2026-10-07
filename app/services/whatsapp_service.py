@@ -171,6 +171,7 @@ class WhatsAppService:
         self._retrying = False
         self._ready = threading.Event()
         self._needs_qr = False
+        self._incoming_handler = None
         self._banned = False
         self.connected = False
         self.connected_phone = None
@@ -390,6 +391,14 @@ class WhatsAppService:
             self._ready.set()
             logger.info('WhatsApp conectado como %s', self.connected_phone)
 
+        elif kind == 'incoming':
+            handler = self._incoming_handler
+            if handler:
+                try:
+                    handler(msg)
+                except Exception:
+                    logger.exception('Falló el procesamiento de un mensaje entrante de WhatsApp')
+
         elif kind == 'send_result':
             ref = msg.get('ref')
             entry = self._pending.get(ref) if ref else None
@@ -518,6 +527,10 @@ class WhatsAppService:
             'last_error': self.last_error,
             'uptime_s': int(time.time() - self.started_at) if self.started_at else 0,
         }
+
+    def set_incoming_handler(self, handler):
+        """Función que recibe cada mensaje entrante (dict del puente). Se ejecuta en el hilo lector del puente."""
+        self._incoming_handler = handler
 
     @staticmethod
     def normalize_phone(phone):

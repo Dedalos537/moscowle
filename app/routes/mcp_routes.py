@@ -379,6 +379,12 @@ def mcp_chat():
             mode=mode,
             history=history,
         )
+        try:
+            from app.services.unanswered_questions import note_if_unanswered
+
+            note_if_unanswered(result, message, 'chat web')
+        except Exception:
+            logger.exception('No se pudo registrar la pregunta sin respuesta')
         resp = jsonify(result)
         for k, v in cors.items():
             resp.headers[k] = v

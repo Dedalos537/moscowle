@@ -912,8 +912,6 @@ def health_notifications_config():
     El GET tambien va autenticado: antes cualquiera que abriera la URL leia
     el numero de destino y los textos de las plantillas.
     """
-    import os
-
     from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 
     from app.models import User
@@ -927,46 +925,23 @@ def health_notifications_config():
     except Exception:
         return jsonify({'error': 'No autenticado'}), 401
 
+    from app.services import channel_settings
+
     if request.method == 'GET':
-        return jsonify(
-            {
-                'destination': (
-                    current_app.config.get('NOTIFICATION_SMS_DESTINATION')
-                    or os.environ.get('NOTIFICATION_SMS_DESTINATION')
-                    or ''
-                ),
-                'sms_template': (
-                    current_app.config.get('NOTIFICATION_SMS_TEMPLATE')
-                    or os.environ.get('NOTIFICATION_SMS_TEMPLATE')
-                    or ''
-                ),
-                'whatsapp_template': (
-                    current_app.config.get('NOTIFICATION_WHATSAPP_TEMPLATE')
-                    or os.environ.get('NOTIFICATION_WHATSAPP_TEMPLATE')
-                    or ''
-                ),
-            }
-        )
+        values = channel_settings.get_all()
+        return jsonify({**values, 'placeholders': list(channel_settings.PLACEHOLDERS)})
 
-    data = request.get_json(silent=True) or {}
-    updated = []
-    errors = []
-
-    for key_name, env_key in [
-        ('destination', 'NOTIFICATION_SMS_DESTINATION'),
-        ('sms_template', 'NOTIFICATION_SMS_TEMPLATE'),
-        ('whatsapp_template', 'NOTIFICATION_WHATSAPP_TEMPLATE'),
-    ]:
-        if key_name in data and data[key_name]:
-            new_val = str(data[key_name])
-            os.environ[env_key] = new_val
-            current_app.config[env_key] = new_val
-            updated.append(key_name)
-
+    if user.role != 'admin':
+        return jsonify({'error': 'Solo administradores pueden cambiar los canales de aviso'}), 403
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'error': 'Cuerpo JSON inválido'}), 400
+    updated, errors = channel_settings.update(data, user_id=user.id)
+    if errors:
+        return jsonify({'error': 'Revisa los campos marcados', 'fields': errors}), 400
     if updated:
-        current_app.logger.info(f'  Notification config updated (Centro de Operaciones OCP): {updated}')
-
-    return jsonify({'updated': updated, 'errors': errors})
+        current_app.logger.info(f'  Canales de aviso actualizados: {updated}')
+    return jsonify({'updated': updated, 'errors': [], **channel_settings.get_all()})
 
 
 @health_bp.route('/health/debug/routes', methods=['GET'])

@@ -17,6 +17,20 @@ logger = logging.getLogger('app.telegram')
 telegram_bp = Blueprint('telegram', __name__, url_prefix='/api/telegram')
 
 
+@telegram_bp.after_request
+def _bump_live_version(response):
+    """Toda escritura exitosa de configuración/FAQ avisa a las pantallas abiertas para que se recarguen solas."""
+    if request.method in ('POST', 'PUT', 'PATCH', 'DELETE') and response.status_code < 400:
+        from app.services import live_sync
+
+        path = request.path
+        if path.endswith('/config'):
+            live_sync.bump('bot_config')
+        elif '/faq' in path and not path.endswith('/search'):
+            live_sync.bump('faq')
+    return response
+
+
 def _webhook_secret():
     """Fuente unica del secreto del webhook.
 
@@ -551,8 +565,8 @@ def bot_config_endpoint():
             cfg.persona_message = persona.strip()
     if 'system_prompt' in data:
         prompt = str(data['system_prompt'] or '')
-        if len(prompt) > 8000:
-            errors['system_prompt'] = 'Máximo 8000 caracteres'
+        if len(prompt) > 20000:
+            errors['system_prompt'] = 'Máximo 20000 caracteres'
         else:
             cfg.system_prompt = prompt.strip()
     if errors:

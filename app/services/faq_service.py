@@ -91,6 +91,9 @@ class _UnansweredTracker:
         now = datetime.now(UTC)
         row = FaqUnanswered.query.filter_by(question_key=key).first()
         if row is None:
+            # La misma pregunta dicha con otras palabras («cuánto cuesta la terapia» / «precio de la terapia») cuenta junta.
+            row = self._similar(key)
+        if row is None:
             row = FaqUnanswered(
                 question_key=key,
                 question=text.strip()[:300],
@@ -110,6 +113,25 @@ class _UnansweredTracker:
             logger.exception('No se pudo registrar la pregunta sin responder')
             return None
         return row
+
+    @staticmethod
+    def _tokens(key):
+        return {w for w in key.split() if len(w) > 3}
+
+    def _similar(self, key, min_overlap=0.6):
+        mine = self._tokens(key)
+        if len(mine) < 2:
+            return None
+        recent = FaqUnanswered.query.order_by(FaqUnanswered.last_seen_at.desc()).limit(300).all()
+        best, best_score = None, 0.0
+        for row in recent:
+            theirs = self._tokens(row.question_key)
+            if not theirs:
+                continue
+            score = len(mine & theirs) / len(mine | theirs)
+            if score > best_score:
+                best, best_score = row, score
+        return best if best_score >= min_overlap else None
 
     def popular(self, threshold=3):
         """Preguntas que alcanzaron el umbral.
@@ -154,7 +176,83 @@ _unanswered = _UnansweredTracker()
 
 
 def note_unanswered(text):
-    _unanswered.note(text)
+    """Cuenta la pregunta y, apenas alcanza el umbral, la propone como FAQ (sin esperar al trabajo horario)."""
+    row = _unanswered.note(text)
+    if row is None:
+        return
+    try:
+        cfg = BotConfig.get_or_create()
+        if cfg.auto_faq_enabled and (row.count or 0) >= max(1, cfg.auto_faq_threshold or 3):
+            auto_propose_faq()
+    except Exception:
+        db.session.rollback()
+        logger.exception('No se pudo proponer la FAQ al alcanzar el umbral')
+
+
+_FALLBACK_MARKERS = (
+    'no pude',
+    'no puedo',
+    'no tengo',
+    'no encontre',
+    'no encontré',
+    'no hay informacion',
+    'no hay información',
+    'no estoy seguro',
+    'lo siento',
+    'disculpa',
+    'sin informacion',
+    'sin información',
+    'no entiendo',
+    'no comprendo',
+)
+
+
+def looks_unanswered(result):
+    """¿La respuesta de la IA es un «no sé»? Una respuesta con datos reales (herramientas) o larga y concreta no cuenta."""
+    if not isinstance(result, dict) or result.get('error') or result.get('already_sent') or result.get('tool_calls'):
+        return False
+    response = (result.get('response') or '').strip().lower()
+    if not response:
+        return False
+    return len(response) <= 15 or any(marker in response for marker in _FALLBACK_MARKERS)
+
+
+def note_if_unanswered(result, text, source='bot'):
+    """Punto único para todos los canales (Telegram, web, WhatsApp): si el asistente no supo responder,
+    se cuenta la pregunta (→ FAQ propuesta) y, si está activado, se avisa a supervisión."""
+    if not text or not looks_unanswered(result):
+        return False
+    note_unanswered(text)
+    notify_supervision_unanswered(text, source)
+    return True
+
+
+def notify_supervision_unanswered(text, source='bot'):
+    """BotConfig.notify_supervision_enabled: aviso agrupado en la campana de admin/supervisor."""
+    try:
+        from app.models.user import User
+        from app.services.notification_service import NotificationService
+
+        if not BotConfig.get_or_create().notify_supervision_enabled:
+            return
+        service = NotificationService()
+        snippet = ' '.join(str(text).split())[:140]
+        for user in User.query.filter(User.role.in_(('admin', 'supervisor')), User.is_active.is_(True)).all():
+            service.notify_user(
+                user_id=user.id,
+                title='Chasqui no supo responder',
+                message=f'Pregunta sin respuesta ({source}): «{snippet}»',
+                notif_type='info',
+                link='/app/admin/settings?section=bot',
+                category='system',
+                priority='normal',
+                icon='robot',
+                event_type='bot_unanswered',
+                event_kwargs={'scope': 'bot'},
+                skip_telegram=True,
+            )
+    except Exception:
+        logger.exception('No se pudo avisar a supervisión de una pregunta sin respuesta')
 
 
 def _proposed_exists(question):
@@ -198,6 +296,9 @@ def auto_propose_faq():
         db.session.commit()
         # Solo se retiran las preguntas promovidas: las demas siguen contando.
         _unanswered.forget(promoted)
+        from app.services import live_sync
+
+        live_sync.bump('faq')
     return created
 
 

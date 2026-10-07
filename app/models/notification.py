@@ -29,6 +29,8 @@ class Notification(db.Model, AuditMixin):
 class UserNotificationPreference(db.Model, AuditMixin):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True)
+    # Interruptor maestro: apagado, no se crea ninguna notificación para el usuario (las categorías pasan a ser irrelevantes).
+    notifications_enabled = db.Column(db.Boolean, default=True, nullable=False, server_default=db.true())
     debt_enabled = db.Column(db.Boolean, default=True)
     activity_enabled = db.Column(db.Boolean, default=True)
     system_enabled = db.Column(db.Boolean, default=True)

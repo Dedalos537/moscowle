@@ -116,6 +116,32 @@ async function start() {
   });
 
   sock.ev.on('creds.update', saveCreds);
+
+  // Mensajes entrantes (solo chats individuales): se reenvían al backend para el buzón del panel.
+  sock.ev.on('messages.upsert', ({ messages, type }) => {
+    if (type !== 'notify') return;
+    for (const m of messages || []) {
+      try {
+        const jid = m.key?.remoteJid || '';
+        if (m.key?.fromMe || !jid.endsWith('@s.whatsapp.net')) continue; // grupos, estados y @lid se ignoran
+        const body = m.message || {};
+        let text = body.conversation || body.extendedTextMessage?.text || body.imageMessage?.caption || '';
+        let kind = 'text';
+        if (body.audioMessage) { kind = 'voice'; text = text || '🎤 Nota de voz'; }
+        else if (body.imageMessage) { kind = 'image'; text = text ? `🖼️ ${text}` : '🖼️ Imagen'; }
+        else if (!text) continue; // reacciones, stickers, etc.
+        send({
+          type: 'incoming',
+          phone: jid.split('@')[0].split(':')[0],
+          name: m.pushName || null,
+          id: m.key?.id || null,
+          kind,
+          text,
+          ts: Number(m.messageTimestamp) || null,
+        });
+      } catch (_) {}
+    }
+  });
   } finally {
     starting = false;
   }

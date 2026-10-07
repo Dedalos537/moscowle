@@ -5,6 +5,10 @@ from app.models.ai_provider import AIProvider as AIProvider
 from app.models.ai_provider import AISettings as AISettings
 from app.models.appointment import *
 from app.models.bot_config import BotConfig as BotConfig
+from app.models.bot_conversation import BotConversation as BotConversation
+from app.models.bot_conversation import BotMessage as BotMessage
+from app.models.system_setting import LiveVersion as LiveVersion
+from app.models.system_setting import SystemSetting as SystemSetting
 from app.models.chat import *
 from app.models.contract import *
 from app.models.faq import Faq as Faq

@@ -220,6 +220,7 @@ def notification_preferences():
             prefs = notification_service.get_preferences(current_user.id)
             return jsonify(
                 {
+                    'notifications_enabled': getattr(prefs, 'notifications_enabled', True),
                     'debt_enabled': getattr(prefs, 'debt_enabled', True),
                     'activity_enabled': getattr(prefs, 'activity_enabled', True),
                     'system_enabled': getattr(prefs, 'system_enabled', True),
@@ -235,7 +236,10 @@ def notification_preferences():
             data = request.get_json()
             if not data:
                 return jsonify({'success': False, 'message': 'Datos requeridos'}), 400
-            notification_service.update_preferences(current_user.id, data)
+            try:
+                notification_service.update_preferences(current_user.id, data)
+            except ValueError as exc:
+                return jsonify({'success': False, 'message': str(exc)}), 400
             return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500

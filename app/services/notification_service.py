@@ -52,17 +52,9 @@ class NotificationService:
         # Check user preferences
         prefs = self._get_preferences(user_id)
         if prefs:
-            enabled_map = {
-                'debt': getattr(prefs, 'debt_enabled', True),
-                'activity': getattr(prefs, 'activity_enabled', True),
-                'system': getattr(prefs, 'system_enabled', True),
-                'alert': getattr(prefs, 'alert_enabled', True),
-                'payment': getattr(prefs, 'payment_enabled', True),
-                'security': getattr(prefs, 'system_enabled', True),
-                'audit': getattr(prefs, 'activity_enabled', True),
-                'report': getattr(prefs, 'system_enabled', True),
-            }
-            if not enabled_map.get(category, True):
+            if not getattr(prefs, 'notifications_enabled', True):
+                return None  # interruptor maestro apagado
+            if not self._category_enabled(prefs, category):
                 return None
 
         # Route through the intelligence engine
@@ -138,7 +130,11 @@ class NotificationService:
 
         Routes through the grouping engine but skips preference filtering.
         Used by: tasks.py, report generation, scheduler jobs, etc.
+        El interruptor maestro del usuario sí se respeta: si apagó las notificaciones, no se crea ninguna.
         """
+        prefs = self._get_preferences(user_id)
+        if prefs and not getattr(prefs, 'notifications_enabled', True):
+            return None
         etype = self._infer_event_type(category, notif_type, metadata_json)
         kwargs = {}
         if metadata_json and isinstance(metadata_json, dict):
@@ -261,14 +257,57 @@ class NotificationService:
             db.session.commit()
         return prefs
 
+    # Categorías sin interruptor propio heredan el de su grupo en la pantalla de configuración.
+    _CATEGORY_GROUP = {
+        'debt': 'debt_enabled',
+        'activity': 'activity_enabled',
+        'system': 'system_enabled',
+        'alert': 'alert_enabled',
+        'payment': 'payment_enabled',
+        'security': 'system_enabled',
+        'audit': 'activity_enabled',
+        'report': 'system_enabled',
+        'message': 'activity_enabled',
+        'session': 'activity_enabled',
+        'game': 'activity_enabled',
+        'contact': 'activity_enabled',
+        'user_mgmt': 'system_enabled',
+        'reminder': 'system_enabled',
+    }
+
+    def _category_enabled(self, prefs, category):
+        field = self._CATEGORY_GROUP.get(category)
+        return True if field is None else bool(getattr(prefs, field, True))
+
+    BOOL_PREFS = (
+        'notifications_enabled',
+        'debt_enabled',
+        'activity_enabled',
+        'system_enabled',
+        'alert_enabled',
+        'payment_enabled',
+        'sound_enabled',
+        'browser_notifications',
+        'digest_enabled',
+    )
+    DIGEST_CHANNELS = ('email', 'telegram', 'both', 'none')
+
     def _update_preferences(self, user_id, data):
         from app.models.notification import UserNotificationPreference as Pref
+        from app.services import live_sync
+
+        for field in self.BOOL_PREFS:
+            if field in data and not isinstance(data[field], bool):
+                raise ValueError(f'{field} debe ser verdadero o falso')
+        if 'digest_channel' in data and data['digest_channel'] not in self.DIGEST_CHANNELS:
+            raise ValueError('digest_channel inválido')
 
         prefs = Pref.query.filter_by(user_id=user_id).first()
         if not prefs:
             prefs = Pref(user_id=user_id)
             db.session.add(prefs)
         for field in [
+            'notifications_enabled',
             'debt_enabled',
             'activity_enabled',
             'system_enabled',
@@ -282,6 +321,7 @@ class NotificationService:
             if field in data:
                 setattr(prefs, field, data[field])
         db.session.commit()
+        live_sync.bump(f'notif_prefs:{user_id}')
         return prefs
 
     def _infer_event_type(self, category, notif_type, metadata_json):

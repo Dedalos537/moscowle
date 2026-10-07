@@ -221,21 +221,22 @@ class SMSWhatsAppService:
 
     def _get_notification_destination(self):
         """OCP: número destino configurable (Centro de Operaciones > env > default)."""
-        return (
-            current_app.config.get('NOTIFICATION_SMS_DESTINATION')
-            or os.environ.get('NOTIFICATION_SMS_DESTINATION')
-            or self.DEFAULT_NOTIFICATION_NUMBER
-        )
+        from app.services import channel_settings
+
+        return channel_settings.get('destination') or self.DEFAULT_NOTIFICATION_NUMBER
 
     def _get_sms_template_body(self, patient_name, amount, due_date_str, days_overdue):
         """OCP: plantilla SMS configurable con fallback al texto por defecto."""
-        template_sms = current_app.config.get('NOTIFICATION_SMS_TEMPLATE') or os.environ.get(
-            'NOTIFICATION_SMS_TEMPLATE'
-        )
+        from app.services import channel_settings
+
+        template_sms = channel_settings.get('sms_template')
         if template_sms:
-            return template_sms.format(
-                patient_name=patient_name, amount=amount, due_date_str=due_date_str, days_overdue=days_overdue
+            rendered = channel_settings.render(
+                template_sms,
+                dict(patient_name=patient_name, amount=amount, due_date_str=due_date_str, days_overdue=days_overdue),
             )
+            if rendered:
+                return rendered
         return f"""Hola {patient_name},
 
 Recordatorio: Tienes una deuda pendiente con Centro de Terapias.
@@ -249,13 +250,16 @@ Por favor realiza el pago. Gracias."""
 
     def _get_whatsapp_template_body(self, patient_name, amount, due_date_str, days_overdue):
         """OCP: plantilla WhatsApp configurable con fallback al texto por defecto."""
-        template_wa = current_app.config.get('NOTIFICATION_WHATSAPP_TEMPLATE') or os.environ.get(
-            'NOTIFICATION_WHATSAPP_TEMPLATE'
-        )
+        from app.services import channel_settings
+
+        template_wa = channel_settings.get('whatsapp_template')
         if template_wa:
-            return template_wa.format(
-                patient_name=patient_name, amount=amount, due_date_str=due_date_str, days_overdue=days_overdue
+            rendered = channel_settings.render(
+                template_wa,
+                dict(patient_name=patient_name, amount=amount, due_date_str=due_date_str, days_overdue=days_overdue),
             )
+            if rendered:
+                return rendered
         return f"""¡Hola {patient_name}!
 
 Recordatorio de pago pendiente
