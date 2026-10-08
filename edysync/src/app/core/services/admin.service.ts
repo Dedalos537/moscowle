@@ -799,6 +799,10 @@ export class AdminService {
     return this.http.post<{ status: string; phone: string | null; patient: string }>('/api/automation/test', { channel, patient_id: patientId, kind });
   }
 
+  testCollectionToNumber(): Observable<{ phone: string; results: Record<'whatsapp' | 'sms', { ok: boolean; error?: string | null }> }> {
+    return this.http.post<{ phone: string; results: Record<'whatsapp' | 'sms', { ok: boolean; error?: string | null }> }>('/api/automation/test-number', {});
+  }
+
   // --- Sincronizar FAQ con la web ---
   getWebsiteFaq(): Observable<WebsiteFaqStatus> {
     return this.http.get<WebsiteFaqStatus>('/api/telegram/faq/website');

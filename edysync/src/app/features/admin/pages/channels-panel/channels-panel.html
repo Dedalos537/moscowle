@@ -158,9 +158,9 @@
     <div class="ch-block__head">
       <div>
         <h3 id="ch-msg-title" class="ch-block__title">Mensajes de cobranza</h3>
-        <p class="ch-block__sub">Los textos que se envían. Déjalos vacíos para usar los predeterminados. El número de pruebas solo se usa en «Enviar prueba».</p>
+        <p class="ch-block__sub">Los textos que se envían a cada apoderado. Déjalos vacíos para usar los predeterminados. «Enviar prueba» manda un ejemplo al número de pruebas por WhatsApp y SMS.</p>
       </div>
-      <button type="button" class="ch-btn ch-btn--ghost" (click)="sendTest()" [disabled]="testing || dirty">{{ testing ? 'Enviando…' : 'Enviar prueba' }}</button>
+      <button type="button" class="ch-btn ch-btn--ghost" (click)="sendTest()" [disabled]="testing" [attr.aria-busy]="testing">{{ testing ? 'Enviando…' : 'Enviar prueba' }}</button>
     </div>
 
     <div class="ch-field">

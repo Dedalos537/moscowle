@@ -82,6 +82,37 @@ def search_patients():
     )
 
 
+@automation_bp.route('/test-number', methods=['POST'])
+@jwt_required()
+@admin_write_required
+def send_test_to_number():
+    """Cobranza de prueba al «Número de pruebas» de Canales de aviso, con las plantillas guardadas y datos de ejemplo.
+
+    Sale por WhatsApp (número vinculado del centro) y por SMS; devuelve el resultado de cada canal.
+    """
+    from app.services import channel_settings
+    from app.services.sms_whatsapp_service import SMSWhatsAppService
+    from app.services.whatsapp_service import WhatsAppBridgeError, whatsapp_service
+
+    phone = (channel_settings.get('destination') or '').strip()
+    if not phone:
+        return jsonify({'error': 'Escribe primero el número de pruebas'}), 400
+    templates = SMSWhatsAppService()
+    args = ('Mateo Rojas', 120, datetime.now().strftime('%d/%m/%Y'), 3)
+    results = {}
+    try:
+        whatsapp_service.send_message(phone, '[PRUEBA] ' + templates._get_whatsapp_template_body(*args))
+        results['whatsapp'] = {'ok': True}
+    except WhatsAppBridgeError as exc:
+        results['whatsapp'] = {'ok': False, 'error': str(exc)}
+    sms = templates.send_sms_message(phone, '[PRUEBA] ' + templates._get_sms_template_body(*args))
+    results['sms'] = (
+        {'ok': bool(sms.get('ok')), 'error': sms.get('error')} if isinstance(sms, dict) else {'ok': bool(sms)}
+    )
+    ok = any(r['ok'] for r in results.values())
+    return jsonify({'phone': phone, 'results': results}), (200 if ok else 502)
+
+
 @automation_bp.route('/test', methods=['POST'])
 @jwt_required()
 @admin_write_required

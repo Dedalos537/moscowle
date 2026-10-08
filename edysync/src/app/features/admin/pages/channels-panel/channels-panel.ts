@@ -190,26 +190,52 @@ export class ChannelsPanel implements OnInit, OnDestroy {
       .replace(/\{(patient_name|amount|due_date_str|days_overdue)\}/g, (_m, k: keyof typeof SAMPLE) => String(SAMPLE[k]));
   }
 
-  /** Cobranza de prueba: usa tus plantillas con datos de ejemplo y la manda al apoderado del paciente de prueba. */
+  /** Cobranza de prueba al «Número de pruebas»: guarda lo pendiente y envía tus plantillas por WhatsApp y SMS. */
   sendTest() {
-    const pid = this.auto?.pilot_patient_id;
-    if (!pid) {
-      this.toast.show('Elige primero un paciente de prueba en «Avisos a padres › Solo una familia».', 'warning');
+    if (this.testing) return;
+    if (!this.form.destination.trim()) {
+      this.toast.show('Escribe el número de pruebas para enviar la cobranza de ejemplo.', 'warning');
       return;
     }
     this.testing = true;
     this.cdr.markForCheck();
-    const results: string[] = [];
-    const run = (channel: 'whatsapp' | 'sms' | 'email', next: () => void) =>
-      this.admin.testAutomation(channel, pid, 'debt').subscribe({
-        next: (res) => { results.push(`${channel === 'sms' ? 'SMS' : channel === 'email' ? 'Correo' : 'WhatsApp'} a ${res.phone ?? 'su apoderado'}`); next(); },
-        error: (err) => { results.push(`${channel === 'sms' ? 'SMS' : channel === 'email' ? 'Correo' : 'WhatsApp'}: ${err?.error?.reason || err?.error?.error || 'no salió'}`); next(); },
+    const send = () =>
+      this.admin.testCollectionToNumber().subscribe({
+        next: (res) => this.reportTest(res.phone, res.results),
+        error: (err) => {
+          if (err?.error?.results) this.reportTest(err.error.phone, err.error.results);
+          else {
+            this.testing = false;
+            this.toast.show(err?.error?.error || 'No se pudo enviar la prueba.', 'error');
+            this.cdr.markForCheck();
+          }
+        },
       });
-    run('whatsapp', () => run('sms', () => run('email', () => {
-      this.testing = false;
-      this.toast.show(`Prueba de cobranza · ${results.join(' · ')}`, results.some((r) => r.includes(' a ')) ? 'success' : 'error');
-      this.cdr.markForCheck();
-    })));
+    if (!this.dirty) {
+      send();
+      return;
+    }
+    // Primero se guarda lo que escribiste: la prueba usa lo guardado.
+    const payload: Record<string, string> = {};
+    (Object.keys(this.form) as Field[]).forEach((k) => { if (this.form[k] !== this.saved[k]) payload[k] = this.form[k]; });
+    this.admin.updateNotificationConfig(payload).subscribe({
+      next: () => { Object.assign(this.saved, payload); this.errors = {}; send(); },
+      error: (err) => {
+        this.testing = false;
+        this.errors = err?.error?.fields || {};
+        this.toast.show(Object.keys(this.errors).length ? 'Revisa los campos marcados antes de probar.' : err?.error?.error || 'No se pudo guardar.', 'error');
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  private reportTest(phone: string, results: Record<string, { ok: boolean; error?: string | null }>) {
+    this.testing = false;
+    const label = (c: string) => (c === 'sms' ? 'SMS' : 'WhatsApp');
+    const parts = Object.entries(results).map(([c, r]) => (r.ok ? `${label(c)} enviado` : `${label(c)}: ${r.error || 'no salió'}`));
+    const anyOk = Object.values(results).some((r) => r.ok);
+    this.toast.show(`Prueba a ${phone} · ${parts.join(' · ')}`, anyOk ? 'success' : 'error');
+    this.cdr.markForCheck();
   }
 
   // ── WhatsApp ─────────────────────────────────────────────────────────────
