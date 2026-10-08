@@ -87,6 +87,57 @@ _TOOL_CALL_ANY_RE = re.compile(
 _UNKNOWN_CALL_RE = re.compile(r'(?:<|\(\s*)function\s*=\s*(\w+)')
 
 
+# Verbos de escritura: crear, registrar, programar, editar, cancelar... (texto normalizado sin tildes).
+_WRITE_INTENT_RE = re.compile(
+    r'\b(crea|crear|creame|registra|registrar|registrame|programa|programar|agenda|agendar|reprograma|reprogramar|'
+    r'edita|editar|modifica|modificar|actualiza|actualizar|cambia|cambiar|cancela|cancelar|anula|anular|'
+    r'elimina|eliminar|borra|borrar|asigna|asignar|desactiva|desactivar|activa|activar|da de alta|dar de alta|'
+    r'paga|pago de|abona|abonar|completa|completar|marca como)\b'
+)
+
+# La respuesta afirma haber hecho algo (o estar haciéndolo) sin haber llamado ninguna herramienta.
+ACTION_CLAIM_RE = re.compile(
+    r'(se ha creado|se creó|usuario creado|fue creado[^ ]*|ha sido creado[^ ]*|ha sido registrad[oa]|he creado|ya creé'
+    r'|se ha registrado|registrado correctamente|registrad[oa] con éxito|se registró|he registrado|ya registré'
+    r'|se actualizó|se ha actualizado|he actualizado|se eliminó|se ha eliminado|se canceló|se ha cancelado'
+    r'|se ha enviado|se envió|se guardó|se ha guardado|se ha completado|se completó|programad[oa] con éxito'
+    r'|sesión programada|sesión creada|pago registrado|usuario creado'
+    r'|creando (la|el|un|una)|registrando (la|el|un|una)|programando (la|el|un|una)|procediendo a la|procedo a la)',
+    re.IGNORECASE,
+)
+
+HONEST_NO_ACTION = (
+    'Todavía no hice ningún cambio en el sistema. Para hacerlo necesito llamar a la herramienta con datos reales: '
+    'dime exactamente qué quieres (por ejemplo, el nombre del paciente, la fecha y la hora) y lo preparo para que lo '
+    'confirmes.'
+)
+
+
+def wants_write(message, history=None):
+    """¿El pedido (o los dos últimos mensajes del usuario) es una acción que modifica datos?"""
+    texts = [message] + [h.get('content', '') for h in (history or [])[-4:] if h.get('role') == 'user'][-2:]
+    return any(_WRITE_INTENT_RE.search(norm(t)) for t in texts)
+
+
+def should_escalate_to_remote(message, history=None):
+    """Las acciones de escritura no se le confían al modelo local de CPU.
+
+    En producción el router local (1.5B) no emitía la llamada a la herramienta al pedirle crear una sesión, un
+    usuario o un pago: inventaba el resultado («Sesión programada…»). Si hay un proveedor en la nube disponible, ese
+    turno lo atiende él, con el prompt completo; el modo local queda para charla y consultas.
+    """
+    return wants_write(message, history) and _remote_ok()
+
+
+def _remote_ok():
+    try:
+        from app.services.llm_client import remote_provider_available
+
+        return remote_provider_available()
+    except Exception:
+        return False
+
+
 def strip_tool_calls(text):
     """Elimina llamadas a funciones (ángulos o paréntesis) del texto visible."""
     return _TOOL_CALL_ANY_RE.sub('', text or '')
@@ -980,6 +1031,12 @@ class MCPService:
         self, message, user_role, user_id, mode='grande', history=None, confirmed_tool=None, telegram_mode=False
     ):
         local_mode = _is_ollama_primary()
+        # Acciones de escritura -> proveedor en la nube (el router local inventaba el resultado).
+        escalated = bool(local_mode and not confirmed_tool and should_escalate_to_remote(message, history))
+        if escalated:
+            logger.info('MCP: pedido de escritura derivado del modelo local a la nube')
+            local_mode = False
+        chain_kw = {'exclude': ('ollama',)} if escalated else {}
 
         # Las herramientas se resuelven para AMBAS ramas: la remota tambien
         # construye el prompt de tools y antes recien se inicializaba dentro
@@ -1096,7 +1153,7 @@ class MCPService:
                 tools_kw = {}
                 if local_mode:
                     tools_kw['phase'] = 'resume'
-                content, provider = llm_chat(messages, temperature=0.3, max_tokens=1024, **tools_kw)
+                content, provider = llm_chat(messages, temperature=0.3, max_tokens=1024, **tools_kw, **chain_kw)
                 return {
                     'response': normalize_number_spaces(content) or f'✅ Operación ejecutada: {tool_name}',
                     'tool_calls': tool_calls_log,
@@ -1122,6 +1179,7 @@ class MCPService:
                     llm_kwargs['phase'] = 'resume' if local_resume else 'route'
                     if not local_resume:
                         llm_kwargs['tools'] = local_tools
+                llm_kwargs.update(chain_kw)
                 content, provider = llm_chat(messages, **llm_kwargs)
 
                 if not content.strip():
@@ -1236,6 +1294,38 @@ class MCPService:
                         }
                     )
                     continue
+
+                # Afirma haber creado/registrado algo sin haber llamado ninguna herramienta: nunca se entrega así.
+                if (
+                    not (confirmed_tool or {}).get('name')
+                    and not tool_calls_log
+                    and ACTION_CLAIM_RE.search(clean_content)
+                ):
+                    if local_mode and not escalated and _remote_ok():
+                        logger.info('MCP: el modelo local inventó una acción; se reintenta en la nube')
+                        escalated, local_mode = True, False
+                        chain_kw = {'exclude': ('ollama',)}
+                        messages[0] = {
+                            'role': 'system',
+                            'content': resolve_system_prompt(user_role, user_id=user_id, mode=mode, tools=tools),
+                        }
+                        messages = messages[:1] + [m for m in messages[1:] if m.get('role') != 'assistant']
+                        continue
+                    if corrections < 2:
+                        corrections += 1
+                        messages.append(
+                            {
+                                'role': 'user',
+                                'content': (
+                                    '¡ALTO! Dijiste que hiciste (o estás haciendo) una acción, pero NO llamaste ninguna '
+                                    'herramienta: nada cambió en el sistema. Si tienes todos los datos, emite AHORA la '
+                                    'llamada <function=nombre{"param": "valor"}</function>. Si te falta algún dato '
+                                    'obligatorio, pregúntalo y no afirmes nada.'
+                                ),
+                            }
+                        )
+                        continue
+                    return {'response': HONEST_NO_ACTION, 'tool_calls': [], 'done': True, 'provider': provider}
 
                 return {
                     'response': normalize_number_spaces(content),

@@ -100,6 +100,16 @@ def _provider_order():
 _PROVIDER_DISPLAY = {'groq': 'Groq', 'glm': 'GLM-5.2', 'gemini': 'Gemini', 'ollama': 'Ollama'}
 
 
+def remote_provider_available():
+    """¿Hay en la cadena algún proveedor en la nube utilizable (con clave y sin bloqueo)?"""
+    for cfg in _configured_providers():
+        if cfg.get('provider_type') == 'ollama' or _provider_blocked(cfg['slug']):
+            continue
+        if cfg.get('api_key'):
+            return True
+    return False
+
+
 def primary_provider_type():
     """Tipo del primer proveedor activo configurado en el panel, o None si el panel no tiene proveedores.
 
@@ -584,7 +594,7 @@ def _notify_provider_error(provider_name, error_msg):
 # ─── Unified chat completion ───────────────────────────────────────────────
 
 
-def llm_chat(messages, model=None, temperature=0.3, max_tokens=4096, tools=None, phase='route'):
+def llm_chat(messages, model=None, temperature=0.3, max_tokens=4096, tools=None, phase='route', exclude=()):
     """
     Send chat completion through provider chain: Groq → GLM-5.2 → Gemini → Ollama
     (order configurable via LLM_PROVIDER). Providers with invalid keys are
@@ -604,6 +614,8 @@ def llm_chat(messages, model=None, temperature=0.3, max_tokens=4096, tools=None,
 
     for cfg in _configured_providers():
         name = cfg['slug']
+        if cfg.get('provider_type') in exclude:
+            continue
         if _provider_blocked(name):
             errors.append(f'{name}: blocked (cooldown)')
             continue
@@ -797,6 +809,19 @@ def _try_ollama(messages, temperature, model=None, tools=None, phase='route', ma
             resp = ollama.chat(**req)
         else:
             raise
+    except Exception as exc:
+        # El modelo elegido en el panel puede no admitir herramientas: se reintenta con el router (qwen).
+        if (
+            tools
+            and 'support' in str(exc).lower()
+            and 'tool' in str(exc).lower()
+            and req['model'] != OLLAMA_MODEL_ROUTER
+        ):
+            logger.warning('Ollama %s no admite tools; uso %s', req['model'], OLLAMA_MODEL_ROUTER)
+            req['model'] = OLLAMA_MODEL_ROUTER
+            resp = ollama.chat(**req)
+        else:
+            raise
 
     msg = resp.get('message', {}) or {}
     content = msg.get('content') or ''
@@ -823,7 +848,7 @@ def _try_ollama(messages, temperature, model=None, tools=None, phase='route', ma
     return content or None
 
 
-def llm_chat_stream(messages, model=None, temperature=0.3, max_tokens=4096, tools=None, phase='route'):
+def llm_chat_stream(messages, model=None, temperature=0.3, max_tokens=4096, tools=None, phase='route', exclude=()):
     """
     Stream chat completion. Yields text chunks.
     Tries Groq first, then GLM-5.2, then Gemini, then Ollama.
@@ -832,7 +857,7 @@ def llm_chat_stream(messages, model=None, temperature=0.3, max_tokens=4096, tool
 
     for cfg in _configured_providers():
         name = cfg['slug']
-        if _provider_blocked(name):
+        if cfg.get('provider_type') in exclude or _provider_blocked(name):
             continue
         try:
             done = yield from _stream_provider(cfg, messages, model, temperature, max_tokens, tools=tools, phase=phase)

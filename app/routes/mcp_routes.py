@@ -19,16 +19,20 @@ from app.services.llm_client import (
     llm_chat_stream,
 )
 from app.services.mcp_service import (
+    ACTION_CLAIM_RE,
+    HONEST_NO_ACTION,
     MCPService,
     _build_local_system_prompt,
     _force_intent_tool,
     _is_ollama_primary,
     _is_smalltalk,
     _parse_text_tool_call,
+    _remote_ok,
     _select_local_tools,
     _trim_tool_result,
     normalize_number_spaces,
     resolve_system_prompt,
+    should_escalate_to_remote,
     strip_tool_calls,
     tool_result_context,
 )
@@ -437,6 +441,16 @@ def mcp_chat_stream():
 
                 tools = get_tools_for_mode(mode, user.role)
                 local_mode = _is_ollama_primary()
+                # Acciones de escritura -> proveedor en la nube: el router local inventaba el resultado.
+                escalated = bool(
+                    local_mode
+                    and not (data.get('confirmed_tool') or {}).get('name')
+                    and should_escalate_to_remote(message, history)
+                )
+                if escalated:
+                    logger.info('MCP stream: pedido de escritura derivado del modelo local a la nube')
+                    local_mode = False
+                chain_kw = {'exclude': ('ollama',)} if escalated else {}
                 if local_mode:
                     local_tools = _select_local_tools(tools, message, user_role=user.role)
                     full_system = _build_local_system_prompt(
@@ -539,7 +553,7 @@ def mcp_chat_stream():
                             full_content = f'<function={det_tool[0]}{_det_args}</function>'
                             logger.info(f'MCP stream intent determinista (sin router): {det_tool[0]}({_det_args})')
                         else:
-                            llm_stream_kwargs = {'temperature': 0.3, 'max_tokens': 4096}
+                            llm_stream_kwargs = {'temperature': 0.3, 'max_tokens': 4096, **chain_kw}
                             if local_mode:
                                 # Sin resultado REAL previo todavia -> fase route con tools nativas.
                                 local_phase = 'resume' if tool_calls_log or last_result_str else 'route'
@@ -680,6 +694,47 @@ def mcp_chat_stream():
                             # para que el retry no quede pegado a la respuesta final.
                             yield f'data: {json.dumps({"type": "reset_text"})}\n\n'
                             continue
+
+                        # Afirma haber hecho una acción sin herramienta: se borra la burbuja y se reintenta.
+                        if (
+                            not confirmed_tool.get('name')
+                            and not tool_calls_log
+                            and ACTION_CLAIM_RE.search(clean_final)
+                        ):
+                            yield f'data: {json.dumps({"type": "reset_text"})}\n\n'
+                            streamed_text = ''
+                            if local_mode and not escalated and _remote_ok():
+                                escalated, local_mode = True, False
+                                chain_kw = {'exclude': ('ollama',)}
+                                messages[0] = {
+                                    'role': 'system',
+                                    'content': resolve_system_prompt(
+                                        user.role, user_id=user.id, mode=mode, tools=tools
+                                    ),
+                                }
+                                messages = messages[:1] + [m for m in messages[1:] if m.get('role') != 'assistant']
+                                yield trace.thinking('Preparando la acción con un modelo más capaz...', 'guard')
+                                continue
+                            if corrections < 2:
+                                corrections += 1
+                                messages.append(
+                                    {
+                                        'role': 'user',
+                                        'content': (
+                                            '¡ALTO! Dijiste que hiciste una acción, pero NO llamaste ninguna '
+                                            'herramienta: nada cambió. Si tienes los datos, emite AHORA '
+                                            '<function=nombre{"param": "valor"}</function>; si falta un dato '
+                                            'obligatorio, pregúntalo sin afirmar nada.'
+                                        ),
+                                    }
+                                )
+                                yield trace.thinking(
+                                    'La acción debe pasar por una herramienta. Reintentando...', 'guard'
+                                )
+                                continue
+                            final_answer = HONEST_NO_ACTION
+                            yield f'data: {json.dumps({"type": "text", "content": HONEST_NO_ACTION}, ensure_ascii=False)}\n\n'
+                            break
 
                         # No more tool calls — final response already streamed
                         break
