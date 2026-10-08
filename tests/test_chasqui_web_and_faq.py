@@ -105,3 +105,14 @@ def test_whatsapp_bot_respects_takeover_and_switch(app):
     assert whatsapp_inbound._bot_allowed(conv) is False
     automation_settings.update({'whatsapp_bot': True})
     db.session.rollback()
+
+
+def test_hidden_number_contact_can_be_linked_to_a_phone(app):
+    convs.log_message('whatsapp', '77434468712570', 'in', 'hola', 'contact', contact_handle='lid:77434468712570')
+    conv = BotConversation.query.filter_by(channel='whatsapp', chat_key='77434468712570').first()
+    assert convs.whatsapp_target(conv) == ('77434468712570', True)
+    ok, err = convs.set_linked_phone(conv, '987 277 835')
+    assert ok and err is None
+    assert convs.whatsapp_target(conv) == ('51987277835', False)
+    assert conv.to_dict()['linked_phone'] == '51987277835'
+    assert convs.set_linked_phone(conv, '12')[0] is False

@@ -52,6 +52,21 @@
         <div class="bc-thread__who">
           <h3 class="bc-thread__name">{{ conv.contact }}</h3>
           <p class="bc-thread__meta">{{ channelName(conv) }}{{ handleLabel(conv) }}{{ conv.user_id ? ' · usuario de la plataforma' : '' }}</p>
+          @if (isHiddenNumber(conv)) {
+            @if (phoneEditing) {
+              <form class="bc-phone" (submit)="$event.preventDefault(); savePhone()">
+                <label class="bc-phone__label" for="bc-phone-input">Celular real de este contacto</label>
+                <input id="bc-phone-input" class="bc-phone__input" type="tel" inputmode="tel" autocomplete="off" placeholder="987 654 321"
+                  [(ngModel)]="phoneDraft" name="phone" />
+                <button type="submit" class="bc-phone__save" [disabled]="phoneBusy || !phoneDraft.trim()">{{ phoneBusy ? 'Guardando…' : 'Guardar' }}</button>
+                <button type="button" class="bc-phone__cancel" (click)="phoneEditing = false">Cancelar</button>
+              </form>
+            } @else {
+              <button type="button" class="bc-phone__link" (click)="startPhone(conv)">
+                {{ conv.linked_phone ? 'Cambiar número' : 'Indicar número para poder responder' }}
+              </button>
+            }
+          }
         </div>
         <div class="bc-takeover">
           <span class="bc-takeover__label" id="bc-takeover">{{ conv.human_takeover ? 'Atiendes tú' : 'Atiende el bot' }}</span>

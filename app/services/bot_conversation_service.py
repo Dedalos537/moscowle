@@ -196,6 +196,9 @@ def whatsapp_target(conv):
     identificador @lid (WhatsApp oculta el número) queda como último recurso.
     """
     is_lid = (conv.contact_handle or '').startswith('lid:')
+    linked = conv.linked_phone() if is_lid else None
+    if linked:
+        return linked, False
     if is_lid and conv.user_id:
         from app.models.user import User
         from app.services.messaging import MessagingService, _is_phone
@@ -205,6 +208,31 @@ def whatsapp_target(conv):
         if phone and _is_phone(phone):
             return re.sub(r'\D', '', phone), False
     return conv.chat_key, is_lid
+
+
+def set_linked_phone(conv, phone, admin_id=None):
+    """Asocia el teléfono real a un contacto de WhatsApp con número oculto. Devuelve (ok, error)."""
+    from app.models.system_setting import SystemSetting
+
+    if conv.channel != 'whatsapp' or not (conv.contact_handle or '').startswith('lid:'):
+        return False, 'Solo aplica a contactos de WhatsApp con número oculto'
+    digits = re.sub(r'\D', '', str(phone or ''))
+    if digits.startswith('0'):
+        digits = digits[1:]
+    if len(digits) == 9:
+        digits = '51' + digits
+    if not (11 <= len(digits) <= 15):
+        return False, 'Escribe un celular válido, por ejemplo 987 654 321'
+    key = f'wa.lid_phone.{conv.chat_key}'
+    row = db.session.get(SystemSetting, key)
+    if row is None:
+        row = SystemSetting(key=key)
+        db.session.add(row)
+    row.value = digits
+    row.updated_by_id = admin_id
+    db.session.commit()
+    live_sync.bump('conversations')
+    return True, None
 
 
 def send_as_admin(conv, text, admin):

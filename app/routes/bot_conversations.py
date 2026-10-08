@@ -88,6 +88,22 @@ def takeover(cid):
     return jsonify({'conversation': conv.to_dict()})
 
 
+@bot_conv_bp.route('/conversations/<int:cid>/phone', methods=['POST'])
+@jwt_required()
+@admin_write_required
+def link_phone(cid):
+    """WhatsApp oculta el número de algunos contactos: el admin indica el real y desde entonces se les escribe ahí."""
+    conv, err = _conversation_or_404(cid)
+    if err:
+        return err
+    ok, error = conversations.set_linked_phone(
+        conv, (request.get_json(silent=True) or {}).get('phone'), admin_id=int(get_jwt_identity())
+    )
+    if not ok:
+        return jsonify({'error': error}), 400
+    return jsonify({'conversation': conv.to_dict()})
+
+
 @live_bp.route('/versions', methods=['GET'])
 @jwt_required()
 def versions():

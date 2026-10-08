@@ -49,6 +49,9 @@ export class BotConversations implements OnInit, OnDestroy {
   draft = '';
   sending = false;
   takeoverBusy = false;
+  phoneEditing = false;
+  phoneDraft = '';
+  phoneBusy = false;
   newBelow = false;
   mobileThread = false;
 
@@ -151,6 +154,36 @@ export class BotConversations implements OnInit, OnDestroy {
   }
 
   // ── acciones ─────────────────────────────────────────────────────────────
+  /** Contacto con número oculto (lid): el admin indica su celular una vez y desde entonces se le escribe ahí. */
+  isHiddenNumber(c: BotConversation): boolean {
+    return c.channel === 'whatsapp' && !!c.handle?.startsWith('lid:');
+  }
+
+  startPhone(c: BotConversation) {
+    this.phoneDraft = c.linked_phone ? '+' + c.linked_phone : '';
+    this.phoneEditing = true;
+  }
+
+  savePhone() {
+    const conv = this.selected();
+    if (!conv || this.phoneBusy || !this.phoneDraft.trim()) return;
+    this.phoneBusy = true;
+    this.admin.setBotConversationPhone(conv.id, this.phoneDraft).subscribe({
+      next: (res) => {
+        this.phoneBusy = false;
+        this.phoneEditing = false;
+        this.patchConversation(res.conversation);
+        this.toast.show('Listo: las respuestas a este contacto saldrán a ese número.', 'success');
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.phoneBusy = false;
+        this.toast.show(err?.error?.error || 'No se pudo guardar el número.', 'error');
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
   toggleTakeover(enabled: boolean) {
     const conv = this.selected();
     if (!conv || this.takeoverBusy) return;
@@ -232,7 +265,8 @@ export class BotConversations implements OnInit, OnDestroy {
   /** El identificador interno de WhatsApp (lid:…) no le sirve a nadie: se muestra como «número oculto». */
   handleLabel(c: BotConversation): string {
     if (!c.handle) return '';
-    return c.handle.startsWith('lid:') ? ' · número oculto por WhatsApp' : ' · ' + c.handle;
+    if (c.handle.startsWith('lid:')) return c.linked_phone ? ' · se responde al +' + c.linked_phone : ' · número oculto por WhatsApp';
+    return ' · ' + c.handle;
   }
 
   channelName(c: BotConversation): string {

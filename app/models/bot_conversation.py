@@ -44,7 +44,17 @@ class BotConversation(db.Model):
             'unread': self.unread_count or 0,
             'last_message': self.last_preview,
             'timestamp': self.last_message_at.isoformat() + 'Z' if self.last_message_at else None,
+            'linked_phone': self.linked_phone(),
         }
+
+    def linked_phone(self):
+        """Teléfono real que un administrador asoció a un contacto con número oculto (@lid), si lo hay."""
+        if self.channel != 'whatsapp' or not (self.contact_handle or '').startswith('lid:'):
+            return None
+        from app.models.system_setting import SystemSetting
+
+        row = db.session.get(SystemSetting, f'wa.lid_phone.{self.chat_key}')
+        return row.value if row is not None and row.value else None
 
 
 class BotMessage(db.Model):

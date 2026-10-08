@@ -494,6 +494,10 @@ export class AdminService {
     return this.http.post<{ status: string; message: BotMessage }>(`/api/bot/conversations/${id}/messages`, { text });
   }
 
+  setBotConversationPhone(id: number, phone: string): Observable<{ conversation: BotConversation }> {
+    return this.http.post<{ conversation: BotConversation }>(`/api/bot/conversations/${id}/phone`, { phone });
+  }
+
   setBotTakeover(id: number, enabled: boolean): Observable<{ conversation: BotConversation }> {
     return this.http.post<{ conversation: BotConversation }>(`/api/bot/conversations/${id}/takeover`, { enabled });
   }
@@ -901,6 +905,7 @@ export interface BotConversation {
   user_id: number | null;
   human_takeover: boolean;
   unread: number;
+  linked_phone?: string | null;
   last_message: string | null;
   timestamp: string | null;
 }
