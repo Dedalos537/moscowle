@@ -6,6 +6,7 @@ Usage:
     python scripts/deploy_cpanel.py --frontend   # Frontend only
     python scripts/deploy_cpanel.py --dry-run    # Preview what would be uploaded
     python scripts/deploy_cpanel.py --build      # Compila Angular (ng build) antes de subir el frontend
+    python scripts/deploy_cpanel.py --no-build   # Frontend: sube el dist/ actual (debe tener base href /)
     python scripts/deploy_cpanel.py --from-ci    # Frontend: descarga el build de la CI (main) en vez de compilar aquí
     python scripts/deploy_cpanel.py --all        # --build + todo: lo mismo que hace el pipeline, en un comando
 
@@ -28,6 +29,7 @@ Structure on cPanel:
         ...
 """
 
+import contextlib
 import ftplib
 import getpass
 import io
@@ -198,8 +200,8 @@ def should_include_backend(path: str) -> bool:
     return top in BACKEND_INCLUDE
 
 
-def delete_old_hashed_files(ftp: ftplib.FTP, remote_dir: str):
-    """Delete old hashed JS/CSS files before uploading new build."""
+def delete_old_hashed_files(ftp: ftplib.FTP, remote_dir: str, keep=frozenset()):
+    """Borra los JS/CSS con hash de builds anteriores (nunca los que están en `keep`, los del build nuevo)."""
     try:
         ftp.cwd(remote_dir)
         entries = []
@@ -213,6 +215,8 @@ def delete_old_hashed_files(ftp: ftplib.FTP, remote_dir: str):
         m = hash_pattern.search(entry)
         if m:
             filename = m.group(1)
+            if filename in keep:
+                continue
             try:
                 ftp.delete(filename)
                 deleted += 1
@@ -341,8 +345,13 @@ def deploy_backend(ftp: ftplib.FTP, dry_run=False):
     print(f'  Uploaded: {uploaded} files, skipped: {skipped}')
 
 
-def deploy_frontend(ftp: ftplib.FTP, dry_run=False):
-    """Deploy frontend build to cPanel."""
+def deploy_frontend(ftp: ftplib.FTP, dry_run=False, connect=None):
+    """Sube el build al cPanel sin dejar el sitio roto en ningún momento.
+
+    Orden: (1) archivos nuevos con hash, con reintento y reconexión; (2) index.html al final, que es el que apunta a
+    ellos; (3) recién entonces se borran los archivos viejos. Antes se borraba primero: si la conexión FTPS se caía a
+    mitad, el sitio quedaba pidiendo archivos que ya no existían.
+    """
     print('\n=== FRONTEND ===')
     print(f'  Local:  {LOCAL_FRONTEND_DIR}')
     print(f'  Remote: {REMOTE_FRONTEND_DIR}')
@@ -350,23 +359,53 @@ def deploy_frontend(ftp: ftplib.FTP, dry_run=False):
     if not LOCAL_FRONTEND_DIR.exists():
         print(f'  ERROR: Frontend build not found at {LOCAL_FRONTEND_DIR}')
         print('  Run "npx ng build" first.')
-        return
+        return False
 
+    files = sorted(p for p in LOCAL_FRONTEND_DIR.rglob('*') if p.is_file())
     if dry_run:
-        count = sum(1 for _ in LOCAL_FRONTEND_DIR.rglob('*') if _.is_file())
-        print(f'  Total: {count} files')
-        return
+        print(f'  Total: {len(files)} files')
+        return True
 
-    # Clean old hashed files
-    print('  Cleaning old hashed files...')
-    delete_old_hashed_files(ftp, REMOTE_FRONTEND_DIR)
+    index = LOCAL_FRONTEND_DIR / 'index.html'
+    ordered = [p for p in files if p != index] + ([index] if index.exists() else [])
+    state = {'ftp': ftp}
 
-    # Upload
-    uploaded, skipped = upload_dir(ftp, str(LOCAL_FRONTEND_DIR), REMOTE_FRONTEND_DIR)
-    print(f'  Uploaded: {uploaded} files')
+    def put(path):
+        rel = path.relative_to(LOCAL_FRONTEND_DIR).as_posix()
+        remote = f'{REMOTE_FRONTEND_DIR}/{rel}'
+        for attempt in range(1, 5):
+            try:
+                mkdir_p(state['ftp'], remote.rsplit('/', 1)[0])
+                with open(path, 'rb') as fh:
+                    state['ftp'].storbinary(f'STOR {remote}', fh)
+                return True
+            except Exception as e:
+                print(f'  reintento {attempt} {rel}: {e}')
+                if connect is None:
+                    break
+                with contextlib.suppress(Exception):
+                    state['ftp'].close()
+                time.sleep(2 * attempt)
+                with contextlib.suppress(Exception):
+                    state['ftp'] = connect()
+        return False
 
-    # Bust index.html cache
-    bust_index_cache(ftp, REMOTE_FRONTEND_DIR)
+    uploaded = 0
+    for path in ordered[:-1] if index.exists() else ordered:
+        if not put(path):
+            print(
+                f'  ERROR: no se pudo subir {path.name}. Se detiene SIN tocar index.html: el sitio sigue con la versión anterior.'
+            )
+            return False
+        uploaded += 1
+    if index.exists() and not put(index):
+        print('  ERROR: no se pudo subir index.html. El sitio sigue con la versión anterior.')
+        return False
+    print(f'  Uploaded: {uploaded + 1} files')
+
+    bust_index_cache(state['ftp'], REMOTE_FRONTEND_DIR)
+    delete_old_hashed_files(state['ftp'], REMOTE_FRONTEND_DIR, keep={p.name for p in files})
+    return True
 
 
 def main():
@@ -388,25 +427,36 @@ def main():
 
     # El dist por defecto usa base /app/ (nginx de Ubuntu); en cPanel cuelga de la raiz, asi que siempre se recompila.
     if do_frontend and not dry_run:
-        if '--from-ci' in sys.argv:
+        if '--no-build' in sys.argv:
+            # Sube el build que ya está en dist/, pero solo si es uno para cPanel (base href en la raíz).
+            index = LOCAL_FRONTEND_DIR / 'index.html'
+            if not index.exists() or '<base href="/">' not in index.read_text(encoding='utf-8'):
+                raise SystemExit('dist/ no es un build para cPanel (falta <base href="/">). Usa --from-ci o compila.')
+        elif '--from-ci' in sys.argv:
             fetch_ci_frontend()
         else:
             build_frontend()
 
     print(f'Connecting to {FTP_HOST}...')
+
     # FTPS: con FTP plano la contrasena viaja en claro.
-    ftp = ftplib.FTP_TLS(FTP_HOST)  # noqa: S321 - FTPS explicito (TLS) con prot_p()
-    ftp.login(FTP_USER, password)
-    ftp.prot_p()
+    def connect():
+        conn = ftplib.FTP_TLS(FTP_HOST, timeout=60)  # noqa: S321 - FTPS explicito (TLS) con prot_p()
+        conn.login(FTP_USER, password)
+        conn.prot_p()
+        return conn
+
+    ftp = connect()
     print('Connected!')
 
     if do_backend:
         deploy_backend(ftp, dry_run)
 
-    if do_frontend:
-        deploy_frontend(ftp, dry_run)
+    if do_frontend and not deploy_frontend(ftp, dry_run, connect=connect):
+        sys.exit(1)
 
-    ftp.quit()
+    with contextlib.suppress(Exception):
+        ftp.quit()
     print('\nDone!')
 
 
