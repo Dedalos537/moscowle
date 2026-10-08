@@ -43,6 +43,17 @@ _TACTICAL_SYSTEM = (
     'Solo conversación casual.'
 )
 
+
+def _tactical_system():
+    """Persona de charla corta con el nombre configurado en el panel (antes «Diego» fijo)."""
+    try:
+        from app.services.prompt_builder import apply_bot_name
+
+        return apply_bot_name(_TACTICAL_SYSTEM)
+    except Exception:
+        return _TACTICAL_SYSTEM
+
+
 _RATE_LIMIT_RETRIES = 2
 _RATE_LIMIT_BACKOFF = 2.0
 
@@ -87,6 +98,21 @@ def _provider_order():
 
 
 _PROVIDER_DISPLAY = {'groq': 'Groq', 'glm': 'GLM-5.2', 'gemini': 'Gemini', 'ollama': 'Ollama'}
+
+
+def primary_provider_type():
+    """Tipo del primer proveedor activo configurado en el panel, o None si el panel no tiene proveedores.
+
+    Sin proveedores en BD rige LLM_PROVIDER (comportamiento de siempre).
+    """
+    db_cfg = _load_db_providers()
+    if db_cfg is None:
+        return None
+    providers, _fallback = db_cfg
+    for cfg in providers:
+        if not _provider_blocked(cfg['slug']):
+            return cfg.get('provider_type')
+    return providers[0].get('provider_type') if providers else None
 
 
 def _provider_display(name):
@@ -354,20 +380,39 @@ def get_gemini_model():
         return None
 
 
-def get_ollama_client():
-    if 'ollama' in _clients:
-        return _clients['ollama']
+_OLLAMA_TIMEOUT = float(os.environ.get('OLLAMA_TIMEOUT', '150'))
+_ollama_down_until = {}
+
+
+def _ollama_host(cfg=None):
+    """Host de Ollama: el guardado en el panel (AIProvider.base_url) gana sobre OLLAMA_HOST."""
+    return ((cfg or {}).get('base_url') or os.environ.get('OLLAMA_HOST') or 'http://127.0.0.1:11434').rstrip('/')
+
+
+def get_ollama_client(cfg=None):
+    """Cliente de Ollama con tope de espera.
+
+    Antes no tenía timeout (una inferencia colgada en CPU bloqueaba al worker para siempre) y, si Ollama estaba caído,
+    cada mensaje volvía a probar la conexión. Ahora un fallo se recuerda 30 s y se pasa al siguiente proveedor.
+    """
+    host = _ollama_host(cfg)
+    key = f'ollama:{host}'
+    if key in _clients:
+        return _clients[key]
+    if time.time() < _ollama_down_until.get(host, 0):
+        return None
     try:
         from ollama import Client
 
-        host = os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434')
-        client = Client(host=host)
+        client = Client(host=host, timeout=_OLLAMA_TIMEOUT)
         client.list()
-        _clients['ollama'] = client
+        _clients[key] = client
         return client
     except ImportError:
         return None
-    except Exception:
+    except Exception as exc:
+        logger.warning('Ollama no disponible en %s: %s', host, exc)
+        _ollama_down_until[host] = time.time() + 30
         return None
 
 
@@ -461,6 +506,7 @@ def reset_clients():
     """Reset cached clients, circuit breaker y config de providers de BD."""
     _clients.clear()
     _provider_cooldowns.clear()
+    _ollama_down_until.clear()
     _reset_provider_config_cache()
 
 
@@ -582,7 +628,7 @@ def _invoke_provider(cfg, messages, model=None, temperature=0.3, max_tokens=4096
     """Despacha una llamada de chat al tipo de provider configurado."""
     p_type = cfg.get('provider_type')
     if p_type == 'ollama':
-        return _try_ollama(messages, temperature, model=model, tools=tools, phase=phase, max_tokens=max_tokens)
+        return _try_ollama(messages, temperature, model=model, tools=tools, phase=phase, max_tokens=max_tokens, cfg=cfg)
     if p_type == 'groq':
         return _try_groq(cfg, messages, model, temperature, max_tokens)
     if p_type == 'glm':
@@ -635,8 +681,14 @@ def _try_anthropic(cfg, messages, model, temperature, max_tokens):
     return _anthropic_text(response) or None
 
 
-def _ollama_route_model(phase, tools):
-    """Elige el modelo local según la fase."""
+def _ollama_route_model(phase, tools, cfg=None):
+    """Elige el modelo local según la fase.
+
+    Si en el panel se fijó un modelo para Ollama, ese se usa en todas las fases: antes se ignoraba y siempre
+    mandaban las variables de entorno, así que cambiar el modelo desde la configuración no tenía efecto.
+    """
+    if (cfg or {}).get('model'):
+        return cfg['model']
     if phase == 'tactical':
         return OLLAMA_MODEL_TACTICAL
     if phase == 'resume':
@@ -699,15 +751,15 @@ def _try_gemini(cfg, messages, temperature, max_tokens):
     return resp.text or None
 
 
-def _try_ollama(messages, temperature, model=None, tools=None, phase='route', max_tokens=None):
-    ollama = get_ollama_client()
+def _try_ollama(messages, temperature, model=None, tools=None, phase='route', max_tokens=None, cfg=None):
+    ollama = get_ollama_client(cfg)
     if not ollama:
         return None
 
     if model:
         ollama_model = model
     else:
-        ollama_model = _ollama_route_model(phase, tools)
+        ollama_model = _ollama_route_model(phase, tools, cfg)
 
     tactical = phase == 'tactical'
     ctx = OLLAMA_CTX_TACTICAL if tactical else OLLAMA_CTX_ROUTE
@@ -715,7 +767,7 @@ def _try_ollama(messages, temperature, model=None, tools=None, phase='route', ma
     # reemplazamos por una persona simple para evitar que MiniCPM "hable" de tools.
     if tactical:
         messages = [
-            {'role': 'system', 'content': _TACTICAL_SYSTEM},
+            {'role': 'system', 'content': _tactical_system()},
             *[m for m in messages if m.get('role') != 'system'],
         ]
     options = {
@@ -801,7 +853,9 @@ def _stream_provider(cfg, messages, model=None, temperature=0.3, max_tokens=4096
     """Despacha un stream de chat al tipo de provider configurado."""
     p_type = cfg.get('provider_type')
     if p_type == 'ollama':
-        yield from _stream_ollama(messages, temperature, model=model, tools=tools, phase=phase, max_tokens=max_tokens)
+        yield from _stream_ollama(
+            messages, temperature, model=model, tools=tools, phase=phase, max_tokens=max_tokens, cfg=cfg
+        )
         return True
     if p_type == 'groq':
         yield from _stream_groq(cfg, messages, model, temperature, max_tokens)
@@ -929,16 +983,16 @@ def _stream_gemini(cfg, messages, temperature, max_tokens):
     return True
 
 
-def _stream_ollama(messages, temperature, model=None, tools=None, phase='route', max_tokens=None):
-    ollama = get_ollama_client()
+def _stream_ollama(messages, temperature, model=None, tools=None, phase='route', max_tokens=None, cfg=None):
+    ollama = get_ollama_client(cfg)
     if not ollama:
         return False
-    ollama_model = model or _ollama_route_model(phase, tools)
+    ollama_model = model or _ollama_route_model(phase, tools, cfg)
     tactical = phase == 'tactical'
     ctx = OLLAMA_CTX_TACTICAL if tactical else OLLAMA_CTX_ROUTE
     if tactical:
         messages = [
-            {'role': 'system', 'content': _TACTICAL_SYSTEM},
+            {'role': 'system', 'content': _tactical_system()},
             *[m for m in messages if m.get('role') != 'system'],
         ]
     options = {

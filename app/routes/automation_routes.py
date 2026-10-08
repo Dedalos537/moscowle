@@ -28,8 +28,22 @@ def get_settings():
     last_24h = {}
     for channel, status, n in rows:
         last_24h.setdefault(channel, {})[status] = n
+    from flask import current_app
+
+    cfg = current_app.config
+    sender = cfg.get('MAIL_DEFAULT_SENDER') or cfg.get('MAIL_USERNAME') or ''
+    email = {
+        'configured': bool(cfg.get('MAIL_USERNAME') and cfg.get('MAIL_PASSWORD')),
+        'server': cfg.get('MAIL_SERVER') or '',
+        'sender': sender if isinstance(sender, str) else str(sender),
+    }
     return jsonify(
-        {**automation_settings.get(), 'pilot_patient': automation_settings.pilot_patient(), 'last_24h': last_24h}
+        {
+            **automation_settings.get(),
+            'pilot_patient': automation_settings.pilot_patient(),
+            'last_24h': last_24h,
+            'email_status': email,
+        }
     )
 
 

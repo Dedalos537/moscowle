@@ -358,7 +358,19 @@ def _trim_tool_result(result, max_chars=MAX_TOOL_RESULT_CHARS):
 
 
 def _is_ollama_primary():
-    """True cuando el proveedor activo es Ollama local (qwen/minicpm/gemma)."""
+    """True cuando el primer proveedor de la cadena EFECTIVA es Ollama.
+
+    Antes solo miraba LLM_PROVIDER del entorno: si en el panel se ponía Ollama primero, se le mandaba el prompt
+    remoto completo (catálogo largo) a un modelo de CPU con 8k de contexto, que lo truncaba y respondía mal.
+    """
+    try:
+        from app.services.llm_client import primary_provider_type
+
+        configured = primary_provider_type()
+        if configured is not None:
+            return configured == 'ollama'
+    except Exception:
+        logger.debug('No se pudo leer la cadena de proveedores del panel', exc_info=True)
     try:
         from flask import current_app
 

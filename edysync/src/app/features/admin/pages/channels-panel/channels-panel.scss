@@ -41,6 +41,7 @@
 
     &--tg { background: var(--badge-info-bg); color: var(--badge-info-fg); }
     &--sms { background: var(--badge-warning-bg); color: var(--badge-warning-fg); }
+    &--mail { background: var(--badge-tertiary-bg); color: var(--badge-tertiary-fg); }
   }
 
   &__body { min-width: 0; flex: 1; }

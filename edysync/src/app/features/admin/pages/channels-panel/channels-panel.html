@@ -45,6 +45,17 @@
         <p class="ch-card__status">{{ form.destination ? 'Pruebas a ' + form.destination : 'Avisa al apoderado de cada paciente' }}</p>
       </div>
     </article>
+
+    <article class="ch-card" [class.is-ok]="auto?.email_status?.configured">
+      <span class="ch-card__icon ch-card__icon--mail" aria-hidden="true"><fa-icon [icon]="['fas', 'envelope']"></fa-icon></span>
+      <div class="ch-card__body">
+        <h3 class="ch-card__name">Correo</h3>
+        <p class="ch-card__status">
+          @if (auto?.email_status?.configured) { Sale desde {{ auto?.email_status?.sender }} }
+          @else { Sin cuenta de correo en el servidor }
+        </p>
+      </div>
+    </article>
   </div>
 
   <section class="ch-block" aria-labelledby="ch-auto-title">

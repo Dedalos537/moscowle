@@ -940,6 +940,7 @@ export interface AutomationSettings {
   whatsapp_bot: boolean;
   pilot_patient: { id: number; username: string } | null;
   last_24h: Record<string, Record<string, number>>;
+  email_status?: { configured: boolean; server: string; sender: string };
 }
 
 export interface WebsiteFaqStatus {

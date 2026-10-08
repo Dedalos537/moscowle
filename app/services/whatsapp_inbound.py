@@ -67,16 +67,19 @@ def handle_incoming(msg):
     if saved is None:
         return None
     live_sync.bump('conversations')
-    _notify_staff(name or f'+{phone}', text)
+    if is_lid or user is None or user.role not in STAFF_ROLES:
+        # Al personal que consulta al bot no se le avisa de sus propios mensajes.
+        _notify_staff(name or f'+{phone}', text)
     try:
-        _auto_reply(phone, text, name, is_lid)
+        # Solo un teléfono real identifica a alguien (WhatsApp lo autentica). Un @lid emparejado por nombre no.
+        _auto_reply(phone, text, name, is_lid, verified_user=None if is_lid else user)
     except Exception:
         db.session.rollback()
         logger.exception('El bot no pudo contestar en WhatsApp')
     return saved
 
 
-MAX_BOT_REPLIES_PER_HOUR = 8
+MAX_BOT_REPLIES_PER_HOUR = 20
 HUMAN_QUIET_MINUTES = 30
 GREETINGS = (
     'hola',
@@ -123,8 +126,11 @@ def _bot_allowed(conv):
     return bot_replies < MAX_BOT_REPLIES_PER_HOUR
 
 
-def compose_reply(text):
-    """Respuesta pública para `text`, o (None, False) si no hay nada que decir. Devuelve (texto, resuelta)."""
+def compose_reply(text, allow_fallback=True):
+    """Respuesta pública rápida (FAQ o saludo). Devuelve (texto, resuelta).
+
+    Con allow_fallback=False devuelve (None, False) cuando no hay respuesta directa, para que decida la IA.
+    """
     from app.models.faq import Faq
     from app.services.faq_service import match_faq, record_usage
     from app.services.telegram_bot_service import _bot_identity, _bot_persona
@@ -146,33 +152,114 @@ def compose_reply(text):
         if topics:
             body += ' Por ejemplo, puedes preguntarme:\n' + '\n'.join(f'• {t}' for t in topics)
         return body, True
-    return (
-        'Gracias por escribirnos. No tengo esa información a la mano, pero ya avisé a una persona del centro '
-        'para que te responda pronto. 🙏',
-        False,
+    if not allow_fallback:
+        return None, False
+    return FALLBACK_TEXT, False
+
+
+FALLBACK_TEXT = (
+    'Gracias por escribirnos. No tengo esa información a la mano, pero ya avisé a una persona del centro '
+    'para que te responda pronto. 🙏'
+)
+PROCESSING_TEXT = '⏳ Un momento, lo estoy revisando…'
+NOT_KNOWN = 'NO_SE'
+
+
+def public_ai_reply(text):
+    """Respuesta con IA para el público, anclada SOLO a las FAQ del centro. (texto, resuelta) o (None, False)."""
+    from app.models.faq import Faq
+    from app.services.llm_client import llm_chat
+    from app.services.prompt_builder import bot_identity
+
+    faqs = Faq.query.filter_by(is_active=True, status='active').order_by(Faq.usage_count.desc()).limit(20).all()
+    if not faqs:
+        return None, False
+    name, emoji, _persona = bot_identity()
+    knowledge = '\n'.join(f'- P: {f.question}\n  R: {f.answer}' for f in faqs)
+    system = (
+        f'Eres {name} {emoji}, asistente virtual del Centro de Terapias Juan Pablo II (Piura, Perú) por WhatsApp. '
+        'Respondes en español, cálido y breve (1 a 4 líneas). Usa SOLO la información de abajo; no inventes precios, '
+        'horarios, nombres ni datos de pacientes. Si la respuesta no está en la información, responde exactamente '
+        f'{NOT_KNOWN} y nada más.\n\nINFORMACIÓN DEL CENTRO:\n{knowledge}'
     )
+    try:
+        content, _provider = llm_chat(
+            [{'role': 'system', 'content': system}, {'role': 'user', 'content': text[:600]}],
+            temperature=0.2,
+            max_tokens=300,
+            phase='resume',
+        )
+    except Exception:
+        logger.warning('La IA no respondió para WhatsApp público', exc_info=True)
+        return None, False
+    content = (content or '').strip()
+    if not content or NOT_KNOWN in content.upper() or content.startswith('<function'):
+        return None, False
+    return content[:1500], True
 
 
-def _auto_reply(phone, text, name, is_lid=False):
+def staff_ai_reply(user, text):
+    """Asistente del ERP (MCP) para un usuario identificado por su teléfono real. Solo consultas.
+
+    Las acciones que modifican datos no se ejecutan por WhatsApp: no hay confirmación segura en este canal.
+    """
+    from app.services.mcp_service import MCPService
+
+    result = MCPService().process_message(
+        message=text, user_role=user.role, user_id=user.id, mode='grande', telegram_mode=True
+    )
+    if result.get('requires_confirmation'):
+        return (
+            '✋ Eso modifica datos del sistema. Por seguridad, por WhatsApp solo hago consultas: '
+            'confírmalo desde el panel o desde Telegram.'
+        )
+    return (result.get('response') or '').strip() or None
+
+
+def _send_bot(target, is_lid, text, phone):
+    from app.services.whatsapp_service import WhatsAppBridgeError, whatsapp_service
+
+    try:
+        whatsapp_service.send_message(target, text, lid=is_lid)
+        conversations.log_message('whatsapp', phone, 'out', text, 'bot')
+        return True
+    except WhatsAppBridgeError as exc:
+        conversations.log_message('whatsapp', phone, 'out', text, 'bot', status='failed', error=str(exc))
+        return False
+
+
+def _auto_reply(phone, text, name, is_lid=False, verified_user=None):
     from app.models.bot_conversation import BotConversation
     from app.services.faq_service import note_unanswered
-    from app.services.whatsapp_service import WhatsAppBridgeError, whatsapp_service
+    from app.services.whatsapp_service import whatsapp_service
 
     conv = BotConversation.query.filter_by(channel='whatsapp', chat_key=phone).first()
     if not _bot_allowed(conv):
         return
     target, is_lid = conversations.whatsapp_target(conv)
     whatsapp_service.send_typing(target, lid=is_lid)
-    reply, solved = compose_reply(text)
-    if not reply:
+
+    staff = verified_user is not None and verified_user.role in STAFF_ROLES
+    if not staff:
+        reply, _solved = compose_reply(text, allow_fallback=False)
+        if reply:
+            _send_bot(target, is_lid, reply, phone)
+            return
+
+    # Camino lento (IA): primero un aviso, como el «Procesando…» de Telegram.
+    if not _send_bot(target, is_lid, PROCESSING_TEXT, phone):
         return
-    if not solved:
-        note_unanswered(text)
-    try:
-        whatsapp_service.send_message(target, reply, lid=is_lid)
-        conversations.log_message('whatsapp', phone, 'out', reply, 'bot')
-    except WhatsAppBridgeError as exc:
-        conversations.log_message('whatsapp', phone, 'out', reply, 'bot', status='failed', error=str(exc))
+    if staff:
+        answer = staff_ai_reply(verified_user, text) or FALLBACK_TEXT
+    else:
+        answer, solved = public_ai_reply(text)
+        if not answer:
+            note_unanswered(text)
+            answer = FALLBACK_TEXT
+    _send_bot(target, is_lid, answer, phone)
+
+
+STAFF_ROLES = ('admin', 'supervisor', 'terapista')
 
 
 def _notify_staff(who, text):

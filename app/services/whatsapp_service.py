@@ -399,10 +399,15 @@ class WhatsAppService:
             logger.warning('WhatsApp: mensaje entrante recibido del puente (lid=%s)', bool(msg.get('lid')))
             handler = self._incoming_handler
             if handler:
-                try:
-                    handler(msg)
-                except Exception:
-                    logger.exception('Falló el procesamiento de un mensaje entrante de WhatsApp')
+                # En OTRO hilo: este es el lector del puente. Si el bot contestaba desde aquí, send_message esperaba
+                # una confirmación que solo este mismo hilo podía leer → bloqueo de 35 s y «no respondió a tiempo».
+                def _run(m=msg, h=handler):
+                    try:
+                        h(m)
+                    except Exception:
+                        logger.exception('Falló el procesamiento de un mensaje entrante de WhatsApp')
+
+                threading.Thread(target=_run, name='wa-incoming', daemon=True).start()
 
         elif kind == 'send_result':
             ref = msg.get('ref')

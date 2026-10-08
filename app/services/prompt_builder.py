@@ -77,7 +77,28 @@ def get_configured_system_prompt():
         return None
 
 
+def bot_identity():
+    """(nombre, emoji, presentación) del bot según BotConfig; con respaldo si la BD no responde."""
+    try:
+        from app.models.bot_config import BotConfig
+
+        cfg = BotConfig.get_or_create()
+        return (cfg.bot_name or 'Diego').strip(), (cfg.bot_emoji or '').strip(), (cfg.persona_message or '').strip()
+    except Exception:
+        return 'Diego', '', ''
+
+
+def apply_bot_name(prompt):
+    """Los prompts base dicen «Diego»: se cambia por el nombre configurado en el panel.
+
+    Se hace ANTES de sustituir {usuario}, para no tocar el nombre de la persona que escribe.
+    """
+    name = bot_identity()[0]
+    return prompt if name == 'Diego' else re.sub(r'\bDiego\b', name, prompt)
+
+
 def _substitute_tokens(prompt, user_role, user_id):
+    prompt = apply_bot_name(prompt)
     prompt = prompt.replace('{rol}', ROLE_NAMES_ES.get(user_role, user_role))
     prompt = prompt.replace('{rol_id}', user_role)
     prompt = prompt.replace('{user_id}', str(user_id or ''))
@@ -173,6 +194,10 @@ def build_system_prompt(role, user_id=None, mode='grande', tools=(), compact=Fal
     """
     if compact:
         base = _substitute_tokens(LOCAL_BASE_PROMPT, role, user_id)
+        persona = bot_identity()[2]
+        if persona:
+            # Presentación del panel, recortada: en CPU cada token de contexto cuesta.
+            base += '\nPRESENTACIÓN (úsala al saludar): ' + persona[:400]
     else:
         base = get_configured_system_prompt() or PERSONALITY_PROMPT
         base = _substitute_tokens(base, role, user_id)
