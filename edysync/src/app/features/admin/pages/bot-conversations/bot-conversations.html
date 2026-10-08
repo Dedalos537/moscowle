@@ -51,7 +51,7 @@
         <span class="bc-avatar bc-avatar--lg" aria-hidden="true">{{ initials(conv.contact) }}<fa-icon class="bc-avatar__ch" [icon]="channelIcon(conv)"></fa-icon></span>
         <div class="bc-thread__who">
           <h3 class="bc-thread__name">{{ conv.contact }}</h3>
-          <p class="bc-thread__meta">{{ channelName(conv) }}{{ conv.handle ? ' · ' + conv.handle : '' }}{{ conv.user_id ? ' · usuario de la plataforma' : '' }}</p>
+          <p class="bc-thread__meta">{{ channelName(conv) }}{{ handleLabel(conv) }}{{ conv.user_id ? ' · usuario de la plataforma' : '' }}</p>
         </div>
         <div class="bc-takeover">
           <span class="bc-takeover__label" id="bc-takeover">{{ conv.human_takeover ? 'Atiendes tú' : 'Atiende el bot' }}</span>

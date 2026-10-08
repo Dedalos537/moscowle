@@ -98,5 +98,18 @@ class TestFallbackDelAdmin:
         assert 'PROMPT DEL ADMIN' in prompt
 
         monkeypatch.setattr(prompt_builder, 'get_configured_system_prompt', lambda: None)
+        monkeypatch.setattr(prompt_builder, 'bot_identity', lambda: ('Diego', '', ''))
         prompt = prompt_builder.build_system_prompt('jugador', user_id=1, mode='grande', tools=tools)
         assert 'Diego' in prompt  # PERSONALITY_PROMPT de fallback
+
+    def test_el_nombre_del_bot_sale_del_panel(self, monkeypatch):
+        from app.services import prompt_builder
+
+        tools = get_tools_for_mode('grande', 'jugador')
+        monkeypatch.setattr(prompt_builder, 'get_configured_system_prompt', lambda: None)
+        monkeypatch.setattr(prompt_builder, 'bot_identity', lambda: ('Chasqui', '', 'Hola, soy Chasqui'))
+        for compact in (False, True):
+            prompt = prompt_builder.build_system_prompt(
+                'jugador', user_id=1, mode='grande', tools=tools, compact=compact
+            )
+            assert 'Chasqui' in prompt and 'Eres Diego' not in prompt

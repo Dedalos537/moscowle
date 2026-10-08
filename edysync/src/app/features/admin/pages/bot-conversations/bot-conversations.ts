@@ -229,6 +229,12 @@ export class BotConversations implements OnInit, OnDestroy {
     return c.channel === 'whatsapp' ? ['fab', 'whatsapp'] : ['fab', 'telegram'];
   }
 
+  /** El identificador interno de WhatsApp (lid:…) no le sirve a nadie: se muestra como «número oculto». */
+  handleLabel(c: BotConversation): string {
+    if (!c.handle) return '';
+    return c.handle.startsWith('lid:') ? ' · número oculto por WhatsApp' : ' · ' + c.handle;
+  }
+
   channelName(c: BotConversation): string {
     return c.channel === 'web' ? 'Página web' : c.channel === 'whatsapp' ? 'WhatsApp' : 'Telegram';
   }
