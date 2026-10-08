@@ -6,6 +6,7 @@ Usage:
     python scripts/deploy_cpanel.py --frontend   # Frontend only
     python scripts/deploy_cpanel.py --dry-run    # Preview what would be uploaded
     python scripts/deploy_cpanel.py --build      # Compila Angular (ng build) antes de subir el frontend
+    python scripts/deploy_cpanel.py --from-ci    # Frontend: descarga el build de la CI (main) en vez de compilar aquí
     python scripts/deploy_cpanel.py --all        # --build + todo: lo mismo que hace el pipeline, en un comando
 
 La contrasena FTP se toma de (en este orden): variable FTP_PASS, archivo local `.deploy_cpanel.env`
@@ -55,6 +56,33 @@ def _load_password():
             if key.strip() == 'FTP_PASS' and value.strip():
                 return value.strip().strip('"\'')
     return getpass.getpass('Contrasena FTP (no se muestra): ') if sys.stdin.isatty() else ''
+
+
+def fetch_ci_frontend():
+    """Descarga el bundle 'frontend-cpanel' del último CI exitoso de main (requiere `gh` autenticado).
+
+    Útil cuando la máquina local no tiene memoria para compilar Angular.
+    """
+    import shutil
+    import tempfile
+
+    list_cmd = ['gh', 'run', 'list', '--branch', 'main', '--workflow', 'ci.yml', '--status', 'success']
+    list_cmd += ['--limit', '1', '--json', 'databaseId', '-q', '.[0].databaseId']
+    out = subprocess.run(list_cmd, cwd=PROJECT_ROOT, capture_output=True, text=True, check=True)  # noqa: S603
+    run_id = out.stdout.strip()
+    if not run_id:
+        raise SystemExit('No hay un CI exitoso en main con el bundle de cPanel.')
+    tmp = Path(tempfile.mkdtemp(prefix='cpanel-'))
+    download_cmd = ['gh', 'run', 'download', run_id, '--name', 'frontend-cpanel', '--dir', str(tmp)]
+    subprocess.run(download_cmd, cwd=PROJECT_ROOT, check=True)  # noqa: S603
+    if not (tmp / 'index.html').exists() or '<base href="/">' not in (tmp / 'index.html').read_text():
+        raise SystemExit('El bundle descargado no tiene el base href de cPanel.')
+    if LOCAL_FRONTEND_DIR.exists():
+        shutil.rmtree(LOCAL_FRONTEND_DIR)
+    LOCAL_FRONTEND_DIR.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(tmp, LOCAL_FRONTEND_DIR)
+    shutil.rmtree(tmp, ignore_errors=True)
+    print(f'Bundle del CI {run_id} listo en {LOCAL_FRONTEND_DIR}')
 
 
 def build_frontend():
@@ -360,7 +388,10 @@ def main():
 
     # El dist por defecto usa base /app/ (nginx de Ubuntu); en cPanel cuelga de la raiz, asi que siempre se recompila.
     if do_frontend and not dry_run:
-        build_frontend()
+        if '--from-ci' in sys.argv:
+            fetch_ci_frontend()
+        else:
+            build_frontend()
 
     print(f'Connecting to {FTP_HOST}...')
     # FTPS: con FTP plano la contrasena viaja en claro.

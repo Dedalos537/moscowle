@@ -71,3 +71,20 @@ jobs:
 
       - name: Build
         run: npm run build -- --configuration production
+
+      # Copia para cPanel: ahí la app cuelga de la raíz, así que solo cambia el <base href>.
+      # scripts/deploy_cpanel.py --from-ci la descarga y la sube sin compilar en la máquina local.
+      - name: Prepare cPanel bundle
+        if: github.ref == 'refs/heads/main'
+        run: |
+          rm -rf ../frontend-cpanel && cp -r dist/edysync/browser ../frontend-cpanel
+          sed -i 's#<base href="/app/">#<base href="/">#' ../frontend-cpanel/index.html
+          grep -q '<base href="/">' ../frontend-cpanel/index.html
+
+      - name: Upload cPanel bundle
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-cpanel
+          path: frontend-cpanel
+          retention-days: 14
