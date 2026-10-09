@@ -468,6 +468,10 @@ def sync_website_faq(app):
 
 
 def init_scheduler(app):
+    # En pruebas no corre nada en segundo plano: un job tocando la BD desde otro hilo rompe las transacciones de
+    # los tests (pasó con el envío de impresiones, que corre cada minuto).
+    if app.config.get('TESTING'):
+        return
     scheduler.add_job(func=lambda: dispatch_print_jobs(app), trigger='interval', minutes=1, id='drive_print_jobs')
     scheduler.add_job(func=lambda: cleanup_drive_uploads(app), trigger='interval', hours=6, id='drive_upload_cleanup')
     scheduler.add_job(
