@@ -66,6 +66,7 @@ export class Sidebar implements OnInit, OnDestroy, AfterViewInit {
     { path: '/admin/reports', label: 'Admin Reportes', subtitle: 'Estadísticas', icon: ['fas', 'chart-bar'], supervisor: true },
     { path: '/admin/messages', label: 'Admin Mensajes', subtitle: 'Comunicación', icon: ['fas', 'envelope'], supervisor: true },
     { path: '/admin/kanban', label: 'Kanban', subtitle: 'Tablero de tareas', icon: ['fas', 'table-columns'], supervisor: true },
+    { path: '/admin/drive', label: 'Drive', subtitle: 'Archivos e impresión', icon: ['fas', 'hard-drive'] },
     { path: '/admin/settings', label: 'Configuración', subtitle: 'Cuenta y sistema', icon: ['fas', 'gear'], supervisor: true },
   ];
 

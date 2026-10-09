@@ -105,6 +105,9 @@ class Config:
     basedir = os.path.abspath(os.path.dirname(__file__))
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', os.path.join(basedir, 'instance', 'uploads'))
     MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB max
+    # Drive del administrador: carpeta en el disco del servidor y cuota total (GB).
+    DRIVE_ROOT = os.environ.get('DRIVE_ROOT') or None  # por defecto: instance/drive
+    DRIVE_QUOTA_GB = float(os.environ.get('DRIVE_QUOTA_GB', '30'))
     ALLOWED_UPLOAD_EXTENSIONS = {
         'png',
         'jpg',

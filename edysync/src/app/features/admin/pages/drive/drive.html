@@ -1,0 +1,445 @@
+@if (!isAdmin()) {
+  <section class="dv-denied" role="status">
+    <fa-icon [icon]="['fas', 'lock']" aria-hidden="true"></fa-icon>
+    <h2>Solo el administrador puede abrir el drive</h2>
+    <p>Pídele al administrador del centro el archivo que necesitas.</p>
+  </section>
+} @else {
+<section class="dv" aria-label="Drive del centro">
+  <!-- ───────── Lugares ───────── -->
+  <aside class="dv-side" aria-label="Lugares">
+    <nav>
+      <ul class="dv-places">
+        @for (p of places; track p.id) {
+          <li>
+            <button type="button" class="dv-place" [class.is-on]="place() === p.id && (p.id !== 'files' || !query())"
+              [attr.aria-current]="place() === p.id ? 'page' : null" (click)="go(p.id)"
+              (dragover)="p.id === 'files' ? onDragOver($event, home) : null"
+              (drop)="p.id === 'files' ? onDrop($event, home) : null">
+              <fa-icon [icon]="p.icon" class="dv-place__icon" aria-hidden="true"></fa-icon>
+              <span>{{ p.label }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </nav>
+
+    @if (usage(); as u) {
+      <div class="dv-quota" [class.is-full]="usagePct() >= 90">
+        <div class="dv-quota__bar" role="meter" aria-label="Espacio usado" [attr.aria-valuenow]="usagePct()" aria-valuemin="0" aria-valuemax="100">
+          <span [style.width.%]="usagePct()"></span>
+        </div>
+        <p class="dv-quota__text">{{ size(u.used) }} de {{ size(u.quota) }} usados</p>
+      </div>
+    }
+  </aside>
+
+  <!-- ───────── Contenido ───────── -->
+  <div class="dv-main" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+    <header class="dv-bar">
+      <div class="dv-path">
+        <button type="button" class="dv-icon-btn" (click)="up()" [disabled]="place() !== 'files' || !path()" aria-label="Subir a la carpeta anterior" title="Carpeta anterior (Retroceso)">
+          <fa-icon [icon]="['fas', 'arrow-up']" aria-hidden="true"></fa-icon>
+        </button>
+        @if (query().trim().length >= 2) {
+          <span class="dv-crumb is-current">Resultados para «{{ query() }}»</span>
+        } @else if (place() === 'files') {
+          <nav class="dv-crumbs" aria-label="Ruta">
+            <button type="button" class="dv-crumb" [class.is-current]="!path()" (click)="go('files', '')"
+              (dragover)="onDragOver($event, home)"
+              (drop)="onDrop($event, home)">
+              <fa-icon [icon]="['fas', 'house']" aria-hidden="true"></fa-icon><span class="sr-only">Inicio</span>
+            </button>
+            @for (c of crumbs(); track c.path; let last = $last) {
+              <fa-icon [icon]="['fas', 'chevron-right']" class="dv-crumbs__sep" aria-hidden="true"></fa-icon>
+              <button type="button" class="dv-crumb" [class.is-current]="last" [attr.aria-current]="last ? 'location' : null" (click)="go('files', c.path)">{{ c.name }}</button>
+            }
+          </nav>
+        } @else {
+          <span class="dv-crumb is-current">{{ place() === 'recent' ? 'Recientes' : place() === 'starred' ? 'Destacados' : place() === 'trash' ? 'Papelera' : 'Impresiones' }}</span>
+        }
+      </div>
+
+      <div class="dv-tools">
+        @if (place() !== 'trash' && place() !== 'prints') {
+          <label class="dv-search">
+            <fa-icon [icon]="['fas', 'magnifying-glass']" aria-hidden="true"></fa-icon>
+            <input #searchInput type="search" placeholder="Buscar en todo el drive" aria-label="Buscar en todo el drive"
+              [ngModel]="query()" (ngModelChange)="onSearch($event)" />
+          </label>
+          <div class="dv-seg" role="group" aria-label="Vista">
+            <button type="button" [class.is-on]="view() === 'grid'" [attr.aria-pressed]="view() === 'grid'" (click)="setView('grid')" aria-label="Cuadrícula" title="Cuadrícula">
+              <fa-icon [icon]="['fas', 'table-cells-large']" aria-hidden="true"></fa-icon>
+            </button>
+            <button type="button" [class.is-on]="view() === 'list'" [attr.aria-pressed]="view() === 'list'" (click)="setView('list')" aria-label="Lista" title="Lista">
+              <fa-icon [icon]="['fas', 'list']" aria-hidden="true"></fa-icon>
+            </button>
+          </div>
+        }
+        @if (place() === 'files' && !query()) {
+          <button type="button" class="dv-btn" (click)="startNewFolder()" title="Carpeta nueva (Ctrl+Mayús+N)">
+            <fa-icon [icon]="['fas', 'folder-plus']" aria-hidden="true"></fa-icon><span>Carpeta</span>
+          </button>
+          <button type="button" class="dv-btn dv-btn--primary" (click)="pickFiles()">
+            <fa-icon [icon]="['fas', 'arrow-up-from-bracket']" aria-hidden="true"></fa-icon><span>Subir</span>
+          </button>
+        }
+        @if (place() === 'trash' && trashEntries().length) {
+          <button type="button" class="dv-btn dv-btn--danger" (click)="purge()">Vaciar papelera</button>
+        }
+        @if (place() === 'prints') {
+          <button type="button" class="dv-btn" (click)="load()"><fa-icon [icon]="['fas', 'rotate']" aria-hidden="true"></fa-icon><span>Actualizar</span></button>
+        }
+        <input #fileInput type="file" multiple hidden (change)="onFilesPicked($event)" />
+      </div>
+    </header>
+
+    @if (selectedEntries().length > 1 && place() !== 'trash') {
+      <div class="dv-selbar" role="status">
+        <span>{{ selectedEntries().length }} seleccionados</span>
+        <button type="button" (click)="copySel('copy')">Copiar</button>
+        <button type="button" (click)="copySel('cut')">Cortar</button>
+        <button type="button" (click)="compressSel()">Comprimir</button>
+        <button type="button" (click)="toggleStar()">Destacar</button>
+        <button type="button" class="is-danger" (click)="trashSel()">Mover a la papelera</button>
+        <button type="button" class="dv-selbar__close" (click)="clearSelection()" aria-label="Quitar selección"><fa-icon [icon]="['fas', 'xmark']"></fa-icon></button>
+      </div>
+    }
+
+    <div class="dv-content" [class.is-drop]="dropActive()" (click)="clearSelection()" (contextmenu)="place() === 'files' ? openMenu($event, null) : null">
+      @if (loading() && !entries().length && !trashEntries().length && !printJobs().length) {
+        <div class="dv-skeleton" aria-hidden="true">
+          @for (n of [1, 2, 3, 4, 5, 6, 7, 8]; track n) { <span></span> }
+        </div>
+      } @else if (error()) {
+        <div class="dv-empty" role="alert">
+          <fa-icon [icon]="['fas', 'triangle-exclamation']" aria-hidden="true"></fa-icon>
+          <h3>{{ error() }}</h3>
+          <button type="button" class="dv-btn" (click)="load()">Reintentar</button>
+        </div>
+      } @else if (place() === 'trash') {
+        <!-- ───────── Papelera ───────── -->
+        @if (!trashEntries().length) {
+          <div class="dv-empty">
+            <fa-icon [icon]="['fas', 'trash-can']" aria-hidden="true"></fa-icon>
+            <h3>La papelera está vacía</h3>
+            <p>Lo que elimines del drive queda aquí hasta que vacíes la papelera, por si necesitas recuperarlo.</p>
+          </div>
+        } @else {
+          <table class="dv-table">
+            <thead><tr><th>Nombre</th><th>Estaba en</th><th>Eliminado</th><th class="sr-only">Acciones</th></tr></thead>
+            <tbody>
+              @for (t of trashEntries(); track t.id) {
+                <tr>
+                  <td><span class="dv-name"><fa-icon [icon]="icon(t)" class="dv-kind" [attr.data-kind]="t.kind" aria-hidden="true"></fa-icon>{{ t.name }}</span></td>
+                  <td class="dv-muted">{{ folderOf(t.original) }}</td>
+                  <td class="dv-muted">{{ when(t.deleted_at) }}</td>
+                  <td class="dv-row-actions">
+                    <button type="button" class="dv-btn dv-btn--sm" (click)="restore([t.id])">Restaurar</button>
+                    <button type="button" class="dv-btn dv-btn--sm dv-btn--ghost-danger" (click)="purge([t.id])">Eliminar</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      } @else if (place() === 'prints') {
+        <!-- ───────── Impresiones ───────── -->
+        <div class="dv-prints">
+          @if (printers(); as ps) {
+            <div class="dv-printers" [class.is-off]="!ps.available || !ps.printers.length">
+              <h3 class="dv-h">Impresoras</h3>
+              @if (ps.printers.length) {
+                <ul>
+                  @for (p of ps.printers; track p.name) {
+                    <li>
+                      <fa-icon [icon]="['fas', 'print']" aria-hidden="true"></fa-icon>
+                      <span class="dv-printers__name">{{ p.name }}@if (p.name === ps.default) { <em>predeterminada</em> }</span>
+                      <span class="dv-state" [attr.data-state]="p.state">{{ p.state === 'idle' ? 'Lista' : p.state === 'printing' ? 'Imprimiendo' : p.state === 'disabled' ? 'Detenida' : 'Sin estado' }}</span>
+                    </li>
+                  }
+                </ul>
+              }
+              @if (ps.help) { <p class="dv-help">{{ ps.help }}</p> }
+            </div>
+          }
+          <h3 class="dv-h">Trabajos</h3>
+          @if (!printJobs().length) {
+            <p class="dv-muted">Aún no imprimiste nada. Haz clic derecho sobre un PDF, una imagen o un documento y elige «Imprimir».</p>
+          } @else {
+            <table class="dv-table">
+              <thead><tr><th>Archivo</th><th>Impresora</th><th>Cuándo</th><th>Estado</th><th class="sr-only">Acciones</th></tr></thead>
+              <tbody>
+                @for (j of printJobs(); track j.id) {
+                  <tr>
+                    <td><span class="dv-name">{{ j.file_name }}</span><span class="dv-sub">{{ j.copies }} {{ j.copies === 1 ? 'copia' : 'copias' }}{{ j.duplex ? ' · doble cara' : '' }}{{ j.color ? '' : ' · B/N' }}{{ j.page_range ? ' · págs. ' + j.page_range : '' }}</span></td>
+                    <td>{{ j.printer }}</td>
+                    <td class="dv-muted">{{ j.scheduled_at ? when(j.scheduled_at) : when(j.created_at) }}</td>
+                    <td><span class="dv-state" [attr.data-state]="j.status" [title]="j.error || ''">{{ j.status === 'scheduled' ? 'Programado' : j.status === 'sent' ? 'Enviado' : j.status === 'failed' ? 'Falló' : 'Cancelado' }}</span>
+                      @if (j.error) { <span class="dv-sub dv-sub--err">{{ j.error }}</span> }</td>
+                    <td class="dv-row-actions">
+                      @if (j.status === 'scheduled' || j.status === 'sent') {
+                        <button type="button" class="dv-btn dv-btn--sm" (click)="cancelJob(j)">Cancelar</button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+      } @else if (!visible().length && !creatingFolder()) {
+        <div class="dv-empty">
+          <fa-icon [icon]="['fas', query() ? 'magnifying-glass' : place() === 'starred' ? 'star' : place() === 'recent' ? 'clock-rotate-left' : 'folder-open']" aria-hidden="true"></fa-icon>
+          @if (query().trim().length >= 2) {
+            <h3>Nada coincide con «{{ query() }}»</h3><p>Prueba con otra palabra del nombre.</p>
+          } @else if (place() === 'starred') {
+            <h3>Sin destacados</h3><p>Marca con una estrella los archivos que usas seguido (clic derecho › Destacar) y aparecerán aquí.</p>
+          } @else if (place() === 'recent') {
+            <h3>Sin archivos recientes</h3><p>Lo que subas o modifiques aparecerá aquí.</p>
+          } @else {
+            <h3>Esta carpeta está vacía</h3>
+            <p>Arrastra archivos o carpetas desde tu computadora, o usa «Subir».</p>
+            <button type="button" class="dv-btn dv-btn--primary" (click)="pickFiles(); $event.stopPropagation()">Subir archivos</button>
+          }
+        </div>
+      } @else {
+        <!-- ───────── Archivos ───────── -->
+        @if (view() === 'list') {
+          <div class="dv-list" role="grid" aria-label="Archivos" [attr.aria-multiselectable]="true">
+            <div class="dv-list__head" role="row">
+              <button type="button" role="columnheader" (click)="setSort('name'); $event.stopPropagation()" [attr.aria-sort]="sort().key === 'name' ? (sort().dir === 1 ? 'ascending' : 'descending') : null">Nombre</button>
+              <button type="button" role="columnheader" (click)="setSort('size'); $event.stopPropagation()" [attr.aria-sort]="sort().key === 'size' ? (sort().dir === 1 ? 'ascending' : 'descending') : null">Tamaño</button>
+              <button type="button" role="columnheader" (click)="setSort('modified'); $event.stopPropagation()" [attr.aria-sort]="sort().key === 'modified' ? (sort().dir === 1 ? 'ascending' : 'descending') : null">Modificado</button>
+            </div>
+            @if (creatingFolder()) {
+              <div class="dv-row is-selected" role="row">
+                <span class="dv-name"><fa-icon [icon]="['fas', 'folder']" class="dv-kind" data-kind="folder" aria-hidden="true"></fa-icon>
+                  <input id="drive-new-folder" class="dv-rename" [(ngModel)]="folderDraft" (keydown.enter)="commitNewFolder()" (keydown.escape)="creatingFolder.set(false)" (blur)="commitNewFolder()" (click)="$event.stopPropagation()" aria-label="Nombre de la carpeta nueva" />
+                </span><span></span><span></span>
+              </div>
+            }
+            @for (e of visible(); track e.path) {
+              <div class="dv-row" role="row" tabindex="0" [attr.data-path]="e.path" [attr.aria-selected]="isSelected(e)"
+                [class.is-selected]="isSelected(e)" [class.is-cut]="clipboard()?.mode === 'cut' && clipboard()!.paths.includes(e.path)" [class.is-target]="dropTarget() === e.path"
+                draggable="true" (dragstart)="onDragStart($event, e)" (dragover)="onDragOver($event, e)" (dragleave)="onDragLeave($event, e)" (drop)="onDrop($event, e)"
+                (click)="select(e, $event); $event.stopPropagation()" (dblclick)="open(e)" (contextmenu)="openMenu($event, e)">
+                <span class="dv-name">
+                  <fa-icon [icon]="icon(e)" class="dv-kind" [attr.data-kind]="e.kind" aria-hidden="true"></fa-icon>
+                  @if (renaming() === e.path) {
+                    <input #renameInput class="dv-rename" [(ngModel)]="renameDraft" (keydown.enter)="commitRename(e)" (keydown.escape)="cancelRename()" (blur)="commitRename(e)" (click)="$event.stopPropagation()" aria-label="Nuevo nombre" />
+                  } @else {
+                    <span class="dv-name__text">{{ e.name }}</span>
+                    @if (e.starred) { <fa-icon [icon]="['fas', 'star']" class="dv-star" aria-label="Destacado"></fa-icon> }
+                    @if (query() || place() !== 'files') { <span class="dv-sub">{{ folderOf(e.path) }}</span> }
+                  }
+                </span>
+                <span class="dv-muted dv-num">{{ detail(e) }}</span>
+                <span class="dv-muted dv-num">{{ when(e.modified) }}</span>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="dv-grid" role="grid" aria-label="Archivos" [attr.aria-multiselectable]="true">
+            @if (creatingFolder()) {
+              <div class="dv-tile is-selected">
+                <span class="dv-tile__art"><fa-icon [icon]="['fas', 'folder']" class="dv-kind" data-kind="folder" aria-hidden="true"></fa-icon></span>
+                <input id="drive-new-folder" class="dv-rename dv-rename--tile" [(ngModel)]="folderDraft" (keydown.enter)="commitNewFolder()" (keydown.escape)="creatingFolder.set(false)" (blur)="commitNewFolder()" (click)="$event.stopPropagation()" aria-label="Nombre de la carpeta nueva" />
+              </div>
+            }
+            @for (e of visible(); track e.path) {
+              <div class="dv-tile" role="gridcell" tabindex="0" [attr.data-path]="e.path" [attr.aria-selected]="isSelected(e)" [attr.aria-label]="e.name + ', ' + detail(e)"
+                [class.is-selected]="isSelected(e)" [class.is-cut]="clipboard()?.mode === 'cut' && clipboard()!.paths.includes(e.path)" [class.is-target]="dropTarget() === e.path"
+                draggable="true" (dragstart)="onDragStart($event, e)" (dragover)="onDragOver($event, e)" (dragleave)="onDragLeave($event, e)" (drop)="onDrop($event, e)"
+                (click)="select(e, $event); $event.stopPropagation()" (dblclick)="open(e)" (contextmenu)="openMenu($event, e)">
+                <span class="dv-tile__art" [class.has-thumb]="!!thumbs()[e.path]">
+                  @if (thumbs()[e.path]; as src) {
+                    <img [src]="src" alt="" loading="lazy" decoding="async" />
+                  } @else {
+                    <fa-icon [icon]="icon(e)" class="dv-kind" [attr.data-kind]="e.kind" aria-hidden="true"></fa-icon>
+                  }
+                  @if (e.starred) { <fa-icon [icon]="['fas', 'star']" class="dv-star dv-star--tile" aria-label="Destacado"></fa-icon> }
+                </span>
+                @if (renaming() === e.path) {
+                  <input #renameInput class="dv-rename dv-rename--tile" [(ngModel)]="renameDraft" (keydown.enter)="commitRename(e)" (keydown.escape)="cancelRename()" (blur)="commitRename(e)" (click)="$event.stopPropagation()" aria-label="Nuevo nombre" />
+                } @else {
+                  <span class="dv-tile__name" [title]="e.name">{{ e.name }}</span>
+                  <span class="dv-tile__meta">{{ detail(e) }}</span>
+                }
+              </div>
+            }
+          </div>
+        }
+      }
+
+      @if (dropActive()) {
+        <div class="dv-dropzone" aria-hidden="true">
+          <fa-icon [icon]="['fas', 'cloud-arrow-up']"></fa-icon>
+          <p>Suelta para subir a <strong>{{ crumbs().length ? crumbs()[crumbs().length - 1].name : 'Inicio' }}</strong></p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ───────── Menú contextual ───────── -->
+@if (menu(); as m) {
+  <div class="dv-menu" role="menu" [style.left.px]="m.x" [style.top.px]="m.y" (click)="$event.stopPropagation()" (contextmenu)="$event.preventDefault()">
+    @if (m.target; as t) {
+      <button type="button" role="menuitem" (click)="open(t); closeMenu()"><fa-icon [icon]="['fas', t.type === 'dir' ? 'folder-open' : 'eye']"></fa-icon>{{ t.type === 'dir' ? 'Abrir' : 'Vista previa' }}<kbd>{{ t.type === 'dir' ? 'Enter' : 'Espacio' }}</kbd></button>
+      @if (t.type === 'file') {
+        <button type="button" role="menuitem" (click)="download(t)"><fa-icon [icon]="['fas', 'download']"></fa-icon>Descargar</button>
+      }
+      @if (canPrint(t)) {
+        <button type="button" role="menuitem" (click)="openPrint(t)"><fa-icon [icon]="['fas', 'print']"></fa-icon>Imprimir…</button>
+      }
+      <hr />
+      <button type="button" role="menuitem" (click)="copySel('cut')"><fa-icon [icon]="['fas', 'scissors']"></fa-icon>Cortar<kbd>Ctrl X</kbd></button>
+      <button type="button" role="menuitem" (click)="copySel('copy')"><fa-icon [icon]="['fas', 'copy']"></fa-icon>Copiar<kbd>Ctrl C</kbd></button>
+      @if (t.type === 'dir' && clipboard()) {
+        <button type="button" role="menuitem" (click)="paste(t.path)"><fa-icon [icon]="['fas', 'paste']"></fa-icon>Pegar dentro</button>
+      }
+      <button type="button" role="menuitem" (click)="startRename(t)"><fa-icon [icon]="['fas', 'pen']"></fa-icon>Renombrar<kbd>F2</kbd></button>
+      <button type="button" role="menuitem" (click)="toggleStar()"><fa-icon [icon]="['fas', 'star']"></fa-icon>{{ t.starred ? 'Quitar destacado' : 'Destacar' }}</button>
+      <hr />
+      <button type="button" role="menuitem" (click)="compressSel()"><fa-icon [icon]="['fas', 'file-zipper']"></fa-icon>Comprimir</button>
+      @if (isArchive(t)) {
+        <button type="button" role="menuitem" (click)="extractSel(t)"><fa-icon [icon]="['fas', 'box-open']"></fa-icon>Extraer aquí</button>
+      }
+      <hr />
+      <button type="button" role="menuitem" class="is-danger" (click)="trashSel()"><fa-icon [icon]="['fas', 'trash-can']"></fa-icon>Mover a la papelera<kbd>Supr</kbd></button>
+    } @else {
+      <button type="button" role="menuitem" (click)="startNewFolder()"><fa-icon [icon]="['fas', 'folder-plus']"></fa-icon>Carpeta nueva<kbd>Ctrl ⇧ N</kbd></button>
+      <button type="button" role="menuitem" (click)="pickFiles()"><fa-icon [icon]="['fas', 'arrow-up-from-bracket']"></fa-icon>Subir archivos</button>
+      <button type="button" role="menuitem" [disabled]="!clipboard()" (click)="paste()"><fa-icon [icon]="['fas', 'paste']"></fa-icon>Pegar<kbd>Ctrl V</kbd></button>
+      <hr />
+      <button type="button" role="menuitem" (click)="selectAll(); closeMenu()"><fa-icon [icon]="['fas', 'object-group']"></fa-icon>Seleccionar todo<kbd>Ctrl A</kbd></button>
+    }
+  </div>
+}
+
+<!-- ───────── Operaciones (subidas) ───────── -->
+@if (uploads().length) {
+  <aside class="dv-ops" aria-label="Subidas" aria-live="polite">
+    <header class="dv-ops__head">
+      <span>{{ activeUploads() ? 'Subiendo ' + activeUploads() + (activeUploads() === 1 ? ' archivo' : ' archivos') : 'Subidas terminadas' }}</span>
+      @if (!activeUploads()) { <button type="button" (click)="clearFinished()">Cerrar</button> }
+    </header>
+    <ul>
+      @for (u of uploads(); track u.id) {
+        <li [attr.data-state]="u.state">
+          <span class="dv-ops__name" [title]="u.name">{{ u.name }}</span>
+          <span class="dv-ops__meta">
+            @switch (u.state) {
+              @case ('running') { {{ uploadPct(u) }} % · {{ size(u.sent) }} de {{ size(u.size) }} }
+              @case ('done') { Listo }
+              @case ('cancelled') { Cancelado }
+              @case ('error') { {{ u.error }} }
+            }
+          </span>
+          @if (u.state === 'running') {
+            <span class="dv-ops__bar"><span [style.width.%]="uploadPct(u)"></span></span>
+            <button type="button" class="dv-ops__x" (click)="cancelUpload(u)" [attr.aria-label]="'Cancelar ' + u.name"><fa-icon [icon]="['fas', 'xmark']"></fa-icon></button>
+          }
+        </li>
+      }
+    </ul>
+  </aside>
+}
+
+<!-- ───────── Vista rápida ───────── -->
+@if (previewEntry(); as pe) {
+  <div class="dv-quick" role="dialog" aria-modal="true" [attr.aria-label]="'Vista previa de ' + pe.name" (click)="closePreview()">
+    <div class="dv-quick__frame" (click)="$event.stopPropagation()">
+      <header class="dv-quick__bar">
+        <fa-icon [icon]="icon(pe)" class="dv-kind" [attr.data-kind]="pe.kind" aria-hidden="true"></fa-icon>
+        <span class="dv-quick__title">{{ pe.name }}</span>
+        <span class="dv-muted">{{ size(pe.size) }}</span>
+        <span class="dv-quick__spacer"></span>
+        @if (canPrint(pe)) { <button type="button" class="dv-icon-btn" (click)="openPrint(pe)" aria-label="Imprimir" title="Imprimir"><fa-icon [icon]="['fas', 'print']"></fa-icon></button> }
+        <button type="button" class="dv-icon-btn" (click)="download(pe)" aria-label="Descargar" title="Descargar"><fa-icon [icon]="['fas', 'download']"></fa-icon></button>
+        <button type="button" class="dv-icon-btn" (click)="closePreview()" aria-label="Cerrar vista previa" title="Cerrar (Esc)"><fa-icon [icon]="['fas', 'xmark']"></fa-icon></button>
+      </header>
+      <div class="dv-quick__body">
+        @if (previewLoading()) {
+          <div class="dv-quick__loading" role="status">Abriendo…</div>
+        } @else if (preview(); as p) {
+          @switch (p.mode) {
+            @case ('image') { <img class="dv-quick__img" [src]="previewUrl()" [alt]="pe.name" /> }
+            @case ('pdf') { <iframe class="dv-quick__pdf" [src]="previewSafeUrl()" [title]="pe.name"></iframe> }
+            @case ('video') { <video class="dv-quick__media" [src]="previewUrl()" controls></video> }
+            @case ('audio') { <audio [src]="previewUrl()" controls></audio> }
+            @case ('html') { <article class="dv-doc" [innerHTML]="safeHtml($any(p).html)"></article> }
+            @case ('slides') {
+              <div class="dv-slides">
+                @for (s of $any(p).slides; track $index; let i = $index) {
+                  <section class="dv-slide">
+                    <span class="dv-slide__n">{{ i + 1 }}</span>
+                    @if (s.title) { <h3>{{ s.title }}</h3> }
+                    @for (block of s.blocks; track $index) { @for (line of block; track $index) { <p>{{ line }}</p> } }
+                    @if (s.images.length) { <div class="dv-slide__imgs">@for (img of s.images; track $index) { <img [src]="img" alt="" /> }</div> }
+                  </section>
+                }
+              </div>
+            }
+            @case ('text') { <pre class="dv-text">{{ $any(p).text }}</pre>@if ($any(p).truncated) { <p class="dv-muted">Se muestran los primeros 200 KB.</p> } }
+            @case ('archive') {
+              <ul class="dv-archive">@for (it of $any(p).items; track it.name) { <li><span>{{ it.name }}</span><span class="dv-muted">{{ size(it.size) }}</span></li> }</ul>
+            }
+            @default {
+              <div class="dv-empty"><fa-icon [icon]="icon(pe)" aria-hidden="true"></fa-icon><h3>Sin vista previa</h3><p>{{ $any(p).reason }}</p>
+                <button type="button" class="dv-btn dv-btn--primary" (click)="download(pe)">Descargar</button></div>
+            }
+          }
+        }
+      </div>
+      <button type="button" class="dv-quick__nav dv-quick__nav--prev" (click)="stepPreview(-1)" aria-label="Archivo anterior"><fa-icon [icon]="['fas', 'chevron-left']"></fa-icon></button>
+      <button type="button" class="dv-quick__nav dv-quick__nav--next" (click)="stepPreview(1)" aria-label="Archivo siguiente"><fa-icon [icon]="['fas', 'chevron-right']"></fa-icon></button>
+    </div>
+  </div>
+}
+
+<!-- ───────── Imprimir ───────── -->
+@if (printEntry(); as pe) {
+  <div class="dv-quick" role="dialog" aria-modal="true" aria-labelledby="dv-print-title" (click)="printEntry.set(null)">
+    <form class="dv-print" (click)="$event.stopPropagation()" (ngSubmit)="submitPrint()">
+      <h2 id="dv-print-title">Imprimir «{{ pe.name }}»</h2>
+      @if (printers(); as ps) {
+        @if (!ps.available || !ps.printers.length) {
+          <p class="dv-help" role="alert">{{ ps.help }}</p>
+        } @else {
+          <label class="dv-field"><span>Impresora</span>
+            <select [(ngModel)]="printForm.printer" name="printer" required>
+              @for (p of ps.printers; track p.name) { <option [value]="p.name">{{ p.name }}{{ p.state === 'disabled' ? ' (detenida)' : '' }}</option> }
+            </select>
+          </label>
+          <div class="dv-field-row">
+            <label class="dv-field"><span>Copias</span><input type="number" min="1" max="50" [(ngModel)]="printForm.copies" name="copies" inputmode="numeric" /></label>
+            <label class="dv-field"><span>Páginas</span><input type="text" placeholder="Todas (o 1-3,5)" [(ngModel)]="printForm.page_range" name="pages" /></label>
+          </div>
+          <div class="dv-checks">
+            <label><input type="checkbox" [(ngModel)]="printForm.duplex" name="duplex" /> Doble cara</label>
+            <label><input type="checkbox" [(ngModel)]="printForm.color" name="color" /> A color</label>
+          </div>
+          <fieldset class="dv-when">
+            <legend>Cuándo</legend>
+            <label><input type="radio" value="now" [(ngModel)]="printForm.when" name="when" /> Ahora</label>
+            <label><input type="radio" value="later" [(ngModel)]="printForm.when" name="when" /> Programar</label>
+            @if (printForm.when === 'later') {
+              <input type="datetime-local" [(ngModel)]="printForm.at" name="at" aria-label="Fecha y hora de impresión" required />
+            }
+          </fieldset>
+        }
+      } @else {
+        <p class="dv-muted" role="status">Buscando impresoras…</p>
+      }
+      <footer class="dv-print__foot">
+        <button type="button" class="dv-btn" (click)="printEntry.set(null)">Cancelar</button>
+        <button type="submit" class="dv-btn dv-btn--primary" [disabled]="printing() || !printers()?.printers?.length || !printForm.printer">
+          {{ printing() ? 'Enviando…' : printForm.when === 'later' ? 'Programar' : 'Imprimir' }}
+        </button>
+      </footer>
+    </form>
+  </div>
+}
+}

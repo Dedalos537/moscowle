@@ -444,6 +444,21 @@ def run_incident_escalation(app):
             print(f'Error in run_incident_escalation: {e}')
 
 
+def dispatch_print_jobs(app):
+    """Envía a la impresora los trabajos programados del drive cuya hora llegó."""
+    with app.app_context():
+        from app.services import print_service
+
+        print_service.dispatch_due()
+
+
+def cleanup_drive_uploads(app):
+    with app.app_context():
+        from app.services import drive_service
+
+        drive_service.cleanup_stale_uploads()
+
+
 def sync_website_faq(app):
     """Refresca las FAQ del bot con lo que dice la web del centro."""
     with app.app_context():
@@ -453,6 +468,8 @@ def sync_website_faq(app):
 
 
 def init_scheduler(app):
+    scheduler.add_job(func=lambda: dispatch_print_jobs(app), trigger='interval', minutes=1, id='drive_print_jobs')
+    scheduler.add_job(func=lambda: cleanup_drive_uploads(app), trigger='interval', hours=6, id='drive_upload_cleanup')
     scheduler.add_job(
         func=lambda: sync_website_faq(app), trigger='cron', day_of_week='mon', hour=5, minute=0, id='website_faq_sync'
     )

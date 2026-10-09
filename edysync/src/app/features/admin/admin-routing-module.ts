@@ -54,6 +54,7 @@ const routes: Routes = [
       { path: 'incidents', component: Incidents },
       { path: 'incidents/:id', component: IncidentDetailPage },
       { path: 'password-resets', component: PasswordResets },
+      { path: 'drive', loadComponent: () => import('./pages/drive/drive').then(m => m.Drive) },
       { path: 'kanban', loadComponent: () => import('./pages/kanban/kanban').then(m => m.KanbanPage) },
       { path: 'settings', loadComponent: () => import('./pages/settings/settings').then(m => m.Settings) },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
