@@ -8,8 +8,10 @@ uploads_bp = Blueprint('uploads', __name__)
 
 
 def _is_allowed(filename):
-    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
-    return ext in current_app.config.get('ALLOWED_UPLOAD_EXTENSIONS', set())
+    from app.services import attachments
+
+    ext = attachments.ext_of(filename)
+    return ext in current_app.config.get('ALLOWED_UPLOAD_EXTENSIONS', set()) or ext in attachments.ALLOWED
 
 
 @uploads_bp.route('/uploads/<path:filename>')
@@ -29,4 +31,16 @@ def protected_file(filename):
     if not os.path.exists(safe_path):
         abort(404)
 
-    return send_from_directory(upload_dir, filename, as_attachment=False)
+    from app.services import attachments
+
+    ext = attachments.ext_of(filename)
+    response = send_from_directory(
+        upload_dir,
+        filename,
+        as_attachment=ext not in attachments.INLINE,
+        download_name=attachments.display_name(os.path.basename(filename)),
+        conditional=True,
+    )
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Content-Security-Policy'] = "default-src 'none'; img-src 'self' data:; media-src 'self'; sandbox"
+    return response

@@ -7,16 +7,15 @@ import shutil
 import subprocess
 import tempfile
 import traceback
-import uuid
 from datetime import datetime
 
-from flask import Blueprint, current_app, jsonify, request, url_for
+from flask import Blueprint, jsonify, request, url_for
 from sqlalchemy import case, text
-from werkzeug.utils import secure_filename
 
 from app.auth_compat import current_user, login_required
 from app.extensions import csrf, db
 from app.models import Chat, ChatParticipant, Message, User
+from app.services import attachments
 from app.services.notification_service import NotificationService
 from app.socketio_events import online_users
 from app.utils.sanitizer import sanitize_text
@@ -27,6 +26,15 @@ logger = logging.getLogger(__name__)
 
 # Shared error capture for diagnostics
 _last_error = {}
+
+
+def _messages_link(role):
+    """Ruta de mensajes del destinatario (antes era «/messages», que no existe para ningún rol)."""
+    if role in ('admin', 'supervisor'):
+        return '/admin/messages'
+    if role in ('terapista', 'terapeuta'):
+        return '/therapist/messages'
+    return '/patient/messages'
 
 
 def get_last_error():
@@ -309,16 +317,8 @@ def list_chats():
         return jsonify(chat_list)
     except Exception as e:
         logger.error(f'Error in list_chats for user {current_user.id}: {str(e)}', exc_info=True)
-        import traceback
 
-        return jsonify(
-            {
-                'success': False,
-                'message': 'Error al cargar conversaciones',
-                'error': str(e)[:500],
-                'traceback': traceback.format_exc(),
-            }
-        ), 500
+        return jsonify({'success': False, 'message': 'No se pudieron cargar las conversaciones.'}), 500
 
 
 @chat_bp.route('/api/chats', methods=['POST'])
@@ -458,6 +458,7 @@ def get_messages(chat_id):
                 if deleted or not r.attachment_path
                 else url_for('uploads.protected_file', filename=f'messages/{r.attachment_path}', _external=False),
                 'attachment_type': None if deleted else r.attachment_type,
+                'file_name': None if deleted else attachments.display_name(r.attachment_path),
                 'created_at': r.created_at.isoformat() if r.created_at else None,
             }
 
@@ -513,23 +514,10 @@ def send_message(chat_id):
             if 'file' in request.files:
                 file = request.files['file']
                 if file and file.filename:
-                    filename = secure_filename(file.filename)
-                    unique_filename = f'{uuid.uuid4().hex}_{filename}'
-                    ext = (filename.rsplit('.', 1)[1] if '.' in filename else '').lower()
-                    mime = (file.mimetype or '').lower()
-                    if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp'] or mime.startswith('image/'):
-                        attachment_type = 'image'
-                    elif ext in ['mp4', 'mov'] or mime.startswith('video/'):
-                        attachment_type = 'video'
-                    elif ext in ['mp3', 'wav', 'ogg', 'm4a', 'webm', 'opus'] or mime.startswith('audio/'):
-                        attachment_type = 'audio'
-                    else:
-                        attachment_type = 'file'
-
-                    upload_folder = os.path.join(current_app.instance_path, 'uploads', 'messages')
-                    os.makedirs(upload_folder, exist_ok=True)
-                    file.save(os.path.join(upload_folder, unique_filename))
-                    attachment_path = unique_filename
+                    try:
+                        attachment_path, attachment_type = attachments.save(file)
+                    except attachments.AttachmentError as exc:
+                        return jsonify({'success': False, 'message': str(exc)}), 400
 
         if not body and not attachment_path:
             return jsonify({'success': False, 'message': 'El mensaje no puede estar vacío'}), 400
@@ -561,7 +549,9 @@ def send_message(chat_id):
             {'mid': msg_id},
         ).fetchone()
 
-        msg_created_at = msg_row.created_at.isoformat() if msg_row.created_at else None
+        created = msg_row.created_at
+        # MySQL devuelve datetime; SQLite (pruebas) devuelve texto.
+        msg_created_at = created.isoformat() if hasattr(created, 'isoformat') else (str(created) if created else None)
 
         try:
             from app.extensions import socketio
@@ -583,6 +573,7 @@ def send_message(chat_id):
                         if msg_row.attachment_path
                         else None,
                         'attachment_type': msg_row.attachment_type,
+                        'file_name': attachments.display_name(msg_row.attachment_path),
                         'created_at': msg_created_at,
                     },
                 },
@@ -594,12 +585,13 @@ def send_message(chat_id):
 
         for row in other_participant_rows:
             with contextlib.suppress(Exception):
+                recipient = db.session.get(User, row.user_id)
                 notification_service.create_notification(
                     user_id=row.user_id,
                     title=f'Nuevo mensaje de {current_user.username}',
-                    message=body or 'Ha enviado un archivo adjunto',
+                    message=body or 'Te envió un archivo adjunto',
                     notif_type='message',
-                    link='/messages',
+                    link=_messages_link(recipient.role if recipient else None),
                 )
 
         return jsonify(
@@ -618,6 +610,7 @@ def send_message(chat_id):
                     if msg_row.attachment_path
                     else None,
                     'attachment_type': msg_row.attachment_type,
+                    'file_name': attachments.display_name(msg_row.attachment_path),
                     'created_at': msg_created_at,
                 },
             }
@@ -635,14 +628,7 @@ def send_message(chat_id):
                 'user_id': current_user.id if hasattr(current_user, 'id') else None,
             }
         )
-        return jsonify(
-            {
-                'success': False,
-                'message': 'Error al enviar mensaje',
-                'error': str(e),
-                'traceback': traceback.format_exc(),
-            }
-        ), 500
+        return jsonify({'success': False, 'message': 'No se pudo enviar el mensaje. Inténtalo de nuevo.'}), 500
 
 
 @chat_bp.route('/api/chats/-1/read', methods=['PUT'])
@@ -923,7 +909,7 @@ def ai_preview():
         if not participant:
             return jsonify({'success': False, 'message': 'No eres participante'}), 403
 
-        disk_path = os.path.join(current_app.instance_path, 'uploads', 'messages', msg.attachment_path)
+        disk_path = os.path.join(attachments.folder(), msg.attachment_path)
         if not os.path.exists(disk_path):
             return jsonify({'success': False, 'message': 'Archivo no existe en disco'}), 404
 

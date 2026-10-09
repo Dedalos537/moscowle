@@ -28,9 +28,7 @@ from app.routes.api._shared import (
     patient_service,
     predict_level,
     request,
-    secure_filename,
     url_for,
-    uuid,
 )
 
 UPSTREAM_HOST = '127.0.0.1'
@@ -315,25 +313,12 @@ def send_message():
     if 'file' in request.files:
         file = request.files['file']
         if file and file.filename:
-            filename = secure_filename(file.filename)
-            unique_filename = f'{uuid.uuid4().hex}_{filename}'
+            from app.services import attachments
 
-            ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
-            if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
-                attachment_type = 'image'
-            elif ext in ['mp4', 'mov', 'webm']:
-                attachment_type = 'video'
-            elif ext in ['mp3', 'wav', 'ogg', 'm4a']:
-                attachment_type = 'audio'
-            else:
-                attachment_type = 'file'
-
-            upload_folder = os.path.join(current_app.instance_path, 'uploads', 'messages')
-            os.makedirs(upload_folder, exist_ok=True)
-
-            file.save(os.path.join(upload_folder, unique_filename))
-
-            attachment_path = unique_filename
+            try:
+                attachment_path, attachment_type = attachments.save(file)
+            except attachments.AttachmentError as exc:
+                return jsonify({'success': False, 'message': str(exc)}), 400
 
     if not body and not attachment_path:
         return jsonify({'success': False, 'message': 'El mensaje no puede estar vacío'}), 400

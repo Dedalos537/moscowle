@@ -112,7 +112,7 @@
                 <span class="chat-row__name">{{ chat.other_user?.username || 'Usuario' }}</span>
                 @if (chat.last_message?.created_at) {
                   <span class="chat-row__time" [class.chat-row__time--active]="chat.unread_count > 0">
-                    {{ chat.last_message!.created_at | date: (isSameDay(chat.last_message!.created_at) ? 'HH:mm' : 'EEE d') }}
+                    {{ listTime(chat.last_message!.created_at) }}
                   </span>
                 }
               </div>
@@ -220,8 +220,8 @@
                 @if (msg.file_url) {
                   <div class="mt-1.5 chat-media">
                     @if (msg.attachment_type === 'image') {
-                      <button type="button" class="chat-media__image-wrap" (click)="openImage(msg.file_url, fileName(msg.file_url))">
-                        <img [src]="msg.file_url" class="chat-bubble__media" alt="Imagen">
+                      <button type="button" class="chat-media__image-wrap" (click)="openImage(msg.file_url, fileName(msg.file_url, msg))">
+                        <img [src]="(msg.file_url | authMedia | async) || ''" class="chat-bubble__media" [alt]="fileName(msg.file_url, msg) || 'Imagen'" loading="lazy" decoding="async">
                         <span class="chat-media__zoom"><fa-icon [icon]="['fas', 'magnifying-glass-plus']"></fa-icon></span>
                       </button>
                       <button type="button" class="chat-media__ia" (click)="openAiPreview(msg)" aria-label="Vista previa IA">
@@ -252,7 +252,7 @@
                         </button>
                       </div>
                     } @else if (msg.attachment_type === 'video') {
-                      <video controls preload="metadata" class="w-full max-w-[240px] rounded-lg" [src]="msg.file_url"></video>
+                      <video controls preload="metadata" playsinline class="chat-video" [src]="(msg.file_url | authMedia | async) || ''"></video>
                       <button type="button" class="video-ia" (click)="openAiPreview(msg)" aria-label="Vista previa IA">
                         <fa-icon [icon]="['fas', 'wand-magic-sparkles']"></fa-icon> Vista IA
                       </button>
@@ -262,13 +262,13 @@
                           <fa-icon [icon]="fileIcon(msg)"></fa-icon>
                         </div>
                         <div class="chat-file-card__body">
-                          <span class="chat-file-card__name">{{ fileName(msg.file_url) || 'Archivo' }}</span>
+                          <span class="chat-file-card__name" [title]="fileName(msg.file_url, msg)">{{ fileName(msg.file_url, msg) || 'Archivo' }}</span>
                           <div class="chat-file-card__actions">
                             <button (click)="openFile(msg.file_url!)" class="chat-file-card__btn">
                               <fa-icon [icon]="['fas', 'arrow-up-right-from-square']" class="text-[10px]"></fa-icon>
                               Abrir
                             </button>
-                            <button (click)="downloadFile(msg.file_url!, fileName(msg.file_url))" class="chat-file-card__btn">
+                            <button (click)="downloadFile(msg.file_url!, fileName(msg.file_url, msg))" class="chat-file-card__btn">
                               <fa-icon [icon]="['fas', 'download']" class="text-[10px]"></fa-icon>
                               Descargar
                             </button>
@@ -373,7 +373,7 @@
             <button (click)="fileInput.click()" class="chat-pane__icon-btn" aria-label="Adjuntar archivo">
               <fa-icon [icon]="['fas', 'paperclip']"></fa-icon>
             </button>
-            <input #fileInput type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
+            <input #fileInput type="file" [accept]="acceptTypes"
               (change)="onFileSelected($event)" class="hidden">
           </div>
           <div class="flex items-center gap-1.5">

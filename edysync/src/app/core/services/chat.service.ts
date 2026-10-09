@@ -36,6 +36,7 @@ export interface MessageData {
   status: string;
   is_read: boolean;
   file_url: string | null;
+  file_name?: string | null;
   attachment_type: string | null;
   created_at: string | null;
   deleted?: boolean;

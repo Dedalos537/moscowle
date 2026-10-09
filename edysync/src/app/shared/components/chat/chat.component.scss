@@ -1108,19 +1108,36 @@
 .chat-file-card__btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.3125rem;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--color-primary);
-  background: none;
+  gap: 0.375rem;
+  min-height: 2rem;
+  padding: 0 0.5rem;
+  margin-left: -0.5rem;
   border: none;
-  padding: 0;
+  border-radius: 0.5rem;
+  background: none;
+  // --color-primary daba 2,8:1 sobre blanco con texto de 11 px; el token de texto pasa AA.
+  color: var(--color-primary-text);
+  font-size: 0.75rem;
+  font-weight: 600;
   cursor: pointer;
-  opacity: 0.9;
-  &:hover {
-    opacity: 1;
-    text-decoration: underline;
-  }
+  transition: background-color 150ms ease;
+  &:hover { background: color-mix(in srgb, var(--color-primary) 12%, transparent); }
+  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+  // En pantallas táctiles, objetivo de 44 px.
+  @media (pointer: coarse) { min-height: 2.75rem; }
+}
+
+// La flecha «volver» trae md:hidden, pero el display del componente le ganaba y aparecía en escritorio.
+@media (min-width: 768px) {
+  .chat-pane__back { display: none; }
+}
+
+.chat-video {
+  display: block;
+  width: 100%;
+  max-width: min(280px, 70vw);
+  border-radius: 0.75rem;
+  background: #000;
 }
 
 /* ══════════ INPUT: previsualización de adjunto ══════════ */

@@ -14,6 +14,32 @@ logger = logging.getLogger(__name__)
 health_bp = Blueprint('health', __name__, url_prefix='/api')
 
 
+@health_bp.before_request
+def _lock_debug_endpoints():
+    """/api/health/debug/* (incluido run-sql) estaba abierto en producción con una clave escrita en el código.
+
+    Ahora no existen salvo que ENABLE_DEBUG_ENDPOINTS esté activo, y aun así exigen sesión de administrador.
+    """
+    from flask import request as req
+
+    if not req.path.startswith('/api/health/debug'):
+        return None
+    if not current_app.config.get('ENABLE_DEBUG_ENDPOINTS'):
+        return jsonify({'error': 'Not found'}), 404
+    try:
+        from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+
+        from app.models import User
+
+        verify_jwt_in_request()
+        user = db.session.get(User, int(get_jwt_identity()))
+    except Exception:
+        user = None
+    if not user or user.role != 'admin':
+        return jsonify({'error': 'Not found'}), 404
+    return None
+
+
 @health_bp.route('/health', methods=['GET'])
 def health_check():
     """Health check: DB, Groq, Gemini, Ollama, crisis alerts"""

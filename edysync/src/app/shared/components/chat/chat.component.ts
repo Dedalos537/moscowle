@@ -6,9 +6,10 @@ import {
   ElementRef,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
+  inject,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
+import { AsyncPipe, DatePipe } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import {
   ChatService,
@@ -20,11 +21,14 @@ import { HeaderService } from '../../../core/services/header.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Subscription } from 'rxjs';
 import { Spinner } from '../spinner/spinner';
+import { AuthMediaPipe } from '../../pipes/auth-media-pipe';
+import { ProtectedMedia } from '../../../core/services/protected-media';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [FormsModule, DatePipe, FontAwesomeModule, Spinner],
+  imports: [FormsModule, DatePipe, AsyncPipe, FontAwesomeModule, Spinner, AuthMediaPipe],
   templateUrl: './chat.component.html',
   styleUrl: './chat.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -91,6 +95,8 @@ export class ChatComponent implements OnInit, OnDestroy {
 
   /** Previsualización mientras se edita / envía */
   selectedFilePreviewUrl: string | null = null;
+  private media = inject(ProtectedMedia);
+  private toast = inject(ToastService);
   lightboxUrl: string | null = null;
   lightboxTitle = '';
   aiPreview: { open: boolean; msg: MessageData | null; loading: boolean; data: any; error: string | null } = {
@@ -389,8 +395,43 @@ export class ChatComponent implements OnInit, OnDestroy {
     }
   }
 
-  onFileSelected(event: any) {
-    const file = event.target.files[0];
+  /** Hora de la lista en español: «10:02», «Ayer», «jue 8» o «8 sept.». */
+  listTime(iso: string | null): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    if (d.toDateString() === yesterday.toDateString()) return 'Ayer';
+    if (now.getTime() - d.getTime() < 6 * 86400000) return d.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric' }).replace('.', '');
+    return d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
+  }
+
+  /** Mismos tipos que acepta el servidor (app/services/attachments.py). */
+  readonly acceptTypes =
+    'image/*,video/*,audio/*,.heic,.heif,.pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.ods,.csv,.ppt,.pptx,.odp,.zip,.rar,.7z,.3gp,.opus,.amr';
+  private readonly allowedExt = new Set(
+    'jpg jpeg png gif webp heic heif bmp mp4 mov m4v 3gp mkv avi webm mp3 wav ogg oga opus m4a aac amr flac weba pdf doc docx odt rtf txt xls xlsx ods csv ppt pptx odp zip rar 7z'.split(' '),
+  );
+  private readonly maxBytes = 50 * 1024 * 1024;
+
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    if (file) {
+      const ext = file.name.includes('.') ? file.name.split('.').pop()!.toLowerCase() : '';
+      if (!this.allowedExt.has(ext)) {
+        this.toast.show(`No se pueden enviar archivos .${ext || 'sin extensión'}. Prueba con imágenes, audio, video, PDF, Office o .zip.`, 'warning');
+        input.value = '';
+        return;
+      }
+      if (file.size > this.maxBytes) {
+        this.toast.show('El archivo pesa más de 50 MB. Comprímelo o comparte un enlace.', 'warning');
+        input.value = '';
+        return;
+      }
+    }
     this.setSelectedFile(file);
   }
 
@@ -476,13 +517,23 @@ export class ChatComponent implements OnInit, OnDestroy {
           this.clearFile();
           this.cdr.markForCheck();
         },
-        error: () => {
+        error: (err) => {
           this.sending = false;
-          this.markFailed(optimistic.id);
+          if (err?.status === 400 || err?.status === 413) {
+            // Rechazo del servidor (tipo o tamaño): se quita la burbuja y se explica; el texto y el archivo quedan para corregir.
+            this.messages = this.messages.filter((m) => m.id !== optimistic.id);
+            this.toast.show(err?.error?.message || 'El archivo es demasiado grande para enviarlo (máx. 50 MB).', 'error');
+          } else {
+            this.markFailed(optimistic.id);
+            this.failedFiles.set(optimistic.id, this.selectedFile);
+          }
           this.cdr.markForCheck();
         },
       });
   }
+
+  /** Archivo de cada mensaje fallido, para que «Reintentar» lo vuelva a enviar (antes se perdía). */
+  private failedFiles = new Map<number, File | null>();
 
   private markFailed(id: number) {
     this.messages = this.messages.map((m) => (m.id === id ? { ...m, status: 'failed' } : m));
@@ -491,7 +542,9 @@ export class ChatComponent implements OnInit, OnDestroy {
   retryMessage(msg: MessageData) {
     if (!this.selectedChatId || this.selectedChatId < 0) return;
     this.messages = this.messages.map((m) => (m.id === msg.id ? { ...m, status: 'sent' } : m));
-    this.chatService.sendMessage(this.selectedChatId, msg.body || undefined, null).subscribe({
+    const file = this.failedFiles.get(msg.id) ?? null;
+    this.failedFiles.delete(msg.id);
+    this.chatService.sendMessage(this.selectedChatId, msg.body || undefined, file).subscribe({
 next: (res: any) => {
           if (res?.success && res?.message) {
             const real = res.message;
@@ -507,6 +560,7 @@ next: (res: any) => {
         },
         error: () => {
           this.markFailed(msg.id);
+          this.failedFiles.set(msg.id, file);
           this.cdr.markForCheck();
         },
       });
@@ -790,13 +844,22 @@ next: (res: any) => {
     }
     let el = this.audioEls.get(msg.id);
     if (!el) {
-      el = new Audio(msg.file_url);
-      this.audioEls.set(msg.id, el);
-      el.addEventListener('timeupdate', () => this.cdr.markForCheck());
-      el.addEventListener('ended', () => {
-        this.audioPlayingId = null;
+      // Se carga con el token (en iPhone y desde el cPanel la URL directa no llevaba la sesión).
+      this.media.url(msg.file_url).then((src) => {
+        if (!src) return;
+        const audio = new Audio(src);
+        this.audioEls.set(msg.id, audio);
+        audio.addEventListener('timeupdate', () => this.cdr.markForCheck());
+        audio.addEventListener('loadedmetadata', () => this.cdr.markForCheck());
+        audio.addEventListener('ended', () => {
+          this.audioPlayingId = null;
+          this.cdr.markForCheck();
+        });
+        audio.play().catch(() => {});
+        this.audioPlayingId = msg.id;
         this.cdr.markForCheck();
-      });
+      }).catch(() => undefined);
+      return;
     }
     el.play().catch(() => {});
     this.audioPlayingId = msg.id;
@@ -883,10 +946,11 @@ next: (res: any) => {
     return 'text-on-surface-variant/50';
   }
 
-  openImage(url: string | null, title: string | null = null) {
+  async openImage(url: string | null, title: string | null = null) {
     if (!url) return;
-    this.lightboxUrl = url;
     this.lightboxTitle = title || '';
+    this.lightboxUrl = await this.media.url(url).catch(() => null);
+    if (!this.lightboxUrl) this.toast.show('No se pudo abrir la imagen.', 'error');
     this.cdr.markForCheck();
   }
 
@@ -917,16 +981,11 @@ next: (res: any) => {
   }
 
   openFile(url: string) {
-    window.open(url, '_blank');
+    this.media.open(url);
   }
 
   downloadFile(url: string, name?: string | null) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name || '';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    this.media.download(url, name || 'archivo');
   }
 
   fileIcon(msg: MessageData): any {
@@ -944,14 +1003,12 @@ next: (res: any) => {
     return ['fas', 'file'];
   }
 
-  fileName(url: string | null): string | null {
+  /** Nombre que se muestra: el original (sin el prefijo interno que el servidor agrega para no repetir nombres). */
+  fileName(url: string | null, msg?: MessageData | null): string | null {
+    if (msg?.file_name) return msg.file_name;
     if (!url) return null;
-    try {
-      const parts = url.split('/');
-      return parts[parts.length - 1] || null;
-    } catch {
-      return null;
-    }
+    const last = decodeURIComponent(url.split('/').pop() || '');
+    return last.replace(/^[0-9a-f]{32}_/, '') || null;
   }
 
   isImageUpload(): boolean {

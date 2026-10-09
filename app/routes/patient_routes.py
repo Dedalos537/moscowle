@@ -1,12 +1,9 @@
 import contextlib
 import json
-import os
-import uuid
 from datetime import UTC, datetime, timedelta
 
-from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from sqlalchemy import func, or_
-from werkzeug.utils import secure_filename
 
 from app.auth_compat import current_user, login_required
 from app.extensions import bcrypt, csrf
@@ -716,23 +713,12 @@ def api_patient_send_message():
     if 'file' in request.files:
         file = request.files['file']
         if file and file.filename:
-            filename = secure_filename(file.filename)
-            unique_filename = f'{uuid.uuid4().hex}_{filename}'
+            from app.services import attachments
 
-            ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
-            if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
-                attachment_type = 'image'
-            elif ext in ['mp4', 'mov', 'webm']:
-                attachment_type = 'video'
-            elif ext in ['mp3', 'wav', 'ogg', 'm4a']:
-                attachment_type = 'audio'
-            else:
-                attachment_type = 'file'
-
-            upload_folder = os.path.join(current_app.instance_path, 'uploads', 'messages')
-            os.makedirs(upload_folder, exist_ok=True)
-            file.save(os.path.join(upload_folder, unique_filename))
-            attachment_path = unique_filename
+            try:
+                attachment_path, attachment_type = attachments.save(file)
+            except attachments.AttachmentError as exc:
+                return jsonify({'success': False, 'error': str(exc)}), 400
 
     msg = Message(
         sender_id=current_user.id,
