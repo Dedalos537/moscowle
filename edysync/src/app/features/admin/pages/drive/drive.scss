@@ -278,7 +278,9 @@ span.dv-crumb { display: inline-flex; align-items: center; cursor: default; &:ho
   .dv-when-cell { white-space: nowrap; font-variant-numeric: tabular-nums; }
   tr:hover td { background: var(--color-surface-container-low); }
 }
-.dv-row-actions { text-align: right; white-space: nowrap; .dv-btn + .dv-btn { margin-left: 0.25rem; } }
+// styles.scss centra con !important toda columna ≥2 de cualquier tabla; en listas de archivos se lee mejor a la izquierda.
+.dv-table :is(th, td) { text-align: left !important; }
+.dv-table .dv-row-actions { text-align: right !important; white-space: nowrap; .dv-btn + .dv-btn { margin-left: 0.25rem; } }
 
 .dv-state {
   display: inline-block; padding: 0.125rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600;
