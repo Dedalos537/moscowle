@@ -262,12 +262,42 @@ def generate_ia_report():
                 report_md += '\n## Notas de Sesiones Recientes\n'
                 for s in session_data:
                     report_md += f'- {s["patient"]} ({s["therapist"]}): {s["notes"][:100]}...\n'
-        return jsonify({'success': True, 'report': report_md})
+        return jsonify({'success': True, 'report': report_md, 'metrics': _strategic_metrics(data_for_ai)})
     except Exception as e:
-        import traceback
+        current_app.logger.exception('No se pudo generar el análisis estratégico: %s', e)
+        return jsonify({'success': False, 'error': 'No se pudo generar el análisis. Inténtalo de nuevo.'}), 500
 
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)}), 500
+
+def _strategic_metrics(data):
+    """Datos del análisis en forma estructurada, para que el panel dibuje gráficas en vez de repetir texto."""
+    from app.services.report_service import lima_today, utc_bounds
+
+    fin = data.get('financial', {})
+    income = float(fin.get('income_last_30d') or 0)
+    expenses = float(fin.get('total_expenses') or 0)
+    monday = lima_today() - timedelta(days=lima_today().weekday())
+    weekly = []
+    for i in range(7, -1, -1):
+        start_day = monday - timedelta(weeks=i)
+        start, end = utc_bounds(start_day, start_day + timedelta(days=6))
+        count = Appointment.query.filter(
+            Appointment.status == 'completed', Appointment.start_time >= start, Appointment.start_time < end
+        ).count()
+        weekly.append({'week_start': start_day.isoformat(), 'sessions': count})
+    return {
+        'period': data.get('period'),
+        'general': data.get('general', {}),
+        'financial': {
+            'income_30d': round(income, 2),
+            'expenses_30d': round(expenses, 2),
+            'balance_30d': round(income - expenses, 2),
+            'total_debt': round(float(fin.get('total_debt') or 0), 2),
+            'debtors': int(fin.get('total_debtors') or 0),
+        },
+        'top_therapists': data.get('top_therapists', []),
+        'weekly_sessions': weekly,
+        'notes_count': len(data.get('recent_session_notes') or []),
+    }
 
 
 @admin_bp.route('/ai-chat-process', methods=['POST'])
@@ -566,50 +596,26 @@ def api_weekly_summary():
 @admin_bp.route('/api/reports/accumulate', methods=['POST'])
 @login_required
 def api_accumulate_reports():
-    """Acumular reportes diarios"""
+    """Acumula la semana elegida: reportes diarios + semanales de cada paciente con sesiones completadas.
+
+    Antes ignoraba la semana de la pantalla (solo procesaba «hoy» en UTC) y no creaba reportes semanales, así que la
+    lista semanal seguía vacía después de acumular.
+    """
     if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
 
-    report_date = request.args.get('date')
-
     from app.services.report_service import ReportService
 
-    rs = ReportService()
-
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    if report_date:
-        try:
-            today_start = datetime.strptime(report_date, '%Y-%m-%d')
-        except:
-            pass
-
-    tomorrow = today_start + timedelta(days=1)
-
-    therapists = User.query.filter_by(role='terapista', is_active=True).all()
-    accumulated = 0
-
-    for therapist in therapists:
-        patients = therapist.associated_patients.filter_by(role='jugador').all()
-        for patient in patients:
-            has_sessions = Appointment.query.filter(
-                Appointment.patient_id == patient.id,
-                Appointment.therapist_id == therapist.id,
-                Appointment.start_time >= today_start,
-                Appointment.start_time < tomorrow,
-                Appointment.status == 'completed',
-            ).count()
-
-            if has_sessions > 0:
-                rs.generate_daily_report(patient.id, therapist.id, today_start.strftime('%Y-%m-%d'))
-                accumulated += 1
-
-    return jsonify(
-        {
-            'success': True,
-            'message': f'Reportes acumulados para {accumulated} pacientes',
-            'date': today_start.strftime('%Y-%m-%d'),
-        }
-    )
+    week_start = request.args.get('week_start') or (request.get_json(silent=True) or {}).get('week_start')
+    try:
+        result = ReportService().accumulate_week(week_start)
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Fecha no válida (usa AAAA-MM-DD)'}), 400
+    if result['pairs'] == 0:
+        message = 'No hay sesiones completadas en esa semana todavía.'
+    else:
+        message = f'Se acumularon {result["weekly"]} reportes semanales y {result["daily"]} diarios.'
+    return jsonify({'success': True, 'message': message, **result})
 
 
 @admin_bp.route('/api/reports/monthly', methods=['GET'])

@@ -17,6 +17,16 @@ import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Select } from '../../../../shared/components/select/select';
 import { Modal } from '../../../../shared/components/modal/modal';
 import DOMPurify from 'dompurify';
+import { markdownSections, type MdSection } from '../../../../core/utils/markdown';
+
+interface StrategicMetrics {
+  period: string;
+  general: { therapists: number; patients: number; total_sessions: number; sessions_this_month: number };
+  financial: { income_30d: number; expenses_30d: number; balance_30d: number; total_debt: number; debtors: number };
+  top_therapists: { name: string; sessions: number }[];
+  weekly_sessions: { week_start: string; sessions: number }[];
+  notes_count: number;
+}
 
 
 interface FinancialSummary {
@@ -98,6 +108,9 @@ export class Reports implements OnInit, OnDestroy {
   reportSending = false;
   /** Informe estratégico (texto, en la ventana) y de auditoría (HTML saneado, dentro de la página): antes compartían variable y salían duplicados. */
   strategicReport: string | null = null;
+  strategicMetrics: StrategicMetrics | null = null;
+  strategicSections: MdSection[] = [];
+  weekHover: number | null = null;
   auditReport: string | null = null;
   strategicGenerating = false;
   exporting = false;
@@ -227,7 +240,11 @@ export class Reports implements OnInit, OnDestroy {
           this.strategicGenerating = false;
           // Se muestra como texto (interpolación): nada de la respuesta del modelo se interpreta como HTML.
           this.strategicReport = (res?.report || '').trim() || null;
-          if (!this.strategicReport) this.toastService.show('La IA no devolvió un análisis. Inténtalo de nuevo.', 'warning');
+          this.strategicMetrics = (res as { metrics?: StrategicMetrics }).metrics ?? null;
+          // Lo que ya se ve en las gráficas no se repite como texto: quedan el análisis, notas y recomendaciones.
+          const shown = this.strategicMetrics ? /resumen|financ|top\s*terap|indicadores/i : /^$/;
+          this.strategicSections = markdownSections(this.strategicReport || '').filter((sec) => !shown.test(sec.title));
+          if (!this.strategicReport && !this.strategicMetrics) this.toastService.show('La IA no devolvió un análisis. Inténtalo de nuevo.', 'warning');
           this.cdr.markForCheck();
         },
         error: () => {
@@ -286,6 +303,31 @@ export class Reports implements OnInit, OnDestroy {
 
   closeAIReport() {
     this.strategicReport = null;
+    this.strategicMetrics = null;
+    this.strategicSections = [];
+  }
+
+  // ── gráficas del análisis ─────────────────────────────────────────
+  get weekMax() {
+    return Math.max(1, ...(this.strategicMetrics?.weekly_sessions ?? []).map((w) => w.sessions));
+  }
+
+  weekLabel(iso: string) {
+    const d = new Date(iso + 'T12:00:00');
+    return d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }).replace('.', '');
+  }
+
+  weeksSummary() {
+    return (this.strategicMetrics?.weekly_sessions ?? []).map((w) => `${this.weekLabel(w.week_start)}: ${w.sessions}`).join(', ');
+  }
+
+  get topMax() {
+    return Math.max(1, ...(this.strategicMetrics?.top_therapists ?? []).map((t) => t.sessions));
+  }
+
+  get moneyMax() {
+    const f = this.strategicMetrics?.financial;
+    return Math.max(1, f?.income_30d ?? 0, f?.expenses_30d ?? 0);
   }
 
   // ─── Formato en español y semáforo de precisión ───────────────
@@ -397,11 +439,11 @@ export class Reports implements OnInit, OnDestroy {
   accumulateReports() {
     this.reportsAccumulating = true;
     this.subscriptions.add(
-      this.adminService.accumulateReports().subscribe({
+      this.adminService.accumulateReports(this.selectedWeekStart || undefined).subscribe({
         next: (res) => {
           this.reportsAccumulating = false;
           if (res.success) {
-            this.toastService.show('Reportes acumulados correctamente.', 'success');
+            this.toastService.show(res.message, res.pairs ? 'success' : 'info');
             this.loadWeeklySummary();
             this.loadDailyReports();
           }

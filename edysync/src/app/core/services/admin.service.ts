@@ -674,8 +674,8 @@ export class AdminService {
     return this.http.get<any>('/admin/api/daily-reports', { params });
   }
 
-  accumulateReports(): Observable<any> {
-    return this.http.post<any>('/admin/api/reports/accumulate', {});
+  accumulateReports(weekStart?: string): Observable<{ success: boolean; message: string; weekly: number; daily: number; pairs: number }> {
+    return this.http.post<{ success: boolean; message: string; weekly: number; daily: number; pairs: number }>('/admin/api/reports/accumulate', { week_start: weekStart });
   }
 
 

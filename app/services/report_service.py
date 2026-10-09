@@ -1,9 +1,28 @@
 import logging
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from app.models import Appointment, DailyReport, MonthlyReport, QuarterlyReport, SessionAudit, User, WeeklyReport, db
 
 logger = logging.getLogger(__name__)
+
+LIMA = ZoneInfo('America/Lima')
+
+
+def utc_bounds(first_day, last_day=None):
+    """Inicio y fin (UTC naive, como se guardan las sesiones) de los días locales de Lima indicados.
+
+    Antes se cortaba el día a medianoche UTC: una sesión a las 20:00 en Lima (01:00 UTC del día siguiente) caía en
+    el reporte del día equivocado.
+    """
+    last_day = last_day or first_day
+    start = datetime(first_day.year, first_day.month, first_day.day, tzinfo=LIMA)
+    end = datetime(last_day.year, last_day.month, last_day.day, tzinfo=LIMA) + timedelta(days=1)
+    return start.astimezone(UTC).replace(tzinfo=None), end.astimezone(UTC).replace(tzinfo=None)
+
+
+def lima_today():
+    return datetime.now(LIMA).date()
 
 
 class ReportService:
@@ -19,8 +38,7 @@ class ReportService:
         if not patient:
             raise ValueError(f'Paciente {patient_id} no encontrado')
 
-        week_start_dt = datetime(week_start.year, week_start.month, week_start.day)
-        week_end_dt = datetime(week_end.year, week_end.month, week_end.day) + timedelta(days=1)
+        week_start_dt, week_end_dt = utc_bounds(week_start, week_end)
 
         sessions = (
             Appointment.query.filter(
@@ -137,12 +155,11 @@ class ReportService:
 
     def generate_daily_report(self, patient_id, therapist_id, report_date=None):
         if report_date is None:
-            report_date = datetime.utcnow().date()
+            report_date = lima_today()
         elif isinstance(report_date, str):
             report_date = datetime.strptime(report_date, '%Y-%m-%d').date()
 
-        day_start = datetime(report_date.year, report_date.month, report_date.day)
-        day_end = day_start + timedelta(days=1)
+        day_start, day_end = utc_bounds(report_date)
 
         sessions = Appointment.query.filter(
             Appointment.patient_id == patient_id,
@@ -251,8 +268,7 @@ class ReportService:
 
         current = start_date
         while current <= end_date:
-            day_start = datetime(current.year, current.month, current.day)
-            day_end = day_start + timedelta(days=1)
+            day_start, day_end = utc_bounds(current)
 
             pairs = (
                 db.session.query(Appointment.patient_id, Appointment.therapist_id)
@@ -312,7 +328,7 @@ class ReportService:
         return result
 
     def get_this_week_range(self):
-        today = datetime.utcnow().date()
+        today = lima_today()
         monday = today - timedelta(days=today.weekday())
         return monday, monday + timedelta(days=6)
 
@@ -322,17 +338,54 @@ class ReportService:
         elif isinstance(week_start, str):
             week_start = datetime.strptime(week_start, '%Y-%m-%d').date()
 
-        therapists = User.query.filter_by(role='terapista', is_active=True).all()
         generated = []
-        for therapist in therapists:
-            patients = therapist.associated_patients.filter_by(role='jugador').all()
-            for patient in patients:
-                try:
-                    report = self.generate_patient_weekly_report(patient.id, therapist.id, week_start)
-                    generated.append(report)
-                except Exception as e:
-                    logger.warning(f'Weekly report error {therapist.id}/{patient.id}: {e}')
+        for patient_id, therapist_id in self._pairs_with_sessions(week_start, week_start + timedelta(days=6)):
+            try:
+                generated.append(self.generate_patient_weekly_report(patient_id, therapist_id, week_start))
+            except Exception as e:
+                logger.warning(f'Weekly report error {therapist_id}/{patient_id}: {e}')
         return generated
+
+    def _pairs_with_sessions(self, first_day, last_day):
+        """Pares (paciente, terapeuta) con sesiones completadas en esos días.
+
+        Antes se partía de los pacientes «asociados» a cada terapeuta y se saltaban sesiones de grupo, de pacientes
+        reasignados o de terapeutas de reemplazo.
+        """
+        start, end = utc_bounds(first_day, last_day)
+        return (
+            db.session.query(Appointment.patient_id, Appointment.therapist_id)
+            .filter(
+                Appointment.start_time >= start,
+                Appointment.start_time < end,
+                Appointment.status == 'completed',
+                Appointment.patient_id.isnot(None),
+                Appointment.therapist_id.isnot(None),
+            )
+            .distinct()
+            .all()
+        )
+
+    def accumulate_week(self, week_start=None):
+        """Acumula una semana: reportes diarios de cada día con sesiones y el semanal de cada paciente–terapeuta."""
+        if week_start is None:
+            week_start, _ = self.get_this_week_range()
+        elif isinstance(week_start, str):
+            week_start = datetime.strptime(week_start, '%Y-%m-%d').date()
+        week_start = week_start - timedelta(days=week_start.weekday())  # siempre desde el lunes
+        last_day = min(week_start + timedelta(days=6), lima_today())
+        if last_day < week_start:
+            return {'week_start': week_start.isoformat(), 'daily': 0, 'weekly': 0, 'pairs': 0}
+        daily = self.sync_daily_reports_for_range(week_start, last_day)
+        pairs = self._pairs_with_sessions(week_start, last_day)
+        weekly = 0
+        for patient_id, therapist_id in pairs:
+            try:
+                self.generate_patient_weekly_report(patient_id, therapist_id, week_start)
+                weekly += 1
+            except Exception as e:
+                logger.warning('Acumulado semanal %s/%s falló: %s', therapist_id, patient_id, e)
+        return {'week_start': week_start.isoformat(), 'daily': len(daily), 'weekly': weekly, 'pairs': len(pairs)}
 
     def generate_monthly_report(self, patient_id, therapist_id, year, month):
         month_start = date(year, month, 1)
