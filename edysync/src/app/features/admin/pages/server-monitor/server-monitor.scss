@@ -1,0 +1,105 @@
+// Estado del servidor: tablero de lectura densa. Colores de las series validados (dataviz) en claro y oscuro.
+:host {
+  display: block;
+  --sm-cpu: #75a83a;
+  --sm-mem: #2563eb;
+}
+:host-context(.dark) {
+  --sm-cpu: #73a346;
+  --sm-mem: #5b8def;
+}
+
+.sm { display: flex; flex-direction: column; gap: 1rem; }
+
+.sm-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.sm-title { margin: 0; font-size: 1.125rem; font-weight: 700; color: var(--color-on-surface); }
+.sm-sub { margin: 0.25rem 0 0; font-size: 0.8125rem; color: var(--color-on-surface-variant); font-variant-numeric: tabular-nums; }
+
+.sm-cockpit {
+  display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.5rem; padding: 0 1rem; border-radius: 0.625rem;
+  border: 1px solid var(--color-outline-variant); background: var(--color-surface-container-lowest); color: var(--color-on-surface);
+  font-size: 0.875rem; font-weight: 600; text-decoration: none; transition: background-color 150ms ease, border-color 150ms ease;
+  &:hover { background: var(--color-surface-container-low); border-color: var(--color-outline); }
+  &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  &__ext { font-size: 0.6875rem; color: var(--color-on-surface-variant); }
+}
+
+.sm-alert {
+  display: flex; align-items: center; gap: 0.5rem; margin: 0; padding: 0.75rem 0.875rem; border-radius: 0.625rem;
+  background: var(--badge-error-bg); color: var(--badge-error-fg); font-size: 0.875rem;
+}
+
+.sm-resources { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1.25rem 1.5rem; }
+.sm-res {
+  display: flex; flex-direction: column; gap: 0.375rem;
+  &__row { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+  &__label { font-size: 0.8125rem; font-weight: 600; color: var(--color-on-surface-variant); }
+  &__value { font-size: 1.125rem; font-weight: 700; color: var(--color-on-surface); font-variant-numeric: tabular-nums; }
+  &__meta { margin: 0; font-size: 0.75rem; color: var(--color-on-surface-variant); font-variant-numeric: tabular-nums; }
+}
+
+.sm-bar {
+  height: 0.5rem; border-radius: 999px; background: var(--color-surface-container-high); overflow: hidden;
+  span { display: block; height: 100%; border-radius: inherit; background: var(--color-primary); transition: width 400ms cubic-bezier(0.16, 1, 0.3, 1); }
+  &.is-warn span { background: var(--color-warning); }
+  &.is-critical span { background: var(--color-error); }
+}
+
+.sm-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem; }
+.sm-block { padding: 1rem; border: 1px solid var(--color-outline-variant); border-radius: 0.875rem; background: var(--color-surface-container-lowest); }
+.sm-h { margin: 0 0 0.5rem; font-size: 0.9375rem; font-weight: 700; color: var(--color-on-surface); }
+
+.sm-list {
+  list-style: none; margin: 0; padding: 0;
+  li { display: flex; align-items: center; gap: 0.625rem; min-height: 2.25rem; border-top: 1px solid color-mix(in srgb, var(--color-outline-variant) 60%, transparent); font-size: 0.875rem; }
+  li:first-child { border-top: 0; }
+  &__name { flex: 1; color: var(--color-on-surface); }
+  &__detail { font-size: 0.8125rem; color: var(--color-on-surface-variant); }
+}
+
+.sm-dot {
+  width: 0.5rem; height: 0.5rem; border-radius: 999px; background: var(--color-outline);
+  &[data-state='active'] { background: var(--color-success); }
+  &[data-state='failed'], &[data-state='inactive'] { background: var(--color-error); }
+  &[data-state='activating'] { background: var(--color-warning); }
+}
+.sm-state {
+  padding: 0.125rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: var(--badge-neutral-bg); color: var(--badge-neutral-fg);
+  &[data-state='active'] { background: var(--badge-success-bg); color: var(--badge-success-fg); }
+  &[data-state='failed'], &[data-state='inactive'] { background: var(--badge-error-bg); color: var(--badge-error-fg); }
+}
+.sm-check { color: var(--color-success); &.is-bad { color: var(--color-error); } }
+
+.sm-chart {
+  &__head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+}
+.sm-seg {
+  display: inline-flex; padding: 2px; border-radius: 0.625rem; background: var(--color-surface-container);
+  button {
+    min-height: 2rem; padding: 0 0.75rem; border: 0; border-radius: 0.5rem; background: transparent; color: var(--color-on-surface-variant);
+    font: inherit; font-size: 0.8125rem; cursor: pointer;
+    &.is-on { background: var(--color-surface-container-lowest); color: var(--color-on-surface); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
+    &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+  }
+}
+.sm-legend { display: flex; gap: 1rem; margin: 0.25rem 0 0.5rem; font-size: 0.8125rem; color: var(--color-on-surface-variant); span { display: inline-flex; align-items: center; gap: 0.375rem; } }
+.sm-swatch { display: inline-block; width: 0.75rem; height: 2px; border-radius: 2px; &--cpu { background: var(--sm-cpu); } &--mem { background: var(--sm-mem); } }
+
+.sm-plot { position: relative; svg { display: block; width: 100%; height: auto; overflow: visible; } }
+.sm-grid { stroke: var(--color-outline-variant); stroke-width: 1; opacity: 0.6; }
+.sm-axis { font-size: 10px; fill: var(--color-on-surface-variant); font-variant-numeric: tabular-nums; }
+.sm-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; &--cpu { stroke: var(--sm-cpu); } &--mem { stroke: var(--sm-mem); } }
+.sm-direct { font-size: 11px; font-weight: 600; fill: var(--color-on-surface); }
+.sm-cross { stroke: var(--color-outline); stroke-width: 1; stroke-dasharray: 3 3; }
+.sm-pt { stroke: var(--color-surface-container-lowest); stroke-width: 2; &--cpu { fill: var(--sm-cpu); } &--mem { fill: var(--sm-mem); } }
+.sm-tip {
+  position: absolute; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; gap: 0.125rem; padding: 0.5rem 0.625rem;
+  border-radius: 0.5rem; background: var(--color-surface-container-lowest); border: 1px solid var(--color-outline-variant);
+  box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.25); font-size: 0.75rem; color: var(--color-on-surface); white-space: nowrap; pointer-events: none;
+  font-variant-numeric: tabular-nums;
+  span { display: inline-flex; align-items: center; gap: 0.375rem; }
+  &__bad { color: var(--color-error-text); }
+}
+.sm-empty { margin: 0.5rem 0 0; font-size: 0.875rem; color: var(--color-on-surface-variant); }
+
+@media (prefers-reduced-motion: reduce) { .sm-bar span { transition: none; } }

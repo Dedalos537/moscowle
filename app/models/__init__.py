@@ -8,6 +8,7 @@ from app.models.bot_config import BotConfig as BotConfig
 from app.models.bot_conversation import BotConversation as BotConversation
 from app.models.bot_conversation import BotMessage as BotMessage
 from app.models.print_job import PrintJob as PrintJob
+from app.models.server_snapshot import ServerSnapshot as ServerSnapshot
 from app.models.system_setting import LiveVersion as LiveVersion
 from app.models.system_setting import SystemSetting as SystemSetting
 from app.models.chat import *

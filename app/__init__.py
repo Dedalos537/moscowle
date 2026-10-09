@@ -549,7 +549,9 @@ def create_app(config_class=None):
     from app.routes.drive_routes import drive_bp
     from app.routes.kanban_routes import kanban_bp
     from app.routes.profile_avatar import avatar_bp
+    from app.routes.server_monitor_routes import server_monitor_bp
 
+    csrf.exempt(server_monitor_bp)
     csrf.exempt(drive_bp)
     csrf.exempt(kanban_bp)
     csrf.exempt(avatar_bp)
@@ -875,6 +877,7 @@ def create_app(config_class=None):
         ('bot_conversations', 'app.routes.bot_conversations', 'bot_conv_bp'),
         ('automation', 'app.routes.automation_routes', 'automation_bp'),
         ('drive', 'app.routes.drive_routes', 'drive_bp'),
+        ('server_monitor', 'app.routes.server_monitor_routes', 'server_monitor_bp'),
         ('live_sync', 'app.routes.bot_conversations', 'live_bp'),
         ('webauthn', 'app.routes.webauthn', 'webauthn_bp'),
         ('deploy', 'app.routes.deploy_routes', 'deploy_bp'),
@@ -1027,6 +1030,7 @@ def create_app_lite():
     from app.routes.mcp_routes import mcp_bp
     from app.routes.profile_avatar import avatar_bp
     from app.routes.public_routes import public_bp
+    from app.routes.server_monitor_routes import server_monitor_bp
     from app.routes.telegram_routes import telegram_bp
     from app.routes.uploads import uploads_bp
     from app.routes.webauthn import webauthn_bp
@@ -1042,6 +1046,7 @@ def create_app_lite():
     csrf.exempt(bot_conv_bp)
     csrf.exempt(automation_bp)
     csrf.exempt(drive_bp)
+    csrf.exempt(server_monitor_bp)
     csrf.exempt(live_bp)
     csrf.exempt(webauthn_bp)
     csrf.exempt(crm_bp)
@@ -1067,6 +1072,7 @@ def create_app_lite():
         live_bp,
         automation_bp,
         drive_bp,
+        server_monitor_bp,
     ]:
         try:
             app.register_blueprint(bp)

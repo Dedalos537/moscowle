@@ -108,6 +108,8 @@ class Config:
     # Drive del administrador: carpeta en el disco del servidor y cuota total (GB).
     DRIVE_ROOT = os.environ.get('DRIVE_ROOT') or None  # por defecto: instance/drive
     DRIVE_QUOTA_GB = float(os.environ.get('DRIVE_QUOTA_GB', '30'))
+    # Cockpit (administración del servidor con su propio inicio de sesión). El panel solo enlaza.
+    COCKPIT_URL = os.environ.get('COCKPIT_URL', 'https://192.168.1.249:9090')
     ALLOWED_UPLOAD_EXTENSIONS = {
         'png',
         'jpg',

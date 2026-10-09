@@ -18,6 +18,7 @@ import { Modal } from '../../../../shared/components/modal/modal';
 import { Incidents } from '../incidents/incidents';
 import { BotPanel } from '../bot-panel/bot-panel';
 import { ChannelsPanel } from '../channels-panel/channels-panel';
+import { ServerMonitor } from '../server-monitor/server-monitor';
 
 export type TabId = 'backend' | 'logs' | 'csp' | 'tokens' | 'incidents' | 'llm' | 'notifications' | 'bot';
 
@@ -76,7 +77,7 @@ interface AIProviderForm {
 @Component({
   selector: 'app-visor-funcionamiento',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input, Alert, Modal, Incidents, BotPanel, ChannelsPanel],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input, Alert, Modal, Incidents, BotPanel, ChannelsPanel, ServerMonitor],
   templateUrl: './visor-funcionamiento.html',
   styleUrl: './visor-funcionamiento.scss',
   animations: [fadeInUp, scaleIn, listStagger, cardEnter],

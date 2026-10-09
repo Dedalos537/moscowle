@@ -1,0 +1,132 @@
+<section class="sm" aria-labelledby="sm-title">
+  <header class="sm-head">
+    <div>
+      <h2 id="sm-title" class="sm-title">Estado del servidor</h2>
+      <p class="sm-sub">
+        @if (status(); as s) { {{ s.host }} · encendido hace {{ uptime(s.uptime) }} · se actualiza cada 10 s }
+        @else if (!error()) { Leyendo el servidor… }
+      </p>
+    </div>
+    @if (status()?.cockpit_url; as url) {
+      <a class="sm-cockpit" [href]="url" target="_blank" rel="noopener noreferrer">
+        <fa-icon [icon]="['fas', 'terminal']" aria-hidden="true"></fa-icon>
+        Abrir Cockpit
+        <fa-icon [icon]="['fas', 'arrow-up-right-from-square']" class="sm-cockpit__ext" aria-hidden="true"></fa-icon>
+      </a>
+    }
+  </header>
+
+  @if (error()) {
+    <p class="sm-alert" role="alert">{{ error() }}</p>
+  }
+
+  @if (status(); as s) {
+    @if (downServices().length) {
+      <p class="sm-alert" role="alert">
+        <fa-icon [icon]="['fas', 'triangle-exclamation']" aria-hidden="true"></fa-icon>
+        {{ downServices().length === 1 ? 'Un servicio no está activo' : downServices().length + ' servicios no están activos' }}:
+        {{ downLabels() }}. Revísalo en Cockpit.
+      </p>
+    }
+
+    <div class="sm-resources">
+      <div class="sm-res">
+        <div class="sm-res__row"><span class="sm-res__label">CPU</span><span class="sm-res__value">{{ s.cpu.pct ?? '—' }} %</span></div>
+        <div class="sm-bar" [class]="level(s.cpu.pct)"><span [style.width.%]="s.cpu.pct ?? 0"></span></div>
+        <p class="sm-res__meta">{{ s.cpu.cores }} núcleos · carga {{ s.cpu.load ? s.cpu.load.join(' · ') : '—' }}</p>
+      </div>
+      <div class="sm-res">
+        <div class="sm-res__row"><span class="sm-res__label">Memoria</span><span class="sm-res__value">{{ s.memory?.pct ?? '—' }} %</span></div>
+        <div class="sm-bar" [class]="level(s.memory?.pct)"><span [style.width.%]="s.memory?.pct ?? 0"></span></div>
+        <p class="sm-res__meta">{{ size(s.memory?.used) }} de {{ size(s.memory?.total) }}@if (s.memory?.swap_total) { · swap {{ size(s.memory?.swap_used) }} }</p>
+      </div>
+      @for (d of s.disks; track d.label) {
+        <div class="sm-res">
+          <div class="sm-res__row"><span class="sm-res__label">Disco · {{ d.label }}</span><span class="sm-res__value">{{ d.pct }} %</span></div>
+          <div class="sm-bar" [class]="level(d.pct)"><span [style.width.%]="d.pct"></span></div>
+          <p class="sm-res__meta">{{ size(d.used) }} de {{ size(d.total) }}</p>
+        </div>
+      }
+      <div class="sm-res">
+        <div class="sm-res__row"><span class="sm-res__label">Proceso de la app</span><span class="sm-res__value">{{ size(s.process.rss) }}</span></div>
+        <p class="sm-res__meta">PID {{ s.process.pid }} · {{ s.process.threads ?? '—' }} hilos</p>
+      </div>
+    </div>
+
+    <div class="sm-cols">
+      <div class="sm-block">
+        <h3 class="sm-h">Servicios</h3>
+        <ul class="sm-list">
+          @for (sv of s.services; track sv.unit) {
+            <li>
+              <span class="sm-dot" [attr.data-state]="sv.state" aria-hidden="true"></span>
+              <span class="sm-list__name">{{ sv.label }}</span>
+              <span class="sm-state" [attr.data-state]="sv.state">{{ stateLabel(sv.state) }}</span>
+            </li>
+          }
+        </ul>
+      </div>
+      <div class="sm-block">
+        <h3 class="sm-h">Piezas de la app</h3>
+        <ul class="sm-list">
+          @for (c of s.checks; track c.name) {
+            <li>
+              <fa-icon [icon]="['fas', c.ok ? 'circle-check' : 'circle-xmark']" class="sm-check" [class.is-bad]="!c.ok" aria-hidden="true"></fa-icon>
+              <span class="sm-list__name">{{ c.name }}</span>
+              <span class="sm-list__detail">{{ c.detail }}</span>
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+  }
+
+  <!-- Historial guardado en la base de datos -->
+  <div class="sm-block sm-chart">
+    <div class="sm-chart__head">
+      <h3 class="sm-h">CPU y memoria · últimas {{ hours() }} h</h3>
+      <div class="sm-seg" role="group" aria-label="Periodo">
+        @for (h of [6, 24, 168]; track h) {
+          <button type="button" [class.is-on]="hours() === h" [attr.aria-pressed]="hours() === h" (click)="setHours(h)">{{ h === 168 ? '7 días' : h + ' h' }}</button>
+        }
+      </div>
+    </div>
+    <div class="sm-legend" aria-hidden="true">
+      <span><i class="sm-swatch sm-swatch--cpu"></i>CPU</span>
+      <span><i class="sm-swatch sm-swatch--mem"></i>Memoria</span>
+    </div>
+    @if (series(); as g) {
+      <div class="sm-plot">
+        <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" role="img" [attr.aria-label]="'CPU y memoria en porcentaje durante las últimas ' + hours() + ' horas'"
+          (mousemove)="onMove($event)" (mouseleave)="hover.set(null)">
+          @for (v of gridY; track v) {
+            <line class="sm-grid" [attr.x1]="PAD.l" [attr.x2]="W - PAD.r" [attr.y1]="g.y(v)" [attr.y2]="g.y(v)" />
+            <text class="sm-axis" [attr.x]="PAD.l - 6" [attr.y]="g.y(v) + 3" text-anchor="end">{{ v }}</text>
+          }
+          @for (t of g.ticks; track $index) {
+            <text class="sm-axis" [attr.x]="t.x" [attr.y]="H - 6" text-anchor="middle">{{ t.label }}</text>
+          }
+          <path class="sm-line sm-line--mem" [attr.d]="g.mem.d" />
+          <path class="sm-line sm-line--cpu" [attr.d]="g.cpu.d" />
+          @if (last(g.cpu.pts); as p) { <text class="sm-direct" [attr.x]="p.x + 6" [attr.y]="p.y + 3">CPU</text> }
+          @if (last(g.mem.pts); as p) { <text class="sm-direct" [attr.x]="p.x + 6" [attr.y]="p.y + 3">Mem.</text> }
+          @if (hovered(); as h) {
+            <line class="sm-cross" [attr.x1]="hoverX()" [attr.x2]="hoverX()" [attr.y1]="PAD.t" [attr.y2]="H - PAD.b" />
+            @if (h.cpu_pct != null) { <circle class="sm-pt sm-pt--cpu" [attr.cx]="hoverX()" [attr.cy]="g.y(h.cpu_pct)" r="4" /> }
+            @if (h.mem_pct != null) { <circle class="sm-pt sm-pt--mem" [attr.cx]="hoverX()" [attr.cy]="g.y(h.mem_pct)" r="4" /> }
+          }
+        </svg>
+        @if (hovered(); as h) {
+          <div class="sm-tip" [style.left.%]="(hoverX() / W) * 100" role="status">
+            <strong>{{ stamp(h.taken_at) }}</strong>
+            <span><i class="sm-swatch sm-swatch--cpu"></i>CPU {{ h.cpu_pct ?? '—' }} %</span>
+            <span><i class="sm-swatch sm-swatch--mem"></i>Memoria {{ h.mem_pct ?? '—' }} %</span>
+            @if (h.services_down.length) { <span class="sm-tip__bad">Caídos: {{ h.services_down.join(', ') }}</span> }
+          </div>
+        }
+      </div>
+    } @else {
+      <p class="sm-empty">El servidor guarda una medición cada 5 minutos; la gráfica aparece en cuanto haya dos.</p>
+    }
+  </div>
+</section>
