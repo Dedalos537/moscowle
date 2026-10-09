@@ -144,6 +144,7 @@
   .rp-mail { overflow-wrap: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 11rem; }
   .rp-table .rp-num { width: auto; }
   .rp-panel { padding: 1rem; }
+  .rp-panel.rp-kpis { padding: 0; }
   .rp-kpi { padding: 0.875rem 1rem; }
   .rp-kpi__value { font-size: 1.5rem; }
   .rp-money__amount { font-size: 1.875rem; }
