@@ -127,13 +127,13 @@
           </div>
         } @else {
           <table class="dv-table">
-            <thead><tr><th>Nombre</th><th>Estaba en</th><th>Eliminado</th><th class="sr-only">Acciones</th></tr></thead>
+            <thead><tr><th>Nombre</th><th>Estaba en</th><th>Eliminado</th><th><span class="sr-only">Acciones</span></th></tr></thead>
             <tbody>
               @for (t of trashEntries(); track t.id) {
                 <tr>
                   <td><span class="dv-name"><fa-icon [icon]="icon(t)" class="dv-kind" [attr.data-kind]="t.kind" aria-hidden="true"></fa-icon>{{ t.name }}</span></td>
                   <td class="dv-muted">{{ folderOf(t.original) }}</td>
-                  <td class="dv-muted">{{ when(t.deleted_at) }}</td>
+                  <td class="dv-muted dv-when-cell">{{ when(t.deleted_at) }}</td>
                   <td class="dv-row-actions">
                     <button type="button" class="dv-btn dv-btn--sm" (click)="restore([t.id])">Restaurar</button>
                     <button type="button" class="dv-btn dv-btn--sm dv-btn--ghost-danger" (click)="purge([t.id])">Eliminar</button>
@@ -168,13 +168,13 @@
             <p class="dv-muted">Aún no imprimiste nada. Haz clic derecho sobre un PDF, una imagen o un documento y elige «Imprimir».</p>
           } @else {
             <table class="dv-table">
-              <thead><tr><th>Archivo</th><th>Impresora</th><th>Cuándo</th><th>Estado</th><th class="sr-only">Acciones</th></tr></thead>
+              <thead><tr><th>Archivo</th><th>Impresora</th><th>Cuándo</th><th>Estado</th><th><span class="sr-only">Acciones</span></th></tr></thead>
               <tbody>
                 @for (j of printJobs(); track j.id) {
                   <tr>
                     <td><span class="dv-name">{{ j.file_name }}</span><span class="dv-sub">{{ j.copies }} {{ j.copies === 1 ? 'copia' : 'copias' }}{{ j.duplex ? ' · doble cara' : '' }}{{ j.color ? '' : ' · B/N' }}{{ j.page_range ? ' · págs. ' + j.page_range : '' }}</span></td>
                     <td>{{ j.printer }}</td>
-                    <td class="dv-muted">{{ j.scheduled_at ? when(j.scheduled_at) : when(j.created_at) }}</td>
+                    <td class="dv-muted dv-when-cell">{{ whenFull(j.scheduled_at || j.sent_at || j.created_at) }}</td>
                     <td><span class="dv-state" [attr.data-state]="j.status" [title]="j.error || ''">{{ j.status === 'scheduled' ? 'Programado' : j.status === 'sent' ? 'Enviado' : j.status === 'failed' ? 'Falló' : 'Cancelado' }}</span>
                       @if (j.error) { <span class="dv-sub dv-sub--err">{{ j.error }}</span> }</td>
                     <td class="dv-row-actions">

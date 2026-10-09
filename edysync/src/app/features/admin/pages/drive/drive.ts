@@ -865,6 +865,12 @@ export class Drive implements OnInit, OnDestroy {
     return sameDay ? d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
   }
 
+  /** Fecha con hora («10 oct., 08:00»): para trabajos de impresión, donde la hora importa. */
+  whenFull(iso: string | null) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleString('es-PE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+
   detail(e: DriveEntry) {
     return e.type === 'dir' ? (e.items === 1 ? '1 elemento' : `${e.items ?? 0} elementos`) : this.size(e.size);
   }
