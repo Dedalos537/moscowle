@@ -211,8 +211,8 @@ body { font-size: 16px; }
   }
 
   // Las tablas de datos centran sus columnas; las listas de archivos del drive (.dv-table) se leen a la izquierda.
-  table:not(.dv-table) th:nth-child(n + 2),
-  table:not(.dv-table) td:nth-child(n + 2) {
+  table:not(.dv-table):not(.data-table) th:nth-child(n + 2),
+  table:not(.dv-table):not(.data-table) td:nth-child(n + 2) {
     text-align: center !important;
   }
 }

@@ -1,340 +1,174 @@
-<ng-template #headerActions></ng-template>
+<ng-template #headerActions>
+  <div class="rp-actions" role="group" aria-label="Acciones de reportes">
+    <button type="button" class="rp-btn" (click)="exportCSV()" [disabled]="exporting" title="Descargar los pagos en CSV">
+      <fa-icon [icon]="['fas', 'file-arrow-down']" aria-hidden="true"></fa-icon><span>{{ exporting ? 'Exportando…' : 'Exportar pagos' }}</span>
+    </button>
+    <button type="button" class="rp-btn" (click)="sendWeeklyReport()" [disabled]="reportSending" title="Enviar el resumen semanal por correo">
+      <fa-icon [icon]="['fas', 'envelope']" aria-hidden="true"></fa-icon><span>{{ reportSending ? 'Enviando…' : 'Enviar semanal' }}</span>
+    </button>
+    <button type="button" class="rp-btn rp-btn--primary" (click)="generateAIReport()" [disabled]="strategicGenerating" title="Análisis estratégico del centro con IA">
+      <fa-icon [icon]="['fas', 'wand-magic-sparkles']" aria-hidden="true"></fa-icon><span>{{ strategicGenerating ? 'Analizando…' : 'Análisis con IA' }}</span>
+    </button>
+  </div>
+</ng-template>
 
-<div class="p-4 md:p-8 space-y-6" [@fadeInUp]>
+<div class="rp" [@fadeInUp]>
 
   @if (loading) {
-    <div class="flex justify-center py-24">
-      <app-spinner size="md" colorClass="text-primary"></app-spinner>
+    <div class="rp-skeleton" aria-hidden="true">
+      <span class="rp-skeleton__strip"></span>
+      <span class="rp-skeleton__block"></span>
+      <span class="rp-skeleton__block"></span>
     </div>
   } @else {
 
-    <div class="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4">
-      <div class="flex gap-2 flex-wrap">
-        <app-button variant="primary" label="Análisis Llama AI" [icon]="['fas', 'brain']" [disabled]="aiGenerating" (clicked)="generateAIReport()"></app-button>
-        <app-button variant="primary" label="Reporte Semanal" [icon]="['fas', 'envelope']" [disabled]="reportSending" (clicked)="sendWeeklyReport()"></app-button>
-        <app-button variant="secondary" label="Exportar CSV" [icon]="['fas', 'file-arrow-down']" (clicked)="exportCSV()"></app-button>
-      </div>
-    </div>
-
     @if (overview) {
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-          <div class="flex items-start justify-between mb-3">
-            <span class="text-label-caps text-primary">Pacientes Activos</span>
-            <fa-icon [icon]="['fas', 'users']" class="text-primary text-xl"></fa-icon>
-          </div>
-          <p class="text-3xl font-black text-on-surface tracking-tight">{{ overview.patients }}</p>
-          <p class="text-xs text-on-surface-variant mt-1">Registrados en el sistema</p>
+      <section class="rp-panel rp-kpis" aria-label="Operación del centro">
+        <div class="rp-kpi">
+          <span class="rp-kpi__label"><fa-icon [icon]="['fas', 'users']" aria-hidden="true"></fa-icon>Pacientes activos</span>
+          <span class="rp-kpi__value">{{ num(overview.patients) }}</span>
         </div>
-
-        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-          <div class="flex items-start justify-between mb-3">
-            <span class="text-label-caps text-info">Terapeutas</span>
-            <fa-icon [icon]="['fas', 'id-card']" class="text-info text-xl"></fa-icon>
-          </div>
-          <p class="text-3xl font-black text-on-surface tracking-tight">{{ overview.therapists }}</p>
-          <p class="text-xs text-on-surface-variant mt-1">Registrados en el sistema</p>
+        <div class="rp-kpi">
+          <span class="rp-kpi__label"><fa-icon [icon]="['fas', 'id-card']" aria-hidden="true"></fa-icon>Terapeutas</span>
+          <span class="rp-kpi__value">{{ num(overview.therapists) }}</span>
         </div>
-
-        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-          <div class="flex items-start justify-between mb-3">
-            <span class="text-label-caps text-warning">Sesiones Totales</span>
-            <fa-icon [icon]="['fas', 'calendar-days']" class="text-warning text-xl"></fa-icon>
-          </div>
-          <p class="text-3xl font-black text-on-surface tracking-tight">{{ overview.sessions_total }}</p>
-          <p class="text-xs text-on-surface-variant mt-1">Histórico acumulado</p>
+        <div class="rp-kpi">
+          <span class="rp-kpi__label"><fa-icon [icon]="['fas', 'calendar-days']" aria-hidden="true"></fa-icon>Sesiones registradas</span>
+          <span class="rp-kpi__value">{{ num(overview.sessions_total) }}</span>
         </div>
-
-        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-          <div class="flex items-start justify-between mb-3">
-            <span class="text-label-caps text-success">Precisión Global</span>
-            <fa-icon [icon]="['fas', 'chart-line']" class="text-success text-xl"></fa-icon>
-          </div>
-          <p class="text-3xl font-black text-on-surface tracking-tight">{{ overview.avg_accuracy }}%</p>
-          <p class="text-xs text-on-surface-variant mt-1">Promedio de precisión</p>
+        <div class="rp-kpi">
+          <span class="rp-kpi__label"><fa-icon [icon]="['fas', 'bullseye']" aria-hidden="true"></fa-icon>Precisión promedio</span>
+          <span class="rp-kpi__value" [attr.data-level]="level(overview.avg_accuracy)">{{ pct(overview.avg_accuracy) }}</span>
         </div>
-      </div>
+      </section>
     }
 
     @if (!hideCharts()) {
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-        <div class="flex items-start justify-between mb-3">
-          <span class="text-label-caps text-success">Ingresos Reales</span>
-          <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-success text-xl"></fa-icon>
-        </div>
-        <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ financials.income_real.toFixed(2) }}</p>
-        <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'arrow-up']" class="text-[14px] text-success"></fa-icon>
-          Recaudado este mes
-        </p>
-      </div>
-
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-        <div class="flex items-start justify-between mb-3">
-          <span class="text-label-caps text-info">Proyección</span>
-          <fa-icon [icon]="['fas', 'building-columns']" class="text-info text-xl"></fa-icon>
-        </div>
-        <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ financials.income_expected.toFixed(2) }}</p>
-        <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'calendar-check']" class="text-[14px] text-info"></fa-icon>
-          Si todos pagaran a tiempo
-        </p>
-      </div>
-
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-        <div class="flex items-start justify-between mb-3">
-          <span class="text-label-caps text-error">Morosidad Acumulada</span>
-          <fa-icon [icon]="['fas', 'triangle-exclamation']" class="text-error text-xl"></fa-icon>
-        </div>
-        <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ financials.overdue_amount.toFixed(2) }}</p>
-        <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'users']" class="text-[14px] text-error"></fa-icon>
-          {{ financials.overdue_users_count }} usuarios con deuda
-        </p>
-      </div>
-
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-        <div class="flex items-start justify-between mb-3">
-          <span class="text-label-caps text-primary">Ejecución</span>
-          <fa-icon [icon]="['fas', 'percent']" class="text-primary text-xl"></fa-icon>
-        </div>
-        <p class="text-3xl font-black text-on-surface tracking-tight">{{ executionPercent.toFixed(1) }}%</p>
-        <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'circle-check']" class="text-[14px] text-primary"></fa-icon>
-          Progreso de cobro
-        </p>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
-
-      <div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-        <h4 class="text-label-caps text-on-surface-variant mb-5 flex items-center gap-2">
-          <fa-icon [icon]="['fas', 'chart-bar']" class="text-[16px]"></fa-icon>
-          Comparativa Visual
-        </h4>
-        <div class="space-y-5">
-          <div>
-            <div class="flex justify-between text-sm mb-1.5">
-              <span class="font-semibold text-on-surface">Proyectado</span>
-              <span class="font-bold text-on-surface">S/ {{ financials.income_expected.toFixed(2) }}</span>
-            </div>
-            <div class="w-full bg-surface-container-high rounded-full h-5 relative overflow-hidden">
-              <div class="h-full rounded-full" style="width: 100%; background: linear-gradient(90deg, var(--color-info), var(--color-info-container))"></div>
-            </div>
-          </div>
-          <div>
-            <div class="flex justify-between text-sm mb-1.5">
-              <span class="font-semibold text-on-surface">Recaudado</span>
-              <span class="font-bold text-success">S/ {{ financials.income_real.toFixed(2) }}</span>
-            </div>
-            <div class="w-full bg-surface-container-high rounded-full h-5 relative overflow-hidden">
-              <div
-                class="h-full rounded-full animate-gradient"
-                [style.width.%]="executionPercent > 100 ? 100 : executionPercent"
-                style="background: linear-gradient(90deg, var(--color-success), var(--color-success-container))"
-              ></div>
-            </div>
-          </div>
-          <div>
-            <div class="flex justify-between text-sm mb-1.5">
-              <span class="font-semibold text-on-surface">Deuda (Morosidad)</span>
-              <span class="font-bold text-error">S/ {{ financials.overdue_amount.toFixed(2) }}</span>
-            </div>
-            <div class="w-full bg-surface-container-high rounded-full h-5 relative overflow-hidden">
-              <div
-                class="h-full rounded-full"
-                [style.width.%]="overduePercent > 100 ? 100 : overduePercent"
-                style="background: linear-gradient(90deg, var(--color-error), var(--color-error-container))"
-              ></div>
-            </div>
+      <section class="rp-panel rp-money" aria-labelledby="rp-money-title">
+        <header class="rp-panel__head">
+          <h2 id="rp-money-title" class="rp-h">Cobranza del mes</h2>
+          <span class="rp-chip" [attr.data-level]="level(executionPercent)">{{ pct(executionPercent) }} de lo proyectado</span>
+        </header>
+        <div class="rp-money__main">
+          <p class="rp-money__amount">{{ money(financials.income_real) }}</p>
+          <p class="rp-money__sub">recaudado de {{ money(financials.income_expected) }} proyectados</p>
+          <div class="rp-meter" role="meter" aria-label="Recaudado frente a lo proyectado" [attr.aria-valuenow]="executionPercent" aria-valuemin="0" aria-valuemax="100">
+            <span class="rp-meter__fill" [style.width.%]="min100(executionPercent)"></span>
           </div>
         </div>
-
-        <div class="mt-5 pt-4 border-t border-border/30 grid grid-cols-3 gap-3 text-center">
+        <dl class="rp-money__grid">
           <div>
-            <p class="text-label-caps text-on-surface-variant">Gastos</p>
-            <p class="text-sm font-bold text-on-surface">S/ {{ financials.expenses.toFixed(2) }}</p>
-          </div>
-          <div>
-            <p class="text-label-caps text-on-surface-variant">Neto</p>
-            <p class="text-sm font-bold text-success">S/ {{ (financials.income_real - financials.expenses).toFixed(2) }}</p>
+            <dt>Por cobrar</dt>
+            <dd>{{ money(max0(financials.income_expected - financials.income_real)) }}</dd>
           </div>
           <div>
-            <p class="text-label-caps text-on-surface-variant">Ejec.</p>
-            <p class="text-sm font-bold text-primary">{{ executionPercent.toFixed(1) }}%</p>
+            <dt>Morosidad</dt>
+            <dd class="is-bad">{{ money(financials.overdue_amount) }}</dd>
+            <dd class="rp-money__note">{{ financials.overdue_users_count }} {{ financials.overdue_users_count === 1 ? 'familia con deuda' : 'familias con deuda' }}</dd>
           </div>
-        </div>
-      </div>
-
-      <div class="lg:col-span-3 bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-        <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
-          <fa-icon [icon]="['fas', 'chart-line']" class="text-[16px]"></fa-icon>
-          Comparación Financiera
-        </h4>
-        @if (!hideCharts()) {
-          <div class="relative" style="height: 260px">
-            <canvas
-              baseChart
-              #financialChart
-              [data]="financialChartData"
-              [options]="financialChartOptions"
-              [type]="financialChartType"
-            ></canvas>
+          <div>
+            <dt>Gastos</dt>
+            <dd>{{ money(financials.expenses) }}</dd>
           </div>
-        }
-      </div>
-    </div>
+          <div>
+            <dt>Resultado neto</dt>
+            <dd [class.is-good]="financials.income_real - financials.expenses >= 0" [class.is-bad]="financials.income_real - financials.expenses < 0">
+              {{ money(financials.income_real - financials.expenses) }}
+            </dd>
+          </div>
+        </dl>
+      </section>
     }
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'users']" class="text-primary text-lg"></fa-icon>
-            Terapeutas
-          </h3>
-          <span class="text-xs text-on-surface-variant font-medium">{{ therapists.length }} registros</span>
-        </div>
-
-        @if (therapists.length > 0 && !hideCharts()) {
-          <div class="relative mb-4" style="height: 100px">
-            <canvas
-              baseChart
-              #therapistChart
-              [data]="therapistChartData"
-              [options]="therapistChartOptions"
-              [type]="therapistChartType"
-            ></canvas>
-          </div>
-        }
-
-        <div class="overflow-x-auto">
-          <table class="w-full min-w-[480px]">
+    <div class="rp-two">
+      <section class="rp-panel" aria-labelledby="rp-ther-title">
+        <header class="rp-panel__head">
+          <h2 id="rp-ther-title" class="rp-h">Terapeutas</h2>
+          <span class="rp-count">{{ therapists.length }}</span>
+        </header>
+        <div class="rp-scroll">
+          <table class="rp-table data-table">
             <thead>
-              <tr class="border-b border-border/40">
-                <th class="px-4 py-3 text-left text-label-caps text-on-surface-variant">Nombre</th>
-                <th class="px-4 py-3 text-left text-label-caps text-on-surface-variant">Email</th>
-                <th class="px-4 py-3 text-center text-label-caps text-on-surface-variant">Sesiones</th>
-                <th class="px-4 py-3 text-right text-label-caps text-on-surface-variant">Precisión</th>
-              </tr>
+              <tr><th scope="col">Nombre</th><th scope="col" class="rp-num">Sesiones</th><th scope="col">Precisión</th></tr>
             </thead>
             <tbody>
               @for (t of therapists; track t.id) {
-                <tr class="border-t border-border/20 hover:bg-surface-container-low transition-colors">
-                  <td class="px-4 py-3 text-sm font-semibold text-on-surface">{{ t.name }}</td>
-                  <td class="px-4 py-3 text-sm text-on-surface-variant">{{ t.email }}</td>
-                  <td class="px-4 py-3 text-sm text-center font-medium text-on-surface">{{ t.sessions }}</td>
-                  <td class="px-4 py-3 text-right">
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
-                      [class.bg-success-container]="t.avg_accuracy >= 90"
-                      [class.text-success]="t.avg_accuracy >= 90"
-                      [class.bg-warning-container]="t.avg_accuracy >= 75 && t.avg_accuracy < 90"
-                      [class.text-warning]="t.avg_accuracy >= 75 && t.avg_accuracy < 90"
-                      [class.bg-error-container]="t.avg_accuracy < 75"
-                      [class.text-error]="t.avg_accuracy < 75">
-                      <fa-icon [icon]="['fas', 'circle']" class="text-[12px]"
-                        [class.text-success]="t.avg_accuracy >= 90"
-                        [class.text-warning]="t.avg_accuracy >= 75 && t.avg_accuracy < 90"
-                        [class.text-error]="t.avg_accuracy < 75"></fa-icon>
-                      {{ t.avg_accuracy }}%
+                <tr>
+                  <td><span class="rp-name">{{ t.name }}</span><span class="rp-mail">{{ t.email }}</span></td>
+                  <td class="rp-num">{{ num(t.sessions) }}</td>
+                  <td>
+                    <span class="rp-bar" [attr.data-level]="level(t.avg_accuracy)">
+                      <span class="rp-bar__track"><span class="rp-bar__fill" [style.width.%]="min100(t.avg_accuracy)"></span></span>
+                      <span class="rp-bar__value">{{ pct(t.avg_accuracy) }}</span>
                     </span>
                   </td>
                 </tr>
               } @empty {
-                <tr>
-                  <td colspan="4" class="px-4 py-8 text-center text-sm text-on-surface-variant">No hay datos de terapeutas.</td>
-                </tr>
+                <tr><td colspan="3" class="rp-empty">Aún no hay sesiones registradas por terapeutas.</td></tr>
               }
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'heart-pulse']" class="text-primary text-lg"></fa-icon>
-            Pacientes
-          </h3>
-          <span class="text-xs text-on-surface-variant font-medium">{{ patients.length }} registros</span>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full min-w-[480px]">
+      <section class="rp-panel" aria-labelledby="rp-pat-title">
+        <header class="rp-panel__head">
+          <h2 id="rp-pat-title" class="rp-h">Pacientes</h2>
+          <span class="rp-count">{{ patients.length }}</span>
+        </header>
+        <div class="rp-scroll">
+          <table class="rp-table data-table">
             <thead>
-              <tr class="border-b border-border/40">
-                <th class="px-4 py-3 text-left text-label-caps text-on-surface-variant">Nombre</th>
-                <th class="px-4 py-3 text-left text-label-caps text-on-surface-variant">Email</th>
-                <th class="px-4 py-3 text-center text-label-caps text-on-surface-variant">Juegos</th>
-                <th class="px-4 py-3 text-right text-label-caps text-on-surface-variant">Precisión</th>
-              </tr>
+              <tr><th scope="col">Nombre</th><th scope="col" class="rp-num">Juegos</th><th scope="col">Precisión</th></tr>
             </thead>
             <tbody>
               @for (p of patients; track p.id) {
-                <tr class="border-t border-border/20 hover:bg-surface-container-low transition-colors">
-                  <td class="px-4 py-3 text-sm font-semibold text-on-surface">{{ p.name }}</td>
-                  <td class="px-4 py-3 text-sm text-on-surface-variant">{{ p.email }}</td>
-                  <td class="px-4 py-3 text-sm text-center font-medium text-on-surface">{{ p.plays }}</td>
-                  <td class="px-4 py-3 text-right">
-                    <div class="flex items-center justify-end gap-2">
-                      <div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-                        <div
-                          class="h-full rounded-full transition-all duration-700"
-                          [class.bg-success-container0]="p.avg_accuracy >= 90"
-                          [class.bg-warning]="p.avg_accuracy >= 75 && p.avg_accuracy < 90"
-                          [class.bg-error]="p.avg_accuracy < 75"
-                          [style.width.%]="p.avg_accuracy"
-                        ></div>
-                      </div>
-                      <span class="text-xs font-bold"
-                        [class.text-success]="p.avg_accuracy >= 90"
-                        [class.text-warning]="p.avg_accuracy >= 75 && p.avg_accuracy < 90"
-                        [class.text-error]="p.avg_accuracy < 75">
-                        {{ p.avg_accuracy }}%
-                      </span>
-                    </div>
+                <tr>
+                  <td><span class="rp-name">{{ p.name }}</span><span class="rp-mail">{{ p.email }}</span></td>
+                  <td class="rp-num">{{ num(p.plays) }}</td>
+                  <td>
+                    <span class="rp-bar" [attr.data-level]="level(p.avg_accuracy)">
+                      <span class="rp-bar__track"><span class="rp-bar__fill" [style.width.%]="min100(p.avg_accuracy)"></span></span>
+                      <span class="rp-bar__value">{{ pct(p.avg_accuracy) }}</span>
+                    </span>
                   </td>
                 </tr>
               } @empty {
-                <tr>
-                  <td colspan="4" class="px-4 py-8 text-center text-sm text-on-surface-variant">No hay datos de pacientes.</td>
-                </tr>
+                <tr><td colspan="3" class="rp-empty">Los pacientes aparecerán aquí cuando jueguen sus primeras actividades.</td></tr>
               }
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
     </div>
 
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 border-l-4 border-l-primary">
+    <section class="rp-panel" aria-labelledby="rp-audit-title">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-4 border-b border-border/30">
         <div class="flex items-center gap-3">
           <fa-icon [icon]="['fas', 'brain']" class="text-2xl text-primary"></fa-icon>
           <div>
-            <h2 class="text-lg font-bold text-on-surface">Auditoría IA (Whisper + Llama)</h2>
-            <p class="text-sm text-on-surface-variant">Mide la fidelidad de las sesiones (Programación vs Grabación)</p>
+            <h2 id="rp-audit-title" class="text-lg font-bold text-on-surface">Auditoría de sesiones con IA</h2>
+            <p class="text-sm text-on-surface-variant">Compara lo programado con lo que se grabó en cada sesión</p>
           </div>
         </div>
-        <app-button variant="primary" class="mt-4 md:mt-0" [disabled]="aiGenerating" (clicked)="generateReport()">
+        <app-button variant="secondary" class="mt-4 md:mt-0" [disabled]="aiGenerating" (clicked)="generateReport()">
             @if (aiGenerating) {
               <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'" class="text-[18px]"></fa-icon>
-              Generando Reporte...
+              Generando informe…
             } @else {
               <fa-icon [icon]="['fas', 'wand-magic']" class="text-[18px]"></fa-icon>
-              Generar Reporte Llama
+              Generar informe de auditoría
             }
           </app-button>
       </div>
 
-      @if (aiReport) {
-        <div class="mb-6 p-5 bg-gradient-to-r from-accent-container to-accent-container rounded-xl border border-primary-container/30 animate-fade-in">
+      @if (auditReport) {
+        <div class="mb-6 p-5 bg-surface-container-low rounded-xl border border-border/30">
           <h3 class="text-sm font-bold text-primary mb-3 flex items-center gap-2">
             <fa-icon [icon]="['fas', 'table-cells-large']" class="text-lg text-primary"></fa-icon>
-            Informe Llama
+            Informe de auditoría
           </h3>
-          <div class="prose prose-sm max-w-none text-on-surface" [innerHTML]="aiReport"></div>
+          <div class="prose prose-sm max-w-none text-on-surface" [innerHTML]="auditReport"></div>
         </div>
       }
 
@@ -355,7 +189,7 @@
             </div>
             <div>
               <p class="text-label-caps text-success mb-0.5">Promedio Fidelidad</p>
-              <p class="text-2xl font-black text-on-surface">{{ auditStats?.avg_score || 0 }} <span class="text-sm font-normal text-on-surface-variant">%</span></p>
+              <p class="text-2xl font-black text-on-surface">{{ pct(auditStats?.avg_score || 0) }}</p>
             </div>
           </div>
         </div>
@@ -369,7 +203,7 @@
             @for (t of auditStats?.by_therapist || []; track $index) {
               <div class="flex justify-between items-center text-sm p-2 hover:bg-surface-container rounded-lg transition-colors">
                 <span class="font-medium text-on-surface">{{ t.name }}</span>
-                <span class="bg-success-container text-success font-bold px-2 py-0.5 rounded-md text-xs">{{ t.avg_score }}%</span>
+                <span class="rp-chip" [attr.data-level]="level(t.avg_score)">{{ pct(t.avg_score) }}</span>
               </div>
             } @empty {
               <p class="text-xs text-center text-on-surface-variant py-4">No hay datos</p>
@@ -382,26 +216,14 @@
             <fa-icon [icon]="['fas', 'clock-rotate-left']" class="text-lg text-primary"></fa-icon>
             Últimas Auditorías
           </h3>
-          <table class="w-full text-left text-sm">
+          <table class="w-full text-left text-sm data-table">
             <tbody>
               @for (r of auditStats?.recent || []; track $index) {
                 <tr class="border-b border-border/20 last:border-b-0 hover:bg-surface-container transition-colors">
                   <td class="p-3 font-semibold text-on-surface">{{ r.title }}</td>
                   <td class="p-3 text-on-surface-variant text-xs">{{ r.therapist }}</td>
                   <td class="p-3 text-right">
-                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold"
-                      [class.bg-success-container]="r.score >= 8"
-                      [class.text-success]="r.score >= 8"
-                      [class.bg-warning-container]="r.score >= 5 && r.score < 8"
-                      [class.text-warning]="r.score >= 5 && r.score < 8"
-                      [class.bg-error-container]="r.score < 5"
-                      [class.text-error]="r.score < 5">
-                      <fa-icon [icon]="['fas', 'circle']" class="text-[10px]"
-                        [class.text-success]="r.score >= 8"
-                        [class.text-warning]="r.score >= 5 && r.score < 8"
-                        [class.text-error]="r.score < 5"></fa-icon>
-                      {{ r.score }}%
-                    </span>
+                    <span class="rp-chip" [attr.data-level]="level(r.score)">{{ pct(r.score) }}</span>
                   </td>
                 </tr>
               } @empty {
@@ -413,30 +235,21 @@
           </table>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+    <div class="rp-panel">
       <div class="flex gap-1 mb-4 pb-3 border-b border-border/30">
-        <button class="px-4 py-2 text-sm font-bold rounded-lg transition-colors"
-                [class.bg-secondary/10]="activeReportTab === 'weekly'"
-                [class.text-secondary]="activeReportTab === 'weekly'"
-                [class.text-on-surface-variant]="activeReportTab !== 'weekly'"
+        <button type="button" class="rp-tab" [class.is-on]="activeReportTab === 'weekly'" [attr.aria-pressed]="activeReportTab === 'weekly'"
                 (click)="setReportTab('weekly')">
           <fa-icon [icon]="['fas', 'calendar-days']" class="text-[16px] align-text-bottom mr-1"></fa-icon>
           Semanal
         </button>
-        <button class="px-4 py-2 text-sm font-bold rounded-lg transition-colors"
-                [class.bg-info-container]="activeReportTab === 'monthly'"
-                [class.text-info]="activeReportTab === 'monthly'"
-                [class.text-on-surface-variant]="activeReportTab !== 'monthly'"
+        <button type="button" class="rp-tab" [class.is-on]="activeReportTab === 'monthly'" [attr.aria-pressed]="activeReportTab === 'monthly'"
                 (click)="setReportTab('monthly')">
           <fa-icon [icon]="['fas', 'calendar-days']" class="text-[16px] align-text-bottom mr-1"></fa-icon>
           Mensual
         </button>
-        <button class="px-4 py-2 text-sm font-bold rounded-lg transition-colors"
-                [class.bg-success-container]="activeReportTab === 'quarterly'"
-                [class.text-success]="activeReportTab === 'quarterly'"
-                [class.text-on-surface-variant]="activeReportTab !== 'quarterly'"
+        <button type="button" class="rp-tab" [class.is-on]="activeReportTab === 'quarterly'" [attr.aria-pressed]="activeReportTab === 'quarterly'"
                 (click)="setReportTab('quarterly')">
           <fa-icon [icon]="['fas', 'clock']" class="text-[16px] align-text-bottom mr-1"></fa-icon>
           Trimestral
@@ -738,7 +551,7 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+      <div class="rp-panel">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
             <fa-icon [icon]="['fas', 'calendar-day']" class="text-lg text-info"></fa-icon>
@@ -796,7 +609,7 @@
         }
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+      <div class="rp-panel">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
             <fa-icon [icon]="['fas', 'gauge-high']" class="text-lg text-success"></fa-icon>
@@ -850,8 +663,6 @@
   }
 </div>
 
-<app-modal [isOpen]="!!aiReport" title="Reporte Estratégico IA" (close)="closeAIReport()">
-  <div class="prose prose-sm max-w-none whitespace-pre-wrap text-on-surface">
-    {{ aiReport }}
-  </div>
+<app-modal [isOpen]="!!strategicReport" title="Análisis del centro con IA" (close)="closeAIReport()">
+  <div class="rp-report">{{ strategicReport }}</div>
 </app-modal>

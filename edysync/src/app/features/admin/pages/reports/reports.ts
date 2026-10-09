@@ -2,15 +2,12 @@ import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionSt
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { BaseChartDirective } from 'ng2-charts';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { GlobalSettingsService } from '../../../../core/services/global-settings.service';
 import { TherapistStats, PatientStats } from '../../../../core/models/expense';
-import { Chart, registerables } from 'chart.js';
-import type { ChartConfiguration, ChartData } from 'chart.js';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../../../core/services/confirm.service';
@@ -21,7 +18,6 @@ import { Select } from '../../../../shared/components/select/select';
 import { Modal } from '../../../../shared/components/modal/modal';
 import DOMPurify from 'dompurify';
 
-Chart.register(...registerables);
 
 interface FinancialSummary {
   income_real: number;
@@ -39,15 +35,13 @@ interface FinancialSummary {
   styleUrl: './reports.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Modal],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Select, Modal],
 })
 export class Reports implements OnInit, OnDestroy {
   private settings = inject(GlobalSettingsService);
   hideCharts = this.settings.hideCharts;
 
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
-  @ViewChild('financialChart') financialChart?: any;
-  @ViewChild('therapistChart') therapistChart?: any;
 
   financials: FinancialSummary = {
     income_real: 0,
@@ -102,125 +96,12 @@ export class Reports implements OnInit, OnDestroy {
   loading = true;
   aiGenerating = false;
   reportSending = false;
-  aiReport: string | null = null;
+  /** Informe estratégico (texto, en la ventana) y de auditoría (HTML saneado, dentro de la página): antes compartían variable y salían duplicados. */
+  strategicReport: string | null = null;
+  auditReport: string | null = null;
+  strategicGenerating = false;
+  exporting = false;
 
-  readonly financialChartLabels = ['Proyectado', 'Recaudado', 'Gastos'];
-
-  financialChartData: ChartData<'bar'> = {
-    labels: this.financialChartLabels,
-    datasets: [
-      {
-        label: 'Monto (S/)',
-        data: [0, 0, 0],
-        backgroundColor: [
-          'rgba(59, 130, 246, 0.85)',
-          'rgba(117, 168, 58, 0.85)',
-          'rgba(186, 26, 26, 0.85)',
-        ],
-        borderColor: ['#3b82f6', '#75a83a', '#ba1a1a'],
-        borderWidth: 1,
-        borderRadius: 8,
-        barPercentage: 0.6,
-      },
-    ],
-  };
-
-  financialChartOptions: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: 'rgba(26, 28, 22, 0.92)',
-        titleFont: { family: 'Manrope', size: 12, weight: 700 },
-        bodyFont: { family: 'Manrope', size: 13, weight: 600 },
-        padding: { x: 14, y: 10 },
-        cornerRadius: 10,
-        displayColors: true,
-        boxPadding: 6,
-        callbacks: {
-          label: (ctx) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        grid: { display: false },
-        ticks: {
-          font: { family: 'Manrope', size: 12, weight: 600 },
-          color: '#76796c',
-        },
-      },
-      y: {
-        grid: { color: 'rgba(217, 219, 206, 0.4)' },
-        ticks: {
-          font: { family: 'Manrope', size: 11, weight: 500 },
-          color: '#76796c',
-          callback: (val) => `S/${val}`,
-        },
-        beginAtZero: true,
-      },
-    },
-  };
-
-  readonly financialChartType = 'bar' as const;
-
-  therapistChartLabels: string[] = [];
-
-  therapistChartData: ChartData<'bar'> = {
-    labels: [],
-    datasets: [
-      {
-        label: 'Precisión (%)',
-        data: [],
-        backgroundColor: 'rgba(117, 168, 58, 0.8)',
-        borderColor: '#75a83a',
-        borderWidth: 1,
-        borderRadius: 6,
-        barPercentage: 0.5,
-      },
-    ],
-  };
-
-  therapistChartOptions: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    indexAxis: 'y',
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: 'rgba(26, 28, 22, 0.92)',
-        titleFont: { family: 'Manrope', size: 12, weight: 700 },
-        bodyFont: { family: 'Manrope', size: 13, weight: 600 },
-        padding: { x: 14, y: 10 },
-        cornerRadius: 10,
-        callbacks: {
-          label: (ctx) => `${ctx.raw}%`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        grid: { color: 'rgba(217, 219, 206, 0.3)' },
-        ticks: {
-          font: { family: 'Manrope', size: 10, weight: 500 },
-          color: '#76796c',
-          callback: (val) => `${val}%`,
-        },
-        beginAtZero: true,
-        max: 100,
-      },
-      y: {
-        grid: { display: false },
-        ticks: {
-          font: { family: 'Manrope', size: 11, weight: 600 },
-          color: '#1a1c16',
-        },
-      },
-    },
-  };
-
-  readonly therapistChartType = 'bar' as const;
 
   private subscriptions = new Subscription();
 
@@ -234,8 +115,8 @@ export class Reports implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.headerService.setConfig({
-      title: 'Reportes y Finanzas',
-      subtitle: 'Resumen operativo y financiero',
+      title: 'Reportes',
+      subtitle: 'Operación, cobranza y calidad de las sesiones',
       icon: ['fas', 'chart-bar'],
       actionTemplate: this.headerActions,
     });
@@ -298,7 +179,6 @@ export class Reports implements OnInit, OnDestroy {
         next: (res) => {
           if (res.success && res.data) {
             this.financials = res.data;
-            this.updateFinancialChart();
           }
           this.cdr.markForCheck();
         },
@@ -310,7 +190,6 @@ export class Reports implements OnInit, OnDestroy {
       this.adminService.getTherapistStats().subscribe({
         next: (res) => {
           this.therapists = res.data;
-          this.updateTherapistChart();
           this.cdr.markForCheck();
         },
         error: () => this.cdr.markForCheck(),
@@ -332,59 +211,28 @@ export class Reports implements OnInit, OnDestroy {
     );
   }
 
-  private updateFinancialChart() {
-    this.financialChartData = {
-      ...this.financialChartData,
-      datasets: [
-        {
-          ...this.financialChartData.datasets[0],
-          data: [
-            this.financials.income_expected,
-            this.financials.income_real,
-            this.financials.expenses,
-          ],
-        },
-      ],
-    };
-  }
-
-  private updateTherapistChart() {
-    this.therapistChartLabels = this.therapists.map((t) => t.name);
-    this.therapistChartData = {
-      ...this.therapistChartData,
-      labels: this.therapistChartLabels,
-      datasets: [
-        {
-          ...this.therapistChartData.datasets[0],
-          data: this.therapists.map((t) => t.avg_accuracy),
-        },
-      ],
-    };
-  }
-
   get executionPercent(): number {
     return this.financials.income_expected > 0
       ? (this.financials.income_real / this.financials.income_expected) * 100
       : 0;
   }
 
-  get overduePercent(): number {
-    return this.financials.income_expected > 0
-      ? (this.financials.overdue_amount / this.financials.income_expected) * 100
-      : 0;
-  }
-
   generateAIReport() {
-    this.aiGenerating = true;
+    if (this.strategicGenerating) return;
+    this.strategicGenerating = true;
+    this.cdr.markForCheck();
     this.subscriptions.add(
       this.adminService.generateAIReport().subscribe({
         next: (res) => {
-          this.aiGenerating = false;
-          this.aiReport = res.report;
+          this.strategicGenerating = false;
+          // Se muestra como texto (interpolación): nada de la respuesta del modelo se interpreta como HTML.
+          this.strategicReport = (res?.report || '').trim() || null;
+          if (!this.strategicReport) this.toastService.show('La IA no devolvió un análisis. Inténtalo de nuevo.', 'warning');
           this.cdr.markForCheck();
         },
         error: () => {
-          this.aiGenerating = false;
+          this.strategicGenerating = false;
+          this.toastService.show('No se pudo generar el análisis con IA.', 'error');
           this.cdr.markForCheck();
         },
       }),
@@ -392,15 +240,19 @@ export class Reports implements OnInit, OnDestroy {
   }
 
   sendWeeklyReport() {
+    if (this.reportSending) return;
     this.reportSending = true;
+    this.cdr.markForCheck();
     this.subscriptions.add(
       this.adminService.sendWeeklyReport().subscribe({
         next: () => {
           this.reportSending = false;
+          this.toastService.show('Reporte semanal enviado.', 'success');
           this.cdr.markForCheck();
         },
         error: () => {
           this.reportSending = false;
+          this.toastService.show('No se pudo enviar el reporte semanal.', 'error');
           this.cdr.markForCheck();
         },
       }),
@@ -408,24 +260,63 @@ export class Reports implements OnInit, OnDestroy {
   }
 
   exportCSV() {
+    if (this.exporting) return;
+    this.exporting = true;
+    this.cdr.markForCheck();
     this.subscriptions.add(
       this.adminService.exportPaymentsCsv().subscribe({
         next: (blob) => {
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = 'pagos_export.csv';
+          a.download = `pagos_${new Date().toISOString().slice(0, 10)}.csv`;
           a.click();
-          window.URL.revokeObjectURL(url);
+          setTimeout(() => window.URL.revokeObjectURL(url), 4000);
+          this.exporting = false;
           this.cdr.markForCheck();
         },
-        error: () => this.cdr.markForCheck(),
+        error: () => {
+          this.exporting = false;
+          this.toastService.show('No se pudo exportar el CSV de pagos.', 'error');
+          this.cdr.markForCheck();
+        },
       }),
     );
   }
 
   closeAIReport() {
-    this.aiReport = null;
+    this.strategicReport = null;
+  }
+
+  // ─── Formato en español y semáforo de precisión ───────────────
+  private readonly nf = new Intl.NumberFormat('es-PE');
+  private readonly mf = new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  private readonly pf = new Intl.NumberFormat('es-PE', { maximumFractionDigits: 1 });
+
+  num(n: number | null | undefined) {
+    return this.nf.format(n ?? 0);
+  }
+
+  money(n: number | null | undefined) {
+    return `S/ ${this.mf.format(n ?? 0)}`;
+  }
+
+  pct(n: number | null | undefined) {
+    return `${this.pf.format(n ?? 0)} %`;
+  }
+
+  /** Un solo criterio en toda la página (antes cada bloque usaba umbrales distintos y uno estaba en escala de 0 a 10). */
+  level(n: number | null | undefined): 'good' | 'warn' | 'bad' {
+    const v = n ?? 0;
+    return v >= 85 ? 'good' : v >= 70 ? 'warn' : 'bad';
+  }
+
+  min100(n: number) {
+    return Math.max(0, Math.min(100, n || 0));
+  }
+
+  max0(n: number) {
+    return Math.max(0, n || 0);
   }
 
   async generateReport() {
@@ -439,14 +330,14 @@ export class Reports implements OnInit, OnDestroy {
     if (!confirmed) return;
 
     this.aiGenerating = true;
-    this.aiReport = null;
+    this.auditReport = null;
 
     this.subscriptions.add(
       this.adminService.generateIAReport().subscribe({
         next: (res: any) => {
           this.aiGenerating = false;
           if (res.success) {
-          this.aiReport = DOMPurify.sanitize(res.report, { ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'ul', 'ol', 'li', 'br', 'p', 'h1', 'h2', 'h3', 'h4', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'blockquote'], ALLOWED_ATTR: ['href'] });
+          this.auditReport = DOMPurify.sanitize(res.report, { ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'ul', 'ol', 'li', 'br', 'p', 'h1', 'h2', 'h3', 'h4', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'blockquote'], ALLOWED_ATTR: ['href'] });
           } else {
             this.toastService.show('Error: ' + res.error, 'error');
           }
@@ -459,15 +350,6 @@ export class Reports implements OnInit, OnDestroy {
           this.cdr.markForCheck();
         },
       }),
-    );
-  }
-
-  get barMaxValue(): number {
-    return Math.max(
-      this.financials.income_expected,
-      this.financials.income_real,
-      this.financials.overdue_amount,
-      1,
     );
   }
 
