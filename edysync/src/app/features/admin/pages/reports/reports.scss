@@ -134,6 +134,21 @@
   &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 }
 
+// ── celular ────────────────────────────────────────────────────────────────
+@media (max-width: 640px) {
+  // El título de la página no cabe con tres botones: queda la acción principal; exportar y enviar siguen en escritorio.
+  .rp-btn:not(.rp-btn--primary) { display: none; }
+  .rp-bar { min-width: 0; }
+  .rp-bar__track { display: none; }
+  .rp-bar__value { width: auto; }
+  .rp-mail { overflow-wrap: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 11rem; }
+  .rp-table .rp-num { width: auto; }
+  .rp-panel { padding: 1rem; }
+  .rp-kpi { padding: 0.875rem 1rem; }
+  .rp-kpi__value { font-size: 1.5rem; }
+  .rp-money__amount { font-size: 1.875rem; }
+}
+
 // ── informe estratégico (texto plano del modelo) ───────────────────────────
 .rp-report { white-space: pre-wrap; font-size: 0.9375rem; line-height: 1.6; color: var(--color-on-surface); max-width: 70ch; }
 
