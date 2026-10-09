@@ -210,8 +210,9 @@ body { font-size: 16px; }
     border-color: var(--color-outline-variant);
   }
 
-  table th:nth-child(n + 2),
-  table td:nth-child(n + 2) {
+  // Las tablas de datos centran sus columnas; las listas de archivos del drive (.dv-table) se leen a la izquierda.
+  table:not(.dv-table) th:nth-child(n + 2),
+  table:not(.dv-table) td:nth-child(n + 2) {
     text-align: center !important;
   }
 }
