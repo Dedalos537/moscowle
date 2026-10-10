@@ -175,13 +175,19 @@ export class Sedes implements OnInit, OnDestroy {
 
   createSede() {
     const name = this.newSede.name.trim();
-    if (!name) return this.formError.set('Escribe el nombre de la sede.');
+    if (!name) {
+      this.formError.set('Escribe el nombre de la sede.');
+      return;
+    }
     this.saving.set(true);
     this.subscriptions.add(
       this.adminService.createSede({ name, address: this.newSede.address.trim() }).subscribe({
         next: (res) => {
           this.saving.set(false);
-          if (!res.success) return this.formError.set(res.message === 'Sede ya existe' ? 'Ya existe una sede con ese nombre.' : res.message || 'No se pudo crear la sede.');
+          if (!res.success) {
+            this.formError.set(res.message === 'Sede ya existe' ? 'Ya existe una sede con ese nombre.' : res.message || 'No se pudo crear la sede.');
+            return;
+          }
           this.showCreateDrawer.set(false);
           this.toastService.show(`Sede «${name}» creada`, 'success');
           this.loadSedes();
@@ -203,13 +209,19 @@ export class Sedes implements OnInit, OnDestroy {
 
   updateSede() {
     const name = this.editSedeData.name.trim();
-    if (!name) return this.formError.set('Escribe el nombre de la sede.');
+    if (!name) {
+      this.formError.set('Escribe el nombre de la sede.');
+      return;
+    }
     this.saving.set(true);
     this.subscriptions.add(
       this.adminService.updateSede(this.editSedeData.id, { name, address: this.editSedeData.address.trim() }).subscribe({
         next: (res) => {
           this.saving.set(false);
-          if (!res.success) return this.formError.set(res.message || 'No se pudieron guardar los cambios.');
+          if (!res.success) {
+            this.formError.set(res.message || 'No se pudieron guardar los cambios.');
+            return;
+          }
           this.showEditDrawer.set(false);
           this.toastService.show('Cambios guardados', 'success');
           this.loadSedes();
@@ -240,7 +252,10 @@ export class Sedes implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.adminService.updateSede(sede.id, { active: activating }).subscribe({
         next: (res) => {
-          if (!res.success) return this.toastService.show(res.message || 'No se pudo cambiar el estado de la sede', 'error');
+          if (!res.success) {
+            this.toastService.show(res.message || 'No se pudo cambiar el estado de la sede', 'error');
+            return;
+          }
           this.sedes.update((list) => list.map((s) => (s.id === sede.id ? { ...s, active: activating } : s)));
           this.toastService.show(`Sede ${activating ? 'activada' : 'desactivada'}`, 'success');
           this.loadScorecard();
@@ -264,7 +279,10 @@ export class Sedes implements OnInit, OnDestroy {
       const raw = String(v ?? '').trim().replace(',', '.');
       if (raw === '') targets[k] = null;
       else if (Number.isFinite(Number(raw)) && Number(raw) >= 0) targets[k] = Number(raw);
-      else return this.formError.set('Las metas deben ser números positivos o quedar vacías.');
+      else {
+        this.formError.set('Las metas deben ser números positivos o quedar vacías.');
+        return;
+      }
     }
     this.saving.set(true);
     this.subscriptions.add(
