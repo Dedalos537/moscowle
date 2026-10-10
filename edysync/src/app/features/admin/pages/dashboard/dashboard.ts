@@ -153,7 +153,7 @@ export class Dashboard implements OnInit, OnDestroy {
         next: (res) => {
           if (res.success && res.data) {
             this.avgAuditCompliance = res.data.avg_audit_compliance;
-            this.auditsCount = res.data.audits_count;
+            this.auditsCount = Number(res.data.audits_count) || 0;
             this.summary.sessions_total = res.data.sessions_total;
           }
           this.cdr.markForCheck();

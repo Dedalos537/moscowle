@@ -82,7 +82,7 @@
       [icon]="['fas', 'calendar-check']" variant="info" />
 
     <app-summary-card label="Cumplimiento IA" [value]="(avgAuditCompliance ?? '—') + '%'" [loading]="loading"
-      [subtitle]="auditsCount + ' auditorías'" [icon]="['fas', 'brain']" variant="primary" />
+      [subtitle]="auditsCount ? auditsCount + (auditsCount === 1 ? ' auditoría' : ' auditorías') : 'Sin auditorías aún'" [icon]="['fas', 'brain']" variant="primary" />
   </div>
 </section>
 
