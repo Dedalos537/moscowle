@@ -104,14 +104,23 @@ export class Dashboard implements OnInit, OnDestroy {
     this.loadSedes();
     this.loadSedesStats();
     this.loadDebtData();
+    // Independiente del reporte de deudores: si ese falla, el flujo de caja igual se muestra.
+    this.setFinancialSummary();
   }
 
   private setFinancialSummary() {
     this.subscriptions.add(
       this.adminService.getFinancialSummary().subscribe({
         next: (res) => {
-          if (res.success && res.data && this.financials) {
-            this.financials.income_real = res.data.income_real;
+          // Cifras del backend (mora = cuotas de contrato vencidas + plan de quien no tiene contrato). Antes la
+          // mora y lo esperado se sumaban aquí con TODOS los pacientes del reporte, incluidos los que están al día.
+          if (res.success && res.data) {
+            this.financials = {
+              income_real: Number(res.data.income_real) || 0,
+              income_expected: Number(res.data.income_expected) || 0,
+              overdue_amount: Number(res.data.overdue_amount) || 0,
+              overdue_users_count: Number(res.data.overdue_users_count) || 0,
+            };
           }
           this.cdr.markForCheck();
         },
@@ -188,10 +197,6 @@ export class Dashboard implements OnInit, OnDestroy {
           const porSede: Record<string, any> = res.data.por_sede || {};
           const todayDay = this.today.getDate();
 
-          let incomeReal = 0;
-          let incomeExpected = 0;
-          let overdueAmount = 0;
-          let overdueCount = 0;
           const incomplete: IncompletePatient[] = [];
           const daily: DailyPending[] = [];
 
@@ -201,8 +206,6 @@ export class Dashboard implements OnInit, OnDestroy {
 
             deudores.forEach((d: any) => {
               const amount = d.monto || 0;
-              incomeExpected += amount;
-              if (amount > 0) overdueAmount += amount;
 
               const isPriceInc = !d.monto || d.monto <= 0;
               const isPlanInc = !d.modality || d.modality.includes('Sin Modalidad');
@@ -222,14 +225,10 @@ export class Dashboard implements OnInit, OnDestroy {
               }
             });
 
-            if (deudores.length > 0) overdueCount += deudores.length;
           });
 
-          this.financials = { income_real: 0, income_expected: incomeExpected, overdue_amount: overdueAmount, overdue_users_count: overdueCount };
           this.incompletePatients = incomplete;
           this.dailyPendings = daily;
-
-          this.setFinancialSummary();
 
           if (incomplete.length > 5) {
             setTimeout(() => (this.showGuidanceModal = true), 2000);
@@ -252,8 +251,15 @@ export class Dashboard implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.adminService.getFinancialSummary().subscribe({
         next: (res) => {
-          if (res.success && res.data && this.financials) {
-            this.financials.income_real = res.data.income_real;
+          // Cifras del backend (mora = cuotas de contrato vencidas + plan de quien no tiene contrato). Antes la
+          // mora y lo esperado se sumaban aquí con TODOS los pacientes del reporte, incluidos los que están al día.
+          if (res.success && res.data) {
+            this.financials = {
+              income_real: Number(res.data.income_real) || 0,
+              income_expected: Number(res.data.income_expected) || 0,
+              overdue_amount: Number(res.data.overdue_amount) || 0,
+              overdue_users_count: Number(res.data.overdue_users_count) || 0,
+            };
           }
           this.cdr.markForCheck();
         },
@@ -281,9 +287,11 @@ export class Dashboard implements OnInit, OnDestroy {
     return `https://wa.me/51${clean}?text=${msg}`;
   }
 
+  /** Altura en px sobre la mayor de las tres barras: ninguna pasa de 200 px aunque lo realizado supere lo esperado. */
   barHeight(value: number): number {
-    const max = Math.max(this.financials?.income_expected || 1, 1);
-    return Math.max((value / max) * 200, 8);
+    const f = this.financials;
+    const max = Math.max(f?.income_real || 0, this.pendingAmount, f?.income_expected || 0, 1);
+    return value > 0 ? Math.max((value / max) * 200, 4) : 0;
   }
 
   trackById(_index: number, item: any): number {

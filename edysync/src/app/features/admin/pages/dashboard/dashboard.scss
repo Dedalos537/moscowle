@@ -116,7 +116,8 @@
 .chart-bars { display: flex; align-items: flex-end; justify-content: space-around; gap: 1.5rem; height: 16rem; width: 100%; }
 .chart-bar-col { display: flex; flex-direction: column; align-items: center; gap: .5rem; flex: 1; }
 .chart-bar-value { font-size: .875rem; font-weight: 700; color: var(--color-primary); }
-.chart-bar { width: 100%; border-radius: var(--radius) var(--radius) 0 0; min-height: 8px; }
+.chart-bar { position: relative; width: 100%; border-radius: var(--radius) var(--radius) 0 0; }
+/* Sin position: relative el relleno (::after, inset: 0) tomaba como caja un contenedor superior y tapaba el panel. */
 .chart-bar--primary { background-color: color-mix(in srgb,var(--color-primary) 15%,transparent); }
 .chart-bar--primary::after { content: ''; position: absolute; inset: 0; background-color: var(--color-primary); border-radius: var(--radius) var(--radius) 0 0; opacity: .9; }
 .chart-bar--info { background-color: color-mix(in srgb,var(--color-info) 15%,transparent); }
