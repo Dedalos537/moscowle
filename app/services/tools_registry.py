@@ -207,6 +207,7 @@ CORE_TOOL_NAMES = [
     'mark_notifications_read',
     'list_sedes',
     'get_sede_stats',
+    'get_sede_scorecard',
     'list_patient_groups',
     'create_patient_group',
     'list_expenses',
@@ -2223,6 +2224,77 @@ def handle_get_sede_stats(sede_id=None, **kwargs):
         resp = _api_get(url, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else {}
         return {'success': True, 'stats': data}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='get_sede_scorecard',
+    description=(
+        'Desempeño de cada sede frente a sus metas (Balanced Scorecard) en 4 perspectivas: financiera, pacientes, '
+        'procesos internos y aprendizaje; cobranza, asistencia, cancelaciones, continuidad y precisión, comparado '
+        'con el periodo anterior.'
+    ),
+    parameters={
+        'type': 'object',
+        'properties': {
+            'period': {
+                'type': 'string',
+                'enum': ['month', 'quarter', 'year'],
+                'description': 'month = este mes (por defecto), quarter = trimestre, year = año',
+            },
+            'sede_name': {'type': 'string', 'description': 'Nombre o parte del nombre de la sede (opcional: todas)'},
+        },
+    },
+    category='read',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_get_sede_scorecard(period='month', sede_name=None, **kwargs):
+    """Mismos números que la página de Sedes: se llama al servicio, sin recalcular nada aquí.
+
+    Se omite la tendencia de 6 meses para no inflar el contexto del modelo local; quedan valor, periodo anterior,
+    meta y estado de cada indicador, y el puntaje por perspectiva.
+    """
+    try:
+        from app.services.sede_scorecard import scorecard
+
+        data = scorecard(period or 'month')
+        sedes = data['sedes']
+        if sede_name:
+            needle = sede_name.strip().lower()
+            sedes = [s for s in sedes if needle in s['name'].lower()]
+            if not sedes:
+                nombres = ', '.join(s['name'] for s in data['sedes']) or 'ninguna'
+                return {'error': f'No hay una sede activa que coincida con "{sede_name}". Sedes: {nombres}.'}
+        status_txt = {'good': 'en meta', 'warn': 'cerca de la meta', 'bad': 'fuera de meta', 'none': 'sin meta'}
+        return {
+            'success': True,
+            'periodo': f'{data["period_label"]} ({data["range"]["from"]} a {data["range"]["to"]})',
+            'comparado_con': f'{data["previous_range"]["from"]} a {data["previous_range"]["to"]}',
+            'nota': 'score = % de indicadores con meta que se cumplen (cerca de la meta cuenta medio punto). '
+            'value null = sin datos en el periodo, no es cero.',
+            'sedes': [
+                {
+                    'sede': s['name'],
+                    'score': s['score'],
+                    'perspectivas': {p['label']: p['score'] for p in s['perspectives']},
+                    'indicadores': [
+                        {
+                            'indicador': k['label'],
+                            'valor': k['value'],
+                            'anterior': k['previous'],
+                            'meta': k['target'],
+                            'unidad': {'money': 'S/', 'pct': '%', 'int': '', 'dec': ''}[k['unit']],
+                            'estado': status_txt[k['status']]
+                            if k['target'] is not None or k['value'] is None
+                            else 'sin meta',
+                        }
+                        for k in s['kpis']
+                    ],
+                }
+                for s in sedes
+            ],
+        }
     except Exception as e:
         return {'error': str(e)}
 

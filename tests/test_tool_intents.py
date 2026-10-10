@@ -24,6 +24,11 @@ INTENT_CASES = [
     ('que sedes tiene el centro', 'list_sedes'),
     ('lista de sedes', 'list_sedes'),
     ('dime las sedes del centro', 'list_sedes'),
+    # Desempeño de sedes (Balanced Scorecard): no debe confundirse con la lista de sedes
+    ('como va el desempeño de las sedes', 'get_sede_scorecard'),
+    ('qué sede rinde mejor este mes', 'get_sede_scorecard'),
+    ('cumplimiento de metas por sede', 'get_sede_scorecard'),
+    ('balanced scorecard de cayma', 'get_sede_scorecard'),
     # Sesiones / agenda (con y sin pista temporal)
     ('sesiones de hoy', 'get_sessions_day'),
     ('que sesiones hay', 'get_sessions'),

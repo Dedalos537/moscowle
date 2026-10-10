@@ -146,3 +146,21 @@ def test_endpoint_requires_admin_and_returns_the_scorecard(client, app):
     assert client.get('/api/admin/sedes/scorecard', headers=hp).status_code == 403
     r = client.put('/api/admin/sedes/scorecard/targets', json={'targets': {'attendance': 90}}, headers=h)
     assert r.status_code == 200 and r.get_json()['targets']['attendance'] == 90
+
+
+def test_mcp_tool_returns_the_same_numbers_as_the_page(app):
+    from app.services.tools_registry import TOOL_REGISTRY
+
+    sede = _sede()
+    therapist = _user('terapista')
+    p = _user('jugador', sede)
+    _appt(therapist, p, datetime(2026, 10, 5, 15))
+    db.session.commit()
+    tool = TOOL_REGISTRY['get_sede_scorecard']
+    assert tool['category'] == 'read' and 'jugador' not in tool['roles']
+    out = tool['handler'](period='month', sede_name=sede.name[-6:])
+    assert out['success'] and len(out['sedes']) == 1
+    row = next(i for i in out['sedes'][0]['indicadores'] if i['indicador'] == 'Sesiones realizadas')
+    page = next(s for s in bsc.scorecard('month')['sedes'] if s['id'] == sede.id)
+    assert row['valor'] == next(k['value'] for k in page['kpis'] if k['key'] == 'sessions_done')
+    assert 'error' in tool['handler'](sede_name='no-existe-xyz')

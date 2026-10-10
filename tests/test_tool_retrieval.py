@@ -33,6 +33,11 @@ CASOS = [
         set(),
     ),
     (
+        'cómo va el desempeño de la sede Cayma frente a las metas',
+        'get_sede_scorecard',
+        {'delete_user', 'create_user'},
+    ),
+    (
         'cuánto me deben los pacientes',
         'get_debtors',
         {'delete_user', 'cancel_contract'},

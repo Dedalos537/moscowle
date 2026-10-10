@@ -508,6 +508,7 @@ _INTENT_GROUPS = {
         'get_current_datetime',
     },
     'reportes': {
+        'get_sede_scorecard',
         'generate_weekly_report',
         'get_weekly_summary',
         'get_monthly_reports',

@@ -23,6 +23,26 @@ from collections import defaultdict
 # descripcion de la tool. Es la capa que un embedding tendria que aprender, aqui
 # es explicita, auditable y no depende de un modelo.
 SYNONYMS = {
+    'get_sede_scorecard': (
+        'scorecard',
+        'balanced',
+        'desempeño',
+        'desempeno',
+        'rendimiento',
+        'rinde',
+        'metas',
+        'meta',
+        'indicadores',
+        'kpi',
+        'kpis',
+        'cumplimiento',
+        'como va',
+        'como van',
+        'mejor sede',
+        'peor sede',
+        'compara sedes',
+        'comparar sedes',
+    ),
     'get_sede_stats': (
         'sede',
         'sedes',

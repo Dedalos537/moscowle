@@ -103,6 +103,7 @@ _CONCEPT_GROUPS = (
     ('sedes', 'sede', 'sucursales', 'sucursal'),
     ('financiero', 'finanzas', 'finanza', 'ingresos', 'ingreso', 'utilidad', 'ganancia'),
     ('terapeutas', 'terapeuta', 'terapista', 'terapistas'),
+    ('desempeno', 'scorecard', 'metas', 'meta', 'cumplimiento', 'indicadores', 'kpi', 'kpis', 'rinde', 'rinden'),
 )
 _CONCEPT_INDEX = {word: group for group in _CONCEPT_GROUPS for word in group}
 
