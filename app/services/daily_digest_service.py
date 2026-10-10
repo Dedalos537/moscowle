@@ -122,20 +122,13 @@ def _gather_bsc_data(user):
         )
         income_expected = active_patients * float(avg_payment) if avg_payment else 0
 
-        # Overdue payments
-        overdue_count = Payment.query.filter(
-            Payment.status.in_(['pending', 'overdue']),
-            Payment.date < today,
-        ).count()
+        # Mora: la misma cifra que el panel (cuotas de contrato vencidas + plan de quien no tiene contrato).
+        # Antes contaba pagos «pendientes», una tercera definición que no coincidía con ninguna pantalla.
+        from app.services.payment_service import PaymentService
 
-        overdue_amount = (
-            db.session.query(db.func.coalesce(db.func.sum(Payment.amount), 0))
-            .filter(
-                Payment.status.in_(['pending', 'overdue']),
-                Payment.date < today,
-            )
-            .scalar()
-        )
+        _summary = PaymentService().get_financial_summary()
+        overdue_count = _summary['overdue_users_count']
+        overdue_amount = _summary['overdue_amount']
 
         # Expenses this month
         expenses = (

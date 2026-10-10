@@ -308,7 +308,17 @@ class PaymentService:
             User.payment_due_date < today,
         ).all()
 
-        overdue_amount = sum([u.payment_amount or 0 for u in overdue_users])
+        # Pacientes con contrato activo: su mora sale de las cuotas vencidas (ver contract_debt); el plan del
+        # paciente solo cuenta para quien no tiene contrato. Antes las cuotas vencidas no sumaban aquí.
+        from app.services.contract_debt import contract_debt
+
+        active_ids = [u.id for u in User.query.filter_by(role='jugador', is_active=True).with_entities(User.id)]
+        debts = contract_debt(today, active_ids)
+        overdue_users = [u for u in overdue_users if u.id not in debts]
+        contract_overdue = [d for d in debts.values() if d.is_overdue]
+        overdue_amount = round(
+            sum(u.payment_amount or 0 for u in overdue_users) + sum(d.overdue_amount for d in contract_overdue), 2
+        )
 
         expenses_query = (
             db.session.query(func.sum(Expense.amount))
@@ -323,7 +333,7 @@ class PaymentService:
             'income_real': monthly_income_real,
             'income_expected': monthly_income_expected,
             'overdue_amount': overdue_amount,
-            'overdue_users_count': len(overdue_users),
+            'overdue_users_count': len(overdue_users) + len(contract_overdue),
             'expenses': monthly_expenses,
             'net_profit': monthly_income_real - monthly_expenses,
         }

@@ -78,10 +78,21 @@ class FinancialService:
 
         patients = self.repo.get_active_patients()
 
+        # Con contrato activo, la deuda y la fecha salen de las cuotas (ver contract_debt).
+        from app.services.contract_debt import contract_debt, due_within
+
+        debts = contract_debt(today, [p.id for p in patients])
+
+        def _due_date(p):
+            d = debts.get(p.id)
+            if d is not None:
+                return d.oldest_due or d.next_due
+            return getattr(p, 'payment_due_date', None)
+
         if filter_start is not None and filter_end is not None:
             filtered = []
             for p in patients:
-                dd = getattr(p, 'payment_due_date', None)
+                dd = _due_date(p)
                 if dd is None:
                     continue
                 if filter_start <= dd <= filter_end or dd < filter_start:
@@ -108,8 +119,25 @@ class FinancialService:
 
                 due_date = getattr(patient, 'payment_due_date', None)
                 days_overdue = (today - due_date).days if due_date else 0
+                debt = debts.get(patient.id)
 
-                if not due_date or monto <= 0:
+                if debt is not None:
+                    # Paciente con contrato: vencido si tiene cuotas vencidas sin pagar; por vencer si la próxima
+                    # cuota cae dentro de la ventana; si no, al día.
+                    if debt.is_overdue:
+                        status, monto, due_date = 'vencido', debt.overdue_amount, debt.oldest_due
+                        days_overdue = (today - due_date).days
+                        urgencia = 'critica' if days_overdue > 7 else 'alta'
+                        vencidos_count += 1
+                    elif due_within(debt, today, days_ahead):
+                        status, urgencia, monto, due_date = 'proximo', 'alta', debt.next_amount, debt.next_due
+                        days_overdue = 0
+                        proximo_a_vencer_count += 1
+                    else:
+                        status, urgencia, days_overdue = 'al_dia', 'baja', 0
+                        due_date = debt.next_due
+                        monto = debt.next_amount or monto
+                elif not due_date or monto <= 0:
                     status = 'sin_plan'
                     urgencia = 'baja'
                 elif days_overdue > 0:
@@ -156,6 +184,8 @@ class FinancialService:
                     'sessions_remaining': getattr(patient, 'sessions_remaining', 0) or 0,
                     'therapist_name': therapist_name,
                     'has_plan_config': bool(due_date and monto > 0),
+                    'origen': 'contrato' if debt is not None else 'plan',
+                    'cuotas_vencidas': debt.overdue_count if debt is not None else (1 if status == 'vencido' else 0),
                 }
 
                 deudores_by_sede[sede_key]['deudores'].append(deudor)
