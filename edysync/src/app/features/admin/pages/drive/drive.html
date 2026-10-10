@@ -222,6 +222,7 @@
             @for (e of visible(); track e.path) {
               <div class="dv-row" role="row" tabindex="0" [attr.data-path]="e.path" [attr.aria-selected]="isSelected(e)"
                 [class.is-selected]="isSelected(e)" [class.is-cut]="clipboard()?.mode === 'cut' && clipboard()!.paths.includes(e.path)" [class.is-target]="dropTarget() === e.path"
+                [class.is-leaving]="leaving().has(e.path)" [class.is-new]="fresh().has(e.path)"
                 draggable="true" (dragstart)="onDragStart($event, e)" (dragover)="onDragOver($event, e)" (dragleave)="onDragLeave($event, e)" (drop)="onDrop($event, e)"
                 (click)="select(e, $event); $event.stopPropagation()" (dblclick)="open(e)" (contextmenu)="openMenu($event, e)">
                 <span class="dv-name">
@@ -250,6 +251,7 @@
             @for (e of visible(); track e.path) {
               <div class="dv-tile" role="gridcell" tabindex="0" [attr.data-path]="e.path" [attr.aria-selected]="isSelected(e)" [attr.aria-label]="e.name + ', ' + detail(e)"
                 [class.is-selected]="isSelected(e)" [class.is-cut]="clipboard()?.mode === 'cut' && clipboard()!.paths.includes(e.path)" [class.is-target]="dropTarget() === e.path"
+                [class.is-leaving]="leaving().has(e.path)" [class.is-new]="fresh().has(e.path)"
                 draggable="true" (dragstart)="onDragStart($event, e)" (dragover)="onDragOver($event, e)" (dragleave)="onDragLeave($event, e)" (drop)="onDrop($event, e)"
                 (click)="select(e, $event); $event.stopPropagation()" (dblclick)="open(e)" (contextmenu)="openMenu($event, e)">
                 <span class="dv-tile__art" [class.has-thumb]="!!thumbs()[e.path]">
@@ -322,7 +324,7 @@
 @if (uploads().length) {
   <aside class="dv-ops" aria-label="Subidas" aria-live="polite">
     <header class="dv-ops__head">
-      <span>{{ activeUploads() ? 'Subiendo ' + activeUploads() + (activeUploads() === 1 ? ' archivo' : ' archivos') : 'Subidas terminadas' }}</span>
+      <span>{{ activeUploads() ? (activeUploads() === 1 ? '1 operación en curso' : activeUploads() + ' operaciones en curso') : 'Operaciones terminadas' }}</span>
       @if (!activeUploads()) { <button type="button" (click)="clearFinished()">Cerrar</button> }
     </header>
     <ul>
@@ -331,15 +333,19 @@
           <span class="dv-ops__name" [title]="u.name">{{ u.name }}</span>
           <span class="dv-ops__meta">
             @switch (u.state) {
-              @case ('running') { {{ uploadPct(u) }} % · {{ size(u.sent) }} de {{ size(u.size) }} }
+              @case ('running') { @if (u.kind && u.kind !== 'upload') { {{ taskLabel(u) }}… } @else { {{ uploadPct(u) }} % · {{ size(u.sent) }} de {{ size(u.size) }} } }
               @case ('done') { Listo }
               @case ('cancelled') { Cancelado }
               @case ('error') { {{ u.error }} }
             }
           </span>
           @if (u.state === 'running') {
-            <span class="dv-ops__bar"><span [style.width.%]="uploadPct(u)"></span></span>
-            <button type="button" class="dv-ops__x" (click)="cancelUpload(u)" [attr.aria-label]="'Cancelar ' + u.name"><fa-icon [icon]="['fas', 'xmark']"></fa-icon></button>
+            @if (u.kind && u.kind !== 'upload') {
+              <span class="dv-ops__bar dv-ops__bar--busy"><span></span></span>
+            } @else {
+              <span class="dv-ops__bar"><span [style.width.%]="uploadPct(u)"></span></span>
+              <button type="button" class="dv-ops__x" (click)="cancelUpload(u)" [attr.aria-label]="'Cancelar ' + u.name"><fa-icon [icon]="['fas', 'xmark']"></fa-icon></button>
+            }
           }
         </li>
       }

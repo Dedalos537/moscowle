@@ -41,7 +41,11 @@ interface UploadOp {
   state: 'running' | 'done' | 'error' | 'cancelled';
   error?: string;
   ctrl: AbortController;
+  /** Subidas muestran porcentaje; comprimir, extraer, mover y copiar, una barra indeterminada. */
+  kind?: 'upload' | 'compress' | 'extract' | 'move' | 'copy';
 }
+
+const LEAVE_MS = 200;
 
 interface MenuState {
   x: number;
@@ -113,6 +117,10 @@ export class Drive implements OnInit, OnDestroy {
   readonly dropTarget = signal<string | null>(null);
   readonly uploads = signal<UploadOp[]>([]);
   readonly thumbs = signal<Record<string, string>>({});
+  /** Elementos que se están yendo (animación de salida) y los recién llegados (entrada + resaltado). */
+  readonly leaving = signal<Set<string>>(new Set());
+  readonly fresh = signal<Set<string>>(new Set());
+  private freshTimer: ReturnType<typeof setTimeout> | null = null;
   renameDraft = '';
   folderDraft = '';
   private anchor = -1;
@@ -355,7 +363,7 @@ export class Drive implements OnInit, OnDestroy {
     if (!name) return;
     this.api.mkdir(this.path(), name).subscribe({
       next: (entry) => {
-        this.load();
+        this.reloadWith([entry.path]);
         this.selected.set(new Set([entry.path]));
       },
       error: (e) => this.toast.show(e?.error?.error || 'No se pudo crear la carpeta.', 'error'),
@@ -399,17 +407,26 @@ export class Drive implements OnInit, OnDestroy {
     this.toast.show(`${paths.length === 1 ? '1 elemento' : paths.length + ' elementos'} ${mode === 'cut' ? 'para mover' : 'copiados'}. Pégalos en otra carpeta.`, 'info', 2500);
   }
 
-  paste(dest = this.path()) {
+  async paste(dest = this.path()) {
     const clip = this.clipboard();
     this.closeMenu();
     if (!clip || this.place() !== 'files') return;
-    const req = clip.mode === 'cut' ? this.api.move(clip.paths, dest) : this.api.copy(clip.paths, dest);
+    const moving = clip.mode === 'cut';
+    const label = clip.paths.length === 1 ? clip.paths[0].split('/').pop()! : `${clip.paths.length} elementos`;
+    const task = this.startTask(moving ? 'move' : 'copy', label);
+    if (moving) await this.animateOut(clip.paths.filter((p) => this.entries().some((e) => e.path === p)));
+    const req = moving ? this.api.move(clip.paths, dest) : this.api.copy(clip.paths, dest);
     req.subscribe({
-      next: () => {
-        if (clip.mode === 'cut') this.clipboard.set(null);
-        this.load();
+      next: (r) => {
+        if (moving) this.clipboard.set(null);
+        this.endTask(task);
+        this.reloadWith(dest === this.path() ? r.entries.map((e) => e.path) : []);
       },
-      error: (e) => this.toast.show(e?.error?.error || 'No se pudo pegar.', 'error'),
+      error: (e) => {
+        this.leaving.set(new Set());
+        this.endTask(task, e?.error?.error || 'No se pudo pegar');
+        this.toast.show(e?.error?.error || 'No se pudo pegar.', 'error');
+      },
     });
   }
 
@@ -417,13 +434,17 @@ export class Drive implements OnInit, OnDestroy {
     const items = this.selectedEntries();
     this.closeMenu();
     if (!items.length) return;
+    await this.animateOut(items.map((e) => e.path));
     this.api.trash(items.map((e) => e.path)).subscribe({
       next: (r) => {
         this.toast.show(r.trashed === 1 ? `«${items[0].name}» se movió a la papelera` : `${r.trashed} elementos a la papelera`, 'success');
         this.clearSelection();
-        this.load();
+        this.reloadWith();
       },
-      error: (e) => this.toast.show(e?.error?.error || 'No se pudo eliminar.', 'error'),
+      error: (e) => {
+        this.leaving.set(new Set());
+        this.toast.show(e?.error?.error || 'No se pudo eliminar.', 'error');
+      },
     });
   }
 
@@ -443,27 +464,28 @@ export class Drive implements OnInit, OnDestroy {
     if (!items.length) return;
     const name = items.length === 1 ? items[0].name.replace(/\.[^.]+$/, '') : 'Archivos';
     const dest = this.place() === 'files' ? this.path() : items[0].path.split('/').slice(0, -1).join('/');
-    this.toast.show('Comprimiendo…', 'info', 1500);
+    const task = this.startTask('compress', `${name}.zip`);
     this.api.compress(items.map((e) => e.path), dest, name).subscribe({
       next: (z) => {
-        this.load();
+        this.endTask(task);
+        this.reloadWith([z.path]);
         this.selected.set(new Set([z.path]));
-        this.toast.show(`Listo: ${z.name}`, 'success');
       },
-      error: (e) => this.toast.show(e?.error?.error || 'No se pudo comprimir.', 'error'),
+      error: (e) => this.endTask(task, e?.error?.error || 'No se pudo comprimir'),
     });
   }
 
   extractSel(entry = this.selectedEntries()[0]) {
     this.closeMenu();
     if (!this.isArchive(entry)) return;
-    this.toast.show('Descomprimiendo…', 'info', 1500);
+    const task = this.startTask('extract', entry.name);
     this.api.extract(entry.path).subscribe({
       next: (d) => {
-        this.load();
-        this.toast.show(`Extraído en «${d.name}»`, 'success');
+        this.endTask(task);
+        this.reloadWith([d.path]);
+        this.selected.set(new Set([d.path]));
       },
-      error: (e) => this.toast.show(e?.error?.error || 'No se pudo descomprimir.', 'error'),
+      error: (e) => this.endTask(task, e?.error?.error || 'No se pudo descomprimir'),
     });
   }
 
@@ -537,11 +559,13 @@ export class Drive implements OnInit, OnDestroy {
     this.uploads.update((u) => [...ops.map((o) => o.op), ...u].slice(0, 50));
     // Tres a la vez: rápido sin saturar la conexión ni el servidor.
     const queue = [...ops];
+    const arrived: string[] = [];
     const worker = async () => {
       while (queue.length) {
         const { op, it } = queue.shift()!;
         try {
-          await this.api.upload(folder, it.file, it.name, (sent) => this.patchUpload(op.id, { sent }), op.ctrl.signal);
+          const entry = await this.api.upload(folder, it.file, it.name, (sent) => this.patchUpload(op.id, { sent }), op.ctrl.signal);
+          arrived.push(entry.path.split('/').slice(0, (folder ? folder.split('/').length : 0) + 1).join('/'));
           this.patchUpload(op.id, { state: 'done', sent: op.size });
         } catch (e: unknown) {
           const err = e as { name?: string; error?: { error?: string } };
@@ -550,7 +574,7 @@ export class Drive implements OnInit, OnDestroy {
       }
     };
     await Promise.all([worker(), worker(), worker()]);
-    if (this.place() === 'files' && this.path() === folder) this.load();
+    if (this.place() === 'files' && this.path() === folder) this.reloadWith([...new Set(arrived)]);
   }
 
   private patchUpload(id: number, patch: Partial<UploadOp>) {
@@ -565,12 +589,77 @@ export class Drive implements OnInit, OnDestroy {
     this.uploads.update((list) => list.filter((u) => u.state === 'running'));
   }
 
+  // ── animaciones de operaciones ─────────────────────────────────────────────
+  private reduceMotion() {
+    return typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  /** Marca los elementos como «saliendo» y espera la animación antes de seguir. */
+  private animateOut(paths: string[]): Promise<void> {
+    if (!paths.length || this.reduceMotion()) return Promise.resolve();
+    this.leaving.set(new Set(paths));
+    return new Promise((resolve) => setTimeout(resolve, LEAVE_MS));
+  }
+
+  /** Recarga y resalta lo que llegó (nombres devueltos por el servidor). */
+  private reloadWith(paths: string[] = []) {
+    this.leaving.set(new Set());
+    if (paths.length) {
+      this.fresh.set(new Set(paths));
+      if (this.freshTimer) clearTimeout(this.freshTimer);
+      this.freshTimer = setTimeout(() => this.fresh.set(new Set()), 1600);
+    }
+    this.load();
+  }
+
+  /** Operación larga en el panel de operaciones (barra indeterminada). */
+  private startTask(kind: NonNullable<UploadOp['kind']>, name: string): number {
+    const id = ++this.uploadSeq;
+    this.uploads.update((u) => [{ id, name, size: 0, sent: 0, state: 'running', ctrl: new AbortController(), kind } as UploadOp, ...u].slice(0, 50));
+    return id;
+  }
+
+  private endTask(id: number, error?: string) {
+    this.patchUpload(id, error ? { state: 'error', error } : { state: 'done' });
+    if (!error) setTimeout(() => this.uploads.update((l) => l.filter((u) => !(u.id === id && u.state === 'done'))), 2400);
+  }
+
+  taskLabel(u: UploadOp) {
+    return { compress: 'Comprimiendo', extract: 'Extrayendo', move: 'Moviendo', copy: 'Copiando', upload: 'Subiendo' }[u.kind || 'upload'];
+  }
+
   // ── arrastrar y soltar ─────────────────────────────────────────────────────
   onDragStart(ev: DragEvent, entry: DriveEntry) {
     if (!this.isSelected(entry)) this.selected.set(new Set([entry.path]));
     this.dragPaths = this.selectedEntries().map((e) => e.path);
     ev.dataTransfer?.setData('application/x-drive', JSON.stringify(this.dragPaths));
-    if (ev.dataTransfer) ev.dataTransfer.effectAllowed = 'copyMove';
+    if (ev.dataTransfer) {
+      ev.dataTransfer.effectAllowed = 'copyMove';
+      // Imagen de arrastre propia: el navegador dibujaba el recuadro del elemento, con esquinas rectas.
+      const ghost = this.dragGhost(this.selectedEntries());
+      ev.dataTransfer.setDragImage(ghost, 18, 18);
+      setTimeout(() => ghost.remove(), 0);
+    }
+  }
+
+  private dragGhost(items: DriveEntry[]): HTMLElement {
+    const el = document.createElement('div');
+    el.className = 'dv-ghost';
+    const isDir = items.length === 1 && items[0].type === 'dir';
+    const icon = isDir
+      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.6l2 2H19.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/></svg>'
+      : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l5 5v11.5A1.5 1.5 0 0 1 17.5 21h-11A1.5 1.5 0 0 1 5 19.5v-15A1.5 1.5 0 0 1 6.5 3zm7 1.5V9h4.5"/></svg>';
+    const label = items.length === 1 ? items[0].name : `${items.length} elementos`;
+    el.innerHTML = `<span class="dv-ghost__icon">${icon}</span><span class="dv-ghost__label"></span>`;
+    (el.querySelector('.dv-ghost__label') as HTMLElement).textContent = label;
+    if (items.length > 1) {
+      const badge = document.createElement('span');
+      badge.className = 'dv-ghost__count';
+      badge.textContent = String(items.length);
+      el.appendChild(badge);
+    }
+    document.body.appendChild(el);
+    return el;
   }
 
   onDragOver(ev: DragEvent, folder: DriveEntry | null = null) {
@@ -599,9 +688,17 @@ export class Drive implements OnInit, OnDestroy {
       this.dragPaths = [];
       if (!folder || folder.type !== 'dir' || paths.includes(dest)) return;
       const copy = ev.ctrlKey || ev.altKey;
+      const task = this.startTask(copy ? 'copy' : 'move', paths.length === 1 ? paths[0].split('/').pop()! : `${paths.length} elementos`);
+      if (!copy) await this.animateOut(paths);
       (copy ? this.api.copy(paths, dest) : this.api.move(paths, dest)).subscribe({
-        next: () => this.load(),
-        error: (e) => this.toast.show(e?.error?.error || 'No se pudo mover.', 'error'),
+        next: () => {
+          this.endTask(task);
+          this.reloadWith();
+        },
+        error: (e) => {
+          this.leaving.set(new Set());
+          this.endTask(task, e?.error?.error || 'No se pudo mover');
+        },
       });
       return;
     }
