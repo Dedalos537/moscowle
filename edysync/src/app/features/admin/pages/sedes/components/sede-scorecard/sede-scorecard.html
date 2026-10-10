@@ -144,7 +144,10 @@
 
       @if (d.kpi) {
         <figure class="bsc-chart">
-          <figcaption>Últimos 6 meses</figcaption>
+          <figcaption>
+            Últimos 6 meses
+            @if (d.targetY != null) { <span class="bsc-chart__key"><i aria-hidden="true"></i>Meta {{ d.targetText }}</span> }
+          </figcaption>
           <div class="bsc-chart__plot">
             <svg [attr.viewBox]="'0 0 ' + CW + ' ' + CH" role="img"
               [attr.aria-label]="d.chartLabel"
@@ -164,7 +167,6 @@
               }
               @if (d.targetY != null) {
                 <line class="bsc-target" [attr.x1]="PAD.l" [attr.x2]="CW - PAD.r" [attr.y1]="d.targetY" [attr.y2]="d.targetY" />
-                <text class="bsc-target__label" [attr.x]="CW - PAD.r" [attr.y]="d.targetY - 5" text-anchor="end">Meta {{ d.targetText }}</text>
               }
               <line class="bsc-base" [attr.x1]="PAD.l" [attr.x2]="CW - PAD.r" [attr.y1]="CH - PAD.b" [attr.y2]="CH - PAD.b" />
             </svg>

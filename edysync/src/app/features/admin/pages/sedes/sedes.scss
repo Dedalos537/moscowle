@@ -1,4 +1,4 @@
-.sd { display: grid; gap: 1.25rem; padding: 0.25rem; }
+.sd { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; padding: 0.25rem; }
 
 // Acción principal en la barra superior.
 .sd-new {

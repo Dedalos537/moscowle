@@ -37,9 +37,10 @@ function barPath(x: number, y: number, w: number, h: number): string {
 const SW = 72;
 const SH = 22;
 // Gráfica de detalle (coordenadas del viewBox).
-const CW = 560;
-const CH = 200;
-const PAD = { l: 12, r: 12, t: 26, b: 26 };
+// Del ancho real del panel de detalle (~330 px), para que el texto del SVG se lea a 11-12 px.
+const CW = 330;
+const CH = 170;
+const PAD = { l: 4, r: 4, t: 22, b: 22 };
 
 const ICONS: Record<PerspectiveKey, IconProp> = {
   financial: ['fas', 'sack-dollar'],
@@ -132,7 +133,7 @@ export class SedeScorecard {
       const top = kpi.unit === 'pct' ? 100 : Math.max(1, ...vals, kpi.target ?? 0) * 1.15;
       const y = (v: number) => PAD.t + (1 - v / top) * (CH - PAD.t - PAD.b);
       const slot = (CW - PAD.l - PAD.r) / kpi.trend.length;
-      const bw = Math.min(44, slot * 0.56);
+      const bw = Math.min(30, slot * 0.56);
       bars = kpi.trend.map((v, i) => {
         const x = PAD.l + slot * i + (slot - bw) / 2;
         const h = Math.max(v ? 2 : 0, CH - PAD.b - y(v ?? 0));
