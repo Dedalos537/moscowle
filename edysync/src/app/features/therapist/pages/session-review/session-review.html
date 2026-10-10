@@ -179,7 +179,7 @@
       <section class="sr-card">
         <header class="sr-card__head sr-card__head--tight">
           <h2 class="sr-card__title sr-card__title--plain"><fa-icon [icon]="['fas', 'wand-magic-sparkles']" aria-hidden="true" /> Auditoría IA</h2>
-          @if (liveScore !== null && !(audit?.audit_status === 'completed')) { <span class="sr-meta">En vivo {{ liveScore }} %</span> }
+          @if (liveScore != null && audit?.audit_status !== 'completed') { <span class="sr-meta">En vivo {{ liveScore }} %</span> }
         </header>
         @if (audit?.audit_status === 'completed' && report) {
           <div class="sr-score" [attr.data-tone]="scoreTone(audit.audit_score)">
