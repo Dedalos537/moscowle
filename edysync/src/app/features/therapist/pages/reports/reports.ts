@@ -1,348 +1,295 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, computed, inject, signal, TemplateRef, ViewChild } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
-import {
-  TherapistService,
-  PatientReport,
-} from '../../../../core/services/therapist.service';
-import { CalendarEvent } from '../../../../core/models/appointment';
-import { Chart, registerables } from 'chart.js';
-import type { ChartConfiguration, ChartData } from 'chart.js';
-import { forkJoin, Subscription } from 'rxjs';
-import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
-import { BaseChartDirective } from 'ng2-charts';
-import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { AiRecommendation, InsightsPatient, TherapistInsights, TherapistService } from '../../../../core/services/therapist.service';
+import { toLocalDateString } from '../../../../core/utils/date.util';
 import { Button } from '../../../../shared/components/button/button';
 
-Chart.register(...registerables);
+type Tab = 'summary' | 'patients' | 'ai';
+type Period = '4w' | '12w' | 'year';
+type SortKey = 'attention' | 'name' | 'accuracy' | 'trend' | 'attendance' | 'sessions';
 
-// chart.js type workaround for font weight
-type _FontWeight = number | 'normal' | 'bold' | 'bolder' | 'lighter';
+const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+// Gráficas: coordenadas del viewBox.
+const W = 520;
+const H = 180;
+const PAD = { l: 8, r: 8, t: 22, b: 24 };
 
-interface WeeklyData {
-  week: string;
-  sessions: number;
-  accuracy: number;
+function dayLabel(iso: string) {
+  const [, m, d] = iso.split('-').map(Number);
+  return `${d} ${MONTHS[m - 1]}`;
 }
 
+/**
+ * Reportes del terapeuta: sesiones, asistencia y progreso en juegos, más las recomendaciones del modelo de la IA
+ * (antes «Analíticas IA» era una pestaña aparte con cifras fijas en el código). Todo viene de /therapist/api/insights.
+ */
 @Component({
   selector: 'app-therapist-reports',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Spinner, Button, BaseChartDirective],
+  imports: [FontAwesomeModule, Button],
   templateUrl: './reports.html',
   styleUrl: './reports.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TherapistReports implements OnInit, OnDestroy {
-  @ViewChild('accuracyChart') accuracyChart?: any;
-  @ViewChild('sessionsChart') sessionsChart?: any;
+  @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<unknown>;
 
-  loading = true;
-  startDate = '';
-  endDate = '';
-  error: string | null = null;
+  private headerService = inject(HeaderService);
+  private therapistService = inject(TherapistService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private sub?: Subscription;
 
-  improvementRate = 0;
-  avgSessionTime = 0;
-  completedObjectives = 0;
-  activePatients = 0;
+  readonly W = W;
+  readonly H = H;
+  readonly PAD = PAD;
+  readonly tabs: { key: Tab; label: string }[] = [
+    { key: 'summary', label: 'Resumen' },
+    { key: 'patients', label: 'Pacientes' },
+    { key: 'ai', label: 'IA y juegos' },
+  ];
+  readonly periods: { key: Period; label: string }[] = [
+    { key: '4w', label: '4 semanas' },
+    { key: '12w', label: '12 semanas' },
+    { key: 'year', label: 'Este año' },
+  ];
 
-  weeklyData: WeeklyData[] = [];
-  allPatients: PatientReport[] = [];
+  readonly tab = signal<Tab>('summary');
+  readonly period = signal<Period>('4w');
+  readonly data = signal<TherapistInsights | null>(null);
+  readonly loading = signal(true);
+  readonly error = signal<string | null>(null);
+  readonly onlyAttention = signal(false);
+  readonly sort = signal<{ key: SortKey; dir: 1 | -1 }>({ key: 'attention', dir: 1 });
+  readonly hoverWeek = signal<number | null>(null);
 
-  get bestPatients(): PatientReport[] {
-    return [...this.allPatients]
-      .sort((a, b) => b.avg_accuracy - a.avg_accuracy)
-      .slice(0, 5);
-  }
+  readonly rangeLabel = computed(() => {
+    const r = this.data()?.range;
+    return r ? `${dayLabel(r.from)} – ${dayLabel(r.to)}` : '';
+  });
 
-  get worstPatients(): PatientReport[] {
-    return [...this.allPatients]
-      .sort((a, b) => a.avg_accuracy - b.avg_accuracy)
-      .slice(0, 5);
-  }
+  readonly attentionCount = computed(() => (this.data()?.patients ?? []).filter((p) => p.attention.length).length);
 
-  accuracyChartData: ChartData<'line'> = {
-    labels: [],
-    datasets: [
-      {
-        label: 'Precisión (%)',
-        data: [],
-        borderColor: '#75a83a',
-        backgroundColor: 'rgba(117, 168, 58, 0.1)',
-        fill: true,
-        tension: 0.4,
-        pointBackgroundColor: '#75a83a',
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        borderWidth: 2,
-      },
-    ],
-  };
-  accuracyChartOptions: ChartConfiguration<'line'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: 'rgba(26, 28, 22, 0.92)',
-        titleFont: { family: 'Manrope', size: 12, weight: 700 as _FontWeight },
-        bodyFont: { family: 'Manrope', size: 13, weight: 600 as _FontWeight },
-        padding: { x: 14, y: 10 },
-        cornerRadius: 10,
-        displayColors: false,
-        callbacks: { label: (ctx) => `${ctx.raw}%` },
-      },
-    },
-    scales: {
-      x: {
-        grid: { display: false },
-        ticks: { font: { family: 'Manrope', size: 11, weight: 600 as _FontWeight }, color: '#76796c' },
-      },
-      y: {
-        grid: { color: 'rgba(217, 219, 206, 0.3)' },
-        ticks: {
-          font: { family: 'Manrope', size: 11, weight: 500 as _FontWeight },
-          color: '#76796c',
-          callback: (val) => `${val}%`,
-        },
-        beginAtZero: true,
-        max: 100,
-      },
-    },
-  };
-  readonly accuracyChartType = 'line' as const;
+  readonly patients = computed(() => {
+    const list = (this.data()?.patients ?? []).filter((p) => !this.onlyAttention() || p.attention.length);
+    const { key, dir } = this.sort();
+    const val = (p: InsightsPatient): number | string => {
+      switch (key) {
+        case 'name':
+          return p.name.toLowerCase();
+        case 'accuracy':
+          return p.accuracy ?? -1;
+        case 'trend':
+          return p.trend ?? -999;
+        case 'attendance':
+          return p.attendance ?? -1;
+        case 'sessions':
+          return p.sessions_done;
+        default:
+          return -p.attention.length;
+      }
+    };
+    return [...list].sort((a, b) => {
+      const va = val(a);
+      const vb = val(b);
+      const c = va < vb ? -1 : va > vb ? 1 : a.name.localeCompare(b.name);
+      return c * (key === 'name' || key === 'attention' ? dir : -dir);
+    });
+  });
 
-  sessionsChartData: ChartData<'bar'> = {
-    labels: [],
-    datasets: [
-      {
-        label: 'Sesiones',
-        data: [],
-        backgroundColor: 'rgba(117, 168, 58, 0.8)',
-        borderColor: '#75a83a',
-        borderWidth: 1,
-        borderRadius: 8,
-        barPercentage: 0.6,
-      },
-    ],
-  };
-  sessionsChartOptions: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: 'rgba(26, 28, 22, 0.92)',
-        titleFont: { family: 'Manrope', size: 12, weight: 700 as _FontWeight },
-        bodyFont: { family: 'Manrope', size: 13, weight: 600 as _FontWeight },
-        padding: { x: 14, y: 10 },
-        cornerRadius: 10,
-        displayColors: false,
-      },
-    },
-    scales: {
-      x: {
-        grid: { display: false },
-        ticks: { font: { family: 'Manrope', size: 11, weight: 600 as _FontWeight }, color: '#76796c' },
-      },
-      y: {
-        grid: { color: 'rgba(217, 219, 206, 0.3)' },
-        ticks: { font: { family: 'Manrope', size: 11, weight: 500 as _FontWeight }, color: '#76796c' },
-        beginAtZero: true,
-      },
-    },
-  };
-  readonly sessionsChartType = 'bar' as const;
+  /** Barras de sesiones realizadas por semana (sobre las programadas, en contorno). */
+  readonly sessionsChart = computed(() => {
+    const weeks = this.data()?.weekly ?? [];
+    if (!weeks.length) return null;
+    const max = Math.max(1, ...weeks.map((w) => w.sessions_scheduled));
+    const slot = (W - PAD.l - PAD.r) / weeks.length;
+    const bw = Math.min(28, slot * 0.6);
+    const y = (v: number) => PAD.t + (1 - v / max) * (H - PAD.t - PAD.b);
+    const bar = (x: number, v: number) => {
+      const h = Math.max(v ? 2 : 0, H - PAD.b - y(v));
+      const top = H - PAD.b - h;
+      const r = Math.min(4, h, bw / 2);
+      return h ? `M${x},${H - PAD.b} V${top + r} Q${x},${top} ${x + r},${top} H${x + bw - r} Q${x + bw},${top} ${x + bw},${top + r} V${H - PAD.b} Z` : '';
+    };
+    const showEvery = Math.ceil(weeks.length / 8);
+    return {
+      max,
+      bars: weeks.map((w, i) => {
+        const x = PAD.l + slot * i + (slot - bw) / 2;
+        return {
+          i,
+          cx: x + bw / 2,
+          hitX: PAD.l + slot * i,
+          hitW: slot,
+          planned: bar(x, w.sessions_scheduled),
+          done: bar(x, w.sessions_done),
+          topY: y(w.sessions_scheduled),
+          label: i % showEvery === 0 ? dayLabel(w.week) : '',
+          week: w,
+        };
+      }),
+    };
+  });
 
-  private subs = new Subscription();
+  /** Línea de precisión semanal (huecos donde no hubo partidas). */
+  readonly accuracyChart = computed(() => {
+    const weeks = this.data()?.weekly ?? [];
+    if (weeks.filter((w) => w.accuracy != null).length < 1) return null;
+    const slot = (W - PAD.l - PAD.r) / weeks.length;
+    const y = (v: number) => PAD.t + (1 - v / 100) * (H - PAD.t - PAD.b);
+    let d = '';
+    let pen = 'M';
+    const points: { x: number; y: number; v: number; i: number }[] = [];
+    weeks.forEach((w, i) => {
+      if (w.accuracy == null) {
+        pen = 'M';
+        return;
+      }
+      const x = PAD.l + slot * i + slot / 2;
+      d += `${pen}${x.toFixed(1)},${y(w.accuracy).toFixed(1)} `;
+      pen = 'L';
+      points.push({ x, y: y(w.accuracy), v: w.accuracy, i });
+    });
+    const showEvery = Math.ceil(weeks.length / 8);
+    return {
+      d,
+      points,
+      grid: [0, 50, 100].map((v) => ({ y: y(v), label: `${v}%` })),
+      ticks: weeks.map((w, i) => ({ x: PAD.l + slot * i + slot / 2, label: i % showEvery === 0 ? dayLabel(w.week) : '' })),
+      last: points[points.length - 1],
+    };
+  });
 
-  constructor(
-    private headerService: HeaderService,
-    private therapistService: TherapistService,
-    private cdr: ChangeDetectorRef,
-  ) {}
+  readonly hovered = computed(() => {
+    const i = this.hoverWeek();
+    const w = i == null ? null : this.data()?.weekly[i];
+    return w ? { i, ...w, label: `Semana del ${dayLabel(w.week)}` } : null;
+  });
 
   ngOnInit() {
     this.headerService.setConfig({
       title: 'Reportes',
-      subtitle: 'Análisis y estadísticas de sesiones',
-      icon: ['fas', 'chart-bar'],
+      subtitle: 'Sesiones, progreso y recomendaciones de la IA',
+      icon: ['fas', 'chart-line'],
+      actionTemplate: this.headerActions,
     });
-    this.loadData();
+    const qp = this.route.snapshot.queryParamMap;
+    const t = qp.get('tab') as Tab | null;
+    if (t && this.tabs.some((x) => x.key === t)) this.tab.set(t);
+    const p = qp.get('period') as Period | null;
+    if (p && this.periods.some((x) => x.key === p)) this.period.set(p);
+    this.load();
   }
 
   ngOnDestroy() {
     this.headerService.reset();
-    this.subs.unsubscribe();
+    this.sub?.unsubscribe();
   }
 
-  private loadData() {
-    this.loading = true;
-    this.cdr.markForCheck();
-    const now = new Date();
-    const month = now.getMonth() + 1;
-    const year = now.getFullYear();
-
-    this.subs.add(forkJoin({
-      overview: this.therapistService.getReportsOverview(),
-      detailed: this.therapistService.getDetailedReports(),
-      appointments: this.therapistService.getTherapistAppointments(month, year),
-    }).subscribe({
-      next: (res) => {
-        if (res.overview.success && res.overview.data) {
-          const o = res.overview.data;
-          this.improvementRate = o.improvement_rate;
-          this.avgSessionTime = o.avg_session_time_minutes;
-          this.completedObjectives = o.completed_objectives;
-          this.activePatients = o.active_patients;
-        }
-
-        if (res.detailed.success && res.detailed.data) {
-          this.allPatients = res.detailed.data;
-        }
-
-        if (res.appointments.success && res.appointments.data) {
-          this.buildWeeklyData(res.appointments.data);
-        }
-
-        this.loading = false;
-        this.cdr.markForCheck();
+  load() {
+    const today = new Date();
+    const from = new Date(today);
+    if (this.period() === 'year') from.setMonth(0, 1);
+    else from.setDate(today.getDate() - (this.period() === '12w' ? 83 : 27));
+    this.loading.set(true);
+    this.error.set(null);
+    this.sub?.unsubscribe();
+    this.sub = this.therapistService.getInsights(toLocalDateString(from), toLocalDateString(today)).subscribe({
+      next: (r) => {
+        this.data.set(r.data ?? null);
+        this.loading.set(false);
       },
-      error: (err) => {
-        this.loading = false;
-        this.error = err.message;
-        this.cdr.markForCheck();
+      error: (e) => {
+        this.loading.set(false);
+        this.error.set(e?.error?.error || 'No se pudieron cargar los reportes.');
       },
-    }));
-  }
-
-  private buildWeeklyData(events: CalendarEvent[]) {
-    const weekMap = new Map<string, { sessions: number; accuracySum: number; count: number }>();
-
-    for (const event of events) {
-      const date = new Date(event.start);
-      const weekStart = this.getWeekStart(date);
-      const key = weekStart.toISOString().slice(0, 10);
-
-      if (!weekMap.has(key)) {
-        weekMap.set(key, { sessions: 0, accuracySum: 0, count: 0 });
-      }
-
-      const entry = weekMap.get(key)!;
-      entry.sessions++;
-    }
-
-    const sorted = Array.from(weekMap.entries()).sort(([a], [b]) => a.localeCompare(b));
-
-    this.weeklyData = sorted.map(([key, val]) => {
-      const d = new Date(key);
-      const monthName = d.toLocaleDateString('es-ES', { month: 'short' });
-      const day = d.getDate();
-      const weekLabel = `${monthName} ${day}`;
-      return {
-        week: weekLabel,
-        sessions: val.sessions,
-        accuracy: val.count > 0 ? Math.round((val.accuracySum / val.count) * 10) / 10 : 0,
-      };
     });
-
-    this.updateCharts();
   }
 
-  private getWeekStart(date: Date): Date {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    d.setDate(diff);
-    d.setHours(0, 0, 0, 0);
-    return d;
+  setTab(t: Tab) {
+    this.tab.set(t);
+    this.router.navigate([], { queryParams: { tab: t === 'summary' ? null : t }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
-  private updateCharts() {
-    const labels = this.weeklyData.map((w) => w.week);
-    const accuracies = this.weeklyData.map((w) => w.accuracy);
-    const sessions = this.weeklyData.map((w) => w.sessions);
-
-    this.accuracyChartData = {
-      ...this.accuracyChartData,
-      labels,
-      datasets: [
-        {
-          ...this.accuracyChartData.datasets[0],
-          data: accuracies,
-        },
-      ],
-    };
-
-    this.sessionsChartData = {
-      ...this.sessionsChartData,
-      labels,
-      datasets: [
-        {
-          ...this.sessionsChartData.datasets[0],
-          data: sessions,
-        },
-      ],
-    };
+  onTabKey(ev: KeyboardEvent) {
+    const i = this.tabs.findIndex((t) => t.key === this.tab());
+    const next = ev.key === 'ArrowRight' ? i + 1 : ev.key === 'ArrowLeft' ? i - 1 : null;
+    if (next == null) return;
+    ev.preventDefault();
+    const t = this.tabs[(next + this.tabs.length) % this.tabs.length];
+    this.setTab(t.key);
+    queueMicrotask(() => document.getElementById(`rp-tab-${t.key}`)?.focus());
   }
 
-  onFilterChange() {
-    this.loading = true;
-    this.cdr.markForCheck();
-    const now = new Date();
-    const month = now.getMonth() + 1;
-    const year = now.getFullYear();
-
-    this.subs.add(forkJoin({
-      overview: this.therapistService.getReportsOverview(),
-      detailed: this.therapistService.getDetailedReports(this.startDate || undefined, this.endDate || undefined),
-      appointments: this.therapistService.getTherapistAppointments(month, year),
-    }).subscribe({
-      next: (res) => {
-        if (res.overview.success && res.overview.data) {
-          const o = res.overview.data;
-          this.improvementRate = o.improvement_rate;
-          this.avgSessionTime = o.avg_session_time_minutes;
-          this.completedObjectives = o.completed_objectives;
-          this.activePatients = o.active_patients;
-        }
-        if (res.detailed.success && res.detailed.data) {
-          this.allPatients = res.detailed.data;
-        }
-        if (res.appointments.success && res.appointments.data) {
-          this.buildWeeklyData(res.appointments.data);
-        }
-        this.loading = false;
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.loading = false;
-        this.error = err.message;
-        this.cdr.markForCheck();
-      },
-    }));
+  setPeriod(p: Period) {
+    if (p === this.period()) return;
+    this.period.set(p);
+    this.router.navigate([], { queryParams: { period: p === '4w' ? null : p }, queryParamsHandling: 'merge', replaceUrl: true });
+    this.load();
   }
 
-  exportCSV() {
-    const now = new Date().toISOString().slice(0, 10);
-    const rows = [['Paciente', 'Sesiones', 'Precisión', 'Progreso']];
-    for (const p of this.allPatients) {
-      rows.push([p.patient_name, String(p.sessions_count), `${p.avg_accuracy}%`, `${p.avg_accuracy}%`]);
-    }
-    const csv = rows.map((r) => r.join(',')).join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+  sortBy(key: SortKey) {
+    const s = this.sort();
+    this.sort.set({ key, dir: s.key === key ? (s.dir === 1 ? -1 : 1) : 1 });
+  }
+
+  ariaSort(key: SortKey) {
+    const s = this.sort();
+    if (s.key !== key) return 'none';
+    const asc = (key === 'name' || key === 'attention' ? s.dir : -s.dir) === 1;
+    return asc ? 'ascending' : 'descending';
+  }
+
+  openPatient(id: number) {
+    this.router.navigate(['/therapist/patients', id]);
+  }
+
+  pct(v: number | null | undefined) {
+    return v == null ? '—' : `${String(v).replace('.', ',')} %`;
+  }
+
+  trendText(t: number | null) {
+    if (t == null) return '—';
+    if (Math.abs(t) < 1) return '= estable';
+    return `${t > 0 ? '↑' : '↓'} ${String(Math.abs(t)).replace('.', ',')} pts`;
+  }
+
+  recLabel(r: AiRecommendation | null) {
+    return r ? (this.data()?.ai.labels[r] ?? r) : '—';
+  }
+
+  date(iso: string | null) {
+    return iso ? dayLabel(iso) : '—';
+  }
+
+  exportCsv() {
+    const d = this.data();
+    if (!d) return;
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = [
+      ['Paciente', 'Sesiones realizadas', 'Sesiones programadas', 'Asistencia %', 'Partidas', 'Precisión %', 'Tendencia (pts)', 'Recomendación IA', 'Última sesión', 'Requiere atención'],
+      ...d.patients.map((p) => [
+        p.name,
+        p.sessions_done,
+        p.sessions_scheduled,
+        p.attendance ?? '',
+        p.games,
+        p.accuracy ?? '',
+        p.trend ?? '',
+        p.recommendation ? d.ai.labels[p.recommendation] : '',
+        p.last_session ?? '',
+        p.attention.join('; '),
+      ]),
+    ];
+    const csv = rows.map((r) => r.map(esc).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = `reporte_pacientes_${now}.csv`;
+    a.download = `reporte_${d.range.from}_${d.range.to}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
-
 }

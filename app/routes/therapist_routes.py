@@ -1167,7 +1167,9 @@ def api_dashboard_stats():
         Appointment.therapist_id == current_user.id,
         Appointment.start_time >= today_start,
         Appointment.start_time < today_end,
-        Appointment.status == 'scheduled',
+        # Todas las sesiones del día menos las canceladas: antes solo contaba las «programadas», así que el número
+        # bajaba a medida que el terapeuta las iba completando.
+        Appointment.status != 'cancelled',
     ).count()
 
     completed_sessions = Appointment.query.filter(
@@ -1178,9 +1180,9 @@ def api_dashboard_stats():
         Appointment.therapist_id == current_user.id, Appointment.status == 'scheduled', Appointment.start_time > now
     ).count()
 
-    active_patients = User.query.filter(
-        User.assigned_therapist_id == current_user.id, User.role == 'jugador', User.is_active == True
-    ).count()
+    # Vínculo N:M (patient_therapist), el mismo que usan el resto de pantallas del terapeuta: assigned_therapist_id
+    # guarda un solo terapeuta y dejaba fuera a los pacientes compartidos.
+    active_patients = current_user.associated_patients.filter_by(role='jugador', is_active=True).count()
 
     return jsonify(
         {
@@ -1488,7 +1490,7 @@ def api_analytics():
         'adaptations_count': 0,
         'avg_accuracy': 0,
         'success_rate': 0,
-        'active_models': 1,
+        'active_models': 0,
     }
     difficulty_matrix = []
     prediction_distribution = []
@@ -1515,7 +1517,7 @@ def api_analytics():
             'adaptations_count': total_metrics,
             'avg_accuracy': round(avg_acc, 1),
             'success_rate': round(success_rate, 1),
-            'active_models': 1,
+            'active_models': 0,
         }
 
         games = (
@@ -1553,10 +1555,9 @@ def api_analytics():
         dist_map = {0: 'Mantener', 1: 'Avanzar', 2: 'Apoyo'}
         prediction_distribution = [{'label': dist_map.get(p, str(p)), 'value': c} for p, c in dist]
 
-        model_confidence = [
-            {'model': 'SVM', 'confidence': 88},
-            {'model': 'Random Forest', 'confidence': 76},
-        ]
+        # Antes devolvía confianzas fijas (SVM 88 %, Random Forest 76 %) que no salían de ningún modelo. La pantalla
+        # usa /therapist/api/insights; aquí no se inventa nada.
+        model_confidence = []
 
         recent = (
             db.session.query(SessionMetrics, User)
@@ -1588,6 +1589,20 @@ def api_analytics():
             },
         }
     )
+
+
+@therapist_bp.route('/api/insights')
+@login_required
+def api_insights():
+    """Reportes del terapeuta: sesiones, asistencia, juegos y recomendaciones de la IA (?from=YYYY-MM-DD&to=...)."""
+    if current_user.role != 'terapista':
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+    from app.services.therapist_insights import build_insights, parse_day
+
+    first, last = parse_day(request.args.get('from')), parse_day(request.args.get('to'))
+    if first and last and (last - first).days > 366:
+        return jsonify({'success': False, 'error': 'El periodo no puede superar un año.'}), 400
+    return jsonify({'success': True, 'data': build_insights(current_user, first, last)})
 
 
 @therapist_bp.route('/api/reports/overview')

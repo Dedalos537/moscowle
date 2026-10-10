@@ -34,13 +34,11 @@ export class RecordingService {
   private endTimer: any;
   private attendanceCheckTimer: any;
   private attendanceCountdownInterval: any;
-  private periodicAuditTimer: any;
   private recordingStartTime: number = 0;
   private chunkCount: number = 0;
   private audioChunks: Blob[] = [];
   private startedSessions: Set<number> = new Set();
   private readonly chunkIntervalMs = 5 * 60 * 1000;
-  private readonly periodicAuditIntervalMs = 15 * 60 * 1000;
   private readonly pollIntervalMs = 30 * 1000;
   private currentSessionId: number | null = null;
   private pendingUploads = 0;
@@ -271,7 +269,6 @@ export class RecordingService {
       this.runAttendanceCheck();
     }, 5 * 60 * 1000);
 
-    this.startPeriodicAudit();
     this.programarFin();
   }
 
@@ -405,27 +402,6 @@ export class RecordingService {
     }
   }
 
-  private startPeriodicAudit() {
-    this.periodicAuditTimer = setInterval(() => {
-      this.runPeriodicAudit();
-    }, this.periodicAuditIntervalMs);
-  }
-
-  private runPeriodicAudit() {
-    if (!this.currentSessionId || this.markedAbsent) return;
-    this.http.post(`/api/sessions/${this.currentSessionId}/audit-session`, {}).subscribe({
-      next: () => {},
-      error: () => {},
-    });
-  }
-
-  private stopPeriodicAudit() {
-    if (this.periodicAuditTimer) {
-      clearInterval(this.periodicAuditTimer);
-      this.periodicAuditTimer = null;
-    }
-  }
-
   private tryFinishAfterUpload() {
     if (this.finishPending && this.pendingUploads === 0) {
       this.finishPending = false;
@@ -496,7 +472,6 @@ export class RecordingService {
     clearInterval(this.elapsedTimer);
     clearTimeout(this.endTimer);
     clearTimeout(this.attendanceCheckTimer);
-    this.stopPeriodicAudit();
     clearInterval(this.attendanceCountdownInterval);
     if (this.recorder && this.recorder.state === 'recording') {
       this.recorder.stop();

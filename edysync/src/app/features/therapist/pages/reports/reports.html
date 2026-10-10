@@ -1,305 +1,254 @@
-<div class="p-4 md:p-8 space-y-6" [@fadeInUp]>
+<ng-template #headerActions>
+  <app-button variant="secondary" label="Exportar CSV" [icon]="['fas', 'file-arrow-down']" [disabled]="!data()" (clicked)="exportCsv()" />
+</ng-template>
 
-  @if (loading) {
-    <div class="flex justify-center py-24">
-      <app-spinner size="md" colorClass="text-primary"></app-spinner>
-    </div>
-  } @else {
-
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div>
-        <div class="flex items-center gap-3">
-          <fa-icon [icon]="['fas', 'chart-bar']" class="text-3xl text-primary"></fa-icon>
-          <div>
-            <h1 class="text-h2 text-on-surface">Reportes de Sesiones</h1>
-            <p class="text-body text-on-surface-variant mt-0.5">Análisis y estadísticas del período actual</p>
-          </div>
-        </div>
-      </div>
-      <div class="flex items-center gap-3 flex-wrap">
-        <div class="flex items-center gap-2">
-          <label class="text-xs font-semibold text-on-surface-variant">Desde</label>
-          <input
-            type="date"
-            [ngModel]="startDate"
-            (ngModelChange)="startDate = $event; onFilterChange()"
-            class="text-xs border border-border/50 rounded-lg px-2.5 py-1.5 bg-surface-container-lowest text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
-          />
-        </div>
-        <div class="flex items-center gap-2">
-          <label class="text-xs font-semibold text-on-surface-variant">Hasta</label>
-          <input
-            type="date"
-            [ngModel]="endDate"
-            (ngModelChange)="endDate = $event; onFilterChange()"
-            class="text-xs border border-border/50 rounded-lg px-2.5 py-1.5 bg-surface-container-lowest text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
-          />
-        </div>
-        <app-button variant="secondary" label="Exportar" [icon]="['fas', 'file-arrow-down']" (clicked)="exportCSV()"></app-button>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-        <div class="flex items-start justify-between mb-3">
-          <span class="text-label-caps text-success">Mejora Promedio</span>
-          <fa-icon [icon]="['fas', 'chart-line']" class="text-success text-xl"></fa-icon>
-        </div>
-        <p class="text-3xl font-black text-on-surface tracking-tight">{{ improvementRate }}%</p>
-        <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'chart-line']" class="text-success text-[14px]"></fa-icon>
-          Tasa de mejora general
-        </p>
-      </div>
-
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-        <div class="flex items-start justify-between mb-3">
-          <span class="text-label-caps text-info">Sesión Promedio</span>
-          <fa-icon [icon]="['fas', 'clock']" class="text-info text-xl"></fa-icon>
-        </div>
-        <p class="text-3xl font-black text-on-surface tracking-tight">{{ avgSessionTime }} <span class="text-sm font-normal text-on-surface-variant">min</span></p>
-        <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'stopwatch']" class="text-info text-[14px]"></fa-icon>
-          Duracion media por sesion
-        </p>
-      </div>
-
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-        <div class="flex items-start justify-between mb-3">
-          <span class="text-label-caps text-info">Objetivos</span>
-          <fa-icon [icon]="['fas', 'list-check']" class="text-info text-xl"></fa-icon>
-        </div>
-        <p class="text-3xl font-black text-on-surface tracking-tight">{{ completedObjectives }}</p>
-        <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'flag']" class="text-info text-[14px]"></fa-icon>
-          Objetivos completados
-        </p>
-      </div>
-
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-        <div class="flex items-start justify-between mb-3">
-          <span class="text-label-caps text-primary">Pacientes</span>
-          <fa-icon [icon]="['fas', 'users']" class="text-primary text-xl"></fa-icon>
-        </div>
-        <p class="text-3xl font-black text-on-surface tracking-tight">{{ activePatients }}</p>
-        <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'user-plus']" class="text-primary text-[14px]"></fa-icon>
-          Pacientes activos
-        </p>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-        <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
-          <fa-icon [icon]="['fas', 'chart-line']" class="text-[16px]"></fa-icon>
-          Tendencia de Precisión Semanal
-        </h4>
-        <div class="relative" style="height: 240px">
-          @if (weeklyData.length > 0) {
-            <canvas
-              baseChart
-              #accuracyChart
-              [data]="accuracyChartData"
-              [options]="accuracyChartOptions"
-              [type]="accuracyChartType"
-            ></canvas>
-          } @else {
-            <div class="flex items-center justify-center h-full text-sm text-on-surface-variant">
-              No hay datos disponibles
-            </div>
-          }
-        </div>
-      </div>
-
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-        <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
-          <fa-icon [icon]="['fas', 'chart-bar']" class="text-[16px]"></fa-icon>
-          Sesiones por Semana
-        </h4>
-        <div class="relative" style="height: 240px">
-          @if (weeklyData.length > 0) {
-            <canvas
-              baseChart
-              #sessionsChart
-              [data]="sessionsChartData"
-              [options]="sessionsChartOptions"
-              [type]="sessionsChartType"
-            ></canvas>
-          } @else {
-            <div class="flex items-center justify-center h-full text-sm text-on-surface-variant">
-              No hay datos disponibles
-            </div>
-          }
-        </div>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'trophy']" class="text-success text-lg"></fa-icon>
-            Mejor Rendimiento
-          </h3>
-          <span class="text-xs text-on-surface-variant font-medium">{{ bestPatients.length }} pacientes</span>
-        </div>
-        @if (bestPatients.length > 0) {
-          <div class="overflow-x-auto">
-            <table class="w-full min-w-[400px]">
-              <thead>
-                <tr class="border-b border-border/40">
-                  <th class="px-3 py-3 text-left text-label-caps text-on-surface-variant">#</th>
-                  <th class="px-3 py-3 text-left text-label-caps text-on-surface-variant">Paciente</th>
-                  <th class="px-3 py-3 text-center text-label-caps text-on-surface-variant">Sesiones</th>
-                  <th class="px-3 py-3 text-right text-label-caps text-on-surface-variant">Precisión</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (p of bestPatients; track p.patient_id; let i = $index) {
-                  <tr class="border-t border-border/20 hover:bg-surface-container-low transition-colors">
-                    <td class="px-3 py-3 text-sm text-on-surface-variant font-medium">{{ i + 1 }}</td>
-                    <td class="px-3 py-3 text-sm font-semibold text-on-surface">{{ p.patient_name }}</td>
-                    <td class="px-3 py-3 text-sm text-center font-medium text-on-surface">{{ p.sessions_count }}</td>
-                    <td class="px-3 py-3 text-right">
-                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
-                        [class.bg-success-container]="p.avg_accuracy >= 80"
-                        [class.text-success]="p.avg_accuracy >= 80"
-                        [class.bg-warning-container]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                        [class.text-warning]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                        [class.bg-error-container]="p.avg_accuracy < 50"
-                        [class.text-error]="p.avg_accuracy < 50">
-                        <fa-icon [icon]="['fas', 'circle']" class="text-[12px]"
-                          [class.text-success]="p.avg_accuracy >= 80"
-                          [class.text-warning]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                          [class.text-error]="p.avg_accuracy < 50"></fa-icon>
-                        {{ p.avg_accuracy }}%
-                      </span>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        } @else {
-          <p class="text-sm text-center text-on-surface-variant py-8">No hay datos de pacientes</p>
-        }
-      </div>
-
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'chart-line']" class="text-error text-lg" flip="vertical"></fa-icon>
-            Requiere Atencion
-          </h3>
-          <span class="text-xs text-on-surface-variant font-medium">{{ worstPatients.length }} pacientes</span>
-        </div>
-        @if (worstPatients.length > 0) {
-          <div class="overflow-x-auto">
-            <table class="w-full min-w-[400px]">
-              <thead>
-                <tr class="border-b border-border/40">
-                  <th class="px-3 py-3 text-left text-label-caps text-on-surface-variant">#</th>
-                  <th class="px-3 py-3 text-left text-label-caps text-on-surface-variant">Paciente</th>
-                  <th class="px-3 py-3 text-center text-label-caps text-on-surface-variant">Sesiones</th>
-                  <th class="px-3 py-3 text-right text-label-caps text-on-surface-variant">Precisión</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (p of worstPatients; track p.patient_id; let i = $index) {
-                  <tr class="border-t border-border/20 hover:bg-surface-container-low transition-colors">
-                    <td class="px-3 py-3 text-sm text-on-surface-variant font-medium">{{ i + 1 }}</td>
-                    <td class="px-3 py-3 text-sm font-semibold text-on-surface">{{ p.patient_name }}</td>
-                    <td class="px-3 py-3 text-sm text-center font-medium text-on-surface">{{ p.sessions_count }}</td>
-                    <td class="px-3 py-3 text-right">
-                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
-                        [class.bg-success-container]="p.avg_accuracy >= 80"
-                        [class.text-success]="p.avg_accuracy >= 80"
-                        [class.bg-warning-container]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                        [class.text-warning]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                        [class.bg-error-container]="p.avg_accuracy < 50"
-                        [class.text-error]="p.avg_accuracy < 50">
-                        <fa-icon [icon]="['fas', 'circle']" class="text-[12px]"
-                          [class.text-success]="p.avg_accuracy >= 80"
-                          [class.text-warning]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                          [class.text-error]="p.avg_accuracy < 50"></fa-icon>
-                        {{ p.avg_accuracy }}%
-                      </span>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        } @else {
-          <p class="text-sm text-center text-on-surface-variant py-8">No hay datos de pacientes</p>
-        }
-      </div>
-    </div>
-
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-      <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'users']" class="text-primary text-lg"></fa-icon>
-            Todos los Pacientes
-          </h3>
-        <span class="text-xs text-on-surface-variant font-medium">{{ allPatients.length }} registros</span>
-      </div>
-      @if (allPatients.length > 0) {
-        <div class="overflow-x-auto">
-          <table class="w-full min-w-[500px]">
-            <thead>
-              <tr class="border-b border-border/40">
-                <th class="px-4 py-3 text-left text-label-caps text-on-surface-variant">Paciente</th>
-                <th class="px-4 py-3 text-center text-label-caps text-on-surface-variant">Sesiones</th>
-                <th class="px-4 py-3 text-right text-label-caps text-on-surface-variant">Precisión</th>
-                <th class="px-4 py-3 text-right text-label-caps text-on-surface-variant">Progreso</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (p of allPatients; track p.patient_id) {
-                <tr class="border-t border-border/20 hover:bg-surface-container-low transition-colors">
-                  <td class="px-4 py-3 text-sm font-semibold text-on-surface">{{ p.patient_name }}</td>
-                  <td class="px-4 py-3 text-sm text-center font-medium text-on-surface">{{ p.sessions_count }}</td>
-                  <td class="px-4 py-3 text-right">
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
-                      [class.bg-success-container]="p.avg_accuracy >= 80"
-                      [class.text-success]="p.avg_accuracy >= 80"
-                      [class.bg-warning-container]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                      [class.text-warning]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                      [class.bg-error-container]="p.avg_accuracy < 50"
-                      [class.text-error]="p.avg_accuracy < 50">
-                      {{ p.avg_accuracy }}%
-                    </span>
-                  </td>
-                  <td class="px-4 py-3 text-right">
-                    <div class="flex items-center justify-end gap-2">
-                      <div class="w-20 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-                        <div
-                          class="h-full rounded-full transition-all duration-700"
-                          [class.bg-success-container0]="p.avg_accuracy >= 80"
-                          [class.bg-warning-container0]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                          [class.bg-error-container0]="p.avg_accuracy < 50"
-                          [style.width.%]="p.avg_accuracy"
-                        ></div>
-                      </div>
-                      <span class="text-xs font-bold"
-                        [class.text-success]="p.avg_accuracy >= 80"
-                        [class.text-warning]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                        [class.text-error]="p.avg_accuracy < 50">
-                        {{ p.avg_accuracy }}%
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      } @else {
-        <p class="text-sm text-center text-on-surface-variant py-8">No hay reportes disponibles</p>
+<div class="rp">
+  <div class="rp-bar">
+    <div class="rp-tabs" role="tablist" aria-label="Secciones del reporte" (keydown)="onTabKey($event)">
+      @for (t of tabs; track t.key) {
+        <button type="button" role="tab" [id]="'rp-tab-' + t.key" [attr.aria-selected]="tab() === t.key" [attr.aria-controls]="'rp-panel-' + t.key"
+          [attr.tabindex]="tab() === t.key ? 0 : -1" [class.is-on]="tab() === t.key" (click)="setTab(t.key)">
+          {{ t.label }}
+          @if (t.key === 'patients' && attentionCount()) { <span class="rp-tabs__badge" [attr.aria-label]="attentionCount() + ' requieren atención'">{{ attentionCount() }}</span> }
+        </button>
       }
     </div>
+    <div class="rp-period">
+      <span class="rp-period__range">{{ rangeLabel() }}</span>
+      <div class="rp-seg" role="group" aria-label="Periodo">
+        @for (p of periods; track p.key) {
+          <button type="button" [class.is-on]="period() === p.key" [attr.aria-pressed]="period() === p.key" (click)="setPeriod(p.key)">{{ p.label }}</button>
+        }
+      </div>
+    </div>
+  </div>
 
+  @if (error(); as err) {
+    <div class="rp-empty" role="alert">
+      <p class="rp-empty__title">{{ err }}</p>
+      <app-button variant="secondary" label="Reintentar" [icon]="['fas', 'rotate-right']" (clicked)="load()" />
+    </div>
+  } @else if (loading() && !data()) {
+    <div class="rp-skel-grid" aria-busy="true">
+      @for (i of [1, 2, 3, 4]; track i) { <div class="rp-skel"></div> }
+      <div class="rp-skel rp-skel--wide"></div>
+    </div>
+  } @else if (data(); as d) {
+    <div class="rp-panels" [class.is-refreshing]="loading()" [attr.aria-busy]="loading()">
+      <!-- ── Resumen ─────────────────────────────────────────────── -->
+      @if (tab() === 'summary') {
+        <section id="rp-panel-summary" role="tabpanel" aria-labelledby="rp-tab-summary" class="rp-panel">
+          <div class="rp-kpis">
+            <div class="rp-kpi">
+              <span class="rp-kpi__label">Sesiones realizadas</span>
+              <span class="rp-kpi__value">{{ d.kpis.sessions_done }}</span>
+              <span class="rp-kpi__meta">de {{ d.kpis.sessions_scheduled }} programadas · {{ d.kpis.cancelled }} canceladas</span>
+            </div>
+            <div class="rp-kpi">
+              <span class="rp-kpi__label">Asistencia</span>
+              <span class="rp-kpi__value">{{ pct(d.kpis.attendance) }}</span>
+              <span class="rp-kpi__meta">{{ d.kpis.patients_seen }} {{ d.kpis.patients_seen === 1 ? 'paciente atendido' : 'pacientes atendidos' }}</span>
+            </div>
+            <div class="rp-kpi">
+              <span class="rp-kpi__label">Precisión en juegos</span>
+              <span class="rp-kpi__value">{{ pct(d.kpis.accuracy) }}</span>
+              <span class="rp-kpi__meta">{{ d.kpis.games_played }} {{ d.kpis.games_played === 1 ? 'partida' : 'partidas' }}</span>
+            </div>
+            <div class="rp-kpi">
+              <span class="rp-kpi__label">Duración media</span>
+              <span class="rp-kpi__value">{{ d.kpis.avg_minutes != null ? d.kpis.avg_minutes + ' min' : '—' }}</span>
+              <span class="rp-kpi__meta">por sesión realizada</span>
+            </div>
+          </div>
+
+          <div class="rp-charts">
+            <figure class="rp-chart">
+              <figcaption>
+                <span>Sesiones por semana</span>
+                <span class="rp-legend"><i class="rp-swatch rp-swatch--done"></i>Realizadas <i class="rp-swatch rp-swatch--plan"></i>Programadas</span>
+              </figcaption>
+              @if (sessionsChart(); as c) {
+                <div class="rp-plot">
+                  <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" role="img" aria-label="Sesiones realizadas y programadas por semana; la tabla de pacientes tiene el detalle" (mouseleave)="hoverWeek.set(null)">
+                    <line class="rp-base" [attr.x1]="PAD.l" [attr.x2]="W - PAD.r" [attr.y1]="H - PAD.b" [attr.y2]="H - PAD.b" />
+                    @for (b of c.bars; track b.i) {
+                      <g (mouseenter)="hoverWeek.set(b.i)" [class.is-hover]="hoverWeek() === b.i">
+                        <rect class="rp-hit" [attr.x]="b.hitX" [attr.y]="PAD.t" [attr.width]="b.hitW" [attr.height]="H - PAD.t - PAD.b" />
+                        @if (b.planned) { <path class="rp-bar rp-bar--plan" [attr.d]="b.planned" /> }
+                        @if (b.done) { <path class="rp-bar rp-bar--done" [attr.d]="b.done" /> }
+                        @if (hoverWeek() === b.i || b.i === c.bars.length - 1) {
+                          <text class="rp-val" [attr.x]="b.cx" [attr.y]="b.topY - 6" text-anchor="middle">{{ b.week.sessions_done }}/{{ b.week.sessions_scheduled }}</text>
+                        }
+                        <text class="rp-axis" [attr.x]="b.cx" [attr.y]="H - 7" text-anchor="middle">{{ b.label }}</text>
+                      </g>
+                    }
+                  </svg>
+                </div>
+              }
+            </figure>
+
+            <figure class="rp-chart">
+              <figcaption><span>Precisión semanal en juegos</span></figcaption>
+              @if (accuracyChart(); as c) {
+                <div class="rp-plot">
+                  <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" role="img" aria-label="Precisión promedio por semana en los juegos terapéuticos" (mouseleave)="hoverWeek.set(null)">
+                    @for (g of c.grid; track g.label) {
+                      <line class="rp-grid" [attr.x1]="PAD.l" [attr.x2]="W - PAD.r" [attr.y1]="g.y" [attr.y2]="g.y" />
+                      <text class="rp-axis" [attr.x]="W - PAD.r" [attr.y]="g.y - 4" text-anchor="end">{{ g.label }}</text>
+                    }
+                    <path class="rp-line" [attr.d]="c.d" />
+                    @for (p of c.points; track p.i) {
+                      <circle class="rp-pt" [class.is-hover]="hoverWeek() === p.i" [attr.cx]="p.x" [attr.cy]="p.y" [attr.r]="hoverWeek() === p.i ? 5 : 3.5" (mouseenter)="hoverWeek.set(p.i)" />
+                    }
+                    @if (c.last) { <text class="rp-val" [attr.x]="c.last.x" [attr.y]="c.last.y - 9" text-anchor="middle">{{ pct(c.last.v) }}</text> }
+                    @for (t of c.ticks; track $index) { <text class="rp-axis" [attr.x]="t.x" [attr.y]="H - 7" text-anchor="middle">{{ t.label }}</text> }
+                  </svg>
+                </div>
+              } @else {
+                <p class="rp-chart__empty">Sin partidas de juegos en este periodo.</p>
+              }
+            </figure>
+          </div>
+
+          @if (hovered(); as h) {
+            <p class="rp-hover" role="status">
+              <strong>{{ h.label }}</strong> · {{ h.sessions_done }} de {{ h.sessions_scheduled }} sesiones realizadas · asistencia {{ pct(h.attendance) }} · precisión {{ pct(h.accuracy) }} ({{ h.games }} {{ h.games === 1 ? 'partida' : 'partidas' }})
+            </p>
+          } @else {
+            <p class="rp-hover rp-hover--hint">Pasa el cursor sobre una semana para ver su detalle.</p>
+          }
+
+          @if (attentionCount()) {
+            <button type="button" class="rp-callout" (click)="onlyAttention.set(true); setTab('patients')">
+              <fa-icon [icon]="['fas', 'triangle-exclamation']" aria-hidden="true" />
+              <span><strong>{{ attentionCount() }} {{ attentionCount() === 1 ? 'paciente requiere' : 'pacientes requieren' }} atención</strong> por precisión baja o en descenso, faltas o recomendación de apoyo.</span>
+              <fa-icon [icon]="['fas', 'arrow-right']" aria-hidden="true" />
+            </button>
+          }
+        </section>
+      }
+
+      <!-- ── Pacientes ───────────────────────────────────────────── -->
+      @if (tab() === 'patients') {
+        <section id="rp-panel-patients" role="tabpanel" aria-labelledby="rp-tab-patients" class="rp-panel">
+          <div class="rp-tools">
+            <label class="rp-check">
+              <input type="checkbox" [checked]="onlyAttention()" (change)="onlyAttention.set(!onlyAttention())" />
+              Solo los que requieren atención ({{ attentionCount() }})
+            </label>
+            <span class="rp-tools__count">{{ patients().length }} {{ patients().length === 1 ? 'paciente' : 'pacientes' }}</span>
+          </div>
+          @if (patients().length) {
+            <div class="rp-table-wrap" role="region" aria-label="Pacientes" tabindex="0">
+              <table class="rp-table data-table">
+                <thead>
+                  <tr>
+                    <th scope="col" [attr.aria-sort]="ariaSort('name')"><button type="button" (click)="sortBy('name')">Paciente</button></th>
+                    <th scope="col" [attr.aria-sort]="ariaSort('sessions')"><button type="button" (click)="sortBy('sessions')">Sesiones</button></th>
+                    <th scope="col" [attr.aria-sort]="ariaSort('attendance')"><button type="button" (click)="sortBy('attendance')">Asistencia</button></th>
+                    <th scope="col" [attr.aria-sort]="ariaSort('accuracy')"><button type="button" (click)="sortBy('accuracy')">Precisión</button></th>
+                    <th scope="col" [attr.aria-sort]="ariaSort('trend')"><button type="button" (click)="sortBy('trend')">Tendencia</button></th>
+                    <th scope="col">IA sugiere</th>
+                    <th scope="col" [attr.aria-sort]="ariaSort('attention')"><button type="button" (click)="sortBy('attention')">Atención</button></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of patients(); track p.id) {
+                    <tr [class.is-flag]="p.attention.length" (click)="openPatient(p.id)">
+                      <th scope="row">
+                        <button type="button" class="rp-name" (click)="$event.stopPropagation(); openPatient(p.id)">{{ p.name }}</button>
+                        <span class="rp-sub">Última sesión: {{ date(p.last_session) }}</span>
+                      </th>
+                      <td class="rp-num">{{ p.sessions_done }}<span class="rp-sub-inline">/{{ p.sessions_scheduled }}</span></td>
+                      <td class="rp-num" [class.is-bad]="p.attendance != null && p.attendance < 70">{{ pct(p.attendance) }}</td>
+                      <td class="rp-num">
+                        <span class="rp-acc">
+                          <span class="rp-acc__bar" aria-hidden="true"><span [style.width.%]="p.accuracy ?? 0" [class.is-low]="p.accuracy != null && p.accuracy < 60"></span></span>
+                          {{ pct(p.accuracy) }}
+                        </span>
+                        <span class="rp-sub">{{ p.games }} {{ p.games === 1 ? 'partida' : 'partidas' }}</span>
+                      </td>
+                      <td class="rp-num" [class.is-good]="p.trend != null && p.trend >= 1" [class.is-bad]="p.trend != null && p.trend <= -1">{{ trendText(p.trend) }}</td>
+                      <td><span class="rp-rec" [attr.data-rec]="p.recommendation">{{ recLabel(p.recommendation) }}</span></td>
+                      <td>
+                        @if (p.attention.length) {
+                          <ul class="rp-reasons">@for (r of p.attention; track r) { <li>{{ r }}</li> }</ul>
+                        } @else { <span class="rp-ok">Sin alertas</span> }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="rp-empty">
+              <p class="rp-empty__title">{{ onlyAttention() ? 'Ningún paciente requiere atención en este periodo' : 'Sin pacientes con actividad en este periodo' }}</p>
+            </div>
+          }
+        </section>
+      }
+
+      <!-- ── IA y juegos ─────────────────────────────────────────── -->
+      @if (tab() === 'ai') {
+        <section id="rp-panel-ai" role="tabpanel" aria-labelledby="rp-tab-ai" class="rp-panel">
+          <p class="rp-intro">
+            Después de cada partida, el modelo de la IA sugiere si el paciente puede subir la dificultad, mantenerla o
+            necesita apoyo. Estas son sus sugerencias en el periodo, con la precisión real de cada juego.
+          </p>
+          @if (d.ai.total) {
+            <div class="rp-recs">
+              @for (r of d.ai.recommendations; track r.key) {
+                <div class="rp-rec-card" [attr.data-rec]="r.key">
+                  <span class="rp-rec-card__label">{{ r.label }}</span>
+                  <span class="rp-rec-card__value">{{ pct(r.pct) }}</span>
+                  <span class="rp-rec-card__meta">{{ r.count }} de {{ d.ai.total }} partidas</span>
+                  <span class="rp-rec-card__bar" aria-hidden="true"><span [style.width.%]="r.pct ?? 0"></span></span>
+                </div>
+              }
+            </div>
+
+            <div class="rp-cols">
+              <div class="rp-block">
+                <h3 class="rp-h">Por juego</h3>
+                <div class="rp-table-wrap" role="region" aria-label="Juegos" tabindex="0">
+                  <table class="rp-table data-table">
+                    <thead><tr><th scope="col">Juego</th><th scope="col">Partidas</th><th scope="col">Precisión</th><th scope="col">Sugerencia más frecuente</th></tr></thead>
+                    <tbody>
+                      @for (g of d.ai.by_game; track g.game) {
+                        <tr class="is-static">
+                          <th scope="row">{{ g.game }}<span class="rp-sub">{{ g.patients }} {{ g.patients === 1 ? 'paciente' : 'pacientes' }}</span></th>
+                          <td class="rp-num">{{ g.plays }}</td>
+                          <td class="rp-num">{{ pct(g.accuracy) }}</td>
+                          <td><span class="rp-rec" [attr.data-rec]="g.recommendation">{{ recLabel(g.recommendation) }}</span></td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="rp-block">
+                <h3 class="rp-h">Últimas sugerencias</h3>
+                <ul class="rp-feed">
+                  @for (r of d.ai.recent; track $index) {
+                    <li>
+                      <button type="button" class="rp-feed__row" (click)="openPatient(r.patient_id)">
+                        <span class="rp-feed__who">{{ r.patient }}<span class="rp-sub">{{ r.game }} · {{ date(r.date) }}</span></span>
+                        <span class="rp-num">{{ pct(r.accuracy) }}</span>
+                        <span class="rp-rec" [attr.data-rec]="r.recommendation">{{ recLabel(r.recommendation) }}</span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+              </div>
+            </div>
+          } @else {
+            <div class="rp-empty">
+              <p class="rp-empty__title">Sin partidas de juegos en este periodo</p>
+              <p class="rp-empty__text">Las sugerencias aparecen cuando tus pacientes juegan desde su portal o durante la sesión.</p>
+            </div>
+          }
+        </section>
+      }
+    </div>
   }
 </div>

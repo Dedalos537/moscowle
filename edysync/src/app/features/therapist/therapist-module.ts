@@ -14,7 +14,6 @@ import { TherapistGames } from './pages/games/therapist-games';
 import { TherapistPatients } from './pages/patients/patients';
 import { TherapistPatientDetail } from './pages/patient-detail/patient-detail';
 import { TherapistReports } from './pages/reports/reports';
-import { TherapistAnalytics } from './pages/analytics/analytics';
 import { TherapistCalendarPage } from './pages/calendar/calendar';
 
 @NgModule({
@@ -33,7 +32,6 @@ import { TherapistCalendarPage } from './pages/calendar/calendar';
     TherapistPatients,
     TherapistPatientDetail,
     TherapistReports,
-    TherapistAnalytics,
     TherapistCalendarPage,
   ],
 })

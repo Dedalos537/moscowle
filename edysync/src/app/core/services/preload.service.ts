@@ -53,7 +53,7 @@ const THERAPIST = [
   '/therapist/api/profile',
   '/therapist/api/reports/overview',
   '/therapist/api/reports/detailed',
-  '/therapist/api/analytics',
+  '/therapist/api/insights',
   '/api/patients',
   '/api/games',
   '/api/incidents/my?page=1&per_page=20'

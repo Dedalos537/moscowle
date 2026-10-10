@@ -1,434 +1,239 @@
-<div class="px-2 py-4 md:px-4 lg:px-6 max-w-7xl mx-auto">
+<ng-template #headerActions>
+  <div class="ts-head-actions">
+    <div class="ts-seg" role="group" aria-label="Vista de la agenda">
+      <button type="button" [class.is-on]="view() === 'week'" [attr.aria-pressed]="view() === 'week'" (click)="setView('week')">Semana</button>
+      <button type="button" [class.is-on]="view() === 'month'" [attr.aria-pressed]="view() === 'month'" (click)="setView('month')">Mes</button>
+    </div>
+  </div>
+</ng-template>
 
-  <div class="grid grid-cols-12 gap-6 mb-8">
-    <div class="col-span-12 lg:col-span-8 glass-card rounded-2xl p-6 signature-shadow overflow-hidden">
-      <div class="view-switcher">
-        <!-- Week View -->
-        <div [class.view-active]="!showCalendar" [class.view-hidden]="showCalendar">
-          <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center gap-2">
-              <fa-icon [icon]="['fas', 'calendar-days']" class="text-primary"></fa-icon>
-              <h3 class="font-bold">{{ monthYearLabel }}</h3>
-            </div>
-            <div class="flex items-center gap-2">
-              <button class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all bg-surface-container-low text-on-surface-variant hover:bg-surface-container"
-                      (click)="toggleCalendar()">
-                <fa-icon [icon]="['fas', 'calendar-day']" class="mr-1"></fa-icon>Ver Todos
-              </button>
-              <div class="flex gap-2">
-                <button class="p-2 hover:bg-surface-container-low rounded-lg transition-colors" (click)="prevWeek()"><fa-icon [icon]="['fas', 'chevron-left']"></fa-icon></button>
-                <button class="p-2 hover:bg-surface-container-low rounded-lg transition-colors" (click)="nextWeek()"><fa-icon [icon]="['fas', 'chevron-right']"></fa-icon></button>
-              </div>
-            </div>
-          </div>
-          <div class="flex justify-between items-center overflow-x-auto pb-2">
-            @for (d of diasSemana; track $index) {
-              <button class="flex flex-col items-center gap-2 min-w-[60px] p-3 rounded-2xl transition-all cursor-pointer"
-                      [class.bg-primary]="esSeleccionado(d)"
-                      [class.text-on-primary]="esSeleccionado(d)"
-                      [class.scale-110]="esSeleccionado(d)"
-                      [class.shadow-lg]="esSeleccionado(d)"
-                      [class.hover:bg-surface-container-low]="!esSeleccionado(d)"
-                      [class.text-on-surface]="!esSeleccionado(d)"
-                      (click)="cambiarFecha(d)">
-                <span class="text-xs font-bold text-on-surface-variant/70 uppercase">{{ diaSemana(d) }}</span>
-                <span class="text-lg font-bold relative">
-                  {{ d.getDate() }}
-                  @if (hasSessionsOnDay(d)) {
-                    <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full"
-                          [class.bg-white]="esSeleccionado(d)"
-                          [class.bg-primary]="!esSeleccionado(d)"></span>
-                  }
-                </span>
-                @if (esSeleccionado(d)) {
-                  <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
-                }
-              </button>
+<div class="ts">
+  @if (view() === 'week') {
+    <!-- Semana -->
+    <section class="ts-week" aria-label="Semana">
+      <div class="ts-week__bar">
+        <h2 class="ts-week__label">{{ weekLabel() }}</h2>
+        <div class="ts-week__nav">
+          @if (!isToday()) {
+            <button type="button" class="ts-chip" (click)="goToday()">Hoy</button>
+          }
+          <button type="button" class="ts-icon-btn" (click)="shiftWeek(-1)" aria-label="Semana anterior"><fa-icon [icon]="['fas', 'chevron-left']" /></button>
+          <button type="button" class="ts-icon-btn" (click)="shiftWeek(1)" aria-label="Semana siguiente"><fa-icon [icon]="['fas', 'chevron-right']" /></button>
+        </div>
+      </div>
+      <div class="ts-days" role="listbox" aria-label="Días de la semana" (keydown)="onWeekKey($event)">
+        @for (d of week(); track d.key) {
+          <button type="button" role="option" class="ts-day" [class.is-selected]="d.selected" [class.is-today]="d.today"
+            [attr.aria-selected]="d.selected" [attr.aria-current]="d.today ? 'date' : null" [attr.tabindex]="d.selected ? 0 : -1"
+            [attr.aria-label]="d.short + ' ' + d.num + ', ' + (d.total ? d.total + (d.total === 1 ? ' sesión' : ' sesiones') : 'sin sesiones')"
+            (click)="selectDay(d.date)">
+            <span class="ts-day__name">{{ d.short }}</span>
+            <span class="ts-day__num">{{ d.num }}</span>
+            <span class="ts-day__count" [class.is-empty]="!d.total">
+              @if (d.total) { {{ d.done }}/{{ d.total }} } @else { — }
+            </span>
+          </button>
+        }
+      </div>
+    </section>
+
+    <div class="ts-body">
+      <!-- Agenda del día -->
+      <section class="ts-agenda" aria-labelledby="ts-day-title">
+        <header class="ts-agenda__head">
+          <div>
+            <h2 id="ts-day-title" class="ts-agenda__title">{{ dayTitle() }}</h2>
+            @if (!loading() && !loadError()) {
+              <p class="ts-agenda__sub">
+                @if (daySummary().total) {
+                  {{ daySummary().total }} {{ daySummary().total === 1 ? 'sesión' : 'sesiones' }} · {{ daySummary().hours }} de atención
+                  @if (daySummary().cancelled) { · {{ daySummary().cancelled }} {{ daySummary().cancelled === 1 ? 'cancelada' : 'canceladas' }} }
+                } @else if (daySummary().cancelled) {
+                  {{ daySummary().cancelled }} {{ daySummary().cancelled === 1 ? 'sesión cancelada' : 'sesiones canceladas' }}
+                } @else { Sin sesiones }
+              </p>
             }
           </div>
-        </div>
-
-        <!-- Calendar View -->
-        <div [class.view-active]="showCalendar" [class.view-hidden-right]="!showCalendar">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold flex items-center gap-2">
-              <fa-icon [icon]="['fas', 'calendar-day']" class="text-primary"></fa-icon>
-              Calendario
-            </h3>
-            <button class="px-3 py-1.5 text-xs font-bold rounded-lg bg-surface-container-low text-on-surface-variant hover:bg-surface-container transition-all"
-                    (click)="toggleCalendar()">
-              <fa-icon [icon]="['fas', 'list']" class="mr-1"></fa-icon>Ver Lista
-            </button>
+          <div class="ts-agenda__nav">
+            <button type="button" class="ts-icon-btn" (click)="shiftDay(-1)" aria-label="Día anterior"><fa-icon [icon]="['fas', 'arrow-left']" /></button>
+            <button type="button" class="ts-icon-btn" (click)="shiftDay(1)" aria-label="Día siguiente"><fa-icon [icon]="['fas', 'arrow-right']" /></button>
           </div>
-          @if (calendarLoading) {
-            <div class="flex justify-center py-12">
-              <app-spinner size="md" colorClass="text-primary"></app-spinner>
+        </header>
+
+        <div class="ts-list" [attr.data-slide]="slide()" [attr.aria-busy]="loading()">
+          @if (loading()) {
+            @for (i of [1, 2, 3]; track i) { <div class="ts-skel" aria-hidden="true"></div> }
+          } @else if (loadError(); as err) {
+            <div class="ts-empty" role="alert">
+              <fa-icon [icon]="['fas', 'triangle-exclamation']" class="ts-empty__icon" />
+              <p class="ts-empty__title">{{ err }}</p>
+              <app-button variant="secondary" label="Reintentar" [icon]="['fas', 'rotate-right']" (clicked)="loadDay()" />
             </div>
           } @else {
-            <app-calendar-widget
-              [events]="calendarEvents"
-              [role]="'therapist'"
-              [readonly]="false"
-              (eventClick)="onCalendarEventClick($event)"
-              (monthChange)="onMonthChange($event)"
-            ></app-calendar-widget>
+            @for (i of items(); track i.id) {
+              <article class="ts-card" [attr.data-status]="i.status" [class.is-next]="nextId() === i.id">
+                <div class="ts-card__time">
+                  <span class="ts-card__start">{{ i.start || '—' }}</span>
+                  @if (i.end) { <span class="ts-card__end">{{ i.end }}</span> }
+                  @if (i.minutes) { <span class="ts-card__dur">{{ duration(i.minutes) }}</span> }
+                </div>
+
+                <div class="ts-card__main">
+                  <div class="ts-card__top">
+                    <button type="button" class="ts-person" (click)="openPatient(i)" [disabled]="!i.patientId"
+                      [attr.aria-label]="i.patientId ? 'Ver ficha de ' + (i.patient || i.title) : null">
+                      <span class="ts-avatar" aria-hidden="true">{{ initials(i.patient || i.title) }}</span>
+                      <span class="ts-person__text">
+                        <span class="ts-person__name">{{ i.patient || i.title }}</span>
+                        @if (i.patient && i.title !== i.patient) { <span class="ts-person__title">{{ i.title }}</span> }
+                      </span>
+                    </button>
+                    <span class="ts-status" [attr.data-status]="i.status">
+                      @if (i.status === 'in_progress') { <i class="ts-status__pulse" aria-hidden="true"></i> }
+                      {{ statusLabel(i.status) }}
+                    </span>
+                  </div>
+
+                  <ul class="ts-meta" aria-label="Detalles">
+                    @if (nextId() === i.id && i.status === 'scheduled') { <li class="ts-meta__next">Siguiente</li> }
+                    @if (i.groupSession) { <li><fa-icon [icon]="['fas', 'people-group']" aria-hidden="true" /> Grupal</li> }
+                    @if (attendanceLabel(i.attendance); as att) {
+                      <li [class.is-bad]="i.attendance === 'absent'"><fa-icon [icon]="['fas', i.attendance === 'present' ? 'user-check' : 'user-xmark']" aria-hidden="true" /> {{ att }}</li>
+                    }
+                    @if (i.location) { <li><fa-icon [icon]="['fas', 'location-dot']" aria-hidden="true" /> {{ i.location }}</li> }
+                    <li [class.is-muted]="!i.hasProgram"><fa-icon [icon]="['fas', 'file-lines']" aria-hidden="true" /> {{ i.hasProgram ? 'Con programación' : 'Sin programación' }}</li>
+                    @if (i.hasTranscript) { <li><fa-icon [icon]="['fas', 'microphone-lines']" aria-hidden="true" /> Grabada</li> }
+                    @if (i.auditScore != null) {
+                      <li class="ts-audit" [attr.data-tone]="auditTone(i.auditScore)"><fa-icon [icon]="['fas', 'wand-magic-sparkles']" aria-hidden="true" /> Auditoría IA {{ i.auditScore }}%</li>
+                    }
+                  </ul>
+
+                  @if (i.notes) {
+                    <button type="button" class="ts-notes" (click)="notesOf.set(i)">
+                      <fa-icon [icon]="['fas', 'note-sticky']" aria-hidden="true" />
+                      <span>{{ i.notes }}</span>
+                    </button>
+                  }
+
+                  <div class="ts-actions">
+                    <button type="button" class="ts-btn ts-btn--primary" (click)="review(i.id)">
+                      <fa-icon [icon]="['fas', i.status === 'completed' ? 'clipboard-check' : 'play']" aria-hidden="true" />
+                      {{ i.status === 'completed' ? 'Ver registro' : i.status === 'cancelled' ? 'Ver sesión' : 'Abrir sesión' }}
+                    </button>
+                    @if (i.status === 'scheduled' || i.status === 'in_progress') {
+                      <button type="button" class="ts-btn" (click)="quickStatus(i, 'completed')">
+                        <fa-icon [icon]="['fas', 'check']" aria-hidden="true" /> Asistió
+                      </button>
+                      <button type="button" class="ts-btn ts-btn--quiet" (click)="quickStatus(i, 'cancelled')">Cancelar</button>
+                    }
+                    <button type="button" class="ts-icon-btn ts-card__edit" (click)="openEdit(i)" [attr.aria-label]="'Editar sesión de ' + (i.patient || i.title)">
+                      <fa-icon [icon]="['fas', 'pen']" />
+                    </button>
+                  </div>
+                </div>
+              </article>
+            } @empty {
+              <div class="ts-empty">
+                <fa-icon [icon]="['fas', 'mug-hot']" class="ts-empty__icon" />
+                <p class="ts-empty__title">{{ isToday() ? 'No tienes sesiones hoy' : 'Sin sesiones este día' }}</p>
+                <p class="ts-empty__text">Las sesiones las programa la coordinación. Revisa otro día de la semana o la vista de mes.</p>
+              </div>
+            }
           }
         </div>
-      </div>
+      </section>
+
+      <!-- Resumen del día -->
+      <aside class="ts-side" aria-label="Resumen">
+        <div class="ts-kpis">
+          <div class="ts-kpi"><span class="ts-kpi__value">{{ loading() ? '·' : daySummary().done }}</span><span class="ts-kpi__label">Realizadas</span></div>
+          <div class="ts-kpi"><span class="ts-kpi__value">{{ loading() ? '·' : daySummary().pending }}</span><span class="ts-kpi__label">Por atender</span></div>
+          <div class="ts-kpi"><span class="ts-kpi__value">{{ loading() ? '·' : daySummary().cancelled }}</span><span class="ts-kpi__label">Canceladas</span></div>
+          <div class="ts-kpi"><span class="ts-kpi__value">{{ activePatients() ?? '—' }}</span><span class="ts-kpi__label">Pacientes a cargo</span></div>
+        </div>
+        <p class="ts-side__hint">
+          <fa-icon [icon]="['fas', 'keyboard']" aria-hidden="true" /> Usa ← y → en la semana para cambiar de día.
+        </p>
+      </aside>
     </div>
-
-    <div class="col-span-12 lg:col-span-4">
-      @if (showCalendar) {
-        <div class="stats-switcher" style="grid-template-columns: 1fr 1fr">
-          <div class="col-span-2 stats-active">
-            <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow">
-              <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider mb-3">Resumen del Mes</p>
-              <div class="grid grid-cols-2 gap-3">
-                <div class="text-center p-3 rounded-xl bg-primary/5">
-                  <p class="text-2xl font-black text-primary">{{ monthStats.total }}</p>
-                  <p class="text-[10px] font-bold text-on-surface-variant/70 uppercase">Total</p>
-                </div>
-                <div class="text-center p-3 rounded-xl bg-success/5">
-                  <p class="text-2xl font-black text-success">{{ monthStats.completionRate }}%</p>
-                  <p class="text-[10px] font-bold text-on-surface-variant/70 uppercase">Completadas</p>
-                </div>
-                <div class="text-center p-3 rounded-xl bg-warning/5">
-                  <p class="text-2xl font-black text-warning">{{ monthStats.pending }}</p>
-                  <p class="text-[10px] font-bold text-on-surface-variant/70 uppercase">Pendientes</p>
-                </div>
-                <div class="text-center p-3 rounded-xl bg-tertiary/5">
-                  <p class="text-sm font-bold text-tertiary mt-1">{{ monthStats.busiestDay }}</p>
-                  <p class="text-[10px] font-bold text-on-surface-variant/70 uppercase">Día más ocupado</p>
-                </div>
-              </div>
-            </div>
-          </div>
+  } @else {
+    <!-- Mes -->
+    <div class="ts-body ts-body--month">
+      <section class="ts-month" aria-label="Calendario del mes">
+        <div [class.is-loading]="monthLoading()">
+          <app-calendar-widget [events]="monthEvents()" [role]="'therapist'" [readonly]="true"
+            (eventClick)="review($event.id)" (dayClick)="onMonthDay($event)" (monthChange)="onMonthChange($event)" />
         </div>
-      } @else {
-        <div class="grid grid-cols-2 gap-4">
-          <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between">
-            <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Hoy</p>
-            <p class="text-3xl font-black text-primary">{{ stats.sessions_today }}</p>
-          </div>
-          <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between">
-            <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Completas</p>
-            <p class="text-3xl font-black text-success">{{ stats.completed_sessions }}</p>
-          </div>
-          <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between">
-            <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Pendientes</p>
-            <p class="text-3xl font-black text-warning">{{ stats.pending_sessions }}</p>
-          </div>
-          <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between border-2 border-primary/10">
-            <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Pacientes</p>
-            <p class="text-3xl font-black text-primary">{{ stats.active_patients }}</p>
-          </div>
+      </section>
+      <aside class="ts-side" aria-label="Resumen del mes">
+        <h3 class="ts-side__title">Resumen de {{ monthSummary().label }}</h3>
+        <div class="ts-kpis">
+          <div class="ts-kpi"><span class="ts-kpi__value">{{ monthSummary().total }}</span><span class="ts-kpi__label">Programadas</span></div>
+          <div class="ts-kpi"><span class="ts-kpi__value">{{ monthSummary().rate != null ? monthSummary().rate + ' %' : '—' }}</span><span class="ts-kpi__label">Realizadas</span></div>
+          <div class="ts-kpi"><span class="ts-kpi__value">{{ monthSummary().pending }}</span><span class="ts-kpi__label">Por atender</span></div>
+          <div class="ts-kpi"><span class="ts-kpi__value">{{ monthSummary().cancelled }}</span><span class="ts-kpi__label">Canceladas</span></div>
         </div>
-      }
+        <p class="ts-side__hint">Día con más sesiones: <strong>{{ monthSummary().busiest }}</strong>. Toca un día para ver su agenda.</p>
+      </aside>
     </div>
-  </div>
-
-  <div class="agenda-wrapper" [class.view-active]="!showCalendar" [class.view-hidden]="showCalendar">
-    <div class="relative" [class.agenda-slide-out-left]="agendaTransitioning && agendaSlideDirection === 'left'"
-         [class.agenda-slide-out-right]="agendaTransitioning && agendaSlideDirection === 'right'"
-         [class.agenda-slide-in]="!agendaTransitioning">
-      <div class="absolute left-[39px] top-4 bottom-4 w-0.5 bg-border hidden md:block"></div>
-
-      @if (loading) {
-        <div class="flex justify-center py-24">
-          <div class="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style="border-color:var(--color-primary);border-top-color:transparent"></div>
-        </div>
-      }
-
-      @if (!loading && agendaEvents.length === 0) {
-        <div class="flex flex-col items-center justify-center py-24 text-center">
-          <div class="w-32 h-32 bg-surface-container-low rounded-full flex items-center justify-center mb-6">
-            <fa-icon [icon]="['fas', 'calendar-xmark']" class="text-5xl text-on-surface-variant/30"></fa-icon>
-          </div>
-          <h3 class="text-xl font-bold text-on-surface mb-1">Sin sesiones para esta fecha</h3>
-          <p class="text-on-surface-variant/70 max-w-md mb-6">Parece que tienes el día libre o aún no has agendado actividades.</p>
-        </div>
-      }
-
-      @for (e of agendaEvents; track e.id; let last = $last) {
-        <div class="relative flex flex-col md:flex-row items-start gap-6 mb-6">
-          <div class="hidden md:flex flex-col items-center z-10 pt-4">
-            <div class="w-5 h-5 rounded-full border-4 border-white"
-                 [style.background]="statusColor(e.status)"
-                 [style.boxShadow]="'0 0 0 4px ' + statusColor(e.status) + '33'"
-                 [class.animate-pulse]="e.status === 'in_progress'">
-            </div>
-          </div>
-
-          <div class="flex-1 w-full bg-surface p-6 rounded-3xl signature-shadow border border-border/50 hover:border-primary-container/30 transition-all group"
-               [class.border-2]="e.status === 'in_progress'"
-               [class.border-amber-200]="e.status === 'in_progress'">
-            @if (e.status === 'in_progress') {
-              <div class="flex justify-end -mt-2 -mr-2 mb-2">
-                <span class="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                  <span class="w-1.5 h-1.5 bg-amber-600 rounded-full animate-ping"></span> EN CURSO
-                </span>
-              </div>
-            }
-
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-              <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-secondary-container flex items-center justify-center text-xl font-bold text-secondary shrink-0">
-                  {{ initials(e.title) }}
-                </div>
-                <div>
-                  <h4 class="text-lg font-bold text-on-surface">{{ e.title }}</h4>
-                  <p class="text-sm text-on-surface-variant/70 flex items-center gap-2">
-                    <fa-icon [icon]="['fas', 'clock']" class="text-xs"></fa-icon>
-                    {{ formatTime(e.start) }}{{ e.end ? ' - ' + formatTime(e.end) : '' }}
-                    @if (e.start && e.end) {
-                      <span class="text-on-surface-variant/50">({{ duration(e.start, e.end) }})</span>
-                    }
-                  </p>
-                </div>
-              </div>
-              <div class="flex items-center gap-3">
-                <span class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wide"
-                      [style.background]="statusColor(e.status) + '1A'"
-                      [style.color]="statusColor(e.status)">
-                  {{ statusLabel(e.status) }}
-                </span>
-                <div class="flex gap-1">
-                  <button class="p-2 hover:bg-surface-container-low rounded-full transition-colors"><fa-icon [icon]="['fas', 'ellipsis-vertical']" class="text-on-surface-variant"></fa-icon></button>
-                </div>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 border-y border-border/30">
-              @if (e.location) {
-                <div class="flex items-center gap-2">
-                  <fa-icon [icon]="['fas', 'location-dot']" class="text-sm text-on-surface-variant/70"></fa-icon>
-                  <span class="text-sm text-on-surface-variant/70">{{ e.location }}</span>
-                </div>
-              }
-              <div class="flex items-center gap-2">
-                <fa-icon [icon]="['fas', 'wand-magic']" class="text-sm text-on-surface-variant/70"></fa-icon>
-                @if (e.audit_score != null) {
-                  <span class="text-sm font-bold"
-                        [style.color]="e.audit_score >= 70 ? 'var(--color-success)' : e.audit_score >= 40 ? 'var(--color-warning)' : 'var(--color-error)'">
-                    Auditoría IA: {{ e.audit_score }}%
-                  </span>
-                } @else if (e.extendedProps?.audit_score != null) {
-                  <span class="text-sm font-bold"
-                        [style.color]="e.extendedProps.audit_score >= 70 ? 'var(--color-success)' : e.extendedProps.audit_score >= 40 ? 'var(--color-warning)' : 'var(--color-error)'">
-                    Auditoría IA: {{ e.extendedProps.audit_score }}%
-                  </span>
-                } @else {
-                  <span class="text-sm text-on-surface-variant/70">Auditoría IA: —</span>
-                }
-              </div>
-              <div class="flex items-center gap-2">
-                <fa-icon [icon]="['fas', 'note-sticky']" class="text-sm text-on-surface-variant/70"></fa-icon>
-                @if (e.notes) {
-                  <span class="text-sm italic text-on-surface-variant/70 truncate">"{{ e.notes }}"</span>
-                } @else if (e.extendedProps?.feedback_notes) {
-                  <span class="text-sm italic text-on-surface-variant/70 truncate">"{{ e.extendedProps.feedback_notes }}"</span>
-                } @else {
-                  <span class="text-sm italic text-on-surface-variant/70">Sin notas</span>
-                }
-              </div>
-            </div>
-
-            <div class="mt-4 flex flex-wrap gap-3 justify-end">
-              @if (e.notes || e.extendedProps?.feedback_notes) {
-                <button class="px-5 py-2.5 rounded-xl border border-border hover:bg-surface-container-low transition-colors text-sm font-bold" (click)="viewNotes(e)">
-                  Ver Notas
-                </button>
-              }
-              <button class="px-5 py-2.5 rounded-xl bg-primary text-on-primary flex items-center gap-2 shadow-md hover:translate-y-[-2px] active:scale-95 transition-all text-sm font-bold"
-                      (click)="irSesion(e.id)">
-                <fa-icon [icon]="['fas', 'eye']" class="text-sm"></fa-icon>
-                Revisar Sesión
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-    </div>
-  </div>
+  }
 </div>
 
-@if (showActiveBriefing && activeBriefing) {
-  <div class="fixed bottom-6 right-6 z-50 w-96 max-w-[calc(100vw-2rem)] animate-in fade-in slide-in-from-bottom-4 duration-300">
-    <div class="bg-surface rounded-2xl signature-shadow border border-border/50 overflow-hidden">
-      <div class="flex items-center justify-between px-4 py-3 bg-primary-container/10 border-b border-border/30">
-        <div class="flex items-center gap-2 min-w-0">
-          <div class="w-2 h-2 rounded-full bg-success animate-pulse shrink-0"></div>
-          <span class="text-xs font-bold text-on-surface truncate">{{ activeBriefing.session?.title || 'Sesión activa' }}</span>
-        </div>
-        <div class="flex items-center gap-1">
-          <button (click)="irSesionDesdeBriefing()" class="text-xs font-bold text-primary hover:text-primary/80 px-2 py-1 rounded-lg hover:bg-primary/5 transition-colors" title="Ir a revisión">
-            <fa-icon [icon]="['fas', 'up-right-from-square']" class="text-xs"></fa-icon>
-          </button>
-          <button (click)="dismissActiveBriefing()" class="text-on-surface-variant/50 hover:text-on-surface transition-colors p-1" title="Cerrar">
-            <fa-icon [icon]="['fas', 'xmark']" class="text-xs"></fa-icon>
-          </button>
-        </div>
-      </div>
-      <div class="p-4 max-h-96 overflow-y-auto space-y-3">
-        @if (activeBriefingLoading) {
-          <div class="flex items-center gap-2 text-sm text-on-surface-variant">
-            <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'"></fa-icon>
-            Cargando...
-          </div>
-        }
-        @if (!activeBriefingLoading && activeBriefing.program?.objectives?.length) {
-          <div class="space-y-2">
-            <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Temas de la sesión</span>
-            @for (obj of activeBriefing.program.objectives; track $index) {
-              <div class="flex items-start gap-2 p-2 rounded-lg bg-surface-container-low text-xs">
-                <fa-icon [icon]="obj.status === 'completado' ? ['fas', 'circle-check'] : obj.status === 'parcial' ? ['fas', 'circle-exclamation'] : ['far', 'circle']"
-                         [class.text-success]="obj.status === 'completado'"
-                         [class.text-warning]="obj.status === 'parcial'"
-                         [class.text-on-surface-variant]="obj.status !== 'completado' && obj.status !== 'parcial'">
-                </fa-icon>
-                <div>
-                  <p class="text-on-surface font-medium">{{ obj.name }}</p>
-                  <p class="text-[10px] uppercase font-bold text-on-surface-variant/70">{{ obj.status }}</p>
-                </div>
-              </div>
-            }
-          </div>
-        }
-        @if (!activeBriefingLoading && activeBriefing.recording?.has_transcript) {
-          <div class="p-3 rounded-xl bg-success-container/15 border border-success-container/25">
-            <div class="flex items-center gap-1.5 mb-1.5">
-              <fa-icon [icon]="['fas', 'microphone-lines']" class="text-success text-[10px]"></fa-icon>
-              <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Transcripción</span>
-            </div>
-            <p class="text-xs text-on-surface leading-relaxed whitespace-pre-wrap line-clamp-3">{{ activeBriefing.recording.transcript_preview }}</p>
-          </div>
-        }
-        @if (!activeBriefingLoading && activeBriefing.recording?.audit_score != null) {
-          <div class="flex items-center gap-2 p-2.5 rounded-xl text-xs font-bold"
-               [class.bg-success-container/20]="(activeBriefing.recording.audit_score || 0) >= 70"
-               [class.bg-warning-container/20]="(activeBriefing.recording.audit_score || 0) >= 40 && (activeBriefing.recording.audit_score || 0) < 70"
-               [class.bg-error-container/20]="(activeBriefing.recording.audit_score || 0) < 40">
-            Score: {{ activeBriefing.recording.audit_score }}/100
-          </div>
-        }
-        @if (activeBriefing.session?.location) {
-          <div class="text-[10px] text-on-surface-variant/60">
-            <fa-icon [icon]="['fas', 'location-dot']" class="mr-1"></fa-icon>
-            {{ activeBriefing.session.location }}
-          </div>
-        }
-      </div>
-    </div>
-  </div>
+<!-- Sesión que se está grabando -->
+@if (live(); as b) {
+  @if (!liveDismissed()) {
+    <aside class="ts-live" role="status" aria-label="Sesión en curso">
+      <header class="ts-live__head">
+        <span class="ts-live__dot" aria-hidden="true"></span>
+        <span class="ts-live__title">{{ b.session?.title || 'Sesión en curso' }}</span>
+        <button type="button" class="ts-icon-btn" (click)="liveDismissed.set(true)" aria-label="Ocultar aviso"><fa-icon [icon]="['fas', 'xmark']" /></button>
+      </header>
+      @if (b.program?.objectives?.length) {
+        <ul class="ts-live__goals">
+          @for (o of b.program.objectives; track $index) {
+            <li [attr.data-state]="o.status"><fa-icon [icon]="o.status === 'completado' ? ['fas', 'circle-check'] : ['far', 'circle']" aria-hidden="true" /> {{ o.name }}</li>
+          }
+        </ul>
+      }
+      @if (b.session?.id) {
+        <button type="button" class="ts-btn ts-btn--primary ts-live__go" (click)="review(b.session.id)">Volver a la sesión</button>
+      }
+    </aside>
+  }
 }
 
-<app-modal [isOpen]="showEditModal" title="Editar Sesión" (close)="closeEditModal()">
-  <div class="space-y-4">
-    <div class="p-3 rounded text-sm font-medium"
-         style="background:var(--color-primary-container);color:var(--color-on-primary-container)">
-      Paciente: {{ editForm.patient }}
-    </div>
-    <div>
-      <label class="block text-sm font-medium text-on-surface mb-1">Título</label>
-      <input type="text" [(ngModel)]="editForm.title" class="input-field">
-    </div>
-    <div>
-      <label class="block text-sm font-medium text-on-surface mb-1">Fecha</label>
-      <input type="date" [(ngModel)]="editForm.date" class="input-field">
-    </div>
-    <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium text-on-surface mb-1">Inicio</label>
-        <input type="time" [(ngModel)]="editForm.start_time" class="input-field">
+<app-modal [isOpen]="!!editing()" title="Editar sesión" (close)="closeEdit()">
+  @if (editing(); as e) {
+    <form class="ts-form" (ngSubmit)="submitEdit()">
+      <p class="ts-form__who"><fa-icon [icon]="['fas', 'user']" aria-hidden="true" /> {{ e.patient || 'Paciente sin nombre' }}</p>
+      <label class="ts-field"><span>Título</span><input class="input-field" name="title" [(ngModel)]="form.title" /></label>
+      <label class="ts-field"><span>Fecha</span><input class="input-field" type="date" name="date" [(ngModel)]="form.date" required /></label>
+      <div class="ts-form__row">
+        <label class="ts-field"><span>Inicio</span><input class="input-field" type="time" name="start" [(ngModel)]="form.start" required /></label>
+        <label class="ts-field"><span>Fin</span><input class="input-field" type="time" name="end" [(ngModel)]="form.end" /></label>
       </div>
-      <div>
-        <label class="block text-sm font-medium text-on-surface mb-1">Fin</label>
-        <input type="time" [(ngModel)]="editForm.end_time" class="input-field">
+      <div class="ts-form__row">
+        <label class="ts-field"><span>Estado</span><app-select name="status" [(ngModel)]="form.status" [options]="statusOptions" /></label>
+        <label class="ts-field"><span>Asistencia</span><app-select name="attendance" [(ngModel)]="form.attendance" [options]="attendanceOptions" /></label>
       </div>
-    </div>
-    <div>
-      <label class="block text-sm font-medium text-on-surface mb-1">Estado</label>
-      <app-select [(ngModel)]="editForm.status" [options]="statusOptions"></app-select>
-    </div>
-
-    @if (showBriefing) {
-      <div class="border-t border-outline pt-4 mt-4">
-        <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Programación y Grabación</p>
-        @if (briefingLoading) {
-          <div class="flex items-center gap-2 p-3 rounded-lg bg-surface-container-low text-sm text-on-surface-variant">
-            <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'"></fa-icon>
-            Cargando briefing...
-          </div>
-        }
-        @if (briefing && !briefingLoading) {
-          <div class="space-y-3">
-            @if (briefing.program?.has_program) {
-              <div class="p-3 rounded-xl bg-info-container/20 border border-info-container/30">
-                <div class="flex items-center gap-2 mb-2">
-                  <fa-icon [icon]="['fas', 'file-lines']" class="text-info text-sm"></fa-icon>
-                  <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Programación</span>
-                </div>
-                <p class="text-xs text-on-surface leading-relaxed whitespace-pre-wrap line-clamp-6">{{ briefing.program.planned_text }}</p>
-                @if (briefing.program.uploaded_at) {
-                  <p class="text-[10px] text-on-surface-variant/60 mt-2">Subido: {{ briefing.program.uploaded_at | date:'short' }}</p>
-                }
-              </div>
-            }
-            @if (!briefing.program?.has_program) {
-              <div class="p-3 rounded-xl bg-surface-container-low text-sm text-on-surface-variant/70">
-                <fa-icon [icon]="['fas', 'circle-info']" class="mr-1"></fa-icon>
-                Sin programación subida para esta sesión.
-              </div>
-            }
-            @if (briefing.recording?.has_transcript) {
-              <div class="p-3 rounded-xl bg-success-container/20 border border-success-container/30">
-                <div class="flex items-center gap-2 mb-2">
-                  <fa-icon [icon]="['fas', 'microphone-lines']" class="text-success text-sm"></fa-icon>
-                  <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Transcripción</span>
-                </div>
-                <p class="text-xs text-on-surface leading-relaxed whitespace-pre-wrap line-clamp-4">{{ briefing.recording.transcript_preview }}</p>
-              </div>
-            }
-            @if (briefing.recording?.audit_score != null) {
-              <div class="flex items-center gap-2 p-3 rounded-xl"
-                   [class.bg-success-container/20]="(briefing.recording.audit_score || 0) >= 70"
-                   [class.bg-warning-container/20]="(briefing.recording.audit_score || 0) >= 40 && (briefing.recording.audit_score || 0) < 70"
-                   [class.bg-error-container/20]="(briefing.recording.audit_score || 0) < 40">
-                <fa-icon [icon]="['fas', 'star']" class="text-sm"
-                         [class.text-success]="(briefing.recording.audit_score || 0) >= 70"
-                         [class.text-warning]="(briefing.recording.audit_score || 0) >= 40 && (briefing.recording.audit_score || 0) < 70"
-                         [class.text-error]="(briefing.recording.audit_score || 0) < 40"></fa-icon>
-                <span class="text-xs font-bold">Score Auditoría: {{ briefing.recording.audit_score }}/100</span>
-              </div>
-            }
-            @if (briefing.session?.status === 'in_progress' || briefing.session?.status === 'scheduled') {
-              <div class="flex items-center gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-xs">
-                <fa-icon [icon]="['fas', 'clock']"></fa-icon>
-                Sesión {{ briefing.session.status === 'in_progress' ? 'en curso' : 'programada' }}
-              </div>
-            }
-          </div>
-        }
-      </div>
-    }
-  </div>
-  <div modal-footer>
-    <div class="flex gap-2">
-      <app-button variant="danger" [label]="deleting ? 'Eliminando...' : 'Eliminar'" [icon]="deleting ? ['fas', 'spinner'] : ['fas', 'trash-can']" [disabled]="deleting" (clicked)="deleteSession()"></app-button>
-      <app-button variant="secondary" label="Revisar Sesión" [icon]="['fas', 'clipboard-check']" (clicked)="navigateToReview()"></app-button>
-    </div>
-    <div class="flex gap-3">
-      <app-button variant="ghost" label="Cancelar" (clicked)="closeEditModal()"></app-button>
-      <app-button variant="primary" [label]="submitting ? 'Guardando...' : 'Guardar Cambios'" [icon]="submitting ? ['fas', 'spinner'] : undefined" [disabled]="submitting" (clicked)="submitEdit()"></app-button>
+      @if (formError(); as err) { <p class="ts-form__error" role="alert">{{ err }}</p> }
+    </form>
+  }
+  <div modal-footer class="ts-form__footer">
+    <app-button variant="danger" [label]="deleting() ? 'Eliminando…' : 'Eliminar'" [icon]="['fas', 'trash-can']" [disabled]="deleting() || saving()" (clicked)="deleteSession()" />
+    <div class="ts-form__footer-end">
+      <app-button variant="ghost" label="Cancelar" (clicked)="closeEdit()" />
+      <app-button variant="primary" [label]="saving() ? 'Guardando…' : 'Guardar'" [disabled]="saving() || deleting()" (clicked)="submitEdit()" />
     </div>
   </div>
 </app-modal>
 
-<app-modal [isOpen]="showNotesModal" title="Notas de la Sesión" (close)="closeNotesModal()">
-  <div class="p-4 whitespace-pre-wrap text-sm text-on-surface leading-relaxed">
-    {{ selectedNote }}
-  </div>
+<app-modal [isOpen]="!!notesOf()" title="Notas de la sesión" (close)="notesOf.set(null)">
+  @if (notesOf(); as n) {
+    <p class="ts-notes-full__who">{{ n.patient || n.title }} · {{ n.date | date: 'd MMM' }} · {{ n.start }}</p>
+    <p class="ts-notes-full">{{ n.notes }}</p>
+  }
   <div modal-footer>
-    <app-button variant="primary" label="Cerrar" (clicked)="closeNotesModal()"></app-button>
+    <app-button variant="primary" label="Cerrar" (clicked)="notesOf.set(null)" />
   </div>
 </app-modal>

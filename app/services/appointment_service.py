@@ -4,6 +4,7 @@ import os
 from datetime import datetime, timedelta
 
 from flask import current_app, url_for
+from flask_login import current_user
 from sqlalchemy import and_, or_
 
 from app.models import Appointment, User, db
@@ -224,8 +225,12 @@ class AppointmentService:
             appt.start_time = data.get('start_time')
         if 'end_time' in data:
             appt.end_time = data.get('end_time')
-        if 'status' in data:
+        if 'status' in data and data.get('status') != appt.status:
             appt.status = data.get('status')
+            # Quién y cuándo cambió el estado (las columnas existían pero nunca se llenaban desde aquí).
+            appt.status_changed_at = datetime.utcnow()
+            with contextlib.suppress(Exception):
+                appt.status_changed_by = current_user.id if current_user and current_user.is_authenticated else None
         if 'attendance' in data:
             appt.attendance = data.get('attendance')
         if 'notes' in data:

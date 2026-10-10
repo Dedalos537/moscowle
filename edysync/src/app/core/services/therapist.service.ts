@@ -114,7 +114,7 @@ export class TherapistService {
     return this.http.post<ApiResponse>('/api/sessions', data);
   }
 
-  updateSession(id: number, data: Partial<{ title: string; start_time: string; end_time: string; status: string; notes: string }>): Observable<ApiResponse> {
+  updateSession(id: number, data: Partial<{ title: string; start_time: string; end_time: string; status: string; notes: string; attendance: string }>): Observable<ApiResponse> {
     return this.http.put<ApiResponse>(`/api/sessions/${id}`, data);
   }
 
@@ -202,6 +202,13 @@ export class TherapistService {
   }
 
 
+  getInsights(from?: string, to?: string): Observable<ApiResponse<TherapistInsights>> {
+    let params = new HttpParams();
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
+    return this.http.get<ApiResponse<TherapistInsights>>('/therapist/api/insights', { params });
+  }
+
   getAnalytics(): Observable<ApiResponse<AnalyticsData>> {
     return this.http.get<ApiResponse<AnalyticsData>>('/therapist/api/analytics');
   }
@@ -227,11 +234,15 @@ export class TherapistService {
 
 
   generateWeeklyReport(patientId: number): Observable<any> {
-    return this.http.post<any>('/reports/generate-weekly', { patient_id: patientId });
+    // El backend exige la semana: se envía el lunes de la semana actual (fecha local).
+    const d = new Date();
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    const weekStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return this.http.post<any>('/api/reports/generate-weekly', { patient_id: patientId, week_start: weekStart });
   }
 
   getWeeklyReport(patientId: number): Observable<any> {
-    return this.http.get<any>(`/reports/weekly/${patientId}`);
+    return this.http.get<any>(`/api/reports/weekly/${patientId}`);
   }
 }
 
@@ -305,4 +316,46 @@ export interface PatientStatsReport {
   completed_sessions: number;
   avg_accuracy: number;
   improvement: number;
+}
+
+// ── Reportes del terapeuta (GET /therapist/api/insights) ─────────────────────
+export type AiRecommendation = 'avanzar' | 'mantener' | 'apoyo';
+
+export interface InsightsPatient {
+  id: number;
+  name: string;
+  linked: boolean;
+  sessions_done: number;
+  sessions_scheduled: number;
+  attendance: number | null;
+  games: number;
+  accuracy: number | null;
+  trend: number | null;
+  recommendation: AiRecommendation | null;
+  last_session: string | null;
+  attention: string[];
+}
+
+export interface TherapistInsights {
+  range: { from: string; to: string };
+  kpis: {
+    sessions_done: number;
+    sessions_scheduled: number;
+    completion: number | null;
+    attendance: number | null;
+    cancelled: number;
+    patients_seen: number;
+    avg_minutes: number | null;
+    games_played: number;
+    accuracy: number | null;
+  };
+  weekly: { week: string; sessions_done: number; sessions_scheduled: number; attendance: number | null; accuracy: number | null; games: number }[];
+  patients: InsightsPatient[];
+  ai: {
+    recommendations: { key: AiRecommendation; label: string; count: number; pct: number | null }[];
+    total: number;
+    by_game: { game: string; plays: number; patients: number; accuracy: number | null; avg_time: number | null; recommendation: AiRecommendation | null }[];
+    recent: { patient: string; patient_id: number; game: string; accuracy: number | null; recommendation: AiRecommendation | null; date: string | null }[];
+    labels: Record<AiRecommendation, string>;
+  };
 }

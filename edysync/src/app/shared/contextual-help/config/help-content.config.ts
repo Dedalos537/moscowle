@@ -411,30 +411,12 @@ export const HELP_CONTENT: RoleHelp[] = [
         route: '/therapist/reports',
         content: {
           title: 'Reportes',
-          description: 'Genera reportes de tu actividad terapéutica.',
+          description: 'Tu actividad, el progreso de tus pacientes y las sugerencias de la IA en un solo lugar.',
           icon: ['fas', 'file-lines'],
           sections: [
             {
               title: 'Reportes',
-              content: 'Crea reportes de sesiones, asistencias y progreso de pacientes.',
-            },
-          ],
-        },
-      },
-      {
-        route: '/therapist/analytics',
-        content: {
-          title: 'Analíticas IA',
-          description: 'Análisis inteligente de sesiones y pacientes.',
-          icon: ['fas', 'brain'],
-          sections: [
-            {
-              title: 'Analíticas',
-              content: 'Visualiza métricas avanzadas generadas por IA sobre el progreso de tus pacientes.',
-              items: [
-                'Gráficos de evolución por paciente.',
-                'Recomendaciones basadas en el historial de sesiones.',
-              ],
+              content: 'Resumen de sesiones y asistencia, tabla de pacientes que requieren atención y la sección «IA y juegos» con las sugerencias del modelo después de cada partida.',
             },
           ],
         },

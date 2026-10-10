@@ -473,28 +473,28 @@ export const WIZARD_STEPS: WizardConfig[] = [
     role: 'terapista',
     steps: [
       {
-        selector: 'a[routerLink="/therapist/sessions/schedule"]',
-        title: 'Agendar Nueva Sesión',
-        description: 'Botón "Agendar Nueva Sesión" abre el formulario para programar: paciente, fecha, hora y duración.',
-        position: 'right',
-      },
-      {
-        selector: '.space-y-4',
-        title: 'Pestañas de Sesiones',
-        description: 'Cambia entre "Próximas" (sesiones futuras) e "Historial" (sesiones completadas).',
+        selector: '.ts-days',
+        title: 'Tu semana',
+        description: 'Cada día muestra sesiones realizadas sobre programadas. Tócalo, o usa las flechas ← →, para ver su agenda.',
         position: 'bottom',
       },
       {
-        selector: 'table',
-        title: 'Tabla de Sesiones',
-        description: 'Cada fila muestra: paciente, fecha, hora, modalidad y estado. Haz clic en una para ver detalles.',
+        selector: '.ts-list',
+        title: 'Agenda del día',
+        description: 'Abre la sesión para registrarla y grabarla, márcala como asistida o cancélala. El lápiz permite cambiar hora, estado y asistencia.',
         position: 'center',
       },
       {
-        selector: 'app-select',
-        title: 'Filtrar por Estado',
-        description: 'Filtra sesiones por: Todas, Completadas, Programadas o Canceladas.',
-        position: 'right',
+        selector: '.ts-kpis',
+        title: 'Resumen',
+        description: 'Realizadas, por atender y canceladas del día elegido, y tus pacientes a cargo.',
+        position: 'left',
+      },
+      {
+        selector: '.ts-seg',
+        title: 'Vista de mes',
+        description: 'Cambia a «Mes» para ver el calendario completo y saltar a cualquier día.',
+        position: 'bottom',
       },
     ],
   },
@@ -585,62 +585,22 @@ export const WIZARD_STEPS: WizardConfig[] = [
     role: 'terapista',
     steps: [
       {
-        selector: 'h1.text-2xl',
-        title: 'Reportes y Análisis',
-        description: 'Genera reportes detallados de tus sesiones, pacientes y progreso.',
+        selector: '.rp-tabs',
+        title: 'Secciones del reporte',
+        description: 'Resumen de tus sesiones, tabla de pacientes y la sección «IA y juegos» (antes Analíticas IA).',
         position: 'bottom',
       },
       {
-        selector: '.grid.grid-cols-2.gap-4',
-        title: 'KPIs del Período',
-        description: 'Tarjetas con métricas: sesiones completadas, asistencia promedio, pacientes activos y evaluaciones.',
+        selector: '.rp-seg',
+        title: 'Periodo',
+        description: 'Cambia entre las últimas 4 semanas, 12 semanas o el año en curso.',
         position: 'bottom',
       },
       {
-        selector: 'table',
-        title: 'Tabla de Reportes',
-        description: 'Detalle de sesiones: paciente, fecha, modalidad, duración y estado de asistencia.',
-        position: 'center',
-      },
-      {
-        selector: 'app-button[variant="primary"]',
-        title: 'Exportar Datos',
-        description: 'Haz clic en "Exportar CSV" para descargar los datos o "Análisis IA" para generar un análisis inteligente.',
-        position: 'right',
-      },
-    ],
-  },
-
-  // ─────────────────────────────────────────────
-  // TERAPEUTA — Analíticas IA
-  // ─────────────────────────────────────────────
-  {
-    route: '/therapist/analytics',
-    role: 'terapista',
-    steps: [
-      {
-        selector: 'h1.text-2xl',
-        title: 'Analíticas con IA',
-        description: 'Métricas inteligentes generadas por inteligencia artificial sobre tu desempeño y pacientes.',
+        selector: '.rp-kpis',
+        title: 'Indicadores',
+        description: 'Sesiones realizadas, asistencia, precisión en juegos y duración media, con datos registrados.',
         position: 'bottom',
-      },
-      {
-        selector: '.grid.grid-cols-2.gap-4',
-        title: 'Métricas Clave',
-        description: 'Tarjetas: tasa de asistencia, precisión de sesiones, adaptaciones recomendadas y tendencia de progreso.',
-        position: 'bottom',
-      },
-      {
-        selector: 'table',
-        title: 'Análisis Detallado',
-        description: 'Tabla con análisis por paciente: tendencia, recomendaciones y evaluación de progreso.',
-        position: 'center',
-      },
-      {
-        selector: '.ai-badge',
-        title: 'Generado por IA',
-        description: 'Indicador de contenido generado por inteligencia artificial. Los datos son una estimación.',
-        position: 'right',
       },
     ],
   },

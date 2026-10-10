@@ -131,12 +131,18 @@ class ReportService:
         }
 
     def get_patient_weekly_report(self, patient_id, week_start_date):
-        if isinstance(week_start_date, str):
+        if isinstance(week_start_date, str) and week_start_date:
             week_start = datetime.strptime(week_start_date, '%Y-%m-%d').date()
         else:
             week_start = week_start_date
 
-        report = WeeklyReport.query.filter_by(patient_id=patient_id, week_start=week_start).first()
+        if week_start is None:
+            # Sin semana: el más reciente. Antes filtraba week_start = NULL y nunca encontraba nada.
+            report = (
+                WeeklyReport.query.filter_by(patient_id=patient_id).order_by(WeeklyReport.week_start.desc()).first()
+            )
+        else:
+            report = WeeklyReport.query.filter_by(patient_id=patient_id, week_start=week_start).first()
 
         if not report:
             return None

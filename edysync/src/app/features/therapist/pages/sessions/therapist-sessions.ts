@@ -1,5 +1,5 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, computed, inject, signal, TemplateRef, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Router } from '@angular/router';
@@ -9,561 +9,539 @@ import { RecordingService } from '../../../../core/services/recording.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { ToastService } from '../../../../core/services/toast.service';
-import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
-import { SelectOption } from '../../../../shared/components/select/select';
 import { Modal } from '../../../../shared/components/modal/modal';
-import { Select } from '../../../../shared/components/select/select';
+import { Select, SelectOption } from '../../../../shared/components/select/select';
 import { Button } from '../../../../shared/components/button/button';
-import { CalendarWidget } from '../../../../shared/components/calendar-widget/calendar-widget';
-import { CalendarWidgetEvent } from '../../../../shared/components/calendar-widget/calendar-widget';
-import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { CalendarWidget, CalendarWidgetEvent } from '../../../../shared/components/calendar-widget/calendar-widget';
 import { toLocalDateString, timeFromISO, dateFromISO } from '../../../../core/utils/date.util';
+
+type Status = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+
+/** Sesión tal como la usa la pantalla: un solo lugar decide de dónde sale cada dato del backend. */
+interface AgendaItem {
+  id: number;
+  title: string;
+  patient: string;
+  patientId: number | null;
+  date: string; // YYYY-MM-DD local
+  start: string; // HH:MM
+  end: string;
+  minutes: number | null;
+  status: Status;
+  attendance: string | null;
+  location: string;
+  notes: string;
+  auditScore: number | null;
+  hasTranscript: boolean;
+  hasProgram: boolean;
+  groupSession: boolean;
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  scheduled: 'Programada',
+  in_progress: 'En curso',
+  completed: 'Realizada',
+  cancelled: 'Cancelada',
+};
+
+const DAY_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const DAY_LONG = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toItem(e: any): AgendaItem {
+  const ext = e.extendedProps ?? {};
+  const start = timeFromISO(e.start);
+  const end = timeFromISO(e.end);
+  let minutes: number | null = null;
+  if (e.start && e.end) minutes = Math.round((Date.parse(e.end) - Date.parse(e.start)) / 60000);
+  return {
+    id: e.id,
+    title: e.title || 'Sesión',
+    patient: e.patient?.name || ext.patient || '',
+    patientId: e.patient?.id ?? ext.patient_id ?? null,
+    date: dateFromISO(e.start),
+    start,
+    end,
+    minutes: minutes && minutes > 0 ? minutes : null,
+    status: (e.status || ext.status || 'scheduled') as Status,
+    attendance: e.attendance ?? null,
+    location: e.location || '',
+    notes: (e.notes || ext.feedback_notes || ext.notes || '').trim(),
+    auditScore: e.audit_score ?? ext.audit_score ?? null,
+    hasTranscript: !!(e.has_transcript ?? ext.has_transcript),
+    hasProgram: !!(e.has_program ?? ext.has_program),
+    groupSession: (ext.session_type || 'individual') === 'group',
+  };
+}
 
 @Component({
   selector: 'app-therapist-sessions',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Modal, Select, Button, CalendarWidget, Spinner],
+  imports: [DatePipe, FormsModule, FontAwesomeModule, Modal, Select, Button, CalendarWidget],
   templateUrl: './therapist-sessions.html',
   styleUrl: './therapist-sessions.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TherapistSessions implements OnInit, OnDestroy {
-  loading = true;
-  agendaEvents: any[] = [];
-  showEditModal = false;
-  showNotesModal = false;
-  selectedNote = '';
-  submitting = false;
-  deleting = false;
-  error: string | null = null;
+  @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<unknown>;
 
-  fechaSeleccionada: Date = new Date();
-  diasSemana: Date[] = [];
+  private therapistService = inject(TherapistService);
+  private recordingService = inject(RecordingService);
+  private headerService = inject(HeaderService);
+  private router = inject(Router);
+  private confirmService = inject(ConfirmService);
+  private toastService = inject(ToastService);
+  private subs = new Subscription();
+  private daySub?: Subscription;
 
-  stats = {
-    sessions_today: 0,
-    completed_sessions: 0,
-    pending_sessions: 0,
-    active_patients: 0,
-  };
+  readonly view = signal<'week' | 'month'>('week');
+  readonly selected = signal<Date>(this.startOfDay(new Date()));
+  readonly items = signal<AgendaItem[]>([]);
+  readonly loading = signal(true);
+  readonly loadError = signal<string | null>(null);
+  /** Dirección de la animación al cambiar de día (−1 = hacia atrás). */
+  readonly slide = signal<-1 | 0 | 1>(0);
+  readonly weekCounts = signal<Record<string, { total: number; done: number }>>({});
+  readonly activePatients = signal<number | null>(null);
 
-  statusOptions: SelectOption[] = [
-    {value: 'scheduled', label: 'Programada'},
-    {value: 'completed', label: 'Completada'},
-    {value: 'cancelled', label: 'Cancelada'},
+  readonly monthEvents = signal<CalendarWidgetEvent[]>([]);
+  readonly monthCursor = signal<Date>(new Date());
+  readonly monthLoading = signal(false);
+
+  // Edición
+  readonly editing = signal<AgendaItem | null>(null);
+  readonly saving = signal(false);
+  readonly deleting = signal(false);
+  readonly formError = signal<string | null>(null);
+  form = { title: '', date: '', start: '', end: '', status: 'scheduled' as string, attendance: 'pending' as string };
+  readonly attendanceOptions: SelectOption[] = [
+    { value: 'pending', label: 'Sin registrar' },
+    { value: 'present', label: 'Asistió' },
+    { value: 'absent', label: 'Faltó' },
+  ];
+  readonly statusOptions: SelectOption[] = [
+    { value: 'scheduled', label: 'Programada' },
+    { value: 'completed', label: 'Realizada' },
+    { value: 'cancelled', label: 'Cancelada' },
   ];
 
-  editForm = {
-    id: 0,
-    title: '',
-    date: '',
-    start_time: '',
-    end_time: '',
-    status: 'scheduled' as string,
-    patient: '',
-  };
+  readonly notesOf = signal<AgendaItem | null>(null);
 
-  showBriefing = false;
-  briefingLoading = false;
-  briefing: any = null;
+  // Sesión que se está grabando ahora (aviso flotante).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readonly live = signal<any>(null);
+  readonly liveDismissed = signal(false);
 
-  showCalendar = false;
-  calendarEvents: CalendarWidgetEvent[] = [];
-  calendarLoading = false;
-  monthStats = { total: 0, completed: 0, pending: 0, cancelled: 0, completionRate: 0, busiestDay: '' };
+  readonly week = computed(() => {
+    const d = this.selected();
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    const today = toLocalDateString(new Date());
+    const sel = toLocalDateString(d);
+    const counts = this.weekCounts();
+    return Array.from({ length: 7 }, (_, i) => {
+      const day = new Date(monday);
+      day.setDate(monday.getDate() + i);
+      const key = toLocalDateString(day);
+      return {
+        date: day,
+        key,
+        short: DAY_SHORT[day.getDay()],
+        num: day.getDate(),
+        today: key === today,
+        selected: key === sel,
+        total: counts[key]?.total ?? 0,
+        done: counts[key]?.done ?? 0,
+      };
+    });
+  });
 
-  weekSessionCounts: Record<string, number> = {};
-  agendaTransitioning = false;
-  agendaSlideDirection: 'left' | 'right' = 'right';
+  readonly weekLabel = computed(() => {
+    const w = this.week();
+    const a = w[0].date;
+    const b = w[6].date;
+    if (a.getMonth() === b.getMonth()) return `${a.getDate()}–${b.getDate()} de ${MONTHS[b.getMonth()]} ${b.getFullYear()}`;
+    return `${a.getDate()} ${MONTHS[a.getMonth()].slice(0, 3)} – ${b.getDate()} ${MONTHS[b.getMonth()].slice(0, 3)} ${b.getFullYear()}`;
+  });
 
-  activeBriefing: any = null;
-  activeBriefingLoading = false;
-  showActiveBriefing = false;
+  readonly dayTitle = computed(() => {
+    const d = this.selected();
+    const key = toLocalDateString(d);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const prefix =
+      key === toLocalDateString(today) ? 'Hoy' : key === toLocalDateString(tomorrow) ? 'Mañana' : key === toLocalDateString(yesterday) ? 'Ayer' : '';
+    const long = `${DAY_LONG[d.getDay()]} ${d.getDate()} de ${MONTHS[d.getMonth()]}`;
+    return prefix ? `${prefix}, ${long}` : long.charAt(0).toUpperCase() + long.slice(1);
+  });
 
-  private subs = new Subscription();
+  readonly isToday = computed(() => toLocalDateString(this.selected()) === toLocalDateString(new Date()));
 
-  constructor(
-    private therapistService: TherapistService,
-    private recordingService: RecordingService,
-    private headerService: HeaderService,
-    private router: Router,
-    private confirmService: ConfirmService,
-    private toastService: ToastService,
-    private cdr: ChangeDetectorRef,
-  ) {}
+  readonly daySummary = computed(() => {
+    const list = this.items();
+    const minutes = list.filter((i) => i.status !== 'cancelled').reduce((s, i) => s + (i.minutes ?? 0), 0);
+    return {
+      total: list.filter((i) => i.status !== 'cancelled').length,
+      done: list.filter((i) => i.status === 'completed').length,
+      pending: list.filter((i) => i.status === 'scheduled' || i.status === 'in_progress').length,
+      cancelled: list.filter((i) => i.status === 'cancelled').length,
+      hours: minutes ? (minutes >= 60 ? `${Math.floor(minutes / 60)} h${minutes % 60 ? ' ' + (minutes % 60) + ' min' : ''}` : `${minutes} min`) : '—',
+    };
+  });
+
+  /** Próxima sesión del día seleccionado si es hoy (para resaltarla). */
+  readonly nextId = computed(() => {
+    if (!this.isToday()) return null;
+    const now = new Date();
+    const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    return this.items().find((i) => i.status === 'in_progress')?.id ?? this.items().find((i) => i.status === 'scheduled' && (i.end || i.start) >= hhmm)?.id ?? null;
+  });
+
+  readonly monthSummary = computed(() => {
+    const m = this.monthCursor();
+    const list = this.monthEvents().filter((e) => e.date.getMonth() === m.getMonth() && e.date.getFullYear() === m.getFullYear());
+    const done = list.filter((e) => e.status === 'completed').length;
+    const cancelled = list.filter((e) => e.status === 'cancelled').length;
+    const held = list.length - cancelled;
+    const counts: Record<number, number> = {};
+    list.filter((e) => e.status !== 'cancelled').forEach((e) => (counts[e.date.getDay()] = (counts[e.date.getDay()] ?? 0) + 1));
+    const busiest = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    return {
+      label: `${MONTHS[m.getMonth()]} ${m.getFullYear()}`,
+      total: held,
+      done,
+      pending: list.filter((e) => e.status === 'scheduled').length,
+      cancelled,
+      rate: held ? Math.round((done / held) * 100) : null,
+      busiest: busiest ? DAY_LONG[+busiest[0]] : '—',
+    };
+  });
 
   ngOnInit() {
     this.headerService.setConfig({
-      title: 'Mis Sesiones',
-      subtitle: 'Gestiona tus sesiones con pacientes',
+      title: 'Mis sesiones',
+      subtitle: 'Agenda, registro y revisión',
       icon: ['fas', 'calendar-days'],
+      actionTemplate: this.headerActions,
     });
-    this.generarDias();
-    this.loadStats();
-    this.loadWeekSessionCounts();
-    this.cargarSesiones();
-
-    this.subs.add(this.recordingService.activeSession$.subscribe(session => {
-      if (session && session.id) {
-        this.loadActiveBriefing(session.id);
-      } else {
-        this.showActiveBriefing = false;
-        this.activeBriefing = null;
-        this.cdr.markForCheck();
-      }
-    }));
-
+    this.loadDay();
+    this.loadWeekCounts();
+    this.subs.add(
+      this.therapistService.getDashboardStats().subscribe({
+        next: (s) => this.activePatients.set(s.active_patients),
+        error: () => this.activePatients.set(null),
+      }),
+    );
+    this.subs.add(
+      this.recordingService.activeSession$.subscribe((session) => {
+        if (!session?.id) {
+          this.live.set(null);
+          return;
+        }
+        this.liveDismissed.set(false);
+        this.subs.add(
+          this.therapistService.getSessionBriefing(session.id).subscribe({
+            next: (b) => this.live.set(b),
+            error: () => this.live.set({ session: { id: session.id, title: 'Sesión en curso' } }),
+          }),
+        );
+      }),
+    );
   }
 
   ngOnDestroy() {
     this.headerService.reset();
     this.subs.unsubscribe();
+    this.daySub?.unsubscribe();
   }
 
-  get monthYearLabel(): string {
-    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    return meses[this.fechaSeleccionada.getMonth()] + ' ' + this.fechaSeleccionada.getFullYear();
+  // ── navegación ──────────────────────────────────────────────────────────
+  selectDay(d: Date) {
+    const prev = toLocalDateString(this.selected());
+    const next = toLocalDateString(d);
+    if (prev === next) return;
+    const weekChanged = this.mondayKey(d) !== this.mondayKey(this.selected());
+    this.slide.set(next > prev ? 1 : -1);
+    this.selected.set(this.startOfDay(d));
+    this.loadDay();
+    if (weekChanged) this.loadWeekCounts();
   }
 
-  generarDias() {
-    this.diasSemana = [];
-    const hoy = new Date(this.fechaSeleccionada);
-    const diaSem = hoy.getDay();
-    const lunes = new Date(hoy);
-    lunes.setDate(hoy.getDate() - ((diaSem + 6) % 7));
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(lunes);
-      d.setDate(lunes.getDate() + i);
-      this.diasSemana.push(d);
-    }
+  shiftWeek(dir: -1 | 1) {
+    const d = new Date(this.selected());
+    d.setDate(d.getDate() + 7 * dir);
+    this.selectDay(d);
   }
 
-  prevWeek() {
-    const d = new Date(this.fechaSeleccionada);
-    d.setDate(d.getDate() - 7);
-    this.fechaSeleccionada = d;
-    this.generarDias();
-    this.loadWeekSessionCounts();
-    this.cargarSesiones();
+  shiftDay(dir: -1 | 1) {
+    const d = new Date(this.selected());
+    d.setDate(d.getDate() + dir);
+    this.selectDay(d);
   }
 
-  nextWeek() {
-    const d = new Date(this.fechaSeleccionada);
-    d.setDate(d.getDate() + 7);
-    this.fechaSeleccionada = d;
-    this.generarDias();
-    this.loadWeekSessionCounts();
-    this.cargarSesiones();
+  goToday() {
+    this.view.set('week');
+    this.selectDay(new Date());
   }
 
-  cambiarFecha(d: Date) {
-    const prevIdx = this.diasSemana.findIndex(dd => dd.toDateString() === this.fechaSeleccionada.toDateString());
-    const newIdx = this.diasSemana.findIndex(dd => dd.toDateString() === d.toDateString());
-    this.agendaSlideDirection = newIdx >= prevIdx ? 'right' : 'left';
-    this.fechaSeleccionada = d;
-    this.generarDias();
-    this.cargarSesionesWithTransition();
-  }
-
-  irHoy() {
-    this.fechaSeleccionada = new Date();
-    this.generarDias();
-    this.cargarSesiones();
-  }
-
-  diaSemana(d: Date): string {
-    return ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'][d.getDay()];
-  }
-
-  esHoy(d: Date): boolean {
-    return d.toDateString() === new Date().toDateString();
-  }
-
-  esSeleccionado(d: Date): boolean {
-    return d.toDateString() === this.fechaSeleccionada.toDateString();
-  }
-
-  initials(name: string): string {
-    if (!name) return '?';
-    return name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-  }
-
-  formatTime(iso: string): string {
-    return timeFromISO(iso);
-  }
-
-  duration(start: string, end: string): string {
-    if (!start || !end) return '';
-    const diff = new Date(end).getTime() - new Date(start).getTime();
-    const mins = Math.round(diff / 60000);
-    if (mins < 60) return mins + ' min';
-    return Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm';
-  }
-
-  private loadStats() {
-    this.subs.add(this.therapistService.getDashboardStats().subscribe({
-      next: (res) => {
-        this.stats = res;
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.error = err.message;
-        this.cdr.markForCheck();
-      },
-    }));
-  }
-
-  cargarSesiones() {
-    this.loading = true;
-    this.cdr.markForCheck();
-    const f = toLocalDateString(this.fechaSeleccionada);
-    this.subs.add(this.therapistService.getSessions(f, f).subscribe({
-      next: (events) => {
-        this.agendaEvents = [...events].sort((a: any, b: any) => {
-          return new Date(a.start).getTime() - new Date(b.start).getTime();
-        });
-        this.loading = false;
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.loading = false;
-        this.error = err.message;
-        this.cdr.markForCheck();
-      },
-    }));
-  }
-
-  cargarSesionesWithTransition() {
-    if (this.agendaEvents.length === 0) {
-      this.cargarSesiones();
-      return;
-    }
-    this.agendaTransitioning = true;
-    this.cdr.markForCheck();
-    setTimeout(() => {
-      const f = toLocalDateString(this.fechaSeleccionada);
-      this.subs.add(this.therapistService.getSessions(f, f).subscribe({
-        next: (events) => {
-          this.agendaEvents = [...events].sort((a: any, b: any) => {
-            return new Date(a.start).getTime() - new Date(b.start).getTime();
-          });
-          this.agendaTransitioning = false;
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.agendaTransitioning = false;
-          this.error = err.message;
-          this.cdr.markForCheck();
-        },
-      }));
-    }, 220);
-  }
-
-  private loadWeekSessionCounts() {
-    const monday = new Date(this.diasSemana[0]);
-    const sunday = new Date(this.diasSemana[6]);
-    sunday.setHours(23, 59, 59, 999);
-    const startStr = toLocalDateString(monday);
-    const endStr = toLocalDateString(sunday);
-    this.subs.add(this.therapistService.getSessions(startStr, endStr).subscribe({
-      next: (events: any[]) => {
-        const counts: Record<string, number> = {};
-        events.forEach(e => {
-          if (e.start) {
-            const dateKey = new Date(e.start).toDateString();
-            counts[dateKey] = (counts[dateKey] || 0) + 1;
-          }
-        });
-        this.weekSessionCounts = counts;
-        this.cdr.markForCheck();
-      },
-      error: () => {},
-    }));
-  }
-
-  hasSessionsOnDay(d: Date): boolean {
-    return (this.weekSessionCounts[d.toDateString()] || 0) > 0;
-  }
-
-  sessionCountOnDay(d: Date): number {
-    return this.weekSessionCounts[d.toDateString()] || 0;
-  }
-
-  openCreateModal() {
-    const today = toLocalDateString(new Date());
-    this.editForm = {
-      id: 0,
-      title: '',
-      date: today,
-      start_time: '',
-      end_time: '',
-      status: 'scheduled',
-      patient: '',
-    };
-    this.showEditModal = true;
-  }
-
-  irSesion(id: number) {
-    this.router.navigate(['/therapist/sessions', id, 'review']);
-  }
-
-  viewNotes(e: any) {
-    this.selectedNote = e.notes || e.extendedProps?.feedback_notes || e.extendedProps?.notes || '';
-    this.showNotesModal = true;
-  }
-
-  closeNotesModal() {
-    this.showNotesModal = false;
-  }
-
-  loadBriefing(sessionId: number) {
-    this.briefingLoading = true;
-    this.briefing = null;
-    this.showBriefing = true;
-    this.cdr.markForCheck();
-    this.subs.add(this.therapistService.getSessionBriefing(sessionId).subscribe({
-      next: (res: any) => {
-        this.briefing = res;
-        this.briefingLoading = false;
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.briefingLoading = false;
-        this.cdr.markForCheck();
-      },
-    }));
-  }
-
-  closeBriefing() {
-    this.showBriefing = false;
-    this.briefing = null;
-  }
-
-  toggleCalendar() {
-    this.showCalendar = !this.showCalendar;
-    if (this.showCalendar && this.calendarEvents.length === 0) {
-      this.loadCalendarEvents();
-    }
-    this.cdr.markForCheck();
-  }
-
-  onCalendarEventClick(event: CalendarWidgetEvent) {
-    this.router.navigate(['/therapist/sessions', event.id, 'review']);
+  setView(v: 'week' | 'month') {
+    this.view.set(v);
+    if (v === 'month') this.loadMonth(this.selected());
   }
 
   onMonthChange(month: Date) {
+    this.loadMonth(month);
+  }
+
+  /** En el mes, tocar un día abre su agenda. */
+  onMonthDay(d: Date) {
+    this.view.set('week');
+    this.selectDay(d);
+  }
+
+  onWeekKey(ev: KeyboardEvent) {
+    const map: Record<string, -1 | 1> = { ArrowLeft: -1, ArrowRight: 1 };
+    if (!map[ev.key]) return;
+    ev.preventDefault();
+    this.shiftDay(map[ev.key]);
+    queueMicrotask(() => (ev.currentTarget as HTMLElement)?.querySelector<HTMLElement>('[aria-current="date"], .is-selected')?.focus());
+  }
+
+  // ── datos ───────────────────────────────────────────────────────────────
+  loadDay() {
+    const f = toLocalDateString(this.selected());
+    this.loading.set(true);
+    this.loadError.set(null);
+    this.daySub?.unsubscribe();
+    this.daySub = this.therapistService.getSessions(f, f).subscribe({
+      next: (events) => {
+        this.items.set(events.map(toItem).sort((a, b) => a.start.localeCompare(b.start)));
+        this.loading.set(false);
+      },
+      error: (e) => {
+        this.items.set([]);
+        this.loading.set(false);
+        this.loadError.set(e?.error?.message || e?.error?.error || 'No se pudo cargar la agenda.');
+      },
+    });
+  }
+
+  private loadWeekCounts() {
+    const w = this.week();
+    this.subs.add(
+      this.therapistService.getSessions(w[0].key, w[6].key).subscribe({
+        next: (events) => {
+          const counts: Record<string, { total: number; done: number }> = {};
+          events.map(toItem).forEach((i) => {
+            if (!i.date || i.status === 'cancelled') return;
+            counts[i.date] ??= { total: 0, done: 0 };
+            counts[i.date].total++;
+            if (i.status === 'completed') counts[i.date].done++;
+          });
+          this.weekCounts.set(counts);
+        },
+        error: () => this.weekCounts.set({}),
+      }),
+    );
+  }
+
+  private loadMonth(month: Date) {
+    this.monthCursor.set(month);
     const start = toLocalDateString(new Date(month.getFullYear(), month.getMonth(), 1));
     const end = toLocalDateString(new Date(month.getFullYear(), month.getMonth() + 1, 0));
-    this.subs.add(this.therapistService.getSessions(start, end).subscribe({
-      next: (events) => {
-        this.calendarEvents = events.map((e: any) => ({
-          id: e.id,
-          title: e.title,
-          date: new Date(dateFromISO(e.start) + 'T12:00:00'),
-          time: timeFromISO(e.start),
-          endTime: timeFromISO(e.end),
-          status: e.extendedProps?.status || 'scheduled',
-          therapist: e.extendedProps?.therapist,
-          patient: e.extendedProps?.patient,
-        }));
-        this.computeMonthStats();
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.cdr.markForCheck();
-      },
-    }));
+    this.monthLoading.set(true);
+    this.subs.add(
+      this.therapistService.getSessions(start, end).subscribe({
+        next: (events) => {
+          this.monthEvents.set(
+            events.map(toItem).map((i) => ({
+              id: i.id,
+              title: i.patient || i.title,
+              date: new Date(`${i.date}T12:00:00`),
+              time: i.start,
+              endTime: i.end,
+              status: (i.status === 'in_progress' ? 'scheduled' : i.status) as CalendarWidgetEvent['status'],
+              patient: i.patient,
+            })),
+          );
+          this.monthLoading.set(false);
+        },
+        error: () => {
+          this.monthEvents.set([]);
+          this.monthLoading.set(false);
+        },
+      }),
+    );
   }
 
-  private loadCalendarEvents() {
-    this.calendarLoading = true;
-    this.cdr.markForCheck();
-    const now = new Date();
-    const start = toLocalDateString(new Date(now.getFullYear(), now.getMonth() - 1, 1));
-    const end = toLocalDateString(new Date(now.getFullYear(), now.getMonth() + 2, 0));
-    this.subs.add(this.therapistService.getSessions(start, end).subscribe({
-      next: (events) => {
-        this.calendarEvents = events.map((e: any) => ({
-          id: e.id,
-          title: e.title,
-          date: new Date(dateFromISO(e.start) + 'T12:00:00'),
-          time: timeFromISO(e.start),
-          endTime: timeFromISO(e.end),
-          status: e.extendedProps?.status || 'scheduled',
-          therapist: e.extendedProps?.therapist,
-          patient: e.extendedProps?.patient,
-        }));
-        this.computeMonthStats();
-        this.calendarLoading = false;
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.calendarLoading = false;
-        this.cdr.markForCheck();
-      },
-    }));
+  private refresh() {
+    this.loadDay();
+    this.loadWeekCounts();
+    if (this.view() === 'month') this.loadMonth(this.monthCursor());
   }
 
-  private computeMonthStats() {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    const monthEvents = this.calendarEvents.filter(e => {
-      const d = new Date(e.date);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    });
-    const total = monthEvents.length;
-    const completed = monthEvents.filter(e => e.status === 'completed').length;
-    const pending = monthEvents.filter(e => e.status === 'scheduled').length;
-    const cancelled = monthEvents.filter(e => e.status === 'cancelled').length;
-    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-    const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const dayCounts: Record<string, number> = {};
-    monthEvents.forEach(e => {
-      const dayName = dayNames[new Date(e.date).getDay()];
-      dayCounts[dayName] = (dayCounts[dayName] || 0) + 1;
-    });
-    const busiestDay = Object.entries(dayCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
-
-    this.monthStats = { total, completed, pending, cancelled, completionRate, busiestDay };
+  // ── acciones ────────────────────────────────────────────────────────────
+  review(id: number) {
+    this.router.navigate(['/therapist/sessions', id, 'review']);
   }
 
-  loadActiveBriefing(sessionId: number) {
-    this.activeBriefingLoading = true;
-    this.showActiveBriefing = true;
-    this.cdr.markForCheck();
-    this.subs.add(this.therapistService.getSessionBriefing(sessionId).subscribe({
-      next: (res: any) => {
-        this.activeBriefing = res;
-        this.activeBriefingLoading = false;
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.activeBriefingLoading = false;
-        this.cdr.markForCheck();
-      },
-    }));
+  openPatient(i: AgendaItem) {
+    if (i.patientId) this.router.navigate(['/therapist/patients', i.patientId]);
   }
 
-  dismissActiveBriefing() {
-    this.showActiveBriefing = false;
+  openEdit(i: AgendaItem) {
+    this.form = {
+      title: i.title,
+      date: i.date,
+      start: i.start,
+      end: i.end,
+      status: i.status === 'in_progress' ? 'scheduled' : i.status,
+      attendance: i.attendance === 'present' || i.attendance === 'absent' ? i.attendance : 'pending',
+    };
+    this.formError.set(null);
+    this.editing.set(i);
   }
 
-  irSesionDesdeBriefing() {
-    if (this.activeBriefing?.session?.id) {
-      this.showActiveBriefing = false;
-      this.router.navigate(['/therapist/sessions', this.activeBriefing.session.id, 'review']);
+  closeEdit() {
+    this.editing.set(null);
+  }
+
+  submitEdit() {
+    const item = this.editing();
+    if (!item) return;
+    const f = this.form;
+    if (!f.date || !f.start) {
+      this.formError.set('Indica la fecha y la hora de inicio.');
+      return;
     }
-  }
-
-  statusColor(status: string): string {
-    const map: any = {
-      scheduled: 'var(--color-info)',
-      completed: 'var(--color-success)',
-      cancelled: 'var(--color-error)',
-      in_progress: 'var(--color-warning)',
+    if (f.end && f.end <= f.start) {
+      this.formError.set('La hora de fin debe ser posterior a la de inicio.');
+      return;
+    }
+    this.saving.set(true);
+    this.formError.set(null);
+    const payload: { title: string; start_time: string; status: string; attendance: string; end_time?: string } = {
+      title: f.title.trim() || item.title,
+      start_time: `${f.date}T${f.start}`,
+      status: f.status,
+      attendance: f.attendance,
     };
-    return map[status] || 'var(--color-on-surface-variant)';
+    if (f.end) payload.end_time = `${f.date}T${f.end}`;
+    this.subs.add(
+      this.therapistService.updateSession(item.id, payload).subscribe({
+        next: () => {
+          this.saving.set(false);
+          this.closeEdit();
+          this.toastService.show('Sesión actualizada', 'success');
+          if (f.date !== toLocalDateString(this.selected())) this.selectDay(new Date(`${f.date}T12:00:00`));
+          this.refresh();
+        },
+        error: (e) => {
+          this.saving.set(false);
+          const errs = e?.error?.errors;
+          this.formError.set(Array.isArray(errs) && errs.length ? errs.join(' ') : e?.error?.message || 'No se pudo guardar la sesión.');
+        },
+      }),
+    );
   }
 
-  statusLabel(status: string): string {
-    const map: any = {
-      scheduled: 'Programada',
-      completed: 'Completada',
-      cancelled: 'Cancelada',
-      in_progress: 'En curso',
-    };
-    return map[status] || status;
-  }
-
-  onEventClick(event: any) {
-    this.editForm = {
-      id: event.id,
-      title: event.title,
-      date: dateFromISO(event.start),
-      start_time: event.start ? timeFromISO(event.start) : '',
-      end_time: event.end ? timeFromISO(event.end) : '',
-      status: event.status || 'scheduled',
-      patient: event.extendedProps?.patient || '',
-    };
-    this.loadBriefing(event.id);
-    this.showEditModal = true;
-  }
-
-  closeEditModal() {
-    this.showEditModal = false;
-  }
-
-  async submitEdit() {
-    const f = this.editForm;
-
-    const confirmed = await firstValueFrom(this.confirmService.confirm({
-      title: 'Guardar cambios',
-      message: '¿Estás seguro de guardar los cambios?',
-      confirmText: 'Guardar',
-      cancelText: 'Cancelar',
-      variant: 'primary',
-    }));
-    if (!confirmed) return;
-
-    this.submitting = true;
-    this.cdr.markForCheck();
-    this.subs.add(this.therapistService.updateSession(f.id, {
-      title: f.title,
-      start_time: `${f.date}T${f.start_time}`,
-      end_time: `${f.date}T${f.end_time}`,
-      status: f.status as any,
-    }).subscribe({
-      next: () => {
-        this.submitting = false;
-        this.closeEditModal();
-        this.toastService.show('Sesión actualizada correctamente', 'success');
-        this.cdr.markForCheck();
-        this.cargarSesiones();
-        this.loadStats();
-      },
-      error: (err) => {
-        this.submitting = false;
-        this.error = err.message;
-        this.toastService.show('Error al actualizar sesión', 'error');
-        this.cdr.markForCheck();
-      },
-    }));
-  }
-
-  navigateToReview() {
-    this.closeEditModal();
-    this.router.navigate(['/therapist/sessions', this.editForm.id, 'review']);
+  async quickStatus(i: AgendaItem, status: 'completed' | 'cancelled') {
+    if (status === 'cancelled') {
+      const ok = await firstValueFrom(
+        this.confirmService.confirm({
+          title: 'Cancelar sesión',
+          message: `La sesión de ${i.patient || i.title} a las ${i.start} quedará cancelada. El paciente verá el cambio en su calendario.`,
+          confirmText: 'Cancelar sesión',
+          cancelText: 'Volver',
+          variant: 'danger',
+        }),
+      );
+      if (!ok) return;
+    }
+    this.subs.add(
+      // «Realizada» desde la agenda implica que el paciente asistió; si faltó, se registra desde Editar.
+      this.therapistService.updateSession(i.id, status === 'completed' ? { status, attendance: 'present' } : { status }).subscribe({
+        next: () => {
+          this.items.update((list) =>
+            list.map((x) => (x.id === i.id ? { ...x, status, attendance: status === 'completed' ? 'present' : x.attendance } : x)),
+          );
+          this.toastService.show(status === 'completed' ? 'Sesión marcada como realizada' : 'Sesión cancelada', 'success');
+          this.loadWeekCounts();
+        },
+        error: (e) => this.toastService.show(e?.error?.message || 'No se pudo actualizar la sesión', 'error'),
+      }),
+    );
   }
 
   async deleteSession() {
-    const confirmed = await firstValueFrom(this.confirmService.confirm({
-      title: 'Eliminar sesión',
-      message: '¿Estás seguro de eliminar esta sesión?',
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar',
-      variant: 'danger',
-    }));
-    if (!confirmed) return;
-    this.deleting = true;
-    this.cdr.markForCheck();
-    this.subs.add(this.therapistService.deleteSession(this.editForm.id).subscribe({
-      next: () => {
-        this.deleting = false;
-        this.closeEditModal();
-        this.toastService.show('Sesión eliminada correctamente', 'success');
-        this.cdr.markForCheck();
-        this.cargarSesiones();
-        this.loadStats();
-      },
-      error: (err) => {
-        this.deleting = false;
-        this.error = err.message;
-        this.toastService.show('Error al eliminar sesión', 'error');
-        this.cdr.markForCheck();
-      },
-    }));
+    const item = this.editing();
+    if (!item) return;
+    const ok = await firstValueFrom(
+      this.confirmService.confirm({
+        title: 'Eliminar sesión',
+        message: 'Se borrará la sesión y su registro. Si solo no se realizará, mejor márcala como cancelada.',
+        confirmText: 'Eliminar',
+        cancelText: 'Volver',
+        variant: 'danger',
+      }),
+    );
+    if (!ok) return;
+    this.deleting.set(true);
+    this.subs.add(
+      this.therapistService.deleteSession(item.id).subscribe({
+        next: () => {
+          this.deleting.set(false);
+          this.closeEdit();
+          this.toastService.show('Sesión eliminada', 'success');
+          this.refresh();
+        },
+        error: (e) => {
+          this.deleting.set(false);
+          this.formError.set(e?.error?.message || 'No se pudo eliminar la sesión.');
+        },
+      }),
+    );
+  }
+
+  // ── presentación ────────────────────────────────────────────────────────
+  statusLabel(s: string) {
+    return STATUS_LABEL[s] ?? s;
+  }
+
+  attendanceLabel(a: string | null) {
+    return a === 'present' ? 'Asistió' : a === 'absent' ? 'Faltó' : null;
+  }
+
+  duration(m: number | null) {
+    if (!m) return '';
+    return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ' ' + (m % 60) : ''}`;
+  }
+
+  initials(name: string) {
+    return (name || '?')
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => w[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+  }
+
+  auditTone(score: number | null) {
+    return score == null ? 'none' : score >= 70 ? 'good' : score >= 40 ? 'warn' : 'bad';
+  }
+
+  private startOfDay(d: Date) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  private mondayKey(d: Date) {
+    const m = new Date(d);
+    m.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return toLocalDateString(m);
   }
 }

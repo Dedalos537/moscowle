@@ -1,6 +1,6 @@
 import { TherapistDashboard } from './pages/dashboard/dashboard';
-import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
+import { NgModule, inject } from '@angular/core';
+import { Router, RouterModule, Routes } from '@angular/router';
 import { RoleGuard } from '../../core/guards/role.guard';
 import { TherapistLayout } from '../../core/layout/therapist-layout/therapist-layout';
 import { TherapistSessions } from './pages/sessions/therapist-sessions';
@@ -11,7 +11,6 @@ import { TherapistGames } from './pages/games/therapist-games';
 import { TherapistPatients } from './pages/patients/patients';
 import { TherapistPatientDetail } from './pages/patient-detail/patient-detail';
 import { TherapistReports } from './pages/reports/reports';
-import { TherapistAnalytics } from './pages/analytics/analytics';
 import { IncidentsList } from '../../shared/components/incidents-list/incidents-list';
 
 const routes: Routes = [
@@ -31,7 +30,8 @@ const routes: Routes = [
       { path: 'patients/:id', component: TherapistPatientDetail },
       { path: 'session-review/:id', component: TherapistSessionReview },
       { path: 'reports', component: TherapistReports },
-      { path: 'analytics', component: TherapistAnalytics },
+      // «Analíticas IA» ahora es la pestaña «IA y juegos» de Reportes; los enlaces viejos llegan ahí.
+      { path: 'analytics', redirectTo: () => inject(Router).parseUrl('/therapist/reports?tab=ai') },
       { path: 'incidents', component: IncidentsList, data: { viewMode: 'therapist' } },
       { path: 'kanban', loadComponent: () => import('./pages/kanban/kanban').then(m => m.KanbanPage) },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
