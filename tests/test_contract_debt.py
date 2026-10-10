@@ -3,6 +3,8 @@
 import uuid
 from datetime import datetime, timedelta
 
+import pytest
+
 from app.extensions import db
 from app.models import User
 from app.models.contract import Contract, Installment
@@ -11,6 +13,24 @@ from app.services.financial_service import FinancialService
 from app.services.payment_service import PaymentService
 
 TODAY = datetime.utcnow().date()
+_CREATED = {'users': [], 'contracts': []}
+
+
+@pytest.fixture(autouse=True)
+def _cleanup(app):
+    """La base de pruebas es compartida y SQLite reutiliza ids de usuarios borrados: si los contratos quedaran,
+    otra prueba podría heredar la deuda de un paciente con el mismo id."""
+    yield
+    db.session.rollback()
+    ids = _CREATED['contracts']
+    if ids:
+        Installment.query.filter(Installment.contract_id.in_(ids)).delete(synchronize_session=False)
+        Contract.query.filter(Contract.id.in_(ids)).delete(synchronize_session=False)
+    if _CREATED['users']:
+        User.query.filter(User.id.in_(_CREATED['users'])).delete(synchronize_session=False)
+    db.session.commit()
+    _CREATED['users'].clear()
+    _CREATED['contracts'].clear()
 
 
 def _patient(**kw):
@@ -18,6 +38,7 @@ def _patient(**kw):
     u = User(username=f'pac{tag}', email=f'{tag}@cd.test', password='x', role='jugador', is_active=True, **kw)
     db.session.add(u)
     db.session.commit()
+    _CREATED['users'].append(u.id)
     return u
 
 
@@ -30,6 +51,7 @@ def _contract(patient, *installments):
             Installment(contract_id=c.id, number=n, due_date=due, amount=amount, paid_amount=paid, status=status)
         )
     db.session.commit()
+    _CREATED['contracts'].append(c.id)
     return c
 
 
@@ -83,6 +105,7 @@ def test_daily_digest_uses_the_same_overdue_figure(app):
     )
     db.session.add(admin)
     db.session.commit()
+    _CREATED['users'].append(admin.id)
     summary = PaymentService().get_financial_summary()
     fin = _gather_bsc_data(admin)['financial']
     assert fin['overdue_amount'] == float(summary['overdue_amount'])
