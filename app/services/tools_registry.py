@@ -2240,7 +2240,9 @@ def handle_get_sede_stats(sede_id=None, sede_name=None, **kwargs):
             query = query.filter(Sede.name.ilike(f'%{sede_name.strip()}%'))
         sedes = query.order_by(Sede.name.asc()).all()
         if not sedes:
-            return {'error': 'No encontré esa sede activa. Usa list_sedes para ver las sedes.'}
+            if sede_id or sede_name:
+                return {'error': 'No encontré esa sede activa. Usa list_sedes para ver las sedes.'}
+            return {'success': True, 'sedes': [], 'nota': 'El centro no tiene sedes activas registradas.'}
 
         result = []
         for sede in sedes:
@@ -2442,7 +2444,10 @@ def normalize_debt_month(month):
 
 @tool(
     name='get_debtors',
-    description='Reporte de deudores por sede. Pacientes con pagos pendientes.',
+    description=(
+        'Reporte de deudores por sede: pacientes con el pago vencido o por vencer en 7 dias segun su plan de pago. '
+        'Las cuotas vencidas de contratos estan en get_due_installments.'
+    ),
     parameters={
         'type': 'object',
         'properties': {
@@ -2453,21 +2458,61 @@ def normalize_debt_month(month):
     roles=ROLES_SUPERVISOR,
 )
 def handle_get_debtors(month=None, **kwargs):
+    """Solo deudores reales (vencido / por vencer), con los campos que el bot necesita.
+
+    /api/admin/deudores lista a TODOS los pacientes activos con su estado (al día, sin plan, vencido...) porque la
+    pantalla de Finanzas los muestra todos. Antes la tool sumaba esa lista completa como `count`: el bot decía
+    «69 deudores» cuando el resumen del mismo reporte contaba solo los vencidos y por vencer. Además enviaba ~30 KB
+    al modelo local.
+    """
     try:
         url = '/api/admin/deudores'
         month = normalize_debt_month(month)
         if month:
             url += f'?month={month}'
         resp = _api_get(url, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
-        data = resp.get_json() if resp else []
-        count = 0
-        if isinstance(data, list):
-            count = len(data)
-        elif isinstance(data, dict):
-            payload = data.get('data') if isinstance(data.get('data'), dict) else data
-            por_sede = payload.get('por_sede') or {}
-            count = sum(len(sede.get('deudores') or []) for sede in por_sede.values())
-        return {'success': True, 'count': count, 'debtors': data}
+        data = resp.get_json() if resp else {}
+        if isinstance(data, dict) and data.get('error') and not data.get('data'):
+            return {'error': data.get('error')}
+        payload = data.get('data') if isinstance(data, dict) and isinstance(data.get('data'), dict) else data
+        payload = payload if isinstance(payload, dict) else {}
+        por_sede = []
+        for sede in (payload.get('por_sede') or {}).values():
+            owing = [
+                {
+                    'id': d.get('id'),
+                    'paciente': d.get('paciente'),
+                    'monto': d.get('monto'),
+                    'estado': 'vencido' if d.get('estado') == 'vencido' else 'por vencer',
+                    'fecha_vencimiento': d.get('fecha_vencimiento'),
+                    'dias_adeudo': d.get('dias_adeudo'),
+                    'telefono': d.get('phone'),
+                    'terapeuta': d.get('therapist_name') or None,
+                }
+                for d in sede.get('deudores') or []
+                if d.get('estado') in ('vencido', 'proximo')
+            ]
+            if owing:
+                owing.sort(key=lambda d: -(d['dias_adeudo'] or 0))
+                por_sede.append(
+                    {
+                        'sede': sede.get('sede_name'),
+                        'deudores': len(owing),
+                        'total': round(sum(d['monto'] or 0 for d in owing), 2),
+                        # Los 10 con más días de atraso; el total y el conteo de la sede son completos.
+                        'detalle': owing[:10],
+                        'nota': f'Se muestran 10 de {len(owing)}' if len(owing) > 10 else None,
+                    }
+                )
+        summary = payload.get('summary') or {}
+        return {
+            'success': True,
+            'count': sum(s['deudores'] for s in por_sede),
+            'total_adeudado': summary.get('total_adeudado', 0),
+            'vencidos': summary.get('vencidos', 0),
+            'por_vencer_7_dias': summary.get('proximo_a_vencer', 0),
+            'por_sede': por_sede,
+        }
     except Exception as e:
         return {'error': str(e)}
 
