@@ -1,165 +1,155 @@
-import { Component, OnInit, OnDestroy, Input, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, computed, inject, signal, TemplateRef, ViewChild } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
-import { IncidentService, Incident } from '../../../core/services/incident.service';
+import { Incident, IncidentDetail, IncidentService } from '../../../core/services/incident.service';
 import { HeaderService } from '../../../core/services/header.service';
-import { cardEnter } from '../../../core/animations';
-import { Spinner } from '../spinner/spinner';
-import { Alert } from '../alert/alert';
+import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
+import { Modal } from '../modal/modal';
+import { Button } from '../button/button';
 
+type Filter = 'open' | 'done' | 'all';
+
+const ESTADO: Record<string, string> = {
+  NUEVO: 'Recibida',
+  EN_CURSO: 'En atención',
+  PENDIENTE_PROVEEDOR: 'En espera de un tercero',
+  RESUELTO: 'Resuelta',
+  CERRADO: 'Cerrada',
+};
+const CATEGORIA: Record<string, string> = {
+  SOFTWARE: 'Plataforma o app',
+  HARDWARE: 'Equipos del centro',
+  RED: 'Conexión a internet',
+  ACCESOS: 'Acceso a la cuenta',
+  OPERACIONES: 'Atención y operación del centro',
+};
+const NEXT: Record<string, { estado: string; label: string }[]> = {
+  NUEVO: [{ estado: 'EN_CURSO', label: 'Empezar a atender' }, { estado: 'RESUELTO', label: 'Marcar como resuelta' }],
+  EN_CURSO: [{ estado: 'PENDIENTE_PROVEEDOR', label: 'En espera de un tercero' }, { estado: 'RESUELTO', label: 'Marcar como resuelta' }],
+  PENDIENTE_PROVEEDOR: [{ estado: 'EN_CURSO', label: 'Retomar' }, { estado: 'RESUELTO', label: 'Marcar como resuelta' }],
+  RESUELTO: [{ estado: 'CERRADO', label: 'Cerrar' }],
+};
+
+interface TimelineEntry {
+  key: string;
+  kind: 'status' | 'comment';
+  at: string | null;
+  who: string | null;
+  text: string;
+  internal?: boolean;
+  mine?: boolean;
+}
+
+/**
+ * Incidencias de terapeutas y pacientes: reportar, ver el estado, quién la atiende, el historial y responder.
+ * Antes cada tarjeta enlazaba a /admin/incidents/:id, bloqueada para estos roles: se podía reportar pero nunca
+ * ver la respuesta. Los avisos llegan con ?id=N y abren la incidencia directamente.
+ */
 @Component({
   selector: 'app-incidents-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Spinner, Alert],
-  template: `
-    <div class="space-y-4">
-      @if (loading) {
-        <app-spinner></app-spinner>
-      } @else if (error && !showCreateModal) {
-        <app-alert type="error" [message]="error"></app-alert>
-      } @else if (!showCreateModal) {
-        <div class="flex items-center justify-between">
-          <p class="text-sm text-on-surface-variant">{{ totalItems }} incidencia(s)</p>
-          <button (click)="showCreateModal = true; error = null"
-                  class="px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:brightness-110 transition-colors flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'plus']"></fa-icon> Reportar
-          </button>
-        </div>
-
-        @if (incidents.length === 0) {
-          <div class="text-center py-12 text-on-surface-variant">
-            <fa-icon [icon]="['fas', 'circle-check']" class="text-4xl text-success mb-3"></fa-icon>
-            <p>No tienes incidencias registradas</p>
-          </div>
-        } @else {
-          <div class="space-y-3">
-            @for (inc of incidents; track inc.id) {
-              <div class="bg-surface-container-lowest rounded-xl border border-border/30 p-4 hover:border-primary/30 transition-colors cursor-pointer"
-                   [routerLink]="['/admin/incidents', inc.id]">
-                <div class="flex items-start justify-between gap-3">
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2 mb-1">
-                      <span class="w-2 h-2 rounded-full" [style.background]="estadoColor(inc.estado)"></span>
-                      <span class="text-xs font-bold uppercase" [style.color]="estadoColor(inc.estado)">{{ inc.estado }}</span>
-                      <span class="text-xs text-on-surface-variant">{{ timeAgo(inc.fecha_creacion) }}</span>
-                    </div>
-                    <h4 class="text-sm font-bold text-on-surface truncate">{{ inc.titulo }}</h4>
-                    <p class="text-xs text-on-surface-variant mt-1 line-clamp-2">{{ inc.descripcion }}</p>
-                  </div>
-                  <div class="flex flex-col items-end gap-1 shrink-0">
-                    <span class="px-2 py-0.5 rounded-full text-xs font-bold text-white" [style.background]="prioridadColor(inc.prioridad)">
-                      {{ prioridadLabel(inc.prioridad) }}
-                    </span>
-                    <span class="text-xs text-on-surface-variant">{{ inc.categoria }}</span>
-                  </div>
-                </div>
-              </div>
-            }
-          </div>
-        }
-      }
-
-      @if (showCreateModal) {
-        <div class="fixed inset-0 z-[20000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" (click)="showCreateModal = false">
-          <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/30 max-w-lg w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
-            <h3 class="text-lg font-bold text-on-surface mb-4">Reportar Incidencia</h3>
-            @if (error) {
-              <div class="mb-4 p-3 rounded-lg bg-error-container text-on-error-container text-sm font-medium flex items-center gap-2">
-                <fa-icon [icon]="['fas', 'circle-exclamation']"></fa-icon> {{ error }}
-              </div>
-            }
-            <div class="space-y-4">
-              <div>
-                <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Titulo</label>
-                <input [(ngModel)]="newIncident.titulo" class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Descripcion</label>
-                <textarea [(ngModel)]="newIncident.descripcion" rows="3" class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none resize-none"></textarea>
-              </div>
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Categoria</label>
-                  <select [(ngModel)]="newIncident.categoria" class="w-full rounded-xl border border-border px-3 py-2.5 text-sm">
-                    <option value="SOFTWARE">Software</option>
-                    <option value="HARDWARE">Hardware</option>
-                    <option value="RED">Red</option>
-                    <option value="ACCESOS">Accesos</option>
-                    <option value="OPERACIONES">Operaciones</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Impacto</label>
-                  <select [(ngModel)]="newIncident.impacto" class="w-full rounded-xl border border-border px-3 py-2.5 text-sm">
-                    <option [ngValue]="1">1 - Bajo</option>
-                    <option [ngValue]="2">2 - Medio</option>
-                    <option [ngValue]="3">3 - Alto</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Urgencia</label>
-                <select [(ngModel)]="newIncident.urgencia" class="w-full rounded-xl border border-border px-3 py-2.5 text-sm">
-                  <option [ngValue]="1">1 - Baja</option>
-                  <option [ngValue]="2">2 - Media</option>
-                  <option [ngValue]="3">3 - Alta</option>
-                </select>
-              </div>
-              <p class="text-xs text-on-surface-variant">Prioridad calculada: <strong>{{ newIncident.impacto * newIncident.urgencia }}</strong> (Impacto x Urgencia)</p>
-            </div>
-            <div class="flex justify-end gap-3 mt-6">
-              <button (click)="showCreateModal = false" class="px-4 py-2 text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors">Cancelar</button>
-              <button (click)="createIncident()" [disabled]="creating || !newIncident.titulo"
-                      class="px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:brightness-110 transition-colors disabled:opacity-50">
-                @if (creating) { <fa-icon [icon]="['fas', 'spinner']" class="fa-spin"></fa-icon> }
-                Crear
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-    </div>
-  `,
-  animations: [cardEnter],
+  imports: [FormsModule, FontAwesomeModule, Modal, Button],
+  templateUrl: './incidents-list.html',
+  styleUrl: './incidents-list.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class IncidentsList implements OnInit, OnDestroy {
-  @Input() viewMode: 'therapist' | 'patient' = 'therapist';
+  @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<unknown>;
 
-  incidents: Incident[] = [];
-  loading = true;
-  error: string | null = null;
-  totalItems = 0;
-  currentPage = 1;
-
-  showCreateModal = false;
-  newIncident = {
-    titulo: '',
-    descripcion: '',
-    categoria: 'SOFTWARE',
-    impacto: 2,
-    urgencia: 2,
-  };
-  creating = false;
-
+  private incidentService = inject(IncidentService);
+  private headerService = inject(HeaderService);
+  private toast = inject(ToastService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private subs = new Subscription();
+  private user = toSignal(inject(AuthService).currentUser$, { initialValue: null });
 
-  constructor(
-    private incidentService: IncidentService,
-    private headerService: HeaderService,
-    private cdr: ChangeDetectorRef,
-  ) {}
+  readonly categories = Object.entries(CATEGORIA).map(([value, label]) => ({ value, label }));
+  readonly items = signal<Incident[]>([]);
+  readonly loading = signal(true);
+  readonly loadError = signal<string | null>(null);
+  readonly filter = signal<Filter>('open');
+  readonly selectedId = signal<number | null>(null);
+  readonly detail = signal<IncidentDetail | null>(null);
+  readonly detailLoading = signal(false);
+  readonly reply = signal('');
+  readonly sending = signal(false);
+  readonly changing = signal(false);
+
+  readonly creating = signal(false);
+  readonly showCreate = signal(false);
+  readonly createError = signal<string | null>(null);
+  form = { titulo: '', descripcion: '', categoria: 'SOFTWARE', impacto: 1, urgencia: 2 };
+
+  readonly isPatient = computed(() => this.user()?.role === 'jugador');
+  readonly myId = computed<number | null>(() => (this.user()?.id != null ? Number(this.user().id) : null));
+
+  readonly counts = computed(() => {
+    const list = this.items();
+    const done = list.filter((i) => i.estado === 'RESUELTO' || i.estado === 'CERRADO').length;
+    return { open: list.length - done, done, all: list.length };
+  });
+
+  readonly visible = computed(() => {
+    const f = this.filter();
+    return this.items().filter((i) => {
+      const done = i.estado === 'RESUELTO' || i.estado === 'CERRADO';
+      return f === 'all' || (f === 'done' ? done : !done);
+    });
+  });
+
+  /** Solo el responsable asignado cambia el estado desde aquí (coordinación lo hace desde su panel). */
+  readonly actions = computed(() => {
+    const d = this.detail();
+    if (!d || d.responsable_id == null || d.responsable_id !== this.myId()) return [];
+    return NEXT[d.estado] ?? [];
+  });
+
+  readonly timeline = computed<TimelineEntry[]>(() => {
+    const d = this.detail();
+    if (!d) return [];
+    const me = this.user()?.username;
+    const entries: TimelineEntry[] = [
+      ...(d.historial ?? []).map((h) => ({
+        key: `h${h.id}`,
+        kind: 'status' as const,
+        at: h.changed_at,
+        who: h.changed_by,
+        text: h.estado_anterior
+          ? `${ESTADO[h.estado_anterior] ?? h.estado_anterior} → ${ESTADO[h.estado_nuevo] ?? h.estado_nuevo}${h.comentario ? ' · ' + h.comentario : ''}`
+          : 'Reportada',
+      })),
+      ...(d.comentarios ?? []).map((c) => ({
+        key: `c${c.id}`,
+        kind: 'comment' as const,
+        at: c.created_at,
+        who: c.autor,
+        text: c.contenido,
+        internal: c.es_interno,
+        mine: !!me && c.autor === me,
+      })),
+    ];
+    return entries.sort((a, b) => (a.at ?? '').localeCompare(b.at ?? ''));
+  });
 
   ngOnInit() {
     this.headerService.setConfig({
       title: 'Incidencias',
-      subtitle: 'Reporta y gestiona incidencias',
+      subtitle: 'Reporta un problema y sigue su atención',
       icon: ['fas', 'triangle-exclamation'],
+      actionTemplate: this.headerActions,
     });
-    this.loadIncidents();
+    this.load();
+    this.subs.add(
+      this.route.queryParamMap.subscribe((q) => {
+        const id = Number(q.get('id'));
+        if (id && id !== this.selectedId()) this.open(id, false);
+      }),
+    );
   }
 
   ngOnDestroy() {
@@ -167,95 +157,167 @@ export class IncidentsList implements OnInit, OnDestroy {
     this.subs.unsubscribe();
   }
 
-  loadIncidents() {
-    this.loading = true;
+  load() {
+    this.loading.set(true);
+    this.loadError.set(null);
     this.subs.add(
-      this.incidentService.getMyIncidents(this.currentPage).subscribe({
+      this.incidentService.getMyIncidents(1, 100).subscribe({
         next: (res) => {
-          this.incidents = res.incidentes;
-          this.totalItems = res.total;
-          this.loading = false;
-          this.cdr.markForCheck();
+          this.items.set(res.incidentes);
+          this.loading.set(false);
         },
         error: () => {
-          this.loading = false;
-          this.error = 'Error al cargar incidencias';
-          this.cdr.markForCheck();
+          this.loading.set(false);
+          this.loadError.set('No se pudieron cargar tus incidencias.');
         },
-      })
+      }),
     );
   }
 
-  createIncident() {
-    if (!this.newIncident.titulo || this.newIncident.titulo.length < 5) {
-      this.error = 'El título debe tener al menos 5 caracteres';
-      this.cdr.markForCheck();
-      return;
-    }
-    if (!this.newIncident.descripcion || this.newIncident.descripcion.length < 10) {
-      this.error = 'La descripción debe tener al menos 10 caracteres';
-      this.cdr.markForCheck();
-      return;
-    }
-    this.error = null;
-    this.creating = true;
-    this.cdr.markForCheck();
+  open(id: number, updateUrl = true) {
+    this.selectedId.set(id);
+    this.reply.set('');
+    this.detailLoading.set(true);
+    if (updateUrl) this.router.navigate([], { queryParams: { id }, queryParamsHandling: 'merge', replaceUrl: true });
     this.subs.add(
-      this.incidentService.createIncident({
-        titulo: this.newIncident.titulo,
-        descripcion: this.newIncident.descripcion,
-        categoria: this.newIncident.categoria,
-        impacto: this.newIncident.impacto,
-        urgencia: this.newIncident.urgencia,
-      }).subscribe({
-        next: () => {
-          this.creating = false;
-          this.showCreateModal = false;
-          this.error = null;
-          this.newIncident = { titulo: '', descripcion: '', categoria: 'SOFTWARE', impacto: 2, urgencia: 2 };
-          this.loadIncidents();
-          this.cdr.markForCheck();
+      this.incidentService.getIncident(id).subscribe({
+        next: (d) => {
+          this.detail.set(d);
+          this.detailLoading.set(false);
+          const done = d.estado === 'RESUELTO' || d.estado === 'CERRADO';
+          if (done && this.filter() === 'open') this.filter.set('all');
         },
-        error: (err) => {
-          this.creating = false;
-          if (err.status === 401) {
-            this.error = 'Sesión expirada. Recarga la página e inicia sesión de nuevo.';
-          } else {
-            this.error = err.error?.error || err.error?.message || 'Error al crear incidencia';
-          }
-          this.cdr.markForCheck();
+        error: (e) => {
+          this.detailLoading.set(false);
+          this.detail.set(null);
+          this.selectedId.set(null);
+          this.toast.show(e?.status === 403 ? 'No tienes acceso a esa incidencia.' : 'No se pudo abrir la incidencia.', 'error');
         },
-      })
+      }),
     );
   }
 
-  prioridadLabel(p: number): string {
-    const map: Record<number, string> = { 1: 'P1', 2: 'P2', 3: 'P3', 4: 'P4', 6: 'P6', 9: 'P9' };
-    return map[p] || `P${p}`;
+  close() {
+    this.selectedId.set(null);
+    this.detail.set(null);
+    this.router.navigate([], { queryParams: { id: null }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
-  prioridadColor(p: number): string {
-    if (p >= 6) return '#dc2626';
-    if (p >= 4) return '#ea580c';
-    if (p >= 3) return '#ca8a04';
-    return '#65a30d';
+  sendReply() {
+    const d = this.detail();
+    const text = this.reply().trim();
+    if (!d || text.length < 2) return;
+    this.sending.set(true);
+    this.subs.add(
+      this.incidentService.addComment(d.id, text).subscribe({
+        next: () => {
+          this.sending.set(false);
+          this.reply.set('');
+          this.open(d.id, false);
+        },
+        error: (e) => {
+          this.sending.set(false);
+          this.toast.show(e?.error?.error || 'No se pudo enviar la respuesta.', 'error');
+        },
+      }),
+    );
   }
 
-  estadoColor(e: string): string {
-    const map: Record<string, string> = {
-      'NUEVO': '#3b82f6', 'EN_CURSO': '#f59e0b', 'PENDIENTE_PROVEEDOR': '#a855f7',
-      'RESUELTO': '#22c55e', 'CERRADO': '#6b7280',
-    };
-    return map[e] || '#6b7280';
+  changeStatus(estado: string) {
+    const d = this.detail();
+    if (!d) return;
+    this.changing.set(true);
+    this.subs.add(
+      this.incidentService.updateStatus(d.id, estado).subscribe({
+        next: (updated) => {
+          this.changing.set(false);
+          this.detail.set(updated);
+          this.items.update((list) => list.map((i) => (i.id === updated.id ? { ...i, estado: updated.estado } : i)));
+          this.toast.show(`Incidencia ${ESTADO[estado]?.toLowerCase() ?? 'actualizada'}`, 'success');
+        },
+        error: (e) => {
+          this.changing.set(false);
+          this.toast.show(e?.error?.error || 'No se pudo cambiar el estado.', 'error');
+        },
+      }),
+    );
   }
 
-  timeAgo(dateStr: string | null): string {
-    if (!dateStr) return '';
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${mins}m`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h`;
-    return `${Math.floor(hours / 24)}d`;
+  openCreate() {
+    this.form = { titulo: '', descripcion: '', categoria: this.isPatient() ? 'OPERACIONES' : 'SOFTWARE', impacto: 1, urgencia: 2 };
+    this.createError.set(null);
+    this.showCreate.set(true);
+  }
+
+  create() {
+    const f = this.form;
+    if (f.titulo.trim().length < 5) {
+      this.createError.set('Escribe un título de al menos 5 letras.');
+      return;
+    }
+    if (f.descripcion.trim().length < 10) {
+      this.createError.set('Cuenta un poco más qué pasó (al menos 10 letras).');
+      return;
+    }
+    this.creating.set(true);
+    this.createError.set(null);
+    this.subs.add(
+      this.incidentService
+        .createIncident({ titulo: f.titulo.trim(), descripcion: f.descripcion.trim(), categoria: f.categoria, impacto: f.impacto, urgencia: f.urgencia })
+        .subscribe({
+          next: (d) => {
+            this.creating.set(false);
+            this.showCreate.set(false);
+            this.toast.show('Incidencia enviada. Coordinación ya fue avisada.', 'success');
+            this.items.update((list) => [d, ...list]);
+            this.filter.set('open');
+            this.open(d.id);
+          },
+          error: (e) => {
+            this.creating.set(false);
+            const details = e?.error?.details;
+            this.createError.set(
+              e?.status === 401
+                ? 'Tu sesión expiró. Recarga la página e inicia sesión.'
+                : details
+                  ? Object.values(details).flat().join(' ')
+                  : e?.error?.error || 'No se pudo enviar la incidencia.',
+            );
+          },
+        }),
+    );
+  }
+
+  estado(e: string) {
+    return ESTADO[e] ?? e;
+  }
+
+  categoria(c: string) {
+    return CATEGORIA[c] ?? c;
+  }
+
+  prioridad(p: number) {
+    return p >= 6 ? 'Alta' : p >= 3 ? 'Media' : 'Baja';
+  }
+
+  when(iso: string | null) {
+    if (!iso) return '';
+    const d = new Date(iso.endsWith('Z') || iso.includes('+') ? iso : iso + 'Z');
+    const mins = Math.round((Date.now() - d.getTime()) / 60000);
+    if (mins < 1) return 'ahora';
+    if (mins < 60) return `hace ${mins} min`;
+    const h = Math.floor(mins / 60);
+    if (h < 24) return `hace ${h} h`;
+    const days = Math.floor(h / 24);
+    if (days < 7) return `hace ${days} ${days === 1 ? 'día' : 'días'}`;
+    return d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
+  }
+
+  sla(d: Incident) {
+    if (d.estado === 'RESUELTO' || d.estado === 'CERRADO') return null;
+    if (d.esta_vencido) return { text: 'Plazo de atención vencido', late: true };
+    if (d.horas_restantes_sla == null) return null;
+    const h = d.horas_restantes_sla;
+    return { text: h < 1 ? 'Menos de 1 h para atenderla' : `Plazo de atención: ${Math.round(h)} h`, late: false };
   }
 }

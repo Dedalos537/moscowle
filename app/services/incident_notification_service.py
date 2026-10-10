@@ -27,6 +27,7 @@ class IncidentNotificationService:
     @classmethod
     def _notify_user(cls, user_id, message, title=None, category='alert', priority='normal', link=None):
         """Create an in-app notification for a user."""
+        link = cls._link_for(user_id, link)
         try:
             notif_service = NotificationService()
             notif_service.notify_user(
@@ -41,6 +42,78 @@ class IncidentNotificationService:
             )
         except Exception as e:
             logger.exception('Failed to create in-app notification for user %s: %s', user_id, e)
+
+    @staticmethod
+    def _link_for(user_id, link):
+        """El enlace del aviso según el rol de quien lo recibe.
+
+        Todos los avisos apuntaban a /admin/incidents/<id>: un terapeuta o paciente que lo tocaba caía en una ruta
+        de administración bloqueada para su rol y nunca veía su incidencia.
+        """
+        if not link or not link.startswith('/admin/incidents/'):
+            return link
+        from app.models.user import User
+
+        user = User.query.get(user_id)
+        incident_id = link.rsplit('/', 1)[-1]
+        if user and user.role == 'terapista':
+            return f'/therapist/incidents?id={incident_id}'
+        if user and user.role == 'jugador':
+            return f'/patient/incidents?id={incident_id}'
+        return link
+
+    @classmethod
+    def _staff_ids(cls):
+        from app.models.user import User
+
+        return [u.id for u in User.query.filter(User.role.in_(('admin', 'supervisor')), User.is_active.is_(True))]
+
+    @classmethod
+    def notify_status_change(cls, incidente: Incidente, estado_anterior, actor_id):
+        """Avisa a quien reportó (y al responsable) que su incidencia cambió de estado."""
+        labels = {
+            'NUEVO': 'Nueva',
+            'EN_CURSO': 'En atención',
+            'PENDIENTE_PROVEEDOR': 'En espera de un tercero',
+            'RESUELTO': 'Resuelta',
+            'CERRADO': 'Cerrada',
+        }
+        msg = (
+            f'Incidencia #{incidente.id_incidente} «{incidente.titulo}»: '
+            f'{labels.get(estado_anterior, estado_anterior)} → {labels.get(incidente.estado, incidente.estado)}'
+        )[:255]
+        link = f'/admin/incidents/{incidente.id_incidente}'
+        for uid in {incidente.user_id, incidente.responsable_id} - {None, actor_id}:
+            cls._notify_user(uid, msg, title='Incidencia actualizada', category='system', link=link)
+
+    @classmethod
+    def notify_comment(cls, incidente: Incidente, author_id, internal):
+        """Una respuesta llega a la otra parte: al que reportó si responde el equipo, al equipo si responde él."""
+        link = f'/admin/incidents/{incidente.id_incidente}'
+        msg = f'Nueva respuesta en la incidencia #{incidente.id_incidente} «{incidente.titulo}»'[:255]
+        if author_id == incidente.user_id:
+            targets = {incidente.responsable_id} if incidente.responsable_id else set(cls._staff_ids())
+        else:
+            targets = set() if internal else {incidente.user_id}
+            if incidente.responsable_id:
+                targets.add(incidente.responsable_id)
+        for uid in targets - {None, author_id}:
+            cls._notify_user(uid, msg, title='Nueva respuesta', category='message', link=link)
+
+    @classmethod
+    def notify_assignment(cls, incidente: Incidente, actor_id):
+        """Al reasignar, el nuevo responsable se entera (antes no recibía nada)."""
+        if not incidente.responsable_id or incidente.responsable_id == actor_id:
+            return
+        msg = f'Te asignaron la incidencia #{incidente.id_incidente}: {incidente.titulo} (P{incidente.prioridad})'[:255]
+        cls._notify_user(
+            incidente.responsable_id,
+            msg,
+            title='Incidencia asignada',
+            category='alert',
+            priority='high',
+            link=f'/admin/incidents/{incidente.id_incidente}',
+        )
 
     @classmethod
     def notify_new_incident(cls, incidente: Incidente):
@@ -455,16 +528,15 @@ class IncidentNotificationService:
 
     @classmethod
     def _notify_inapp_new(cls, incidente: Incidente):
-        from app.models.user import User
 
         sla_str = incidente.fecha_limite_sla.strftime('%d/%m %H:%M') if incidente.fecha_limite_sla else 'N/A'
         msg = f'Nuevo incidente #{incidente.id_incidente}: {incidente.titulo} (P{incidente.prioridad}, SLA: {sla_str})'
         link = f'/admin/incidents/{incidente.id_incidente}'
 
-        # Notify admins
-        admins = User.query.filter_by(role='admin', is_active=True).all()
-        for admin in admins:
-            cls._notify_user(admin.id, msg, title='Nuevo Incidente', category='alert', priority='high', link=link)
+        # Coordinación completa (admins y supervisores): antes los supervisores no se enteraban.
+        for uid in cls._staff_ids():
+            if uid != incidente.user_id:
+                cls._notify_user(uid, msg, title='Nuevo Incidente', category='alert', priority='high', link=link)
 
         # Notify responsible
         if incidente.responsable_id and incidente.responsable_id != incidente.user_id:

@@ -5,6 +5,8 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { HeaderService } from '../../../../core/services/header.service';
 import { IncidentService, IncidentDetail } from '../../../../core/services/incident.service';
+import { AdminService } from '../../../../core/services/admin.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { Subscription } from 'rxjs';
 import { fadeInUp } from '../../../../core/animations';
 import { Button } from '../../../../shared/components/button/button';
@@ -39,6 +41,11 @@ export class IncidentDetailPage implements OnInit, OnDestroy {
 
   readonly ESTADOS = ['NUEVO', 'EN_CURSO', 'PENDIENTE_PROVEEDOR', 'RESUELTO', 'CERRADO'];
 
+  // Asignación (antes no había forma de asignar desde la interfaz: las incidencias quedaban sin responsable).
+  staff: { id: number; name: string; role: string }[] = [];
+  assignTo: number | null = null;
+  assigning = false;
+
   private subs = new Subscription();
   private incidentId = 0;
 
@@ -47,6 +54,8 @@ export class IncidentDetailPage implements OnInit, OnDestroy {
     private router: Router,
     private headerService: HeaderService,
     private incidentService: IncidentService,
+    private adminService: AdminService,
+    private toast: ToastService,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -58,6 +67,45 @@ export class IncidentDetailPage implements OnInit, OnDestroy {
       icon: ['fas', 'triangle-exclamation'],
     });
     this.loadIncident();
+    this.loadStaff();
+  }
+
+  private loadStaff() {
+    const labels: Record<string, string> = { admin: 'Admin', supervisor: 'Supervisión', terapista: 'Terapeuta' };
+    this.subs.add(
+      this.adminService.getUsers().subscribe({
+        next: (res) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          this.staff = (res.users ?? [])
+            .filter((u: any) => labels[u.role] && u.is_active !== false)
+            .map((u: any) => ({ id: u.id, name: u.username || u.email, role: labels[u.role] }))
+            .sort((a: { role: string; name: string }, b: { role: string; name: string }) => a.role.localeCompare(b.role) || a.name.localeCompare(b.name));
+          this.cdr.markForCheck();
+        },
+        error: () => {},
+      }),
+    );
+  }
+
+  assign() {
+    if (!this.incident || !this.assignTo || this.assignTo === this.incident.responsable_id) return;
+    this.assigning = true;
+    this.subs.add(
+      this.incidentService.assignIncident(this.incident.id, this.assignTo).subscribe({
+        next: () => {
+          this.assigning = false;
+          const who = this.staff.find((s) => s.id === this.assignTo)?.name;
+          this.toast.show(`Asignada a ${who}. Ya recibió el aviso.`, 'success');
+          this.assignTo = null;
+          this.loadIncident();
+        },
+        error: (err) => {
+          this.assigning = false;
+          this.toast.show(err.error?.error || 'No se pudo asignar', 'error');
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   ngOnDestroy() {

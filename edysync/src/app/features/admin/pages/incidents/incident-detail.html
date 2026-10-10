@@ -143,6 +143,20 @@
             <span class="sidebar-label">Responsable</span>
             <span class="sidebar-value">{{ incident.responsable_name || 'Sin asignar' }}</span>
           </div>
+          @if (incident.estado !== 'CERRADO') {
+            <div class="assign-row">
+              <label class="sidebar-label" for="assign-to">{{ incident.responsable_id ? 'Reasignar a' : 'Asignar a' }}</label>
+              <div class="assign-row__controls">
+                <select id="assign-to" class="input-field text-sm" [(ngModel)]="assignTo">
+                  <option [ngValue]="null">Elegir persona…</option>
+                  @for (p of staff; track p.id) {
+                    <option [ngValue]="p.id" [disabled]="p.id === incident.responsable_id">{{ p.name }} · {{ p.role }}</option>
+                  }
+                </select>
+                <app-button variant="primary" [label]="assigning ? 'Asignando…' : 'Asignar'" [disabled]="!assignTo || assigning" (clicked)="assign()"></app-button>
+              </div>
+            </div>
+          }
           <div class="sidebar-field">
             <span class="sidebar-label">Creado por</span>
             <span class="sidebar-value">{{ incident.user_name || '—' }}</span>

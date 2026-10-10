@@ -1,0 +1,158 @@
+<ng-template #headerActions>
+  <app-button variant="primary" label="Reportar" [icon]="['fas', 'plus']" (clicked)="openCreate()" />
+</ng-template>
+
+<div class="il" [class.has-detail]="selectedId() !== null">
+  <!-- Lista -->
+  <section class="il-list" aria-label="Mis incidencias">
+    <div class="il-filters" role="group" aria-label="Filtrar incidencias">
+      <button type="button" [class.is-on]="filter() === 'open'" [attr.aria-pressed]="filter() === 'open'" (click)="filter.set('open')">Abiertas <span>{{ counts().open }}</span></button>
+      <button type="button" [class.is-on]="filter() === 'done'" [attr.aria-pressed]="filter() === 'done'" (click)="filter.set('done')">Resueltas <span>{{ counts().done }}</span></button>
+      <button type="button" [class.is-on]="filter() === 'all'" [attr.aria-pressed]="filter() === 'all'" (click)="filter.set('all')">Todas <span>{{ counts().all }}</span></button>
+    </div>
+
+    @if (loading()) {
+      @for (i of [1, 2, 3]; track i) { <div class="il-skel" aria-hidden="true"></div> }
+    } @else if (loadError(); as err) {
+      <div class="il-empty" role="alert">
+        <p class="il-empty__title">{{ err }}</p>
+        <app-button variant="secondary" label="Reintentar" (clicked)="load()" />
+      </div>
+    } @else {
+      <ul class="il-items">
+        @for (i of visible(); track i.id) {
+          <li>
+            <button type="button" class="il-item" [class.is-on]="selectedId() === i.id" [attr.aria-current]="selectedId() === i.id ? 'true' : null" (click)="open(i.id)">
+              <span class="il-item__top">
+                <span class="il-state" [attr.data-estado]="i.estado">{{ estado(i.estado) }}</span>
+                <span class="il-item__when">{{ when(i.fecha_creacion) }}</span>
+              </span>
+              <span class="il-item__title">{{ i.titulo }}</span>
+              <span class="il-item__meta">
+                {{ categoria(i.categoria) }}
+                @if (i.user_id !== myId()) { · <strong>asignada a ti</strong> }
+                @if (sla(i); as s) { @if (s.late) { · <span class="is-late">plazo vencido</span> } }
+              </span>
+            </button>
+          </li>
+        } @empty {
+          <li class="il-empty">
+            <fa-icon [icon]="['fas', filter() === 'open' ? 'circle-check' : 'inbox']" class="il-empty__icon" />
+            <p class="il-empty__title">{{ filter() === 'open' ? 'No tienes incidencias abiertas' : 'No hay incidencias aquí' }}</p>
+            <p class="il-empty__text">Si algo no funciona, en la plataforma o en el centro, repórtalo y coordinación te responderá aquí mismo.</p>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <!-- Detalle -->
+  <section class="il-detail" aria-label="Detalle de la incidencia" aria-live="polite">
+    @if (detailLoading() && !detail()) {
+      <div class="il-skel il-skel--tall" aria-hidden="true"></div>
+    } @else if (detail(); as d) {
+      <article class="il-card" [class.is-refreshing]="detailLoading()">
+        <header class="il-card__head">
+          <button type="button" class="il-back" (click)="close()" aria-label="Volver a la lista"><fa-icon [icon]="['fas', 'arrow-left']" /></button>
+          <div class="il-card__titles">
+            <p class="il-card__eyebrow">#{{ d.id }} · {{ categoria(d.categoria) }} · prioridad {{ prioridad(d.prioridad) }}</p>
+            <h2 class="il-card__title">{{ d.titulo }}</h2>
+          </div>
+          <span class="il-state il-state--lg" [attr.data-estado]="d.estado">{{ estado(d.estado) }}</span>
+        </header>
+
+        <dl class="il-facts">
+          <div><dt>Reportada</dt><dd>{{ d.user_id === myId() ? 'Por ti' : d.user_name }} · {{ when(d.fecha_creacion) }}</dd></div>
+          <div><dt>Quién la atiende</dt><dd>{{ d.responsable_name ? (d.responsable_id === myId() ? 'Tú' : d.responsable_name) : 'Coordinación aún no la asigna' }}</dd></div>
+          @if (sla(d); as s) { <div><dt>Plazo</dt><dd [class.is-late]="s.late">{{ s.text }}</dd></div> }
+          @if (d.fecha_resolucion) { <div><dt>Resuelta</dt><dd>{{ when(d.fecha_resolucion) }}</dd></div> }
+        </dl>
+
+        <p class="il-desc">{{ d.descripcion }}</p>
+
+        @if (actions().length) {
+          <div class="il-actions">
+            <span class="il-actions__label">Te la asignaron:</span>
+            @for (a of actions(); track a.estado) {
+              <app-button [variant]="a.estado === 'RESUELTO' ? 'primary' : 'secondary'" [label]="a.label" [disabled]="changing()" (clicked)="changeStatus(a.estado)" />
+            }
+          </div>
+        }
+
+        <h3 class="il-h">Seguimiento</h3>
+        <ol class="il-timeline">
+          @for (t of timeline(); track t.key) {
+            <li [attr.data-kind]="t.kind" [class.is-mine]="t.mine" [class.is-internal]="t.internal">
+              @if (t.kind === 'status') {
+                <span class="il-tl__dot" aria-hidden="true"></span>
+                <span class="il-tl__status">{{ t.text }}</span>
+                <span class="il-tl__meta">{{ t.who }} · {{ when(t.at) }}</span>
+              } @else {
+                <div class="il-bubble">
+                  <p class="il-bubble__meta">
+                    {{ t.mine ? 'Tú' : t.who }} · {{ when(t.at) }}
+                    @if (t.internal) { <span class="il-bubble__tag">Nota interna</span> }
+                  </p>
+                  <p class="il-bubble__text">{{ t.text }}</p>
+                </div>
+              }
+            </li>
+          }
+        </ol>
+
+        @if (d.estado !== 'CERRADO') {
+          <form class="il-reply" (ngSubmit)="sendReply()">
+            <label for="il-reply" class="sr-only">Responder</label>
+            <textarea id="il-reply" name="reply" rows="2" [ngModel]="reply()" (ngModelChange)="reply.set($event)"
+              placeholder="Escribe una respuesta o agrega detalles…" (keydown.control.enter)="sendReply()" (keydown.meta.enter)="sendReply()"></textarea>
+            <app-button variant="primary" [label]="sending() ? 'Enviando…' : 'Responder'" [icon]="['fas', 'paper-plane']"
+              [disabled]="sending() || reply().trim().length < 2" (clicked)="sendReply()" />
+          </form>
+        } @else {
+          <p class="il-closed">Esta incidencia está cerrada. Si el problema vuelve, reporta una nueva.</p>
+        }
+      </article>
+    } @else {
+      <div class="il-placeholder">
+        <fa-icon [icon]="['fas', 'comments']" aria-hidden="true" />
+        <p>Elige una incidencia para ver su seguimiento y responder.</p>
+      </div>
+    }
+  </section>
+</div>
+
+<app-modal [isOpen]="showCreate()" title="Reportar un problema" (close)="showCreate.set(false)">
+  <form class="il-form" (ngSubmit)="create()">
+    <label class="il-field">
+      <span>¿Qué pasó?</span>
+      <input class="input-field" name="titulo" [(ngModel)]="form.titulo" maxlength="200" placeholder="Por ejemplo: no carga el juego de memoria" required />
+    </label>
+    <label class="il-field">
+      <span>Cuéntanos los detalles</span>
+      <textarea class="input-field" name="descripcion" rows="4" [(ngModel)]="form.descripcion" placeholder="Qué estabas haciendo, desde cuándo pasa y qué esperabas que ocurriera." required></textarea>
+    </label>
+    <label class="il-field">
+      <span>Tema</span>
+      <select class="input-field" name="categoria" [(ngModel)]="form.categoria">
+        @for (c of categories; track c.value) { <option [value]="c.value">{{ c.label }}</option> }
+      </select>
+    </label>
+    <fieldset class="il-choice">
+      <legend>¿A quién afecta?</legend>
+      <label><input type="radio" name="impacto" [value]="1" [(ngModel)]="form.impacto" /> Solo a mí</label>
+      <label><input type="radio" name="impacto" [value]="2" [(ngModel)]="form.impacto" /> A varias personas</label>
+      <label><input type="radio" name="impacto" [value]="3" [(ngModel)]="form.impacto" /> A todo el centro</label>
+    </fieldset>
+    <fieldset class="il-choice">
+      <legend>¿Qué tan urgente es?</legend>
+      <label><input type="radio" name="urgencia" [value]="1" [(ngModel)]="form.urgencia" /> Puede esperar</label>
+      <label><input type="radio" name="urgencia" [value]="2" [(ngModel)]="form.urgencia" /> Pronto</label>
+      <label><input type="radio" name="urgencia" [value]="3" [(ngModel)]="form.urgencia" /> Me impide trabajar o atenderme</label>
+    </fieldset>
+    @if (createError(); as err) { <p class="il-form__error" role="alert">{{ err }}</p> }
+  </form>
+  <div modal-footer class="il-form__footer">
+    <app-button variant="ghost" label="Cancelar" (clicked)="showCreate.set(false)" />
+    <app-button variant="primary" [label]="creating() ? 'Enviando…' : 'Enviar a coordinación'" [disabled]="creating()" (clicked)="create()" />
+  </div>
+</app-modal>

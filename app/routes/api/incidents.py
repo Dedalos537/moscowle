@@ -21,7 +21,24 @@ def _utcnow():
     return datetime.now(UTC).replace(tzinfo=None)
 
 
-def _serialize_incident(incidente, detail=False):
+STAFF = ('admin', 'supervisor')
+
+
+def _can_view(incidente):
+    """Coordinación ve todo; el resto, lo que reportó o lo que tiene asignado."""
+    if current_user.role in STAFF:
+        return True
+    return current_user.id in {incidente.user_id, incidente.responsable_id}
+
+
+def _can_manage(incidente):
+    """Cambiar estado: coordinación o el responsable asignado (quien reporta no se resuelve su propio caso)."""
+    return current_user.role in STAFF or (
+        incidente.responsable_id is not None and incidente.responsable_id == current_user.id
+    )
+
+
+def _serialize_incident(incidente, detail=False, show_internal=True):
     data = {
         'id': incidente.id_incidente,
         'titulo': incidente.titulo,
@@ -75,6 +92,7 @@ def _serialize_incident(incidente, detail=False):
             for c in sorted(
                 incidente.comentarios, key=lambda x: x.created_at or datetime.min.replace(tzinfo=UTC), reverse=True
             )
+            if show_internal or not c.es_interno
         ]
 
     return data
@@ -245,7 +263,7 @@ def get_incident(incident_id):
                 if incidente.user_id != current_user.id:
                     return jsonify({'error': 'Acceso denegado'}), 403
 
-        return jsonify(_serialize_incident(incidente, detail=True))
+        return jsonify(_serialize_incident(incidente, detail=True, show_internal=current_user.role != 'jugador'))
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -294,7 +312,9 @@ def create_incident():
             evidencia_original=validated.get('evidencia_original', ''),
             fecha_creacion=fecha_creacion,
             fecha_limite_sla=fecha_limite,
-            responsable_id=current_user.id,
+            # Antes quedaba como responsable quien reportaba: un terapeuta o paciente «se asignaba» su propio
+            # problema y la coordinación no lo veía pendiente de asignar. Solo coordinación se asigna al crear.
+            responsable_id=current_user.id if current_user.role in STAFF else None,
         )
 
         db.session.add(incidente)
@@ -328,6 +348,9 @@ def update_incident_status(incident_id):
 
         if not incidente:
             return jsonify({'error': 'Incidente no encontrado'}), 404
+        if not _can_manage(incidente):
+            # Antes no había control: cualquier usuario con sesión podía resolver o cerrar cualquier incidencia.
+            return jsonify({'error': 'Solo coordinación o el responsable asignado pueden cambiar el estado'}), 403
 
         data = request.get_json()
         if not data:
@@ -384,6 +407,8 @@ def update_incident_status(incident_id):
 
         if nuevo_estado in ('RESUELTO', 'CERRADO'):
             IncidentNotificationService.notify_resolution(incidente)
+        else:
+            IncidentNotificationService.notify_status_change(incidente, estado_anterior, current_user.id)
 
         return jsonify(_serialize_incident(incidente, detail=True))
 
@@ -409,16 +434,21 @@ def add_incident_comment(incident_id):
         validated, errors = validate_incident_comment(data)
         if errors:
             return jsonify({'error': 'Validación fallida', 'details': errors}), 400
+        if not _can_view(incidente):
+            return jsonify({'error': 'Acceso denegado'}), 403
 
+        # Las notas internas son del equipo; un paciente nunca las escribe (ni las ve en el detalle).
+        es_interno = bool(validated.get('es_interno', False)) and current_user.role != 'jugador'
         comentario = IncidenteComentario(
             incidente_id=incidente.id_incidente,
             autor_id=current_user.id,
             contenido=validated['contenido'],
-            es_interno=validated.get('es_interno', False),
+            es_interno=es_interno,
         )
 
         db.session.add(comentario)
         db.session.commit()
+        IncidentNotificationService.notify_comment(incidente, current_user.id, es_interno)
 
         return jsonify(
             {
@@ -477,6 +507,7 @@ def assign_incident(incident_id):
         )
         db.session.add(historial)
         db.session.commit()
+        IncidentNotificationService.notify_assignment(incidente, current_user.id)
 
         return jsonify(_serialize_incident(incidente))
 
