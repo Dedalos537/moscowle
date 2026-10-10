@@ -287,3 +287,11 @@
 
 // Modo oscuro: la sombra necesita más presencia sobre fondos casi negros.
 :host-context(.dark) .sidebar { box-shadow: 8px 0 28px -14px rgb(0 0 0 / 0.65); }
+
+/* Contador junto al ícono (incidencias abiertas): visible también con la barra compacta. */
+.nav-link-icon-wrap { position: relative; display: inline-flex; flex: none; }
+.nav-badge {
+  position: absolute; top: -0.4rem; right: -0.6rem; min-width: 1.05rem; height: 1.05rem; padding: 0 0.25rem;
+  border-radius: 999px; display: grid; place-items: center; font-size: 0.625rem; font-weight: 800; line-height: 1;
+  background: var(--color-error); color: var(--color-on-error); box-shadow: 0 0 0 2px var(--color-surface-container-lowest);
+}

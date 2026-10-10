@@ -1,3 +1,4 @@
+import { IncidentService } from '../../services/incident.service';
 import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, QueryList, ViewChild, ViewChildren, inject, effect } from '@angular/core';
 import { Router, NavigationEnd, RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -16,6 +17,8 @@ interface NavItem {
   icon: IconProp;
   supervisor?: boolean;
   hideWhenNoCharts?: boolean;
+  /** Clave del contador que se muestra junto al ícono (p. ej. incidencias abiertas). */
+  badge?: 'incidents';
 }
 
 @Component({
@@ -66,6 +69,8 @@ export class Sidebar implements OnInit, OnDestroy, AfterViewInit {
     { path: '/admin/reports', label: 'Reportes', subtitle: 'Estadísticas', icon: ['fas', 'chart-bar'], supervisor: true },
     { path: '/admin/messages', label: 'Mensajes', subtitle: 'Comunicación', icon: ['fas', 'envelope'], supervisor: true },
     { path: '/admin/kanban', label: 'Kanban', subtitle: 'Tablero de tareas', icon: ['fas', 'table-columns'], supervisor: true },
+    // Antes solo se llegaba desde Configuración › Sistema: lo reportado por terapeutas y pacientes no se veía.
+    { path: '/admin/incidents', label: 'Incidencias', subtitle: 'Reportes del equipo', icon: ['fas', 'triangle-exclamation'], supervisor: true, badge: 'incidents' },
     { path: '/admin/drive', label: 'Drive', subtitle: 'Archivos e impresión', icon: ['fas', 'hard-drive'] },
     { path: '/admin/settings', label: 'Configuración', subtitle: 'Cuenta y sistema', icon: ['fas', 'gear'], supervisor: true },
   ];
@@ -129,6 +134,26 @@ export class Sidebar implements OnInit, OnDestroy, AfterViewInit {
   });
 
   helpState = inject(HelpStateService);
+  private incidentService = inject(IncidentService);
+  /** Incidencias abiertas (admin/supervisor), refrescado al cambiar de ruta. */
+  openIncidents = 0;
+
+  private refreshBadges() {
+    if (this.userRole !== 'admin' && this.userRole !== 'supervisor') return;
+    this.subs.add(
+      this.incidentService.getDashboard().subscribe({
+        next: (d) => {
+          this.openIncidents = d?.total_abiertos ?? 0;
+          this.cdr.markForCheck();
+        },
+        error: () => {},
+      }),
+    );
+  }
+
+  badgeFor(item: NavItem): number {
+    return item.badge === 'incidents' ? this.openIncidents : 0;
+  }
 
   constructor(
     private auth: AuthService,
@@ -141,6 +166,7 @@ export class Sidebar implements OnInit, OnDestroy, AfterViewInit {
       this.userRole = u?.role || '';
       this.cdr.markForCheck();
       this.scheduleIndicator();
+      this.refreshBadges();
     }));
     this.subs.add(this.sidebarService.open$.subscribe(open => {
       this.isOpen = open;
@@ -154,6 +180,7 @@ export class Sidebar implements OnInit, OnDestroy, AfterViewInit {
         this.flyVisible = false;
         this.cdr.markForCheck();
         this.scheduleIndicator();
+        this.refreshBadges();
       })
     );
   }

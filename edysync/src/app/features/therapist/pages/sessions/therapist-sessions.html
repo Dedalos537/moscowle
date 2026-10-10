@@ -43,7 +43,10 @@
         <header class="ts-agenda__head">
           <div>
             <h2 id="ts-day-title" class="ts-agenda__title">{{ dayTitle() }}</h2>
-            @if (!loading() && !loadError()) {
+            <!-- Siempre presente (con su alto reservado) para que el contenido no salte al llegar los datos. -->
+            @if (loading()) {
+              <p class="ts-agenda__sub"><span class="ts-skel-text" aria-hidden="true"></span></p>
+            } @else if (!loadError()) {
               <p class="ts-agenda__sub">
                 @if (daySummary().total) {
                   {{ daySummary().total }} {{ daySummary().total === 1 ? 'sesión' : 'sesiones' }} · {{ daySummary().hours }} de atención
@@ -67,7 +70,7 @@
             <div class="ts-empty" role="alert">
               <fa-icon [icon]="['fas', 'triangle-exclamation']" class="ts-empty__icon" />
               <p class="ts-empty__title">{{ err }}</p>
-              <app-button variant="secondary" label="Reintentar" [icon]="['fas', 'rotate-right']" (clicked)="loadDay()" />
+              <app-button variant="secondary" label="Reintentar" [icon]="['fas', 'rotate-right']" (clicked)="loadWeek()" />
             </div>
           } @else {
             @for (i of items(); track i.id) {
@@ -146,10 +149,10 @@
       <!-- Resumen del día -->
       <aside class="ts-side" aria-label="Resumen">
         <div class="ts-kpis">
-          <div class="ts-kpi"><span class="ts-kpi__value">{{ loading() ? '·' : daySummary().done }}</span><span class="ts-kpi__label">Realizadas</span></div>
-          <div class="ts-kpi"><span class="ts-kpi__value">{{ loading() ? '·' : daySummary().pending }}</span><span class="ts-kpi__label">Por atender</span></div>
-          <div class="ts-kpi"><span class="ts-kpi__value">{{ loading() ? '·' : daySummary().cancelled }}</span><span class="ts-kpi__label">Canceladas</span></div>
-          <div class="ts-kpi"><span class="ts-kpi__value">{{ activePatients() ?? '—' }}</span><span class="ts-kpi__label">Pacientes a cargo</span></div>
+          <div class="ts-kpi"><span class="ts-kpi__value">@if (loading()) { <span class="ts-skel-num" aria-hidden="true"></span> } @else { {{ daySummary().done }} }</span><span class="ts-kpi__label">Realizadas</span></div>
+          <div class="ts-kpi"><span class="ts-kpi__value">@if (loading()) { <span class="ts-skel-num" aria-hidden="true"></span> } @else { {{ daySummary().pending }} }</span><span class="ts-kpi__label">Por atender</span></div>
+          <div class="ts-kpi"><span class="ts-kpi__value">@if (loading()) { <span class="ts-skel-num" aria-hidden="true"></span> } @else { {{ daySummary().cancelled }} }</span><span class="ts-kpi__label">Canceladas</span></div>
+          <div class="ts-kpi"><span class="ts-kpi__value">@if (activePatients() === undefined) { <span class="ts-skel-num" aria-hidden="true"></span> } @else { {{ activePatients() ?? '—' }} }</span><span class="ts-kpi__label">Pacientes a cargo</span></div>
         </div>
         <p class="ts-side__hint">
           <fa-icon [icon]="['fas', 'keyboard']" aria-hidden="true" /> Usa ← y → en la semana para cambiar de día.

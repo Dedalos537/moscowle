@@ -34,7 +34,12 @@
         (focus)="onItemHover(i)"
         (blur)="onItemLeave()"
         [attr.aria-label]="expanded ? null : item.label + (item.subtitle ? ', ' + item.subtitle : '')">
-        <fa-icon [icon]="item.icon" class="nav-link-icon" aria-hidden="true"></fa-icon>
+        <span class="nav-link-icon-wrap">
+          <fa-icon [icon]="item.icon" class="nav-link-icon" aria-hidden="true"></fa-icon>
+          @if (badgeFor(item); as n) {
+            <span class="nav-badge" [attr.aria-label]="n + (n === 1 ? ' abierta' : ' abiertas')">{{ n > 99 ? '99+' : n }}</span>
+          }
+        </span>
 
         <!-- El texto siempre existe: se muestra/oculta con una transición, sin insertarlo ni quitarlo del DOM -->
         <div class="nav-link-text" [attr.aria-hidden]="!expanded && !isOpen">

@@ -97,13 +97,31 @@ export class TherapistSessions implements OnInit, OnDestroy {
 
   readonly view = signal<'week' | 'month'>('week');
   readonly selected = signal<Date>(this.startOfDay(new Date()));
-  readonly items = signal<AgendaItem[]>([]);
+  /** Sesiones de la semana visible: de aquí salen la agenda del día y los conteos (una sola petición). */
+  readonly weekItems = signal<AgendaItem[]>([]);
+  private loadedWeek: string | null = null;
+  readonly items = computed(() => {
+    const key = toLocalDateString(this.selected());
+    return this.weekItems()
+      .filter((i) => i.date === key)
+      .sort((a, b) => a.start.localeCompare(b.start));
+  });
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
-  /** Dirección de la animación al cambiar de día (−1 = hacia atrás). */
+  /** Dirección de la animación al cambiar de día; 0 = sin animación (primera carga: ya anima la transición de ruta). */
   readonly slide = signal<-1 | 0 | 1>(0);
-  readonly weekCounts = signal<Record<string, { total: number; done: number }>>({});
-  readonly activePatients = signal<number | null>(null);
+  readonly weekCounts = computed(() => {
+    const counts: Record<string, { total: number; done: number }> = {};
+    this.weekItems().forEach((i) => {
+      if (!i.date || i.status === 'cancelled') return;
+      counts[i.date] ??= { total: 0, done: 0 };
+      counts[i.date].total++;
+      if (i.status === 'completed') counts[i.date].done++;
+    });
+    return counts;
+  });
+  /** undefined = cargando; null = no se pudo leer. */
+  readonly activePatients = signal<number | null | undefined>(undefined);
 
   readonly monthEvents = signal<CalendarWidgetEvent[]>([]);
   readonly monthCursor = signal<Date>(new Date());
@@ -228,8 +246,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
       icon: ['fas', 'calendar-days'],
       actionTemplate: this.headerActions,
     });
-    this.loadDay();
-    this.loadWeekCounts();
+    this.loadWeek();
     this.subs.add(
       this.therapistService.getDashboardStats().subscribe({
         next: (s) => this.activePatients.set(s.active_patients),
@@ -264,11 +281,10 @@ export class TherapistSessions implements OnInit, OnDestroy {
     const prev = toLocalDateString(this.selected());
     const next = toLocalDateString(d);
     if (prev === next) return;
-    const weekChanged = this.mondayKey(d) !== this.mondayKey(this.selected());
     this.slide.set(next > prev ? 1 : -1);
     this.selected.set(this.startOfDay(d));
-    this.loadDay();
-    if (weekChanged) this.loadWeekCounts();
+    // Dentro de la misma semana el cambio es instantáneo: los datos ya están cargados.
+    if (this.mondayKey(d) !== this.loadedWeek) this.loadWeek();
   }
 
   shiftWeek(dir: -1 | 1) {
@@ -312,41 +328,27 @@ export class TherapistSessions implements OnInit, OnDestroy {
   }
 
   // ── datos ───────────────────────────────────────────────────────────────
-  loadDay() {
-    const f = toLocalDateString(this.selected());
+  /** Una sola petición por semana: la agenda y los conteos aparecen a la vez (antes llegaban en dos saltos). */
+  loadWeek() {
+    const monday = this.mondayKey(this.selected());
+    const sunday = new Date(`${monday}T12:00:00`);
+    sunday.setDate(sunday.getDate() + 6);
     this.loading.set(true);
     this.loadError.set(null);
     this.daySub?.unsubscribe();
-    this.daySub = this.therapistService.getSessions(f, f).subscribe({
+    this.daySub = this.therapistService.getSessions(monday, toLocalDateString(sunday)).subscribe({
       next: (events) => {
-        this.items.set(events.map(toItem).sort((a, b) => a.start.localeCompare(b.start)));
+        this.weekItems.set(events.map(toItem));
+        this.loadedWeek = monday;
         this.loading.set(false);
       },
       error: (e) => {
-        this.items.set([]);
+        this.weekItems.set([]);
+        this.loadedWeek = null;
         this.loading.set(false);
         this.loadError.set(e?.error?.message || e?.error?.error || 'No se pudo cargar la agenda.');
       },
     });
-  }
-
-  private loadWeekCounts() {
-    const w = this.week();
-    this.subs.add(
-      this.therapistService.getSessions(w[0].key, w[6].key).subscribe({
-        next: (events) => {
-          const counts: Record<string, { total: number; done: number }> = {};
-          events.map(toItem).forEach((i) => {
-            if (!i.date || i.status === 'cancelled') return;
-            counts[i.date] ??= { total: 0, done: 0 };
-            counts[i.date].total++;
-            if (i.status === 'completed') counts[i.date].done++;
-          });
-          this.weekCounts.set(counts);
-        },
-        error: () => this.weekCounts.set({}),
-      }),
-    );
   }
 
   private loadMonth(month: Date) {
@@ -379,8 +381,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
   }
 
   private refresh() {
-    this.loadDay();
-    this.loadWeekCounts();
+    this.loadWeek();
     if (this.view() === 'month') this.loadMonth(this.monthCursor());
   }
 
@@ -466,11 +467,10 @@ export class TherapistSessions implements OnInit, OnDestroy {
       // «Realizada» desde la agenda implica que el paciente asistió; si faltó, se registra desde Editar.
       this.therapistService.updateSession(i.id, status === 'completed' ? { status, attendance: 'present' } : { status }).subscribe({
         next: () => {
-          this.items.update((list) =>
+          this.weekItems.update((list) =>
             list.map((x) => (x.id === i.id ? { ...x, status, attendance: status === 'completed' ? 'present' : x.attendance } : x)),
           );
           this.toastService.show(status === 'completed' ? 'Sesión marcada como realizada' : 'Sesión cancelada', 'success');
-          this.loadWeekCounts();
         },
         error: (e) => this.toastService.show(e?.error?.message || 'No se pudo actualizar la sesión', 'error'),
       }),

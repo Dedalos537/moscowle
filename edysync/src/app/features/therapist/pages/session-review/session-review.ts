@@ -237,7 +237,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     this.cdr.markForCheck();
     this.subs.add(this.therapistService.updateAttendance(this.sessionId, state).subscribe({
       error: (err) => {
-        this.error = err.message;
+        this.error = err?.error?.message || 'No se pudo guardar la asistencia. Revisa tu conexión e inténtalo otra vez.';
         this.cdr.markForCheck();
       }
     }));
@@ -260,19 +260,14 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     this.subs.add(this.therapistService.saveNotes(this.sessionId, this.notes).subscribe({
       next: () => {
         this.saving = false;
-        this.lastSavedLabel = 'Guardado a las ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        // Se queda a la vista: antes volvía a «Sin cambios pendientes» a los 3 s y no se sabía si se guardó.
+        this.lastSavedLabel = 'Guardado a las ' + new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
         this.cdr.markForCheck();
-        setTimeout(() => {
-          if (this.lastSavedLabel.includes('Guardado')) {
-            this.lastSavedLabel = 'Sin cambios pendientes';
-            this.cdr.markForCheck();
-          }
-        }, 3000);
       },
-      error: (err) => {
+      error: () => {
         this.saving = false;
-        this.error = err.message;
-        this.lastSavedLabel = 'Error al guardar';
+        this.error = 'No se pudieron guardar las notas. Lo que escribiste sigue aquí; vuelve a intentarlo.';
+        this.lastSavedLabel = 'Sin guardar';
         this.cdr.markForCheck();
       },
     }));
@@ -561,7 +556,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.feedbackSaving = false;
-        this.error = err.message;
+        this.error = err?.error?.message || 'No se pudo enviar la valoración. Inténtalo otra vez.';
         this.cdr.markForCheck();
       },
     }));
@@ -691,6 +686,39 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   get programPreview(): string {
     if (!this.programText) return '';
     return this.programText.substring(0, 200) + (this.programText.length > 200 ? '...' : '');
+  }
+
+  /** «Viernes 9 de octubre · 13:00» (la hora viene con offset de Lima; se lee tal cual). */
+  get sessionWhen(): string {
+    const iso: string = this.session?.start_time || '';
+    const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (!m) return '';
+    const d = new Date(+m[1], +m[2] - 1, +m[3]);
+    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    return `${days[d.getDay()]} ${d.getDate()} de ${months[d.getMonth()]} · ${m[4]}:${m[5]}`;
+  }
+
+  get timeRange(): string {
+    const t = (iso: string | null | undefined) => (iso?.match(/T(\d{2}:\d{2})/) ?? [])[1] ?? '';
+    const a = t(this.session?.start_time);
+    const b = t(this.session?.end_time);
+    return a ? (b ? `${a} – ${b}` : a) : '—';
+  }
+
+  get audioLabel(): string {
+    const secs = Number(this.audit?.audio_duration_seconds) || 0;
+    if (!secs) return 'sin duración';
+    const m = Math.floor(secs / 60);
+    return m ? `${m} min ${secs % 60 ? (secs % 60) + ' s' : ''}`.trim() : `${secs} s`;
+  }
+
+  get objectivesAchieved(): number {
+    return (this.report?.objectives ?? []).filter((o: { classification?: string }) => o.classification === 'logrado').length;
+  }
+
+  scoreTone(score: number | null | undefined): string {
+    return score == null ? 'none' : score >= 70 ? 'good' : score >= 40 ? 'warn' : 'bad';
   }
 
   get computedDuration(): number {
