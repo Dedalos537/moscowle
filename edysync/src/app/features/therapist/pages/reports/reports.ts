@@ -190,10 +190,13 @@ export class TherapistReports implements OnInit, OnDestroy {
   }
 
   load() {
+    // Semanas completas (lunes a domingo) para que la primera barra no quede casi vacía.
     const today = new Date();
     const from = new Date(today);
     if (this.period() === 'year') from.setMonth(0, 1);
-    else from.setDate(today.getDate() - (this.period() === '12w' ? 83 : 27));
+    else {
+      from.setDate(today.getDate() - ((today.getDay() + 6) % 7) - 7 * (this.period() === '12w' ? 11 : 3));
+    }
     this.loading.set(true);
     this.error.set(null);
     this.sub?.unsubscribe();

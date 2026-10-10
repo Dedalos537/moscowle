@@ -42,7 +42,7 @@
             <div class="rp-kpi">
               <span class="rp-kpi__label">Sesiones realizadas</span>
               <span class="rp-kpi__value">{{ d.kpis.sessions_done }}</span>
-              <span class="rp-kpi__meta">de {{ d.kpis.sessions_scheduled }} programadas · {{ d.kpis.cancelled }} canceladas</span>
+              <span class="rp-kpi__meta">de {{ d.kpis.sessions_scheduled + d.kpis.cancelled }} agendadas · {{ d.kpis.cancelled }} {{ d.kpis.cancelled === 1 ? 'cancelada' : 'canceladas' }}</span>
             </div>
             <div class="rp-kpi">
               <span class="rp-kpi__label">Asistencia</span>

@@ -56,13 +56,13 @@
   &.is-today:not(.is-selected) { border-color: color-mix(in srgb, var(--color-primary) 45%, transparent); }
   &.is-selected { background: var(--color-primary); color: var(--color-on-primary); transform: translateY(-1px); box-shadow: 0 8px 20px -12px color-mix(in srgb, var(--color-primary) 80%, transparent); }
 }
-.ts-day__name { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.75; }
+.ts-day__name { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.75; .is-selected & { opacity: 1; } }
 .ts-day__num { font-size: 1.25rem; font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .ts-day__count {
   font-size: 0.6875rem; font-weight: 700; font-variant-numeric: tabular-nums; padding: 0.0625rem 0.4375rem; border-radius: 999px;
   background: color-mix(in srgb, var(--color-primary) 14%, transparent); color: var(--color-primary-text, var(--color-primary));
   &.is-empty { background: transparent; color: var(--color-on-surface-variant); opacity: 0.6; }
-  .is-selected & { background: color-mix(in srgb, var(--color-on-primary) 22%, transparent); color: var(--color-on-primary); opacity: 1; }
+  .is-selected & { background: var(--color-on-primary); color: var(--color-primary); opacity: 1; }
 }
 
 // ── cuerpo ──────────────────────────────────────────────────────────────────
@@ -166,7 +166,7 @@
 // ── lateral ─────────────────────────────────────────────────────────────────
 .ts-side { display: grid; gap: 0.75rem; }
 @media (min-width: 1100px) { .ts-side { position: sticky; top: 1rem; } }
-.ts-side__title { font-size: 0.875rem; font-weight: 700; color: var(--color-on-surface); text-transform: capitalize; }
+.ts-side__title { font-size: 0.875rem; font-weight: 700; color: var(--color-on-surface); }
 .ts-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
 .ts-kpi {
   display: grid; gap: 0.125rem; padding: 0.875rem 1rem; border-radius: 0.875rem;

@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { SessionLabelPipe } from '../../../../shared/pipes/session-label-pipe';
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -14,7 +15,7 @@ import { Modal } from '../../../../shared/components/modal/modal';
 @Component({
   selector: 'app-therapist-patient-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule, Spinner, Button, Modal],
+  imports: [CommonModule, RouterModule, FontAwesomeModule, Spinner, Button, Modal, SessionLabelPipe],
   templateUrl: './patient-detail.html',
   styleUrl: './patient-detail.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

@@ -784,8 +784,10 @@ def profile():
     if current_user.role != 'terapista':
         return redirect(url_for('main.dashboard'))
 
-    patients_count = User.query.filter_by(assigned_therapist_id=current_user.id, role='jugador', is_active=True).count()
-    sessions_count = Appointment.query.filter_by(therapist_id=current_user.id).count()
+    # Vínculo N:M, igual que el resto de pantallas (assigned_therapist_id deja fuera a los pacientes compartidos).
+    patients_count = current_user.associated_patients.filter_by(role='jugador', is_active=True).count()
+    # «Sesiones realizadas»: antes contaba todas (programadas y canceladas incluidas).
+    sessions_count = Appointment.query.filter_by(therapist_id=current_user.id, status='completed').count()
     upcoming_appointments = Appointment.query.filter(
         Appointment.therapist_id == current_user.id,
         Appointment.status == 'scheduled',

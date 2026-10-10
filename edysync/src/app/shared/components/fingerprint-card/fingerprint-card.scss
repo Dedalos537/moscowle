@@ -1,3 +1,6 @@
+/* Bloque: como elemento en línea, el espaciado vertical del contenedor (space-y-*) no lo separaba. */
+:host { display: block; }
+
 .fp {
   &__title {
     margin: 0;

@@ -211,7 +211,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
     list.filter((e) => e.status !== 'cancelled').forEach((e) => (counts[e.date.getDay()] = (counts[e.date.getDay()] ?? 0) + 1));
     const busiest = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
     return {
-      label: `${MONTHS[m.getMonth()]} ${m.getFullYear()}`,
+      label: `${MONTHS[m.getMonth()].charAt(0).toUpperCase()}${MONTHS[m.getMonth()].slice(1)} ${m.getFullYear()}`,
       total: held,
       done,
       pending: list.filter((e) => e.status === 'scheduled').length,

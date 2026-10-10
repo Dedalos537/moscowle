@@ -11,7 +11,7 @@
             <fa-icon [icon]="['fas', 'gamepad']" class="text-4xl text-primary/30 group-hover:text-primary/50 transition-colors"></fa-icon>
           </div>
           <div class="p-4">
-            <h3 class="font-bold text-on-surface truncate">{{ game }}</h3>
+            <h3 class="font-bold text-on-surface truncate" [title]="game">{{ prettyName(game) }}</h3>
             <div class="flex items-center gap-2 mt-3">
               <a [href]="getGameUrl(game)" target="_blank" class="inline-flex items-center px-3 py-1.5 text-xs font-bold text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors">
                 <fa-icon [icon]="['fas', 'up-right-from-square']" class="mr-1.5 text-[10px]"></fa-icon> Abrir

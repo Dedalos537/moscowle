@@ -23,7 +23,8 @@ interface EmptyState {
 }
 
 interface DashboardData {
-  next_session?: { id: number; title: string; start: string; patient?: string; location?: string };
+  next_session?: { id: number; title: string; start: string; patient?: string; location?: string } | null;
+  upcoming?: { id: number; title: string; patient: string; day: string; start: string } | null;
   agenda: any[];
   today_label: string;
   avg_compliance: number;
@@ -153,7 +154,10 @@ export class TherapistDashboard implements OnInit, OnDestroy {
 
   get nextSessionSubtitle(): string {
     const s = this.data?.next_session;
-    if (!s) return 'No hay citas programadas para hoy';
+    if (!s) {
+      const u = this.data?.upcoming;
+      return u ? `Próxima: ${u.day} a las ${u.start}${u.patient ? ' con ' + u.patient : ''}` : 'No hay citas programadas';
+    }
     const parts = [s.location, s.patient].filter(Boolean);
     return parts.join(' • ') || 'Sesión programada';
   }

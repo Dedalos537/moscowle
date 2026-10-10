@@ -169,3 +169,24 @@ def test_insights_report_uses_real_numbers(client, app):
     assert recs == {'avanzar': 2, 'mantener': 1, 'apoyo': 2}
     assert {g['game'] for g in d['ai']['by_game']} == {'Memoria', 'Colores'}
     assert 'model_confidence' not in d['ai']  # nada inventado
+
+
+def test_dashboard_announces_the_next_session_when_today_is_free(client, app):
+    therapist, patient = _user('terapista'), _user('jugador')
+    db.session.add(
+        Appointment(
+            therapist_id=therapist.id,
+            patient_id=patient.id,
+            title='Lenguaje',
+            start_time=datetime.utcnow() + timedelta(days=3),
+            status='scheduled',
+        )
+    )
+    db.session.commit()
+    r = client.get('/api/therapist/dashboard', headers=_auth(therapist))
+    assert r.status_code == 200, r.get_json()
+    body = r.get_json()
+    data = body.get('data', body)
+    assert data['next_session'] is None or data['next_session']['title'] == 'Lenguaje'
+    if data['next_session'] is None:
+        assert data['upcoming']['patient'] == patient.username and data['upcoming']['start']

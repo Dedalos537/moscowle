@@ -30,7 +30,7 @@
               <span class="il-item__title">{{ i.titulo }}</span>
               <span class="il-item__meta">
                 {{ categoria(i.categoria) }}
-                @if (i.user_id !== myId()) { · <strong>asignada a ti</strong> }
+                @if (i.responsable_id === myId() && i.user_id !== myId()) { · <strong>asignada a ti</strong> }
                 @if (sla(i); as s) { @if (s.late) { · <span class="is-late">plazo vencido</span> } }
               </span>
             </button>

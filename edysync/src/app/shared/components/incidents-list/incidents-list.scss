@@ -136,6 +136,8 @@
   .il-back { display: grid; }
   .il-card { padding: 1rem; }
   .il-card__head { flex-wrap: wrap; }
-  .il-state--lg { order: 3; }
+  .il-card__titles { flex-basis: calc(100% - 3rem); }
+  .il-state--lg { order: 3; margin-left: 3rem; }
+  .il-card__title { font-size: 1.125rem; }
 }
 @media (prefers-reduced-motion: reduce) { .il-card, .il-skel { animation: none; } }

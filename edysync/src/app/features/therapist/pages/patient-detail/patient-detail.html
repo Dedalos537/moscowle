@@ -165,10 +165,10 @@
                             [class.text-info]="session.status === 'scheduled'"
                             [class.bg-surface-container-high]="session.status === 'cancelled'"
                             [class.text-on-surface-variant]="session.status === 'cancelled'">
-                        {{ session.status }}
+                        {{ session.status | sessionLabel }}
                       </span>
                     </td>
-                    <td class="py-3 text-sm text-on-surface-variant">{{ session.attendance || '—' }}</td>
+                    <td class="py-3 text-sm text-on-surface-variant">{{ session.attendance | sessionLabel: 'attendance' }}</td>
                     <td class="py-3">
                       <fa-icon [icon]="['fas', 'chevron-right']" class="text-xs text-on-surface-variant"></fa-icon>
                     </td>
@@ -238,7 +238,7 @@
                 [class.text-info]="selectedSession.status === 'scheduled'"
                 [class.bg-surface-container-high]="selectedSession.status === 'cancelled'"
                 [class.text-on-surface-variant]="selectedSession.status === 'cancelled'">
-            {{ selectedSession.status }}
+            {{ selectedSession.status | sessionLabel }}
           </span>
         </div>
       </div>
@@ -259,7 +259,7 @@
         </div>
         <div>
           <p class="text-xs text-on-surface-variant uppercase tracking-wide mb-1">Asistencia</p>
-          <p class="text-sm text-on-surface capitalize">{{ selectedSession.attendance || '—' }}</p>
+          <p class="text-sm text-on-surface capitalize">{{ selectedSession.attendance | sessionLabel: 'attendance' }}</p>
         </div>
       </div>
       @if (selectedSession.audit_score != null) {

@@ -119,9 +119,12 @@ export class IncidentsList implements OnInit, OnDestroy {
         kind: 'status' as const,
         at: h.changed_at,
         who: h.changed_by,
-        text: h.estado_anterior
-          ? `${ESTADO[h.estado_anterior] ?? h.estado_anterior} → ${ESTADO[h.estado_nuevo] ?? h.estado_nuevo}${h.comentario ? ' · ' + h.comentario : ''}`
-          : 'Reportada',
+        // Una reasignación deja el mismo estado: se muestra solo el motivo («Reasignado a …»).
+        text: !h.estado_anterior
+          ? 'Reportada'
+          : h.estado_anterior === h.estado_nuevo
+            ? h.comentario || 'Actualizada'
+            : `${ESTADO[h.estado_anterior] ?? h.estado_anterior} → ${ESTADO[h.estado_nuevo] ?? h.estado_nuevo}${h.comentario ? ' · ' + h.comentario : ''}`,
       })),
       ...(d.comentarios ?? []).map((c) => ({
         key: `c${c.id}`,

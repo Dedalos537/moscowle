@@ -231,6 +231,31 @@ class DashboardService:
         if not next_session and active_session:
             next_session = active_session
 
+        # Si hoy no queda ninguna, la siguiente de cualquier día (antes el panel decía «Tu próxima sesión es Sin
+        # sesión hoy»).
+        upcoming = None
+        if not next_session:
+            nxt = (
+                Appointment.query.filter(
+                    Appointment.therapist_id == user.id,
+                    Appointment.start_time > now_utc,
+                    Appointment.status == 'scheduled',
+                )
+                .order_by(Appointment.start_time)
+                .first()
+            )
+            if nxt:
+                local = localize_datetime_for_display(nxt.start_time, tz_name)
+                days_es = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+                patient = User.query.get(nxt.patient_id) if nxt.patient_id else None
+                upcoming = {
+                    'id': nxt.id,
+                    'title': nxt.title or 'Sesión de Terapia',
+                    'patient': patient.username if patient else '',
+                    'day': f'{days_es[local.weekday()]} {local.day}',
+                    'start': local.strftime('%H:%M'),
+                }
+
         audit = None
         if next_session:
             audit = SessionAudit.query.filter_by(appointment_id=next_session['id']).first()
@@ -258,6 +283,7 @@ class DashboardService:
 
         return {
             'next_session': next_session,
+            'upcoming': upcoming,
             'agenda': agenda,
             'today_label': today_label,
             'avg_compliance': avg_compliance,

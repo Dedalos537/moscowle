@@ -63,4 +63,10 @@ export class TherapistGames implements OnInit, OnDestroy {
   getGameUrl(filename: string): string {
     return `/static/games/${filename}`;
   }
+
+  /** «cuento_cenicienta.html» → «Cuento cenicienta» (el archivo se sigue usando para abrir el juego). */
+  prettyName(file: string): string {
+    const base = file.replace(/\.[a-z0-9]+$/i, '').replace(/[_-]+/g, ' ').trim();
+    return base ? base.charAt(0).toUpperCase() + base.slice(1) : file;
+  }
 }

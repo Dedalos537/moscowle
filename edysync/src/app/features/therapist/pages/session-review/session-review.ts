@@ -1,4 +1,5 @@
 import { CommonModule, Location } from '@angular/common';
+import { SessionLabelPipe } from '../../../../shared/pipes/session-label-pipe';
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -15,7 +16,7 @@ import { ConfirmService } from '../../../../core/services/confirm.service';
 @Component({
   selector: 'app-therapist-session-review',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule],
+  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, SessionLabelPipe],
   templateUrl: './session-review.html',
   styleUrl: './session-review.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

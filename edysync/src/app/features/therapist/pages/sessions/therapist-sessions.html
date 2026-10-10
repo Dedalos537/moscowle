@@ -166,7 +166,7 @@
         </div>
       </section>
       <aside class="ts-side" aria-label="Resumen del mes">
-        <h3 class="ts-side__title">Resumen de {{ monthSummary().label }}</h3>
+        <h3 class="ts-side__title">{{ monthSummary().label }}</h3>
         <div class="ts-kpis">
           <div class="ts-kpi"><span class="ts-kpi__value">{{ monthSummary().total }}</span><span class="ts-kpi__label">Programadas</span></div>
           <div class="ts-kpi"><span class="ts-kpi__value">{{ monthSummary().rate != null ? monthSummary().rate + ' %' : '—' }}</span><span class="ts-kpi__label">Realizadas</span></div>
