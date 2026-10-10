@@ -386,6 +386,11 @@ export class TherapistSessions implements OnInit, OnDestroy {
   }
 
   // ── acciones ────────────────────────────────────────────────────────────
+  /** El terapeuta no crea sesiones directamente: las solicita y la coordinación las aprueba. */
+  requestSessions() {
+    this.router.navigate(['/therapist/requests'], { queryParams: { new: 'sessions' } });
+  }
+
   review(id: number) {
     this.router.navigate(['/therapist/sessions', id, 'review']);
   }

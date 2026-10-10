@@ -1,0 +1,58 @@
+<ng-template #headerActions>
+  <span class="rq-pending" [class.is-zero]="!pendingCount()">{{ pendingCount() }} en revisión</span>
+</ng-template>
+
+<div class="rq">
+  <section class="rq-new" aria-labelledby="rq-new-title">
+    <h2 id="rq-new-title" class="rq-h">¿Qué necesitas?</h2>
+    <div class="rq-kinds">
+      @for (k of kinds; track k.key) {
+        <button type="button" class="rq-kind" (click)="open(k.key)">
+          <span class="rq-kind__icon" aria-hidden="true"><fa-icon [icon]="k.icon" /></span>
+          <span class="rq-kind__title">{{ labels[k.key] }}</span>
+          <span class="rq-kind__hint">{{ k.hint }}</span>
+        </button>
+      }
+    </div>
+  </section>
+
+  <section class="rq-list" aria-labelledby="rq-list-title">
+    <h2 id="rq-list-title" class="rq-h">Mis solicitudes</h2>
+    @if (loading()) {
+      @for (i of [1, 2, 3]; track i) { <div class="rq-skel" aria-hidden="true"></div> }
+    } @else if (error(); as err) {
+      <div class="rq-empty" role="alert"><p>{{ err }}</p><button type="button" class="rq-btn" (click)="load()">Reintentar</button></div>
+    } @else {
+      <ul class="rq-items">
+        @for (r of items(); track r.id) {
+          <li class="rq-item" [attr.data-status]="r.status" [class.is-highlight]="highlight() === r.id">
+            <div class="rq-item__main">
+              <p class="rq-item__kind">{{ labels[r.kind] }} · {{ when(r.created_at) }}</p>
+              <p class="rq-item__summary">{{ r.summary }}</p>
+              @if (r.status === 'rejected' && r.review_note) {
+                <p class="rq-item__note"><strong>Motivo:</strong> {{ r.review_note }}</p>
+              } @else if (r.status === 'approved') {
+                <p class="rq-item__note rq-item__note--ok">{{ resultText(r) }}@if (r.review_note) { · {{ r.review_note }} }</p>
+              } @else if (r.last_error) {
+                <p class="rq-item__note">Coordinación la está revisando: {{ r.last_error }}</p>
+              }
+            </div>
+            <div class="rq-item__side">
+              <span class="rq-status" [attr.data-status]="r.status">{{ status(r.status) }}</span>
+              @if (r.status === 'approved') {
+                <button type="button" class="rq-link" (click)="goToResult(r)">Ver <fa-icon [icon]="['fas', 'arrow-right']" aria-hidden="true" /></button>
+              }
+            </div>
+          </li>
+        } @empty {
+          <li class="rq-empty">
+            <fa-icon [icon]="['fas', 'paper-plane']" aria-hidden="true" />
+            <p>Aún no enviaste solicitudes. Elige arriba lo que necesitas.</p>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</div>
+
+<app-request-form-modal [kind]="formKind()" (closed)="closeForm()" (sent)="onSent($event)" />

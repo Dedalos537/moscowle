@@ -21,6 +21,8 @@ const EXCLUDED = [
   '/admin/api/sessions',
   // El drive cambia con cada operación: nunca se sirve de caché.
   '/api/drive',
+  // Solicitudes: el terapeuta y la coordinación deben ver el estado al instante.
+  '/api/requests',
   '/api/auth/webauthn/'
 ];
 

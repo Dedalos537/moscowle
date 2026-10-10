@@ -8,12 +8,48 @@ from app.extensions import db, socketio
 from app.models import Chat, ChatParticipant, Message
 
 online_users = {}
+# sid -> id del usuario autenticado por JWT al conectar.
+_sid_users = {}
+
+
+def _user_from_token(auth):
+    """El frontend conecta con `auth: {token}` (JWT). Antes se ignoraba y se usaba la sesión de flask_login, que no
+    viaja entre dominios (cPanel → API): el socket quedaba sin usuario, no entraba a ninguna sala y los mensajes solo
+    se veían al recargar."""
+    token = (auth or {}).get('token') if isinstance(auth, dict) else None
+    if not token:
+        return None
+    try:
+        from flask_jwt_extended import decode_token
+
+        from app.models import User
+
+        uid = decode_token(token).get('sub')
+        user = db.session.get(User, int(uid)) if uid is not None else None
+        return user if user and user.is_active is not False else None
+    except Exception:  # noqa: BLE001 - token vencido o inválido: conexión anónima
+        return None
+
+
+def _user():
+    """Quién es este socket: manda el usuario con el que se autenticó al conectar (JWT); la sesión de
+    flask_login solo es respaldo (puede ser de otra cuenta si el navegador conserva una cookie vieja)."""
+    uid = _sid_users.get(request.sid)
+    if uid is not None:
+        from app.models import User
+
+        return db.session.get(User, uid)
+    if current_user and getattr(current_user, 'is_authenticated', False):
+        return current_user
+    return None
 
 
 @socketio.on('connect')
-def handle_connect():
-    if current_user.is_authenticated:
-        user_id = current_user.id
+def handle_connect(auth=None):
+    user = _user_from_token(auth) or _user()
+    if user is not None:
+        _sid_users[request.sid] = user.id
+        user_id = user.id
         if user_id not in online_users:
             online_users[user_id] = set()
         online_users[user_id].add(request.sid)
@@ -21,23 +57,25 @@ def handle_connect():
         emit('users:online', {'user_ids': list(online_users.keys())})
 
         join_room(f'user_{user_id}')
-        if current_user.role in ('admin', 'supervisor'):
+        if user.role in ('admin', 'supervisor'):
             join_room('admins')  # avisos del bot en vivo
 
         chats = Chat.query.join(ChatParticipant).filter(ChatParticipant.user_id == user_id).all()
         for chat in chats:
             join_room(f'chat_{chat.id}')
 
-        emit('user:online', {'user_id': user_id, 'username': current_user.username}, broadcast=True, include_self=False)
+        emit('user:online', {'user_id': user_id, 'username': user.username}, broadcast=True, include_self=False)
 
         return True
     return True
 
 
 @socketio.on('disconnect')
-def handle_disconnect():
-    if current_user.is_authenticated:
-        user_id = current_user.id
+def handle_disconnect(*_args):
+    user = _user()
+    _sid_users.pop(request.sid, None)
+    if user is not None:
+        user_id = user.id
         if user_id in online_users:
             online_users[user_id].discard(request.sid)
             if not online_users[user_id]:
@@ -52,17 +90,19 @@ def handle_disconnect():
 
 @socketio.on('chat:join')
 def handle_chat_join(data):
+    user = _user()
     chat_id = data.get('chat_id')
-    if current_user.is_authenticated and chat_id:
-        participant = ChatParticipant.query.filter_by(chat_id=chat_id, user_id=current_user.id).first()
+    if user is not None and chat_id:
+        participant = ChatParticipant.query.filter_by(chat_id=chat_id, user_id=user.id).first()
         if participant:
             join_room(f'chat_{chat_id}')
 
 
 @socketio.on('chat:leave')
 def handle_chat_leave(data):
+    user = _user()
     chat_id = data.get('chat_id')
-    if current_user.is_authenticated and chat_id:
+    if user is not None and chat_id:
         from flask_socketio import leave_room
 
         leave_room(f'chat_{chat_id}')
@@ -70,11 +110,12 @@ def handle_chat_leave(data):
 
 @socketio.on('typing:start')
 def handle_typing_start(data):
+    user = _user()
     chat_id = data.get('chat_id')
-    if current_user.is_authenticated and chat_id:
+    if user is not None and chat_id:
         emit(
             'user:typing',
-            {'user_id': current_user.id, 'username': current_user.username, 'chat_id': chat_id},
+            {'user_id': user.id, 'username': user.username, 'chat_id': chat_id},
             room=f'chat_{chat_id}',
             include_self=False,
         )
@@ -82,11 +123,12 @@ def handle_typing_start(data):
 
 @socketio.on('typing:stop')
 def handle_typing_stop(data):
+    user = _user()
     chat_id = data.get('chat_id')
-    if current_user.is_authenticated and chat_id:
+    if user is not None and chat_id:
         emit(
             'user:stop_typing',
-            {'user_id': current_user.id, 'chat_id': chat_id},
+            {'user_id': user.id, 'chat_id': chat_id},
             room=f'chat_{chat_id}',
             include_self=False,
         )
@@ -95,22 +137,23 @@ def handle_typing_stop(data):
 @socketio.on('message:read')
 def handle_message_read(data):
     chat_id = data.get('chat_id')
-    if current_user.is_authenticated and chat_id:
-        participant = ChatParticipant.query.filter_by(chat_id=chat_id, user_id=current_user.id).first()
+    user = _user()
+    if user is not None and chat_id:
+        participant = ChatParticipant.query.filter_by(chat_id=chat_id, user_id=user.id).first()
         if participant:
             participant.last_read_at = datetime.utcnow()
             db.session.commit()
 
         Message.query.filter(
             Message.chat_id == chat_id,
-            Message.receiver_id == current_user.id,
+            Message.receiver_id == user.id,
             Message.status.in_(['delivered', 'sent']),
         ).update({'status': 'read', 'is_read': True})
         db.session.commit()
 
         emit(
             'message:status',
-            {'chat_id': chat_id, 'user_id': current_user.id, 'status': 'read'},
+            {'chat_id': chat_id, 'user_id': user.id, 'status': 'read'},
             room=f'chat_{chat_id}',
             include_self=False,
         )

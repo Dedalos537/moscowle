@@ -1,3 +1,10 @@
+<ng-template #headerActions>
+  <div class="tp-actions">
+    <button type="button" class="tp-btn" (click)="request('group')"><fa-icon [icon]="['fas', 'people-group']" aria-hidden="true" /><span>Solicitar grupo</span></button>
+    <button type="button" class="tp-btn tp-btn--primary" (click)="request('patient')"><fa-icon [icon]="['fas', 'user-plus']" aria-hidden="true" /><span>Solicitar alta</span></button>
+  </div>
+</ng-template>
+
 @if (loading) {
 <div class="flex justify-center items-center h-96">
   <app-spinner size="lg" colorClass="text-primary"></app-spinner>

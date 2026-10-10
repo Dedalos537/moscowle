@@ -38,3 +38,4 @@ from app.models.message_log import MessageLog as MessageLog
 from app.models.message_template import MessageTemplate as MessageTemplate
 from app.models.campaign import Campaign as Campaign
 from app.models.campaign import CampaignSend as CampaignSend
+from app.models.action_request import ActionRequest as ActionRequest

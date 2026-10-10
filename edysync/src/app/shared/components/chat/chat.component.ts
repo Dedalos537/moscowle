@@ -112,7 +112,10 @@ export class ChatComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
   ) {}
 
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
+
   ngOnInit() {
+    this.pollTimer = setInterval(() => this.pollWhileDisconnected(), 10_000);
     this.headerService.setConfig({
       title: 'Mensajería',
       subtitle: 'Chat en tiempo real',
@@ -202,6 +205,7 @@ export class ChatComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    if (this.pollTimer) clearInterval(this.pollTimer);
     this.headerService.reset();
     this.clearRecording();
     this.audioEls.forEach((el) => {
@@ -355,7 +359,40 @@ export class ChatComponent implements OnInit, OnDestroy {
       if (chat) chat.unread_count += 1;
     }
 
+    // Conversación nueva (primer mensaje que te escriben): aún no está en la lista lateral.
+    if (!this.chats.some((c) => c.id === chatId)) this.refreshChatsQuietly();
     this.updateChatLastMessage(chatId, message);
+  }
+
+  /** Actualiza la lista de conversaciones sin esqueletos ni borrar lo ya mostrado. */
+  private refreshChatsQuietly() {
+    this.chatService.getChats().subscribe({
+      next: (chats) => {
+        this.chats = chats;
+        this.cdr.markForCheck();
+      },
+      error: () => {},
+    });
+  }
+
+  /** Respaldo si el tiempo real no conecta (red inestable, túnel): trae lo nuevo sin recargar la página. */
+  private pollWhileDisconnected() {
+    if (this.connected || document.visibilityState !== 'visible') return;
+    this.refreshChatsQuietly();
+    if (!this.selectedChatId) return;
+    const chatId = this.selectedChatId;
+    this.chatService.getMessages(chatId).subscribe({
+      next: (res) => {
+        if (chatId !== this.selectedChatId) return;
+        const fresh = (res.messages || []).filter((m) => m.id > 0 && !this.messageIds.has(m.id));
+        if (!fresh.length) return;
+        fresh.forEach((m) => this.messageIds.add(m.id));
+        this.messages = [...this.messages, ...fresh].sort((a, b) => this.timeOf(a).localeCompare(this.timeOf(b)));
+        setTimeout(() => this.scrollToBottom(), 50);
+        this.cdr.markForCheck();
+      },
+      error: () => {},
+    });
   }
 
   private updateChatLastMessage(chatId: number, message: MessageData) {

@@ -1,4 +1,5 @@
 import { IncidentService } from '../../services/incident.service';
+import { ActionRequestService } from '../../services/action-request.service';
 import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, QueryList, ViewChild, ViewChildren, inject, effect } from '@angular/core';
 import { Router, NavigationEnd, RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -18,7 +19,7 @@ interface NavItem {
   supervisor?: boolean;
   hideWhenNoCharts?: boolean;
   /** Clave del contador que se muestra junto al ícono (p. ej. incidencias abiertas). */
-  badge?: 'incidents';
+  badge?: 'incidents' | 'requests';
 }
 
 @Component({
@@ -70,6 +71,7 @@ export class Sidebar implements OnInit, OnDestroy, AfterViewInit {
     { path: '/admin/messages', label: 'Mensajes', subtitle: 'Comunicación', icon: ['fas', 'envelope'], supervisor: true },
     { path: '/admin/kanban', label: 'Kanban', subtitle: 'Tablero de tareas', icon: ['fas', 'table-columns'], supervisor: true },
     // Antes solo se llegaba desde Configuración › Sistema: lo reportado por terapeutas y pacientes no se veía.
+    { path: '/admin/requests', label: 'Solicitudes', subtitle: 'Pedidos de terapeutas', icon: ['fas', 'paper-plane'], supervisor: true, badge: 'requests' },
     { path: '/admin/incidents', label: 'Incidencias', subtitle: 'Reportes del equipo', icon: ['fas', 'triangle-exclamation'], supervisor: true, badge: 'incidents' },
     { path: '/admin/drive', label: 'Drive', subtitle: 'Archivos e impresión', icon: ['fas', 'hard-drive'] },
     { path: '/admin/settings', label: 'Configuración', subtitle: 'Cuenta y sistema', icon: ['fas', 'gear'], supervisor: true },
@@ -81,6 +83,7 @@ export class Sidebar implements OnInit, OnDestroy, AfterViewInit {
     { path: '/therapist/sessions', label: 'Mis Sesiones', subtitle: 'Agenda', icon: ['fas', 'calendar-days'] },
     { path: '/therapist/games', label: 'Juegos', subtitle: 'Terapia recreativa', icon: ['fas', 'gamepad'] },
     { path: '/therapist/reports', label: 'Reportes', subtitle: 'Progreso e IA', icon: ['fas', 'chart-line'] },
+    { path: '/therapist/requests', label: 'Solicitudes', subtitle: 'Sesiones, altas y grupos', icon: ['fas', 'paper-plane'] },
     { path: '/therapist/incidents', label: 'Incidencias', subtitle: 'Reportes de incidentes', icon: ['fas', 'triangle-exclamation'] },
     { path: '/therapist/messages', label: 'Mensajes', subtitle: 'Comunicación', icon: ['fas', 'envelope'] },
     { path: '/therapist/kanban', label: 'Kanban', subtitle: 'Tablero de tareas', icon: ['fas', 'table-columns'] },
@@ -135,8 +138,10 @@ export class Sidebar implements OnInit, OnDestroy, AfterViewInit {
 
   helpState = inject(HelpStateService);
   private incidentService = inject(IncidentService);
-  /** Incidencias abiertas (admin/supervisor), refrescado al cambiar de ruta. */
+  private requestService = inject(ActionRequestService);
+  /** Incidencias abiertas y solicitudes pendientes (admin/supervisor), refrescado al cambiar de ruta. */
   openIncidents = 0;
+  pendingRequests = 0;
 
   private refreshBadges() {
     if (this.userRole !== 'admin' && this.userRole !== 'supervisor') return;
@@ -149,10 +154,19 @@ export class Sidebar implements OnInit, OnDestroy, AfterViewInit {
         error: () => {},
       }),
     );
+    this.subs.add(
+      this.requestService.list('pending').subscribe({
+        next: (r) => {
+          this.pendingRequests = r.pending ?? 0;
+          this.cdr.markForCheck();
+        },
+        error: () => {},
+      }),
+    );
   }
 
   badgeFor(item: NavItem): number {
-    return item.badge === 'incidents' ? this.openIncidents : 0;
+    return item.badge === 'incidents' ? this.openIncidents : item.badge === 'requests' ? this.pendingRequests : 0;
   }
 
   constructor(

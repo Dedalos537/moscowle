@@ -7,7 +7,7 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 # registered with whatever routes loaded successfully.
 import sys as _sys  # noqa: E402
 
-_modules = ['sessions', 'admin', 'reports', 'payments', 'games', 'notifications', 'misc', 'incidents']
+_modules = ['sessions', 'admin', 'reports', 'payments', 'games', 'notifications', 'misc', 'incidents', 'requests']
 for _mod in _modules:
     try:
         __import__(f'app.routes.api.{_mod}')

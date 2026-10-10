@@ -3785,8 +3785,9 @@ def handle_set_messaging_contact_active(**kwargs):
     if not patient:
         return {'error': f'Paciente {patient_id} no encontrado'}
 
-    patient.is_active = bool(is_active)
-    patient.account_status = 'active' if is_active else 'inactive'
+    from app.services.user_status import apply_is_active
+
+    apply_is_active(patient, is_active)
     db.session.commit()
 
     contactable, reason = MessagingService().check_contactable(patient, 'whatsapp')

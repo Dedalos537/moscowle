@@ -377,8 +377,10 @@ class AdminService:
 
         if 'role' in data:
             user.role = data['role']
-        if 'is_active' in data:
-            user.is_active = bool(data['is_active'])
+        from app.services.user_status import apply_account_status, apply_is_active
+
+        if 'is_active' in data and 'account_status' not in data:
+            apply_is_active(user, data['is_active'])
         if 'account_status' in data:
             from app.models.user_status_log import UserStatusLog
 
@@ -386,7 +388,7 @@ class AdminService:
             if new_status not in ('active', 'inactive', 'debtor', 'retired'):
                 return False, 'Estado inválido'
             old_status = user.account_status or 'active'
-            user.account_status = new_status
+            apply_account_status(user, new_status)
             if old_status != new_status:
                 justification = (data.get('justification') or '').strip()
                 db.session.add(
@@ -567,7 +569,9 @@ class AdminService:
         if new_status in STATUSES_REQUIRING_JUSTIFICATION and not (justification or '').strip():
             return False, JUSTIFICATION_REQUIRED_MSG
 
-        user.account_status = new_status
+        from app.services.user_status import apply_account_status
+
+        apply_account_status(user, new_status)  # is_active acompaña al estado visible
         log = UserStatusLog(
             user_id=user.id,
             old_status=old_status,

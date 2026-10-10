@@ -52,6 +52,7 @@ const routes: Routes = [
       { path: 'visor-funcionamiento', redirectTo: 'settings?section=backend', pathMatch: 'full' },
       { path: 'operations', redirectTo: 'settings?section=backend', pathMatch: 'full' },
       { path: 'incidents', component: Incidents },
+      { path: 'requests', loadComponent: () => import('./pages/requests/requests').then((m) => m.AdminRequests) },
       { path: 'incidents/:id', component: IncidentDetailPage },
       { path: 'password-resets', component: PasswordResets },
       { path: 'drive', loadComponent: () => import('./pages/drive/drive').then(m => m.Drive) },

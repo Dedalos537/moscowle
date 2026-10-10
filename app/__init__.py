@@ -807,6 +807,17 @@ def create_app(config_class=None):
                 app.logger.warning(f'Patient detail column migration (non-fatal): {e}')
                 db.session.rollback()
 
+            # Estado del paciente: is_active alineado con el estado visible (ver services/user_status.py).
+            try:
+                from app.services.user_status import sync_patient_statuses
+
+                fixed = sync_patient_statuses(db)
+                if fixed:
+                    app.logger.info('Estados de pacientes sincronizados: %s cambios', fixed)
+            except Exception as e:
+                app.logger.warning(f'Patient status sync (non-fatal): {e}')
+                db.session.rollback()
+
             try:
                 from sqlalchemy import text
 

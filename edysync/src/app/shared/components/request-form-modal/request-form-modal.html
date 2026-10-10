@@ -1,0 +1,187 @@
+<app-modal [isOpen]="!!kind()" [title]="kind() ? 'Solicitar: ' + labels[kind()!].toLowerCase() : ''" size="lg" (close)="close()">
+  @if (done(); as d) {
+    <div class="rf-done" role="status">
+      <svg class="rf-check" viewBox="0 0 52 52" aria-hidden="true">
+        <circle class="rf-check__ring" cx="26" cy="26" r="23" fill="none" />
+        <path class="rf-check__tick" fill="none" d="M15 27 l8 8 l15 -17" />
+      </svg>
+      <h3 class="rf-done__title">Solicitud enviada</h3>
+      <p class="rf-done__text">{{ d.summary }}</p>
+      <p class="rf-done__hint">La coordinación ya recibió el aviso. Te avisaremos cuando la apruebe o rechace; también puedes verla en Solicitudes.</p>
+    </div>
+  } @else {
+    <form class="rf-form" (ngSubmit)="submit()" novalidate>
+      <p class="rf-intro">
+        <fa-icon [icon]="['fas', 'paper-plane']" aria-hidden="true" />
+        No se crea nada todavía: la coordinación revisa tu solicitud y, al aprobarla, se aplica tal cual.
+      </p>
+
+      @if (loadingOptions()) {
+        <div class="rf-skel" aria-busy="true" aria-label="Cargando"></div>
+      } @else {
+        @switch (kind()) {
+          @case ('sessions') {
+            <fieldset class="rf-fieldset" [disabled]="sending()">
+              <legend class="rf-legend">Participantes</legend>
+              <div class="rf-grid">
+                <div class="rf-field">
+                  <label class="rf-label" for="rf-type">Tipo de sesión</label>
+                  <app-select id="rf-type" name="type" [(ngModel)]="s.session_type" [options]="typeOptions" ariaLabel="Tipo de sesión" />
+                </div>
+                @if (isGroupSession) {
+                  <div class="rf-field">
+                    <label class="rf-label" for="rf-group">Grupo <span class="rf-req" aria-hidden="true">*</span></label>
+                    <app-select id="rf-group" name="group" [ngModel]="s.group_id" (valueChange)="onGroupChange($event)" [options]="groupOptions()" ariaLabel="Grupo" placeholder="Elige uno de tus grupos" />
+                    @if (!groupOptions().length) { <p class="rf-hint">Aún no tienes grupos. Puedes solicitar uno nuevo.</p> }
+                    @if (submitted() && errors['who']) { <p class="rf-err" role="alert">{{ errors['who'] }}</p> }
+                  </div>
+                } @else {
+                  <div class="rf-field">
+                    <label class="rf-label" for="rf-patient">Paciente <span class="rf-req" aria-hidden="true">*</span></label>
+                    <app-select id="rf-patient" name="patient" [(ngModel)]="s.patient_id" [options]="patientOptions()" [searchable]="true" ariaLabel="Paciente" placeholder="Elige a uno de tus pacientes" />
+                    @if (submitted() && errors['who']) { <p class="rf-err" role="alert">{{ errors['who'] }}</p> }
+                  </div>
+                }
+              </div>
+              <div class="rf-grid">
+                <div class="rf-field">
+                  <label class="rf-label" for="rf-title">Nombre de la sesión</label>
+                  <input id="rf-title" class="input-field" name="title" [(ngModel)]="s.title_prefix" maxlength="120" placeholder="Ej: Terapia de lenguaje" />
+                </div>
+                <div class="rf-field">
+                  <label class="rf-label" for="rf-sede">Sede</label>
+                  <app-select id="rf-sede" name="sede" [(ngModel)]="s.sede" [options]="sedeNameOptions()" placeholder="Sin sede" ariaLabel="Sede" />
+                </div>
+              </div>
+            </fieldset>
+            <fieldset class="rf-fieldset" [disabled]="sending()">
+              <legend class="rf-legend">Cuándo</legend>
+              <div class="rf-field">
+                <span class="rf-label" id="rf-dates-label">Fechas <span class="rf-req" aria-hidden="true">*</span></span>
+                <app-multi-date-picker [(dates)]="dates" [max]="10" aria-labelledby="rf-dates-label" />
+                @if (submitted() && errors['dates']) { <p class="rf-err" role="alert">{{ errors['dates'] }}</p> }
+              </div>
+              <div class="rf-grid">
+                <div class="rf-field">
+                  <label class="rf-label" for="rf-start">Hora de inicio <span class="rf-req" aria-hidden="true">*</span></label>
+                  <input id="rf-start" class="input-field" type="time" name="start" [(ngModel)]="s.start_time" />
+                  @if (submitted() && errors['start']) { <p class="rf-err" role="alert">{{ errors['start'] }}</p> }
+                </div>
+                <div class="rf-field">
+                  <label class="rf-label" for="rf-end">Hora de fin <span class="rf-req" aria-hidden="true">*</span></label>
+                  <input id="rf-end" class="input-field" type="time" name="end" [(ngModel)]="s.end_time" />
+                  @if (submitted() && errors['end']) { <p class="rf-err" role="alert">{{ errors['end'] }}</p> }
+                </div>
+              </div>
+            </fieldset>
+            <fieldset class="rf-fieldset" [disabled]="sending()">
+              <legend class="rf-legend">Comentarios</legend>
+              <div class="rf-field">
+                <label class="rf-label" for="rf-notes">Para todas las sesiones</label>
+                <textarea id="rf-notes" class="input-field" name="notes" rows="2" [(ngModel)]="s.notes" maxlength="2000" placeholder="Objetivo, materiales, indicaciones…"></textarea>
+              </div>
+              @if (dates.length) {
+                <div class="rf-daynotes">
+                  @for (d of dates; track d) {
+                    <label class="rf-daynote">
+                      <span>{{ d }}</span>
+                      <input class="input-field" [name]="'dn-' + d" [ngModel]="dayNotes[d] || ''" (ngModelChange)="setDayNote(d, $event)" maxlength="500" placeholder="Nota solo para este día (opcional)" />
+                    </label>
+                  }
+                </div>
+              }
+            </fieldset>
+            @if (count) { <p class="rf-count">Se pedirán <strong>{{ count }}</strong> {{ count === 1 ? 'sesión' : 'sesiones' }}.</p> }
+          }
+
+          @case ('patient') {
+            <fieldset class="rf-fieldset" [disabled]="sending()">
+              <legend class="rf-legend">Paciente</legend>
+              <div class="rf-field">
+                <label class="rf-label" for="rf-pname">Nombre completo <span class="rf-req" aria-hidden="true">*</span></label>
+                <input id="rf-pname" class="input-field" name="pname" [(ngModel)]="p.username" maxlength="100" autocomplete="off" />
+                @if (submitted() && errors['name']) { <p class="rf-err" role="alert">{{ errors['name'] }}</p> }
+              </div>
+              <div class="rf-grid">
+                <div class="rf-field">
+                  <label class="rf-label" for="rf-pemail">Correo <span class="rf-opt">opcional</span></label>
+                  <input id="rf-pemail" class="input-field" type="email" name="pemail" [(ngModel)]="p.email" maxlength="150" />
+                  @if (submitted() && errors['email']) { <p class="rf-err" role="alert">{{ errors['email'] }}</p> }
+                </div>
+                <div class="rf-field">
+                  <label class="rf-label" for="rf-pphone">Teléfono <span class="rf-opt">opcional</span></label>
+                  <input id="rf-pphone" class="input-field" type="tel" name="pphone" [(ngModel)]="p.phone" maxlength="50" />
+                </div>
+              </div>
+              <div class="rf-grid">
+                <div class="rf-field">
+                  <label class="rf-label" for="rf-gname">Apoderado</label>
+                  <input id="rf-gname" class="input-field" name="gname" [(ngModel)]="p.guardian_name" maxlength="150" />
+                </div>
+                <div class="rf-field">
+                  <label class="rf-label" for="rf-gcontact">Contacto del apoderado</label>
+                  <input id="rf-gcontact" class="input-field" name="gcontact" [(ngModel)]="p.guardian_contact" maxlength="150" />
+                </div>
+              </div>
+              <div class="rf-field">
+                <label class="rf-label" for="rf-psede">Sede</label>
+                <app-select id="rf-psede" name="psede" [(ngModel)]="p.sede_id" [options]="sedeIdOptions()" placeholder="Sin sede" ariaLabel="Sede" />
+              </div>
+              <div class="rf-field">
+                <label class="rf-label" for="rf-pnotes">Motivo o comentarios</label>
+                <textarea id="rf-pnotes" class="input-field" name="pnotes" rows="2" [(ngModel)]="p.notes" maxlength="2000" placeholder="Derivación, diagnóstico preliminar, horarios posibles…"></textarea>
+              </div>
+              <p class="rf-hint">Al aprobarse, el paciente queda asignado a ti.</p>
+            </fieldset>
+          }
+
+          @case ('group') {
+            <fieldset class="rf-fieldset" [disabled]="sending()">
+              <legend class="rf-legend">Grupo</legend>
+              <div class="rf-field">
+                <label class="rf-label" for="rf-grname">Nombre del grupo <span class="rf-req" aria-hidden="true">*</span></label>
+                <input id="rf-grname" class="input-field" name="grname" [(ngModel)]="g.name" maxlength="120" placeholder="Ej: Lenguaje martes y jueves" />
+                @if (submitted() && errors['name']) { <p class="rf-err" role="alert">{{ errors['name'] }}</p> }
+              </div>
+              <div class="rf-field">
+                <label class="rf-label" for="rf-members">Pacientes <span class="rf-req" aria-hidden="true">*</span></label>
+                <app-select id="rf-members" name="members" [(ngModel)]="g.member_ids" [options]="patientOptions()" [multiple]="true" [searchable]="true" ariaLabel="Pacientes del grupo" placeholder="Elige a tus pacientes" />
+                @if (submitted() && errors['members']) { <p class="rf-err" role="alert">{{ errors['members'] }}</p> }
+              </div>
+              <div class="rf-grid">
+                <div class="rf-field">
+                  <label class="rf-label" for="rf-gstart">Hora de inicio</label>
+                  <input id="rf-gstart" class="input-field" type="time" name="gstart" [(ngModel)]="g.start_time" />
+                </div>
+                <div class="rf-field">
+                  <label class="rf-label" for="rf-gend">Hora de fin</label>
+                  <input id="rf-gend" class="input-field" type="time" name="gend" [(ngModel)]="g.end_time" />
+                  @if (submitted() && errors['end']) { <p class="rf-err" role="alert">{{ errors['end'] }}</p> }
+                </div>
+              </div>
+              <div class="rf-field">
+                <label class="rf-label" for="rf-gsede">Sede</label>
+                <app-select id="rf-gsede" name="gsede" [(ngModel)]="g.sede_id" [options]="sedeIdOptions()" placeholder="Sin sede" ariaLabel="Sede" />
+              </div>
+              <div class="rf-field">
+                <label class="rf-label" for="rf-gnotes">Comentarios</label>
+                <textarea id="rf-gnotes" class="input-field" name="gnotes" rows="2" [(ngModel)]="g.notes" maxlength="2000"></textarea>
+              </div>
+            </fieldset>
+          }
+        }
+      }
+      @if (serverError(); as err) { <p class="rf-server-err" role="alert">{{ err }}</p> }
+    </form>
+  }
+  <div modal-footer class="rf-footer">
+    @if (done()) {
+      <button type="button" class="rf-btn rf-btn--primary" (click)="close()">Listo</button>
+    } @else {
+      <button type="button" class="rf-btn" (click)="close()">Cancelar</button>
+      <button type="button" class="rf-btn rf-btn--primary" (click)="submit()" [disabled]="sending() || loadingOptions()">
+        <fa-icon [icon]="['fas', 'paper-plane']" aria-hidden="true" /> {{ sending() ? 'Enviando…' : 'Enviar solicitud' }}
+      </button>
+    }
+  </div>
+</app-modal>

@@ -1,5 +1,8 @@
 <ng-template #headerActions>
   <div class="ts-head-actions">
+    <button type="button" class="ts-request" (click)="requestSessions()">
+      <fa-icon [icon]="['fas', 'calendar-plus']" aria-hidden="true" /><span class="ts-request__label">Solicitar sesiones</span>
+    </button>
     <div class="ts-seg" role="group" aria-label="Vista de la agenda">
       <button type="button" [class.is-on]="view() === 'week'" [attr.aria-pressed]="view() === 'week'" (click)="setView('week')">Semana</button>
       <button type="button" [class.is-on]="view() === 'month'" [attr.aria-pressed]="view() === 'month'" (click)="setView('month')">Mes</button>

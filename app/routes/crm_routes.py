@@ -138,8 +138,9 @@ def toggle_contact(patient_id):
     if activate is None:
         activate = not patient.is_active
 
-    patient.is_active = bool(activate)
-    patient.account_status = 'active' if activate else 'inactive'
+    from app.services.user_status import apply_is_active
+
+    apply_is_active(patient, activate)
     db.session.commit()
 
     svc = _service()

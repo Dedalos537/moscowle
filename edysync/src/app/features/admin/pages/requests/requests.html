@@ -1,0 +1,82 @@
+<ng-template #headerActions>
+  <span class="ar-badge" [class.is-zero]="!pending()">{{ pending() }} {{ pending() === 1 ? 'pendiente' : 'pendientes' }}</span>
+</ng-template>
+
+<div class="ar" [class.has-detail]="selected()">
+  <section class="ar-list" aria-label="Solicitudes">
+    <div class="ar-seg" role="group" aria-label="Filtrar">
+      @for (f of [['pending', 'Pendientes'], ['approved', 'Aprobadas'], ['rejected', 'Rechazadas'], ['all', 'Todas']]; track f[0]) {
+        <button type="button" [class.is-on]="filter() === f[0]" [attr.aria-pressed]="filter() === f[0]" (click)="setFilter($any(f[0]))">{{ f[1] }}</button>
+      }
+    </div>
+    @if (loading()) {
+      @for (i of [1, 2, 3]; track i) { <div class="ar-skel" aria-hidden="true"></div> }
+    } @else {
+      <ul class="ar-items">
+        @for (r of items(); track r.id) {
+          <li>
+            <button type="button" class="ar-item" [attr.data-status]="r.status" [class.is-on]="selectedId() === r.id" (click)="select(r)" [attr.aria-current]="selectedId() === r.id ? 'true' : null">
+              <span class="ar-item__top"><span class="ar-item__kind">{{ labels[r.kind] }}</span><span class="ar-item__when">{{ when(r.created_at) }}</span></span>
+              <span class="ar-item__summary">{{ r.summary }}</span>
+              <span class="ar-item__who">{{ r.requester_name }} · <span class="ar-status-text">{{ status(r.status) }}</span></span>
+            </button>
+          </li>
+        } @empty {
+          <li class="ar-empty">
+            <fa-icon [icon]="['fas', 'inbox']" aria-hidden="true" />
+            <p>{{ filter() === 'pending' ? 'No hay solicitudes pendientes.' : 'Nada por aquí.' }}</p>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <section class="ar-detail" aria-live="polite">
+    @if (selected(); as r) {
+      <article class="ar-card">
+        <header class="ar-card__head">
+          <button type="button" class="ar-back" (click)="selectedId.set(null)" aria-label="Volver a la lista"><fa-icon [icon]="['fas', 'arrow-left']" /></button>
+          <div>
+            <p class="ar-card__eyebrow">{{ labels[r.kind] }} · {{ r.requester_name }} · {{ when(r.created_at) }}</p>
+            <h2 class="ar-card__title">{{ r.summary }}</h2>
+          </div>
+          <span class="ar-status" [attr.data-status]="r.status">{{ status(r.status) }}</span>
+        </header>
+        <dl class="ar-fields">
+          @for (f of fields(); track f.label) { <div><dt>{{ f.label }}</dt><dd>{{ f.value }}</dd></div> }
+        </dl>
+        @if (r.last_error && r.status === 'pending') {
+          <p class="ar-warn" role="alert"><fa-icon [icon]="['fas', 'triangle-exclamation']" aria-hidden="true" /> No se pudo aplicar: {{ r.last_error }}</p>
+        }
+        @if (r.status === 'pending') {
+          @if (rejecting()) {
+            <div class="ar-reject">
+              <label for="ar-note" class="ar-label">Motivo del rechazo (lo verá el terapeuta)</label>
+              <textarea id="ar-note" class="input-field" rows="2" [(ngModel)]="rejectNote" maxlength="1000"></textarea>
+              <div class="ar-actions">
+                <button type="button" class="ar-btn" (click)="rejecting.set(false)" [disabled]="busy()">Volver</button>
+                <button type="button" class="ar-btn ar-btn--danger" (click)="reject()" [disabled]="busy() || !rejectNote.trim()">{{ busy() ? 'Rechazando…' : 'Rechazar' }}</button>
+              </div>
+            </div>
+          } @else {
+            <div class="ar-actions">
+              <button type="button" class="ar-btn" (click)="rejecting.set(true)" [disabled]="busy()">Rechazar…</button>
+              <button type="button" class="ar-btn ar-btn--primary" (click)="approve()" [disabled]="busy()">
+                <fa-icon [icon]="['fas', 'check']" aria-hidden="true" /> {{ busy() ? 'Aplicando…' : 'Aprobar y aplicar' }}
+              </button>
+            </div>
+            <p class="ar-hint">Al aprobar se ejecuta con las mismas reglas que el alta directa (choques de horario, feriados, estado de los pacientes).</p>
+          }
+        } @else {
+          <p class="ar-resolved">
+            {{ r.status === 'approved' ? 'Aprobada' : 'Rechazada' }} por {{ r.reviewer_name }} · {{ when(r.resolved_at) }}
+            @if (r.review_note) { <br /><strong>Motivo:</strong> {{ r.review_note }} }
+            @if (r.result?.['message']) { <br />{{ r.result?.['message'] }} }
+          </p>
+        }
+      </article>
+    } @else {
+      <div class="ar-placeholder"><fa-icon [icon]="['fas', 'paper-plane']" aria-hidden="true" /><p>Elige una solicitud para revisarla.</p></div>
+    }
+  </section>
+</div>

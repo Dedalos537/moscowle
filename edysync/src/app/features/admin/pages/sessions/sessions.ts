@@ -545,7 +545,11 @@ export class Sessions implements OnInit, OnDestroy {
     this.subs.add(
       this.adminService.getPatientsByTherapist(id).subscribe({
         next: (list) => {
-          this.patients = list;
+          // Solo quienes pueden recibir sesiones (activo o con deuda): antes salían también inactivos y retirados
+          // y el alta fallaba con 400.
+          this.patients = (list as { is_active?: boolean; account_status?: string }[]).filter(
+            (p) => p.is_active !== false && !['inactive', 'retired'].includes(p.account_status || ''),
+          ) as typeof list;
           this.patientsLoading = false;
           this.cdr.markForCheck();
         },

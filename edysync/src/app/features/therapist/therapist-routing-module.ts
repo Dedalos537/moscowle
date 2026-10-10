@@ -33,6 +33,7 @@ const routes: Routes = [
       // «Analíticas IA» ahora es la pestaña «IA y juegos» de Reportes; los enlaces viejos llegan ahí.
       { path: 'analytics', redirectTo: () => inject(Router).parseUrl('/therapist/reports?tab=ai') },
       { path: 'incidents', component: IncidentsList, data: { viewMode: 'therapist' } },
+      { path: 'requests', loadComponent: () => import('./pages/requests/requests').then((m) => m.TherapistRequests) },
       { path: 'kanban', loadComponent: () => import('./pages/kanban/kanban').then(m => m.KanbanPage) },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],

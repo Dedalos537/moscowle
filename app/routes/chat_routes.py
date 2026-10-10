@@ -556,30 +556,33 @@ def send_message(chat_id):
         try:
             from app.extensions import socketio
 
-            socketio.emit(
-                'message:new',
-                {
-                    'chat_id': chat_id,
-                    'message': {
-                        'id': msg_row.id,
-                        'sender_id': msg_row.sender_id,
-                        'receiver_id': msg_row.receiver_id,
-                        'body': msg_row.body,
-                        'status': msg_row.status,
-                        'is_read': msg_row.is_read,
-                        'file_url': url_for(
-                            'uploads.protected_file', filename=f'messages/{msg_row.attachment_path}', _external=False
-                        )
-                        if msg_row.attachment_path
-                        else None,
-                        'attachment_type': msg_row.attachment_type,
-                        'file_name': attachments.display_name(msg_row.attachment_path),
-                        'created_at': msg_created_at,
-                    },
+            event = {
+                'chat_id': chat_id,
+                'message': {
+                    'id': msg_row.id,
+                    'sender_id': msg_row.sender_id,
+                    'receiver_id': msg_row.receiver_id,
+                    'body': msg_row.body,
+                    'status': msg_row.status,
+                    'is_read': msg_row.is_read,
+                    'file_url': url_for(
+                        'uploads.protected_file', filename=f'messages/{msg_row.attachment_path}', _external=False
+                    )
+                    if msg_row.attachment_path
+                    else None,
+                    'attachment_type': msg_row.attachment_type,
+                    'file_name': attachments.display_name(msg_row.attachment_path),
+                    'created_at': msg_created_at,
                 },
-                namespace='/',
-                room=f'chat_{chat_id}',
-            )
+            }
+            # A la conversación y a la sala personal de cada participante: en una conversación nueva el receptor aún
+            # no estaba en chat_<id> (solo se une al conectar) y no veía el mensaje hasta recargar. El cliente descarta
+            # los repetidos por id; se emite sala por sala para no depender de la versión de python-socketio.
+            rooms = {f'chat_{chat_id}', f'user_{current_user.id}'} | {
+                f'user_{row.user_id}' for row in other_participant_rows
+            }
+            for room in rooms:
+                socketio.emit('message:new', event, namespace='/', room=room)
         except Exception as e:
             logger.warning(f'SocketIO emit failed: {str(e)}')
 

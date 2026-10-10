@@ -250,7 +250,19 @@ def api_patients():
         from app.models import User
 
         patients = User.query.filter_by(role='jugador', is_active=True).order_by(User.username.asc()).all()
-    return jsonify([{'id': p.id, 'username': p.username, 'email': p.email} for p in patients])
+    # Estado real (antes la pantalla del terapeuta mostraba «Activo» fijo para todos).
+    return jsonify(
+        [
+            {
+                'id': p.id,
+                'username': p.username,
+                'email': p.email,
+                'account_status': p.account_status or ('active' if p.is_active is not False else 'inactive'),
+                'is_active': p.is_active is not False,
+            }
+            for p in patients
+        ]
+    )
 
 
 @api_bp.route('/ai/gemini', methods=['POST'])

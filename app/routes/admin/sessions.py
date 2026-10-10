@@ -210,7 +210,12 @@ def batch_create_sessions():
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return jsonify({'error': 'Cuerpo JSON inválido'}), 400
+    return create_sessions_batch(data)
 
+
+def create_sessions_batch(data):
+    """Alta de sesiones en lote. La usan la ruta de admin y la aprobación de solicitudes de terapeutas
+    (app/services/action_requests.py), así ambas aplican las mismas validaciones."""
     therapist_id = data.get('therapist_id')
     patient_id = data.get('patient_id')
     patient_ids = data.get('patient_ids') or ([patient_id] if patient_id else [])
@@ -241,9 +246,23 @@ def batch_create_sessions():
         patient_ids = sorted({int(p) for p in patient_ids})
     except (TypeError, ValueError):
         return jsonify({'error': 'Identificadores de paciente inválidos'}), 400
-    patients = User.query.filter(User.id.in_(patient_ids), User.role == 'jugador', User.is_active.is_(True)).all()
-    if len(patients) != len(patient_ids):
-        return jsonify({'error': 'Algún paciente no existe o está inactivo'}), 400
+    found = User.query.filter(User.id.in_(patient_ids), User.role == 'jugador').all()
+    if len(found) != len(patient_ids):
+        return jsonify({'error': 'Algún paciente ya no existe. Recarga la página.'}), 400
+    # «Inactivo» y «retirado» no reciben sesiones (deudor sí). Antes el lote entero fallaba con un 400 genérico
+    # si un solo miembro del grupo estaba inactivo; ahora en grupo se omite y se avisa, y uno solo se nombra.
+    inactive = [u for u in found if u.is_active is False or (u.account_status or 'active') in ('inactive', 'retired')]
+    skipped_inactive = [u.username or u.email for u in inactive]
+    if inactive:
+        if len(inactive) == len(found):
+            names = ', '.join(skipped_inactive)
+            return jsonify(
+                {
+                    'error': f'{names} está{"n" if len(inactive) > 1 else ""} inactivo{"s" if len(inactive) > 1 else ""}. '
+                    'Cambia su estado en Usuarios para programarle sesiones.'
+                }
+            ), 400
+        patient_ids = [u.id for u in found if u not in inactive]
 
     try:
         start_h, start_m = start_hm
@@ -350,6 +369,8 @@ def batch_create_sessions():
             db.session.commit()
             _notify_new_sessions(created_ids)
             message = f'Se crearon {created_count} sesiones.'
+            if skipped_inactive:
+                message += f' Se omitieron pacientes inactivos: {", ".join(skipped_inactive)}.'
             if skipped_holidays:
                 message += f' Se omitieron feriados: {", ".join(skipped_holidays)}.'
             if conflicts:
@@ -362,6 +383,7 @@ def batch_create_sessions():
                     'created': created_count,
                     'skipped_holidays': skipped_holidays,
                     'conflicts': conflicts,
+                    'skipped_inactive': skipped_inactive,
                 }
             )
 

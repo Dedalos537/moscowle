@@ -142,9 +142,9 @@ def toggle_user_status(user_id):
         flash('Estado inválido', 'error')
         return redirect(url_for('admin.user_details', user_id=user.id))
 
-    user.account_status = status
+    from app.services.user_status import apply_account_status
 
-    user.is_active = status == 'active'
+    apply_account_status(user, status)  # antes «deudor» quedaba inactivo
 
     messages = {
         'active': 'Usuario activado, todo ok',
