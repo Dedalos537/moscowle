@@ -2176,7 +2176,7 @@ def handle_assign_incident(incident_id, assignee_id, **kwargs):
 
 @tool(
     name='list_sedes',
-    description='Lista todas las sedes del centro.',
+    description='Lista todas las sedes del centro. Uso tipico: "cuantas sedes hay", "que sedes tiene el centro".',
     parameters={'type': 'object', 'properties': {}},
     category='read',
 )
@@ -2206,24 +2206,81 @@ def handle_list_sedes(**kwargs):
 
 @tool(
     name='get_sede_stats',
-    description='Estadisticas de una sede: pacientes, terapeutas, sesiones, ingresos.',
+    description=(
+        'Estadisticas por sede de pacientes y terapeutas asignados, con cuantos pacientes atiende cada terapeuta en '
+        'cada sede. Uso tipico: "cuantos alumnos hay por sede", "pacientes por terapeuta en cada sede", '
+        '"terapeutas asignados a la sede".'
+    ),
     parameters={
         'type': 'object',
         'properties': {
             'sede_id': {'type': 'integer', 'description': 'ID de la sede (opcional, todas si se omite)'},
+            'sede_name': {'type': 'string', 'description': 'Nombre o parte del nombre de la sede (opcional)'},
         },
     },
     category='read',
     roles=ROLES_SUPERVISOR,
 )
-def handle_get_sede_stats(sede_id=None, **kwargs):
+def handle_get_sede_stats(sede_id=None, sede_name=None, **kwargs):
+    """Desglose real por sede, leído de los modelos.
+
+    Antes devolvía el `count` de /api/admin/sedes/stats, que suma a TODOS los usuarios con esa sede más los
+    terapeutas asignados (es el «usuarios por sede» del panel), ignoraba sede_id y no traía terapeutas: el bot lo
+    presentaba como número de alumnos y completaba el resto inventando.
+    """
     try:
-        url = '/api/admin/sedes/stats'
+        from collections import Counter
+
+        from app.models.user import Sede
+
+        query = Sede.query.filter(or_(Sede.is_active.is_(True), Sede.is_active.is_(None)))
         if sede_id:
-            url += f'?sede_id={sede_id}'
-        resp = _api_get(url, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
-        data = resp.get_json() if resp else {}
-        return {'success': True, 'stats': data}
+            query = query.filter(Sede.id == sede_id)
+        elif sede_name:
+            query = query.filter(Sede.name.ilike(f'%{sede_name.strip()}%'))
+        sedes = query.order_by(Sede.name.asc()).all()
+        if not sedes:
+            return {'error': 'No encontré esa sede activa. Usa list_sedes para ver las sedes.'}
+
+        result = []
+        for sede in sedes:
+            patients = User.query.filter(User.role == 'jugador', User.sede_id == sede.id).all()
+            by_therapist = Counter(p.assigned_therapist_id for p in patients if p.is_active)
+            therapists = (
+                User.query.filter(User.role == 'terapista', User.assigned_sedes.any(Sede.id == sede.id))
+                .order_by(User.username)
+                .all()
+            )
+            names = {t.id: t.username or t.email for t in therapists}
+            # Terapeutas que atienden pacientes de la sede sin estar asignados a ella también cuentan.
+            missing = [tid for tid in by_therapist if tid and tid not in names]
+            if missing:
+                for t in User.query.filter(User.id.in_(missing)).all():
+                    names[t.id] = f'{t.username or t.email} (no asignado a esta sede)'
+            result.append(
+                {
+                    'sede_id': sede.id,
+                    'sede': sede.name,
+                    'pacientes_total': len(patients),
+                    'pacientes_activos': sum(1 for p in patients if p.is_active),
+                    'terapeutas_asignados': len(therapists),
+                    'pacientes_activos_por_terapeuta': [
+                        {'terapeuta': names[tid], 'pacientes': n}
+                        for tid, n in sorted(by_therapist.items(), key=lambda x: -x[1])
+                        if tid
+                    ]
+                    + [
+                        {'terapeuta': t.username or t.email, 'pacientes': 0}
+                        for t in therapists
+                        if t.id not in by_therapist
+                    ],
+                    'pacientes_activos_sin_terapeuta': by_therapist.get(None, 0),
+                }
+            )
+        sin_sede = User.query.filter(
+            User.role == 'jugador', User.sede_id.is_(None), User.is_active.isnot(False)
+        ).count()
+        return {'success': True, 'sedes': result, 'pacientes_activos_sin_sede': sin_sede}
     except Exception as e:
         return {'error': str(e)}
 

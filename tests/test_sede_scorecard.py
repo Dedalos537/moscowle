@@ -164,3 +164,29 @@ def test_mcp_tool_returns_the_same_numbers_as_the_page(app):
     page = next(s for s in bsc.scorecard('month')['sedes'] if s['id'] == sede.id)
     assert row['valor'] == next(k['value'] for k in page['kpis'] if k['key'] == 'sessions_done')
     assert 'error' in tool['handler'](sede_name='no-existe-xyz')
+
+
+def test_sede_stats_tool_counts_patients_not_all_users(app):
+    """Antes contaba a todos los usuarios con esa sede (admins incluidos) y el bot lo daba como alumnos."""
+    from app.services.tools_registry import TOOL_REGISTRY
+
+    sede = _sede()
+    t1, t2 = _user('terapista'), _user('terapista')
+    t1.assigned_sedes.append(sede)
+    t2.assigned_sedes.append(sede)
+    _user('admin', sede)  # no es paciente
+    for _ in range(3):
+        _user('jugador', sede).assigned_therapist_id = t1.id
+    lonely = _user('jugador', sede)
+    lonely.is_active = False
+    _user('jugador', sede)  # activo y sin terapeuta
+    db.session.commit()
+
+    out = TOOL_REGISTRY['get_sede_stats']['handler'](sede_name=sede.name)
+    row = out['sedes'][0]
+    assert row['pacientes_total'] == 5 and row['pacientes_activos'] == 4
+    assert row['terapeutas_asignados'] == 2
+    by_name = {r['terapeuta']: r['pacientes'] for r in row['pacientes_activos_por_terapeuta']}
+    assert by_name[t1.username] == 3 and by_name[t2.username] == 0
+    assert row['pacientes_activos_sin_terapeuta'] == 1
+    assert 'error' in TOOL_REGISTRY['get_sede_stats']['handler'](sede_name='no-existe-xyz')

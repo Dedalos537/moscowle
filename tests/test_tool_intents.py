@@ -24,6 +24,11 @@ INTENT_CASES = [
     ('que sedes tiene el centro', 'list_sedes'),
     ('lista de sedes', 'list_sedes'),
     ('dime las sedes del centro', 'list_sedes'),
+    # Desglose por sede: alumnos y terapeutas (antes caía en el listado de pacientes)
+    ('cuantos alumnos hay por sede', 'get_sede_stats'),
+    ('cuántos alumnos hay por sede, asignados a qué terapeutas?', 'get_sede_stats'),
+    ('pacientes por terapeuta en cada sede', 'get_sede_stats'),
+    ('cuantos pacientes hay', 'get_patient_stats'),
     # Desempeño de sedes (Balanced Scorecard): no debe confundirse con la lista de sedes
     ('como va el desempeño de las sedes', 'get_sede_scorecard'),
     ('qué sede rinde mejor este mes', 'get_sede_scorecard'),

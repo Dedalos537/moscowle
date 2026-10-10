@@ -98,7 +98,7 @@ _CONCEPT_GROUPS = (
         'atraso',
     ),
     ('cobranza', 'recaudacion', 'cobrado', 'cobros', 'cobro', 'genero', 'generado', 'recaudo', 'recaudado'),
-    ('pacientes', 'paciente', 'jugadores', 'jugador'),
+    ('pacientes', 'paciente', 'jugadores', 'jugador', 'alumnos', 'alumno'),
     ('usuarios', 'usuario'),
     ('sedes', 'sede', 'sucursales', 'sucursal'),
     ('financiero', 'finanzas', 'finanza', 'ingresos', 'ingreso', 'utilidad', 'ganancia'),
