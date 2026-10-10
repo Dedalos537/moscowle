@@ -1,63 +1,45 @@
-<div class="group bg-surface-container-lowest rounded-xl shadow-soft hover:shadow-soft transition-all border border-border/20 overflow-hidden flex flex-col">
+<article class="sc" [class.is-selected]="selected()" [class.is-off]="!sede().active">
+  <button type="button" class="sc-main" (click)="select.emit(sede())" [disabled]="!sede().active"
+    [attr.aria-pressed]="sede().active ? selected() : null"
+    [attr.aria-label]="sede().active ? 'Ver el scorecard de ' + sede().name : null">
+    <span class="sc-head">
+      <span class="sc-icon" aria-hidden="true"><fa-icon [icon]="['fas', 'location-dot']"></fa-icon></span>
+      <span class="sc-titles">
+        <span class="sc-name">{{ sede().name }}</span>
+        <span class="sc-addr">{{ sede().address || 'Sin dirección registrada' }}</span>
+      </span>
+    </span>
 
-  <div class="p-6 flex-1 flex flex-col cursor-pointer" (click)="edit.emit(sede())">
-    <div class="flex items-start justify-between mb-4">
-      <div class="flex items-center gap-3">
-        <div class="w-12 h-12 rounded-full bg-primary-container/15 flex items-center justify-center">
-          <fa-icon [icon]="['fas', 'house']" class="text-primary text-xl"></fa-icon>
-        </div>
-        <app-pill-status
-          [status]="sede().active ? 'completed' : 'error'"
-          [label]="sede().active ? 'Activa' : 'Inactiva'"
-        />
-      </div>
-      <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button (click)="$event.stopPropagation(); toggle.emit(sede())"
-          class="w-8 h-8 rounded-full hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
-          [title]="sede().active ? 'Desactivar' : 'Activar'">
-          <fa-icon [icon]="sede().active ? ['fas', 'pause'] : ['fas', 'play']" class="text-sm"></fa-icon>
-        </button>
-        <button (click)="$event.stopPropagation(); edit.emit(sede())"
-          class="w-8 h-8 rounded-full hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
-          title="Editar">
-          <fa-icon [icon]="['fas', 'pencil']" class="text-sm"></fa-icon>
-        </button>
-      </div>
-    </div>
+    @if (sede().active) {
+      <span class="sc-score" [attr.data-s]="tone()">
+        @if (loading()) {
+          <span class="sc-skel" aria-hidden="true"></span>
+        } @else {
+          <span class="sc-score__num">{{ score()?.score ?? '—' }}</span>
+          <span class="sc-score__label">{{ score()?.score != null ? 'de 100 en metas' : 'sin metas evaluables' }}</span>
+        }
+      </span>
+      <span class="sc-figs">
+        @for (f of figures(); track f.label) {
+          <span class="sc-fig">
+            <span class="sc-fig__label">{{ f.label }}</span>
+            @if (loading()) { <span class="sc-skel sc-skel--sm" aria-hidden="true"></span> }
+            @else { <span class="sc-fig__value">{{ f.value }}</span> }
+          </span>
+        }
+      </span>
+    } @else {
+      <span class="sc-off">Sede inactiva · no aparece en el scorecard ni al asignar pacientes</span>
+    }
+  </button>
 
-    <h3 class="text-xl font-bold text-on-surface truncate mb-1">{{ sede().name }}</h3>
-    <p class="text-sm text-on-surface-variant line-clamp-2">{{ sede().address || 'Sin direccion' }}</p>
+  <div class="sc-actions">
+    <button type="button" class="sc-act" (click)="edit.emit(sede())" [attr.aria-label]="'Editar ' + sede().name" title="Editar">
+      <fa-icon [icon]="['fas', 'pencil']" aria-hidden="true"></fa-icon>
+    </button>
+    <button type="button" class="sc-act" (click)="toggle.emit(sede())"
+      [attr.aria-label]="(sede().active ? 'Desactivar ' : 'Activar ') + sede().name" [title]="sede().active ? 'Desactivar' : 'Activar'">
+      <fa-icon [icon]="sede().active ? ['fas', 'pause'] : ['fas', 'play']" aria-hidden="true"></fa-icon>
+    </button>
   </div>
-
-  <div class="border-t border-border/20 p-6 space-y-4 bg-surface-container-high/30 group-hover:bg-primary/[0.02] transition-colors">
-
-    <div class="flex justify-between items-center text-sm">
-      <span class="flex items-center gap-3 text-on-surface-variant font-medium">
-        <fa-icon [icon]="['fas', 'users']" class="text-info"></fa-icon> Pacientes
-      </span>
-      <span class="font-bold text-on-surface">
-        {{ sede().stats?.patients?.total ?? '—' }}
-      </span>
-    </div>
-
-    <div class="flex justify-between items-center text-sm">
-      <span class="flex items-center gap-3 text-on-surface-variant font-medium">
-        <fa-icon [icon]="['fas', 'calendar-days']" class="text-success"></fa-icon> Sesiones
-      </span>
-      <span class="font-bold text-on-surface">
-        {{ sede().stats?.sessions?.total_completed != null ? sede().stats?.sessions?.total_completed : '—' }}
-      </span>
-    </div>
-
-    <div class="flex justify-between items-center text-sm">
-      <span class="flex items-center gap-3 text-on-surface-variant font-medium">
-        <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-warning"></fa-icon> Ingresos
-      </span>
-      <span class="font-bold text-on-surface">
-        {{ sede().stats?.payments?.total_revenue != null ? ('S/. ' + sede().stats?.payments?.total_revenue) : '—' }}
-      </span>
-    </div>
-
-  </div>
-
-</div>
+</article>

@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response';
 import { User, CreateUserPayload } from '../models/user';
-import { Sede, SedeAnalytics } from '../models/sede';
+import { Scorecard, ScorecardPeriod, Sede, SedeAnalytics } from '../models/sede';
 import { Payment, PatientPaymentStatus, DebtReport } from '../models/payment';
 import { Appointment, CalendarEvent, BatchSessionPayload } from '../models/appointment';
 import { Expense, TherapistFinancial, ContactMessage, TherapistStats, PatientStats } from '../models/expense';
@@ -113,6 +113,14 @@ export class AdminService {
 
   updateSede(id: number, data: Partial<Sede>): Observable<ApiResponse> {
     return this.http.put<ApiResponse>(`/api/admin/sedes/${id}`, data);
+  }
+
+  getSedeScorecard(period: ScorecardPeriod): Observable<Scorecard> {
+    return this.http.get<Scorecard>('/api/admin/sedes/scorecard', { params: new HttpParams().set('period', period) });
+  }
+
+  saveScorecardTargets(targets: Record<string, number | null>): Observable<{ success: boolean; targets: Record<string, number | null>; message?: string }> {
+    return this.http.put<{ success: boolean; targets: Record<string, number | null>; message?: string }>('/api/admin/sedes/scorecard/targets', { targets });
   }
 
   getSedeAnalytics(id: number): Observable<any> {

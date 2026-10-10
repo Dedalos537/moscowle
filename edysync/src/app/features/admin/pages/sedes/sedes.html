@@ -1,107 +1,161 @@
 <ng-template #headerActions>
-  <div class="flex items-center gap-2 sm:gap-3">
-    <div class="text-center hidden sm:block">
-      <div class="text-2xl font-bold text-primary leading-none">{{ activeCount }}</div>
-      <p class="text-label-caps text-on-surface-variant mt-1">activas</p>
-    </div>
-
-    <button (click)="openCreateDrawer()"
-      class="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-sm font-semibold rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors cursor-pointer whitespace-nowrap">
-      <fa-icon [icon]="['fas', 'plus']" class="text-[10px] sm:text-xs"></fa-icon>
-      <span class="hidden sm:inline">Nueva Sede</span>
-      <span class="sm:hidden">Nueva</span>
-    </button>
-  </div>
+  <button type="button" class="sd-new" (click)="openCreateDrawer()">
+    <fa-icon [icon]="['fas', 'plus']" aria-hidden="true"></fa-icon>
+    <span>Nueva sede</span>
+  </button>
 </ng-template>
 
-<div class="p-1 animate-fade-in-up space-y-6" [@fadeInUp]>
-
-  @if (!loading && sedes.length > 1) {
-    <div class="relative max-w-md">
-      <fa-icon [icon]="['fas', 'magnifying-glass']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm"></fa-icon>
-      <input [(ngModel)]="searchQuery" type="text" class="input-field text-sm pl-9" placeholder="Buscar sede...">
+<div class="sd">
+  <!-- Barra: búsqueda, periodo y metas -->
+  <div class="sd-toolbar">
+    <div class="sd-toolbar__lead">
+      <h2 class="sd-h">
+        Sedes
+        @if (!loading()) { <span class="sd-count">{{ activeCount() }} {{ activeCount() === 1 ? 'activa' : 'activas' }} de {{ sedes().length }}</span> }
+      </h2>
+      @if (sedes().length > 3) {
+        <label class="sd-search">
+          <fa-icon [icon]="['fas', 'magnifying-glass']" aria-hidden="true"></fa-icon>
+          <span class="sr-only">Buscar sede</span>
+          <input type="search" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Buscar por nombre o dirección" />
+        </label>
+      }
     </div>
-  }
+    <div class="sd-toolbar__tools">
+      <div class="sd-seg" role="group" aria-label="Periodo de las cifras">
+        @for (p of periods; track p.key) {
+          <button type="button" [class.is-on]="period() === p.key" [attr.aria-pressed]="period() === p.key" (click)="setPeriod(p.key)">{{ p.label }}</button>
+        }
+      </div>
+      <button type="button" class="sd-ghost" (click)="openTargets()" [disabled]="!scorecard()">
+        <fa-icon [icon]="['fas', 'bullseye']" aria-hidden="true"></fa-icon> Metas
+      </button>
+    </div>
+  </div>
 
-  @if (loading) {
-    <div class="flex justify-center py-20">
-      <app-spinner size="md" colorClass="text-primary"></app-spinner>
+  <!-- Tarjetas -->
+  @if (loading()) {
+    <div class="sd-grid" aria-busy="true">
+      @for (i of [1, 2, 3]; track i) { <div class="sd-skel"></div> }
+    </div>
+  } @else if (loadError()) {
+    <div class="sd-empty" role="alert">
+      <p class="sd-empty__title">No se pudieron cargar las sedes</p>
+      <app-button variant="secondary" label="Reintentar" [icon]="['fas', 'rotate-right']" (clicked)="loadSedes()"></app-button>
     </div>
   } @else {
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-      @for (sede of filteredSedes; track sede.id; let i = $index) {
-        <div class="animate-fade-in" [style.animation-delay]="i * 0.08 + 's'">
-          <app-sede-card
-            [sede]="sede"
-            (edit)="openEditDrawer($event)"
-            (delete)="deleteSede($event)"
-            (toggle)="toggleActive($event)"
-          ></app-sede-card>
-        </div>
-      }
-
-      @empty {
-        <div class="col-span-full py-16 text-center">
-          <fa-icon [icon]="['fas', 'building']" class="text-4xl text-on-surface-variant/30 mb-4"></fa-icon>
-          <p class="text-on-surface-variant text-lg font-medium">
-            @if (searchQuery) {
-              No se encontraron sedes con ese nombre
-            } @else {
-              No hay sedes registradas
-            }
-          </p>
-          @if (!searchQuery) {
-            <app-button variant="primary" label="Crear primera sede" [icon]="['fas', 'plus']" class="mt-4" (clicked)="openCreateDrawer()"></app-button>
+    <div class="sd-grid">
+      @for (sede of filteredSedes(); track sede.id) {
+        <app-sede-card
+          [sede]="sede"
+          [score]="scoreById().get(sede.id) ?? null"
+          [selected]="selectedId() === sede.id"
+          [loading]="scoreLoading()"
+          (select)="focusSede($event)"
+          (edit)="openEditDrawer($event)"
+          (toggle)="toggleActive($event)"
+        />
+      } @empty {
+        <div class="sd-empty">
+          @if (searchQuery()) {
+            <p class="sd-empty__title">Ninguna sede coincide con «{{ searchQuery() }}»</p>
+            <app-button variant="ghost" label="Limpiar búsqueda" (clicked)="searchQuery.set('')"></app-button>
+          } @else {
+            <p class="sd-empty__title">Todavía no hay sedes</p>
+            <p class="sd-empty__text">Crea la primera para asignarle pacientes y terapeutas y ver su desempeño aquí.</p>
+            <app-button variant="primary" label="Crear sede" [icon]="['fas', 'plus']" (clicked)="openCreateDrawer()"></app-button>
           }
         </div>
       }
-
     </div>
   }
 
+  <!-- Balanced Scorecard -->
+  <div #scorecardAnchor class="sd-anchor">
+    @if (scoreError(); as err) {
+      <div class="sd-empty" role="alert">
+        <p class="sd-empty__title">{{ err }}</p>
+        <app-button variant="secondary" label="Reintentar" [icon]="['fas', 'rotate-right']" (clicked)="loadScorecard()"></app-button>
+      </div>
+    } @else if (scorecard(); as sc) {
+      @if (sc.sedes.length) {
+        <div class="sd-scorecard" [class.is-refreshing]="scoreLoading()" [attr.aria-busy]="scoreLoading()">
+          <app-sede-scorecard [data]="sc" [sedeId]="selectedId()" (sedeChange)="chooseSede($event)" />
+        </div>
+      }
+    } @else if (scoreLoading()) {
+      <div class="sd-skel sd-skel--wide" aria-busy="true" aria-label="Calculando el scorecard"></div>
+    }
+  </div>
 </div>
 
-<app-drawer [isOpen]="showCreateDrawer" title="Crear Nueva Sede" [icon]="['fas', 'building']" (close)="closeCreateDrawer()" size="lg">
-
-  <div>
-    <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre</label>
-    <input [(ngModel)]="newSede.name" type="text" class="input-field text-sm" placeholder="Nombre de la sede">
-  </div>
-  <div>
-    <label class="text-label-caps text-on-surface-variant mb-1.5 block">Direccion</label>
-    <input [(ngModel)]="newSede.address" type="text" class="input-field text-sm" placeholder="Direccion (opcional)">
-  </div>
-
+<app-drawer [isOpen]="showCreateDrawer()" title="Nueva sede" [icon]="['fas', 'location-dot']" (close)="showCreateDrawer.set(false)" size="lg">
+  <form class="sd-form" (ngSubmit)="createSede()" id="sd-create">
+    <label class="sd-field">
+      <span>Nombre</span>
+      <input class="input-field text-sm" name="name" [(ngModel)]="newSede.name" required autocomplete="off" placeholder="Por ejemplo: Sede Cayma" />
+    </label>
+    <label class="sd-field">
+      <span>Dirección <small>opcional</small></span>
+      <input class="input-field text-sm" name="address" [(ngModel)]="newSede.address" autocomplete="street-address" placeholder="Calle, número y distrito" />
+    </label>
+    @if (formError()) { <p class="sd-error" role="alert">{{ formError() }}</p> }
+  </form>
   <div drawer-footer>
     <div class="buttons_footer_drawer">
-      <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateDrawer()"></app-button>
-      <app-button variant="primary" label="Crear Sede" [icon]="['fas', 'floppy-disk']" (clicked)="createSede()"></app-button>
+      <app-button variant="ghost" label="Cancelar" (clicked)="showCreateDrawer.set(false)"></app-button>
+      <app-button variant="primary" [label]="saving() ? 'Creando…' : 'Crear sede'" [disabled]="saving()" [icon]="['fas', 'check']" (clicked)="createSede()"></app-button>
     </div>
-    @if (createStatus) {
-      <span class="text-right text-sm text-on-surface-variant font-medium">{{ createStatus }}</span>
-    }
   </div>
 </app-drawer>
 
-<app-drawer [isOpen]="showEditDrawer" title="Editar Sede" [icon]="['fas', 'pencil']" (close)="closeEditDrawer()" size="lg">
-
-  <div>
-    <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre</label>
-    <input [(ngModel)]="editSedeData.name" type="text" class="input-field text-sm" placeholder="Nombre de la sede">
-  </div>
-  <div>
-    <label class="text-label-caps text-on-surface-variant mb-1.5 block">Direccion</label>
-    <input [(ngModel)]="editSedeData.address" type="text" class="input-field text-sm" placeholder="Direccion (opcional)">
-  </div>
-
+<app-drawer [isOpen]="showEditDrawer()" title="Editar sede" [icon]="['fas', 'pencil']" (close)="showEditDrawer.set(false)" size="lg">
+  <form class="sd-form" (ngSubmit)="updateSede()">
+    <label class="sd-field">
+      <span>Nombre</span>
+      <input class="input-field text-sm" name="name" [(ngModel)]="editSedeData.name" required autocomplete="off" />
+    </label>
+    <label class="sd-field">
+      <span>Dirección <small>opcional</small></span>
+      <input class="input-field text-sm" name="address" [(ngModel)]="editSedeData.address" autocomplete="street-address" placeholder="Calle, número y distrito" />
+    </label>
+    @if (formError()) { <p class="sd-error" role="alert">{{ formError() }}</p> }
+  </form>
   <div drawer-footer>
     <div class="buttons_footer_drawer">
-      <app-button variant="ghost" label="Cancelar" (clicked)="closeEditDrawer()"></app-button>
-      <app-button variant="primary" label="Guardar Cambios" [icon]="['fas', 'floppy-disk']" (clicked)="updateSede()"></app-button>
+      <app-button variant="ghost" label="Cancelar" (clicked)="showEditDrawer.set(false)"></app-button>
+      <app-button variant="primary" [label]="saving() ? 'Guardando…' : 'Guardar cambios'" [disabled]="saving()" [icon]="['fas', 'check']" (clicked)="updateSede()"></app-button>
     </div>
-    @if (editStatus) {
-      <span class="text-right text-sm text-on-surface-variant font-medium">{{ editStatus }}</span>
+  </div>
+</app-drawer>
+
+<app-drawer [isOpen]="showTargets()" title="Metas del scorecard" [icon]="['fas', 'bullseye']" (close)="showTargets.set(false)" size="lg">
+  <form class="sd-form" (ngSubmit)="saveTargets()">
+    <p class="sd-form__intro">
+      Las metas valen para todas las sedes y deciden el semáforo de cada indicador. Deja un campo vacío si ese indicador
+      solo debe mostrarse, sin evaluarse.
+    </p>
+    @for (g of targetGroups(); track g.label) {
+      <fieldset class="sd-fieldset">
+        <legend>{{ g.label }}</legend>
+        @for (f of g.fields; track f.key) {
+          <label class="sd-target">
+            <span class="sd-target__label">{{ f.label }}<small>{{ f.hint }}</small></span>
+            <span class="sd-target__input">
+              @if (f.unit === 'S/') { <span aria-hidden="true">S/</span> }
+              <input type="text" inputmode="decimal" [name]="f.key" [(ngModel)]="targetDraft[f.key]" placeholder="Sin meta" [attr.aria-label]="f.label + ', ' + f.hint" />
+              @if (f.unit === '%') { <span aria-hidden="true">%</span> }
+            </span>
+          </label>
+        }
+      </fieldset>
     }
+    @if (formError()) { <p class="sd-error" role="alert">{{ formError() }}</p> }
+  </form>
+  <div drawer-footer>
+    <div class="buttons_footer_drawer">
+      <app-button variant="ghost" label="Cancelar" (clicked)="showTargets.set(false)"></app-button>
+      <app-button variant="primary" [label]="saving() ? 'Guardando…' : 'Guardar metas'" [disabled]="saving()" [icon]="['fas', 'check']" (clicked)="saveTargets()"></app-button>
+    </div>
   </div>
 </app-drawer>

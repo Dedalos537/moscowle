@@ -522,6 +522,37 @@ def admin_sedes_detail(sede_id):
         return jsonify({'error': str(e), 'data': []}), 500
 
 
+@api_bp.route('/admin/sedes/scorecard', methods=['GET'])
+@login_required
+def admin_sedes_scorecard():
+    """Balanced Scorecard de todas las sedes activas (datos reales del periodo y comparación con el anterior)."""
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
+    from app.services.sede_scorecard import scorecard
+
+    try:
+        return jsonify({'success': True, **scorecard(request.args.get('period', 'month'))})
+    except Exception as e:
+        current_app.logger.exception('Error en el scorecard de sedes')
+        return jsonify({'success': False, 'message': f'No se pudo calcular el scorecard: {e}'}), 500
+
+
+@api_bp.route('/admin/sedes/scorecard/targets', methods=['PUT'])
+@login_required
+def admin_sedes_scorecard_targets():
+    """Guarda las metas del scorecard (solo admin). Una meta vacía deja el indicador sin semáforo."""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
+    from app.services.sede_scorecard import save_targets
+
+    try:
+        targets = save_targets((request.get_json(silent=True) or {}).get('targets'), current_user.id)
+    except (ValueError, TypeError) as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e) or 'Meta inválida.'}), 400
+    return jsonify({'success': True, 'targets': targets})
+
+
 @api_bp.route('/admin/sedes/<int:sede_id>/analytics', methods=['GET'])
 @login_required
 def admin_sedes_analytics(sede_id):
