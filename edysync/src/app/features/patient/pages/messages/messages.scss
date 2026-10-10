@@ -1,1 +1,3 @@
-:host { display: contents; }
+/* Bloque, no «contents»: la animación entre pestañas desvanece este elemento; sin caja, la página vieja
+   (p. ej. la tabla de pacientes) se quedaba visible encima de la nueva hasta que terminaba la transición. */
+:host { display: block; }

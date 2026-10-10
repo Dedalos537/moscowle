@@ -40,6 +40,7 @@ export class TherapistPatients implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.headerService.reset();
     this.subs.unsubscribe();
   }
 
