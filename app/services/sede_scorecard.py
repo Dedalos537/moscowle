@@ -45,7 +45,7 @@ KPIS = [
         'Deuda vencida',
         'money',
         'down',
-        0,
+        None,  # en soles depende del tamaño de cada centro: la fija el admin en «Metas»
         'Saldo de cuotas vencidas sin pagar al cierre del periodo.',
     ),
     ('ticket', 'financial', 'Ingreso por sesión', 'money', 'up', None, 'Ingresos cobrados entre sesiones realizadas.'),
