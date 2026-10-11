@@ -141,7 +141,8 @@
     L.enemy('blob', 20, 21).enemy('blob', 30, 21).enemy('bee', 36, 15);
     L.row(41, 18, '===');
     L.row(50, 15, 'BBBBBBB').coins(51, 13, 5).row(52, 15, 'H');
-    L.fill(58, 59, 16, 21, 'B').fill(66, 67, 13, 21, 'B').coins(63, 10, 2);
+    // Columnas de ladrillo con un tablón entre ellas: cada salto queda a 3 filas o menos (también para Ruy grande).
+    L.fill(58, 59, 18, 21, 'B').row(62, 17, '==').fill(66, 67, 14, 21, 'B').coins(63, 10, 2);
     L.enemy('blob', 62, 21).enemy('blob', 72, 21).enemy('bee', 76, 14);
     L.row(81, 18, '===');
     L.pipe(92, 19, { to: 'r1', x: 4, y: 20 }).pipe(100, 18);
@@ -166,23 +167,31 @@
     L.fill(0, 1, 0, H - 1, 'S').fill(32, 33, 0, H - 1, 'S');
     L.ground(2, 31, H - 4);
     L.start = { x: 4, y: H - 6 };
-    // Plataformas en zigzag hacia arriba; algunas sólidas (piedra), otras de un sentido.
+    // Escalones en zigzag: cada uno sube 4 filas y queda a 2 columnas o menos del anterior, así cada salto se
+    // alcanza caminando (el salto llega a ~5 filas). Los de piedra (S) no se atraviesan desde abajo: se suben por el
+    // borde. Los de madera (=) se atraviesan desde abajo. [x, ancho, tipo, extra]
     var plan = [
-      [20, 6, '='], [8, 6, '='], [18, 8, 'S'], [4, 6, '='], [14, 6, '='], [24, 6, '='], [12, 8, 'S'], [3, 5, '='],
-      [10, 6, '='], [20, 6, '='], [26, 5, '='], [16, 8, 'S'], [6, 6, '='], [14, 5, '='], [22, 8, '='], [10, 10, 'S'],
+      [17, 7, '='], [9, 7, '=', 'coins'], [16, 8, 'S', 'hog'], [7, 7, '='], [15, 7, '=', 'coins'], [23, 7, '=', 'bee'],
+      [13, 8, 'S'], [4, 7, '=', 'coins'], [12, 7, '='], [21, 6, '=', 'bee'], [12, 8, 'S', 'hog'], [4, 6, '=', 'coins'],
+      [11, 6, '='], [19, 8, '=', 'bee'], [11, 6, '=', 'coins'], [18, 10, 'S', 'hog'],
     ];
     var y = H - 8;
-    plan.forEach(function (p, i) {
+    L.steps = [];
+    plan.forEach(function (p) {
       L.fill(p[0], p[0] + p[1] - 1, y, y, p[2]);
-      if (i % 3 === 1) L.coins(p[0] + 1, y - 2, Math.min(3, p[1] - 2));
-      if (p[2] === 'S' && p[1] >= 8) L.enemy('hog', p[0] + 3, y - 1);
-      if (i % 4 === 2) L.enemy('bee', p[0] + 2, y - 5);
+      L.steps.push({ x: p[0], w: p[1], y: y, solid: p[2] === 'S' });
+      if (p[3] === 'coins') L.coins(p[0] + 2, y - 2, 3);
+      if (p[3] === 'hog') L.enemy('hog', p[0] + 3, y - 1);
+      if (p[3] === 'bee') L.enemy('bee', p[0] + 2, y - 5);
       y -= 4;
     });
-    L.row(5, H - 23, '?M?');
-    // Meta: plataforma de un sentido de lado a lado (se sube desde abajo).
+    // Bloques con poder sobre el cuarto escalón (fila H-20): se golpean saltando desde él.
+    L.row(8, H - 23, '?M?');
+    // Meta: plataforma de un sentido de lado a lado (se sube desde abajo) con la bandera a la izquierda.
     L.fill(2, 31, y, y, '=');
-    L.flag(16, y);
+    L.steps.push({ x: 2, w: 30, y: y, solid: false, goal: true });
+    L.coins(14, y - 2, 6);
+    L.flag(8, y);
     L.time = 300;
     return L;
   }

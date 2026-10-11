@@ -24,6 +24,7 @@ type KindFilter = 'all' | GameKind;
 const KIND_ICON: Record<GameKind, IconProp> = {
   platformer: ['fas', 'person-running'],
   reflex: ['fas', 'bolt'],
+  simulation: ['fas', 'cart-shopping'],
   jclic: ['fas', 'puzzle-piece'],
   clic3: ['fas', 'shapes'],
   flash: ['fas', 'gamepad'],
@@ -105,8 +106,8 @@ export class GameLibrary implements OnInit {
 
   readonly kindChips = computed(() => {
     const present = new Set<GameKind>(this.games().map((g) => (g.kind === 'clic3' ? 'jclic' : g.kind)));
-    const labels: Record<string, string> = { platformer: 'Plataformas', reflex: 'Reflejos', jclic: 'Actividades', flash: 'Flash', html: 'Web' };
-    return (['platformer', 'jclic', 'reflex', 'flash', 'html'] as GameKind[]).filter((k) => present.has(k)).map((k) => ({ id: k, label: labels[k] }));
+    const labels: Record<string, string> = { platformer: 'Plataformas', simulation: 'Simulación', reflex: 'Reflejos', jclic: 'Actividades', flash: 'Flash', html: 'Web' };
+    return (['platformer', 'simulation', 'jclic', 'reflex', 'flash', 'html'] as GameKind[]).filter((k) => present.has(k)).map((k) => ({ id: k, label: labels[k] }));
   });
 
   readonly archivedCount = computed(() => this.games().filter((g) => !g.is_active).length);

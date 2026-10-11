@@ -190,3 +190,8 @@ def test_games_can_be_embedded_by_the_player(client):
     assert 'X-Frame-Options' not in r.headers
     # El resto del sitio conserva su política.
     assert client.get('/api/health').headers.get('X-Frame-Options') in ('DENY', 'SAMEORIGIN')
+
+
+def test_supermarket_has_its_own_kpi_profile():
+    assert set(game_kpis.default_profile('simulation')) == {'accuracy', 'completion', 'errors', 'avg_time'}
+    assert game_kpis.validate_profile(game_kpis.default_profile('simulation'))
