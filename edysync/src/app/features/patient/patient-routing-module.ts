@@ -23,6 +23,7 @@ const routes: Routes = [
       { path: 'sessions', component: PatientSessions },
       { path: 'payments', component: PatientPayments },
       { path: 'progress', component: PatientProgressPage },
+      { path: 'games', loadComponent: () => import('./pages/games/games').then(m => m.PatientGames) },
       { path: 'calendar', component: PatientCalendar },
       { path: 'messages', component: ChatComponent },
       { path: 'profile', component: PatientProfile },

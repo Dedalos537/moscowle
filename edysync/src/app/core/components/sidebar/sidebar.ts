@@ -91,6 +91,7 @@ export class Sidebar implements OnInit, OnDestroy, AfterViewInit {
 
   private readonly patientItems: NavItem[] = [
     { path: '/patient/dashboard', label: 'Mi Panel', subtitle: 'Resumen', icon: ['fas', 'house'] },
+    { path: '/patient/games', label: 'Juegos', subtitle: 'A jugar', icon: ['fas', 'gamepad'] },
     { path: '/patient/sessions', label: 'Mis Sesiones', subtitle: 'Tus citas', icon: ['fas', 'calendar-days'] },
     { path: '/patient/calendar', label: 'Calendario', subtitle: 'Próximas citas', icon: ['fas', 'calendar-day'] },
     { path: '/patient/progress', label: 'Mi Progreso', subtitle: 'Avances', icon: ['fas', 'chart-line'] },

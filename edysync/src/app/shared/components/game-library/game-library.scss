@@ -1,0 +1,740 @@
+:host {
+  display: block;
+}
+
+/* Niveles: cuatro tonos que se distinguen también sin color (cada uno lleva su etiqueta). */
+[data-level='inicial'] { --lv: #c2410c; --lv-text: #9a3412; }
+[data-level='en_proceso'] { --lv: #d97706; --lv-text: #8a4b00; }
+[data-level='logrado'] { --lv: #2e7d32; --lv-text: #1b5e20; }
+[data-level='destacado'] { --lv: #2f6fb5; --lv-text: #1d4f8c; }
+:host-context(.dark) {
+  [data-level='inicial'] { --lv-text: #fdba74; }
+  [data-level='en_proceso'] { --lv-text: #fcd34d; }
+  [data-level='logrado'] { --lv-text: #86efac; }
+  [data-level='destacado'] { --lv-text: #93c5fd; }
+}
+
+[data-kind='platformer'] { --cover: #3fa33a; --cover-2: #8fd94a; }
+[data-kind='reflex'] { --cover: #e8822f; --cover-2: #ffc35c; }
+[data-kind='jclic'] { --cover: #2f6fb5; --cover-2: #6fb2ff; }
+[data-kind='clic3'] { --cover: #7a4fd8; --cover-2: #b896ff; }
+[data-kind='flash'],
+[data-kind='html'] { --cover: #c2416b; --cover-2: #ff8fb1; }
+
+.gl {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 84rem;
+  margin: 0 auto;
+  padding: 0.25rem;
+  align-items: start;
+}
+@media (min-width: 1100px) {
+  .gl.has-detail {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 27rem);
+  }
+}
+
+/* ── barra de herramientas ── */
+.gl-main {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.gl-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.gl-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 15rem;
+  max-width: 22rem;
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-outline-variant);
+  background: var(--color-surface-container-lowest);
+  color: var(--color-on-surface-variant);
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 0.875rem;
+    color: var(--color-on-surface);
+    outline: none;
+  }
+  &:focus-within {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+  }
+}
+.gl-chips {
+  display: flex;
+  gap: 0.375rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  button {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.25rem;
+    padding: 0 0.875rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-outline-variant);
+    background: var(--color-surface-container-lowest);
+    color: var(--color-on-surface-variant);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    &.is-on {
+      background: var(--color-on-surface);
+      border-color: var(--color-on-surface);
+      color: var(--color-surface);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+  }
+}
+.gl-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+/* ── botones ── */
+.gl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4375rem;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-outline-variant);
+  background: var(--color-surface-container-lowest);
+  color: var(--color-on-surface);
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  &:hover:not(:disabled) {
+    background: var(--color-surface-container);
+  }
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+.gl-btn--primary {
+  background: var(--color-primary);
+  border-color: transparent;
+  color: var(--color-on-primary);
+  &:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+  }
+}
+.gl-btn--ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-on-surface-variant);
+}
+.gl-btn--danger-ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-error-text);
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-error) 10%, transparent);
+  }
+}
+.gl-btn--small {
+  min-height: 2.25rem;
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
+}
+.gl-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  &:hover {
+    background: color-mix(in srgb, currentColor 12%, transparent);
+  }
+  &:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 1px;
+  }
+}
+
+/* ── tarjetas ── */
+.gl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: 0.875rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.gl-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid var(--color-outline-variant);
+  background: var(--color-surface-container-lowest);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  &:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-outline-variant));
+  }
+  &.is-on {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-primary);
+  }
+  &.is-archived .gl-cover {
+    filter: grayscale(0.85);
+    opacity: 0.7;
+  }
+}
+/* Toda la tarjeta abre el detalle; los botones del pie quedan encima. */
+.gl-card__hit {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+    border-radius: 1rem;
+  }
+}
+.gl-cover {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 2 / 1;
+  background:
+    radial-gradient(circle at 22% 30%, var(--cover-2) 0 14%, transparent 15%),
+    radial-gradient(circle at 82% 72%, rgb(255 255 255 / 0.18) 0 18%, transparent 19%),
+    var(--cover);
+  color: #fff;
+  font-size: 2rem;
+  pointer-events: none;
+}
+.gl-kind {
+  position: absolute;
+  left: 0.625rem;
+  bottom: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.28);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+.gl-card__body {
+  display: grid;
+  align-content: start;
+  gap: 0.25rem;
+  padding: 0.875rem 1rem 0.5rem;
+  pointer-events: none;
+  h3 {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 800;
+    color: var(--color-on-surface);
+  }
+}
+.gl-meta {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-on-surface-variant);
+}
+.gl-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+  &:empty {
+    display: none;
+  }
+}
+.gl-flag {
+  padding: 0.0625rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  color: var(--color-on-surface);
+}
+.gl-flag--muted {
+  background: var(--color-surface-container-high);
+  color: var(--color-on-surface-variant);
+}
+.gl-flag--warn {
+  background: color-mix(in srgb, var(--color-warning) 18%, transparent);
+  color: var(--color-warning-text);
+}
+.gl-card__foot {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem 0.875rem;
+}
+
+/* ── detalle ── */
+.gl-detail {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid var(--color-outline-variant);
+  background: var(--color-surface-container-lowest);
+  animation: gl-in 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (min-width: 1100px) {
+  .gl-detail {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+}
+@media (max-width: 1099px) {
+  .gl.has-detail .gl-main {
+    display: none;
+  }
+}
+.gl-detail__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--cover);
+  color: #fff;
+  h2 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 800;
+  }
+}
+.gl-detail__kind {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+.gl-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem 0;
+  border-bottom: 1px solid var(--color-outline-variant);
+  button {
+    min-height: 2.5rem;
+    padding: 0 0.875rem;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--color-on-surface-variant);
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    &.is-on {
+      color: var(--color-on-surface);
+      border-bottom-color: var(--color-primary);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: -2px;
+    }
+  }
+}
+.gl-panel {
+  display: grid;
+  gap: 0.875rem;
+  padding: 1rem;
+}
+.gl-note {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-on-surface-variant);
+  strong {
+    color: var(--color-on-surface);
+  }
+}
+
+/* distribución por nivel */
+.gl-dist {
+  display: flex;
+  gap: 2px;
+  height: 0.75rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--color-surface-container-high);
+}
+.gl-dist__seg {
+  flex-basis: 0;
+  background: var(--lv);
+}
+.gl-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+  color: var(--color-on-surface-variant);
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  strong {
+    color: var(--color-on-surface);
+    font-variant-numeric: tabular-nums;
+  }
+}
+.gl-swatch {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 2px;
+  background: var(--lv);
+}
+.gl-level {
+  flex: none;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--lv, var(--color-outline)) 16%, transparent);
+  color: var(--lv-text, var(--color-on-surface-variant));
+}
+.gl-level--small {
+  font-size: 0.6875rem;
+}
+
+.gl-patients {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-outline-variant);
+}
+.gl-patient {
+  border-bottom: 1px solid var(--color-outline-variant);
+}
+.gl-patient__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.125rem 0.75rem;
+  width: 100%;
+  padding: 0.75rem 0.25rem;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+    border-radius: 0.5rem;
+  }
+}
+.gl-patient__name {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gl-patient__meta {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  color: var(--color-on-surface-variant);
+}
+.gl-kpis {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background: var(--color-surface-container-low);
+  div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  dt {
+    font-size: 0.8125rem;
+    color: var(--color-on-surface-variant);
+  }
+  dd {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+  }
+}
+.gl-kpi-value {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
+  font-variant-numeric: tabular-nums;
+}
+.gl-trend {
+  font-size: 0.8125rem;
+}
+.gl-trend--up {
+  color: var(--color-success-text);
+}
+.gl-trend--down {
+  color: var(--color-error-text);
+}
+.gl-foot-note {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  color: var(--color-on-surface-variant);
+}
+
+/* indicadores */
+.gl-kpi {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 0.75rem;
+  &.is-off {
+    background: var(--color-surface-container-low);
+  }
+  legend {
+    padding: 0 0.25rem;
+  }
+}
+.gl-thresholds {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  label {
+    display: grid;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--color-on-surface-variant);
+  }
+  input {
+    width: 100%;
+    min-height: 2.5rem;
+    padding: 0 0.625rem;
+    border-radius: 0.625rem;
+    border: 1px solid var(--color-outline-variant);
+    background: var(--color-surface-container-lowest);
+    color: var(--color-on-surface);
+    font: inherit;
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+    }
+  }
+}
+.gl-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-on-surface-variant);
+}
+.gl-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-on-surface);
+  cursor: pointer;
+  input {
+    width: 1.125rem;
+    height: 1.125rem;
+    accent-color: var(--color-primary);
+  }
+}
+
+/* ficha */
+.gl-form {
+  margin: 0;
+}
+.gl-field {
+  display: grid;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-on-surface);
+  textarea {
+    resize: vertical;
+  }
+}
+.gl-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.gl-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.gl-error {
+  margin: 0;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.625rem;
+  font-size: 0.8125rem;
+  background: color-mix(in srgb, var(--color-error) 10%, transparent);
+  color: var(--color-on-surface);
+}
+
+/* estados */
+.gl-empty {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 3rem 1rem;
+  border: 1px dashed var(--color-outline-variant);
+  border-radius: 1rem;
+  color: var(--color-on-surface-variant);
+  text-align: center;
+  font-size: 0.875rem;
+  p {
+    margin: 0;
+  }
+  fa-icon {
+    font-size: 1.5rem;
+    opacity: 0.5;
+  }
+}
+.gl-empty--inline {
+  padding: 1.5rem 1rem;
+}
+.gl-skel {
+  height: 15rem;
+  border-radius: 1rem;
+  background: var(--color-surface-container-high);
+  animation: gl-pulse 1.1s ease-in-out infinite alternate;
+}
+.gl-skel--row {
+  height: 3rem;
+  border-radius: 0.75rem;
+}
+
+/* subida */
+.gl-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(0 0 0 / 0.45);
+}
+.gl-modal__card {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 32rem);
+  padding: 1.25rem;
+  border-radius: 1rem;
+  background: var(--color-surface-container-lowest);
+  box-shadow: 0 30px 60px -20px rgb(0 0 0 / 0.5);
+  animation: gl-in 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    h2 {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 800;
+      color: var(--color-on-surface);
+    }
+  }
+}
+.gl-upload-ok {
+  display: grid;
+  justify-items: start;
+  gap: 0.75rem;
+  color: var(--color-on-surface);
+  fa-icon {
+    font-size: 1.75rem;
+    color: var(--color-success-text);
+  }
+  p {
+    margin: 0;
+  }
+}
+.gl-warnings {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.8125rem;
+  color: var(--color-on-surface-variant);
+}
+
+@keyframes gl-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes gl-pulse {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (max-width: 640px) {
+  .gl-field-row,
+  .gl-thresholds {
+    grid-template-columns: 1fr;
+  }
+  .gl-actions {
+    margin-left: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gl-detail,
+  .gl-modal__card,
+  .gl-skel {
+    animation: none;
+  }
+}

@@ -33,7 +33,7 @@ export class PatientProgressPage implements OnInit, OnDestroy {
   ngOnInit() {
     this.headerService.setConfig({
       title: 'Mi Progreso',
-      subtitle: 'Evolución de tu rendimiento',
+      subtitle: 'Tus partidas y logros',
       icon: ['fas', 'chart-line'],
     });
     this.loadProgress();
@@ -41,6 +41,12 @@ export class PatientProgressPage implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subs.unsubscribe();
+  }
+
+  /** Altura de cada barra según el día con más partidas de la semana. */
+  barHeight(n: number): number {
+    const max = Math.max(1, ...(this.data?.plays_data ?? [0]));
+    return n ? Math.max(8, Math.round((n / max) * 100)) : 0;
   }
 
   private loadProgress() {

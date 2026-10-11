@@ -25,6 +25,8 @@ const EXCLUDED = [
   '/api/requests',
   // Landing: las solicitudes de evaluación llegan en vivo y el contenido se edita y publica desde aquí.
   '/api/landing/',
+  // Juegos: el admin edita fichas y umbrales; el catálogo y los niveles se ven al instante.
+  '/api/games/',
   '/api/auth/webauthn/'
 ];
 

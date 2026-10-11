@@ -6,8 +6,6 @@ import { ApiResponse } from '../models/api-response';
 export interface PatientDashboardData {
   player_stats: {
     total_sessions: number;
-    avg_accuracy: number;
-    avg_time: number;
     games_played: number;
   };
   today_sessions: {
@@ -16,6 +14,8 @@ export interface PatientDashboardData {
     start_time: string;
     therapist: string;
     status: string;
+    is_active: boolean;
+    games: string[];
   }[];
   payment_status: {
     is_overdue: boolean;
@@ -35,12 +35,14 @@ export interface PatientSession {
   attendance: string;
 }
 
+/** Progreso que ve el paciente: cuánto jugó y sus logros. Sin KPIs clínicos (esos los ve solo el equipo). */
 export interface PatientProgress {
   labels: string[];
-  accuracy_data: number[];
-  time_data: number[];
+  plays_data: number[];
+  streak: number;
+  total_plays: number;
+  days_this_week: number;
   weekly_summary: string;
-  avg_accuracy: number;
   achievements: { title: string; name: string; achieved: boolean; date?: string }[];
 }
 

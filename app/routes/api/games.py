@@ -1,7 +1,5 @@
 import contextlib
 
-from werkzeug.utils import secure_filename
-
 from app.routes.api import api_bp
 from app.routes.api._shared import (
     Appointment,
@@ -51,6 +49,13 @@ def save_game():
         coins = data.get('coins')
         score = data.get('score')
         duration_s = data.get('duration_s')
+        # Indicadores que el juego informa además de precisión y tiempo (ver app/services/game_kpis.py).
+        raw_kpis = data.get('kpis') if isinstance(data.get('kpis'), dict) else {}
+        kpis = {
+            k: round(float(v), 2)
+            for k, v in raw_kpis.items()
+            if k in ('completion', 'errors', 'collected') and isinstance(v, (int, float)) and 0 <= v <= 100000
+        }
 
         appt = None
         if session_id:
@@ -79,6 +84,7 @@ def save_game():
             'coins': coins,
             'score': score,
             'duration_s': duration_s,
+            'kpis': kpis or None,
         }
         if any(v is not None for v in extras.values()):
             details = json.dumps(extras, ensure_ascii=False)
@@ -93,7 +99,11 @@ def save_game():
             details=details,
         )
 
-        game_obj = Game.query.filter(or_(Game.filename == game_name, Game.title == game_name)).first()
+        game_obj = None
+        if data.get('game_id'):
+            game_obj = db.session.get(Game, int(data['game_id']))
+        if game_obj is None:
+            game_obj = Game.query.filter(or_(Game.filename == game_name, Game.title == game_name)).first()
         if game_obj:
             m.game_id = game_obj.id
 
@@ -129,74 +139,37 @@ def save_game():
         except Exception as e:
             current_app.logger.error(f'AI Retraining trigger failed: {e}')
 
+        # El paciente no recibe la valoración: es un indicador clínico que solo ve el equipo.
+        if current_user.role == 'jugador':
+            return jsonify({'status': 'ok'})
         return jsonify({'status': 'ok', 'prediction': pred_code, 'recommendation': label})
     except Exception as e:
         return jsonify({'error': 'no_se_pudo_guardar', 'detail': str(e)}), 400
 
 
 @api_bp.route('/games/upload', methods=['POST'])
-@limiter.limit('5 per hour')
+@limiter.limit('20 per hour')
 @login_required
 def upload_game():
-    if current_user.role != 'terapista':
-        return jsonify({'error': 'Acceso denegado'}), 403
+    """Sube un juego al catálogo (admin o terapeuta). Clic 3.0 se convierte a JClic al subirlo."""
+    from app.services.game_upload import UploadError, save_upload
+
+    if current_user.role not in ('admin', 'terapista'):
+        return jsonify({'error': 'Solo el administrador o un terapeuta pueden subir juegos.'}), 403
     file = request.files.get('file')
-    name = request.form.get('name')
-    if not file or not name:
-        return jsonify({'error': 'Falta el archivo o el nombre'}), 400
-
-    safe = secure_filename(file.filename or name)
-    if not safe:
-        safe = secure_filename(name)
-    lower = safe.lower()
-
-    if lower.endswith('.jclic.zip'):
-        filetype, entry = 'jclic', safe
-    elif lower.endswith('.swf'):
-        filetype, entry = 'flash', safe
-    elif lower.endswith('.zip'):
-        filetype, entry = 'zip', safe
-    elif lower.endswith(('.html', '.htm')):
-        filetype, entry = 'html', safe
-    else:
-        filetype, entry = 'html', f'{safe}.html'
-
-    if not entry.lower().endswith(('.html', '.htm', '.swf', '.zip')):
-        entry = f'{entry}.html'
-
-    dest_dir = os.path.join(current_app.root_path, 'static', 'games')
-    os.makedirs(dest_dir, exist_ok=True)
-    path = os.path.join(dest_dir, entry)
-    file.save(path)
-
-    meta = {}
-    if filetype in ('jclic', 'flash', 'zip'):
-        meta['entry'] = entry
-
-    game = Game.query.filter_by(filename=entry).first()
-    if game:
-        game.title = (request.form.get('title') or name).strip() or game.title
-        game.filetype = filetype
-        if meta:
-            game.meta = json.dumps(meta, ensure_ascii=False)
-    else:
-        game = Game(
-            title=(request.form.get('title') or name).strip(),
-            filename=entry,
-            filetype=filetype,
-            meta=json.dumps(meta, ensure_ascii=False) if meta else None,
-            is_active=True,
-        )
-        db.session.add(game)
-    db.session.commit()
-
+    title = (request.form.get('title') or request.form.get('name') or '').strip()
+    if not file or not file.filename:
+        return jsonify({'error': 'Elige un archivo.'}), 400
+    try:
+        game, report = save_upload(file.filename, file.read(), title)
+    except UploadError as e:
+        return jsonify({'error': str(e)}), 400
     return jsonify(
         {
             'status': 'ok',
-            'file': entry,
-            'filetype': filetype,
-            'url': url_for('static', filename=f'games/{entry}'),
             'game': {'id': game.id, 'title': game.title, 'filename': game.filename, 'filetype': game.filetype},
+            'activities': report['activities'],
+            'warnings': report['warnings'],
         }
     )
 

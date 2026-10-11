@@ -1,0 +1,34 @@
+<div #shell class="gp" role="dialog" aria-modal="true" [attr.aria-label]="game().title">
+  <header class="gp-bar">
+    <button type="button" class="gp-exit" (click)="requestClose()" [disabled]="phase() === 'closing'">
+      <fa-icon [icon]="['fas', 'arrow-left']" aria-hidden="true" />
+      {{ phase() === 'closing' ? 'Guardando…' : 'Salir' }}
+    </button>
+    <p class="gp-title">{{ game().title }}</p>
+    <button type="button" class="gp-icon" (click)="toggleFullscreen()" [attr.aria-label]="fullscreen() ? 'Salir de pantalla completa' : 'Pantalla completa'">
+      <fa-icon [icon]="['fas', fullscreen() ? 'compress' : 'expand']" aria-hidden="true" />
+    </button>
+  </header>
+
+  <div class="gp-stage">
+    @if (phase() === 'loading') {
+      <div class="gp-loading" aria-live="polite">
+        <span class="gp-spinner" aria-hidden="true"></span>
+        Cargando {{ game().title }}…
+      </div>
+    }
+    <iframe
+      #frame
+      class="gp-frame"
+      [class.is-ready]="phase() !== 'loading'"
+      [src]="src()"
+      [title]="game().title"
+      allow="fullscreen; autoplay; gamepad"
+      (load)="onLoad()"
+    ></iframe>
+  </div>
+
+  @if (error()) {
+    <p class="gp-error" role="alert">{{ error() }}</p>
+  }
+</div>

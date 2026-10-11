@@ -28,42 +28,16 @@
 <div id="status">Guardando resultados…</div>
 
 <script src="/static/games/vendor/ruffle/ruffle.js"></script>
+<script src="/static/games/vendor/moscowle-bridge.js"></script>
 <script>
 (function () {
   var q = new URLSearchParams(location.search);
   var game = q.get('game') || '';
-  var sessionId = q.get('session_id') || '';
-  var startTs = Date.now();
+  var title = q.get('title') || game.replace(/\.swf$/i, '').replace(/_/g, ' ');
   window.RufflePlayer = window.RufflePlayer || {};
-  window.RufflePlayer.config = {
-    autoplay: 'on',
-    publicPath: '/static/games/vendor/ruffle/'
-  };
-
-  if (game) {
-    document.getElementById('game-title').textContent = game.replace(/\.swf$/i, '').replace(/_/g, ' ');
-  }
-
-  function buildPayload() {
-    var now = Math.round((Date.now() - startTs) / 1000);
-    return {
-      game_name: game || 'Juego Flash',
-      session_id: sessionId ? parseInt(sessionId, 10) : null,
-      accuracy: 0,
-      avg_time: now,
-      duration_s: now,
-      details: { usage_only: true, launcher: 'flash', duration_s: now }
-    };
-  }
-
-  function sendMetrics() {
-    if (!sessionId) return Promise.resolve(null);
-    return fetch('/api/save_game', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildPayload())
-    }).then(function (r) { return r.json(); }).catch(function (e) { return null; });
-  }
+  window.RufflePlayer.config = { autoplay: 'on', publicPath: '/static/games/vendor/ruffle/' };
+  document.getElementById('game-title').textContent = title || 'Juego Flash';
+  window.MoscowleGame.start(title || game);
 
   function showStatus(msg) {
     var el = document.getElementById('status');
@@ -73,35 +47,25 @@
 
   function play() {
     if (!window.RufflePlayer || !window.RufflePlayer.newest) { setTimeout(play, 60); return; }
-    var ruffle = window.RufflePlayer.newest();
-    var player = ruffle.createPlayer();
+    var player = window.RufflePlayer.newest().createPlayer();
     document.getElementById('flash-host').appendChild(player);
-    player.addEventListener('loadedmetadata', function () {
-      try { player.play(); } catch (e) {}
-    });
     player.load('/static/games/' + game).then(function () {
       try { player.play(); } catch (e) {}
-    }).catch(function (err) { showStatus('Error al cargar el SWF') });
+    }).catch(function () { showStatus('No se pudo cargar el juego.'); });
   }
   if (game) play();
 
+  // Un SWF no informa aciertos: solo se registra que se jugó y cuánto duró.
   document.getElementById('terminate').addEventListener('click', function () {
     var btn = document.getElementById('terminate');
     btn.disabled = true;
     btn.textContent = 'Guardando…';
-    showStatus('Guardando resultados…');
-    sendMetrics().finally(function () {
-      try { parent.postMessage({ type: 'game_finished', launcher: 'flash', game: game }, '*'); } catch (e) {}
-      setTimeout(function () { window.close(); }, 400);
+    window.MoscowleGame.finish({}).then(function () {
+      window.MoscowleGame.exit();
+      if (!window.MoscowleGame.embedded) setTimeout(function () { window.close(); }, 400);
     });
   });
-
-  window.addEventListener('beforeunload', function () {
-    if (!sessionId) return;
-    try {
-      navigator.sendBeacon('/api/save_game', new Blob([JSON.stringify(buildPayload())], { type: 'application/json' }));
-    } catch (e) {}
-  });
+  window.addEventListener('pagehide', function () { window.MoscowleGame.finish({}); });
 })();
 </script>
 </body>

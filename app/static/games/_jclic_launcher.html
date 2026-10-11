@@ -30,65 +30,33 @@
   window.JClicDataOptions = { noInit: true };
   window.__jclicParams = (function () {
     var q = new URLSearchParams(location.search);
-    return { game: q.get('game') || '', sessionId: q.get('session_id') || '' };
+    return { game: q.get('game') || '', title: q.get('title') || '' };
   })();
 </script>
+<script src="/static/games/vendor/moscowle-bridge.js"></script>
 <script type="module" src="/static/games/vendor/jclic/jclic.min.js"></script>
 <script>
 (function () {
   var P = window.__jclicParams;
-  if (P.game) {
-    document.getElementById('game-title').textContent = P.game.replace(/\.jclic\.zip$/i, '').replace(/_/g, ' ');
-  }
-  var startTs = Date.now();
-  var lastSent = 0;
+  var title = P.title || P.game.replace(/(\/project)?\.jclic(\.zip)?$/i, '').replace(/^clic3\//, '').replace(/_/g, ' ');
+  document.getElementById('game-title').textContent = title || 'Actividad';
+  window.MoscowleGame.start(title || P.game);
   var player = null;
 
-  function reportData() {
-    if (!player || !player.reporter) return null;
-    try { return player.reporter.getData(); } catch (e) { return null; }
-  }
-
-  function buildPayload() {
-    var d = reportData();
-    var now = Math.round((Date.now() - startTs) / 1000);
-    var payload = {
-      game_name: P.game || 'Actividad JClic',
-      session_id: P.sessionId ? parseInt(P.sessionId, 10) : null,
-      accuracy: 0,
-      avg_time: now,
-      duration_s: now,
-      details: { usage_only: true, launcher: 'jclic' }
+  // Resultado del informe de JClic: puntuación, actividades resueltas y tiempo medio por actividad.
+  function result() {
+    var d = null;
+    try { d = player && player.reporter ? player.reporter.getData() : null; } catch (e) { d = null; }
+    if (!d) return { accuracy: 0, avg_time: 0, kpis: {} };
+    var done = d.activitiesDone || 0;
+    var total = (d.numActivities || d.activities || 0) || done;
+    return {
+      accuracy: Math.max(0, Math.min(100, Math.round((d.partialScore != null ? d.partialScore : d.globalScore) || 0))),
+      avg_time: done ? Math.round(((d.time || 0) / done) * 10) / 10 : 0,
+      level_reached: d.activitiesSolved || 0,
+      score: d.globalScore != null ? Math.round(d.globalScore) : null,
+      kpis: { completion: total ? Math.round(((d.activitiesSolved || 0) / total) * 100) : 0 },
     };
-    if (d) {
-      var acts = d.activitiesDone || 0;
-      payload.accuracy = Math.max(0, Math.min(100, Math.round((d.partialScore != null ? d.partialScore : d.globalScore) || 0)));
-      payload.avg_time = acts ? Math.round((d.time || 0) / acts) : now;
-      payload.level_reached = acts;
-      payload.score = d.globalScore != null ? Math.round(d.globalScore) : null;
-      payload.deaths = 0;
-      payload.details = {
-        usage_only: false,
-        launcher: 'jclic',
-        activities_done: d.activitiesDone || 0,
-        activities_solved: d.activitiesSolved || 0,
-        ratio_solved: d.ratioSolved != null ? d.ratioSolved : null,
-        ratio_played: d.ratioPlayed != null ? d.ratioPlayed : null,
-        actions: d.actions || 0,
-        duration_s: now
-      };
-    }
-    return payload;
-  }
-
-  function sendMetrics() {
-    var payload = buildPayload();
-    if (!P.sessionId) return Promise.resolve(null);
-    return fetch('/api/save_game', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    }).then(function (r) { return r.json(); }).catch(function (e) { return null; });
   }
 
   function showStatus(msg) {
@@ -108,16 +76,8 @@
       );
       player = window.JClicObject.currentPlayers && window.JClicObject.currentPlayers[0];
     } catch (e) {
-      showStatus('Error al cargar la actividad');
-      return;
+      showStatus('No se pudo cargar la actividad.');
     }
-    setInterval(function () {
-      var now = Date.now();
-      if (now - lastSent >= 25000) {
-        lastSent = now;
-        sendMetrics();
-      }
-    }, 5000);
   }
   boot();
 
@@ -125,20 +85,14 @@
     var btn = document.getElementById('terminate');
     btn.disabled = true;
     btn.textContent = 'Guardando…';
-    showStatus('Guardando resultados…');
-    sendMetrics().finally(function () {
-      try { parent.postMessage({ type: 'game_finished', launcher: 'jclic', game: P.game }, '*'); } catch (e) {}
-      setTimeout(function () { window.close(); }, 400);
+    window.MoscowleGame.finish(result()).then(function () {
+      window.MoscowleGame.exit();
+      if (!window.MoscowleGame.embedded) setTimeout(function () { window.close(); }, 400);
     });
   });
 
-  window.addEventListener('beforeunload', function () {
-    var payload = buildPayload();
-    if (!P.sessionId) return;
-    try {
-      navigator.sendBeacon('/api/save_game', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
-    } catch (e) {}
-  });
+  // Si cierran la pestaña sin «Terminar», el avance igual se guarda (una sola vez).
+  window.addEventListener('pagehide', function () { window.MoscowleGame.finish(result()); });
 })();
 </script>
 </body>

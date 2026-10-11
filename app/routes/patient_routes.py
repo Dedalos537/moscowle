@@ -3,7 +3,7 @@ import json
 from datetime import UTC, datetime, timedelta
 
 from flask import Blueprint, jsonify, request
-from sqlalchemy import func, or_
+from sqlalchemy import or_
 
 from app.auth_compat import current_user, login_required
 from app.extensions import bcrypt, csrf
@@ -131,10 +131,9 @@ def api_patient_dashboard():
         {
             'success': True,
             'data': {
+                # Sin precisión ni tiempos: los KPIs son del equipo, no del paciente.
                 'player_stats': {
                     'total_sessions': player_stats['total_sessions'],
-                    'avg_accuracy': player_stats['avg_accuracy'],
-                    'avg_time': player_stats['avg_time'],
                     'games_played': player_stats['total_sessions'],
                 },
                 'today_sessions': sessions_data,
@@ -151,61 +150,61 @@ def api_patient_progress():
     if current_user.role != 'jugador':
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
+    # Sin KPIs clínicos (precisión, tiempos): eso lo ve solo el equipo. Aquí, cuánto jugó y sus logros.
     today = datetime.utcnow().date()
     days = [today - timedelta(days=i) for i in range(6, -1, -1)]
     labels = [d.strftime('%a') for d in days]
-    accuracy_data = []
-    time_data = []
+    since = datetime(days[0].year, days[0].month, days[0].day)
+    week_dates = [
+        r[0].date()
+        for r in db.session.query(SessionMetrics.date)
+        .filter(SessionMetrics.user_id == current_user.id, SessionMetrics.date >= since)
+        .all()
+        if r[0]
+    ]
+    plays_data = [sum(1 for d in week_dates if d == day) for day in days]
 
-    for d in days:
-        start_dt = datetime(d.year, d.month, d.day)
-        end_dt = start_dt + timedelta(days=1)
-        q = SessionMetrics.query.filter(
-            SessionMetrics.user_id == current_user.id, SessionMetrics.date >= start_dt, SessionMetrics.date < end_dt
+    played_days = {
+        r[0].date()
+        for r in db.session.query(SessionMetrics.date)
+        .filter(
+            SessionMetrics.user_id == current_user.id, SessionMetrics.date >= datetime.utcnow() - timedelta(days=120)
         )
-        rows = q.all()
-        if rows:
-            acc_vals = [r.accurracy for r in rows if r.accurracy is not None]
-            time_vals = [r.avg_time for r in rows if r.avg_time is not None]
-            avg_acc = round(sum(acc_vals) / len(acc_vals), 1) if acc_vals else 0
-            avg_time = round(sum(time_vals) / len(time_vals), 2) if time_vals else 0
-        else:
-            avg_acc = 0
-            avg_time = 0
-        accuracy_data.append(avg_acc)
-        time_data.append(avg_time)
-
-    total_sessions = SessionMetrics.query.filter(SessionMetrics.user_id == current_user.id).count()
-    overall_avg_acc = (
-        db.session.query(func.avg(SessionMetrics.accurracy)).filter(SessionMetrics.user_id == current_user.id).scalar()
-        or 0
-    )
-
-    achievements = {
-        'first_session': total_sessions >= 1,
-        'five_day_streak': False,
-        'ten_sessions': total_sessions >= 10,
-        'expert': total_sessions >= 50,
+        .all()
+        if r[0]
     }
+    streak = 0
+    cursor = today if today in played_days else today - timedelta(days=1)
+    while cursor in played_days:
+        streak += 1
+        cursor -= timedelta(days=1)
 
-    weekly_summary = (
-        f'Has completado {total_sessions} sesiones con un promedio de {int(overall_avg_acc)}% de precision.'
-    )
+    total_plays = SessionMetrics.query.filter(SessionMetrics.user_id == current_user.id).count()
+    days_this_week = sum(1 for n in plays_data if n)
+    if total_plays == 0:
+        weekly_summary = 'Aún no has jugado. ¡Tu primera partida te espera!'
+    else:
+        weekly_summary = f'Esta semana jugaste {days_this_week} {"día" if days_this_week == 1 else "días"}. ¡Sigue así!'
+
+    achievements = [
+        ('Primera partida', total_plays >= 1),
+        ('3 días seguidos', streak >= 3),
+        ('5 días seguidos', streak >= 5),
+        ('10 partidas', total_plays >= 10),
+        ('50 partidas', total_plays >= 50),
+    ]
 
     return jsonify(
         {
             'success': True,
             'data': {
                 'labels': labels,
-                'accuracy_data': accuracy_data,
-                'time_data': time_data,
+                'plays_data': plays_data,
+                'streak': streak,
+                'total_plays': total_plays,
+                'days_this_week': days_this_week,
                 'weekly_summary': weekly_summary,
-                'achievements': [
-                    {'name': 'Primera sesion', 'achieved': achievements['first_session']},
-                    {'name': '5 dias consecutivos', 'achieved': achievements['five_day_streak']},
-                    {'name': '10 sesiones', 'achieved': achievements['ten_sessions']},
-                    {'name': 'Experto', 'achieved': achievements['expert']},
-                ],
+                'achievements': [{'name': n, 'title': n, 'achieved': ok} for n, ok in achievements],
             },
         }
     )
