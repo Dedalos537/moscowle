@@ -65,10 +65,10 @@ class LoadTestCase(unittest.TestCase):
                     resp = client.get(url)
                     futures.append(resp.status_code)
 
-        # Should get 401 (invalid credentials) or 429 (rate limited), or 500 (missing App-Key in test)
+        # GET a un endpoint solo-POST: 405 (método no permitido) o 429 (rate limit), nunca 500
         self.assertTrue(
-            all(s in (401, 429, 500) for s in futures),
-            f'Unexpected status codes: {[s for s in futures if s not in (401, 429, 500)]}',
+            all(s in (405, 429) for s in futures),
+            f'Unexpected status codes: {[s for s in futures if s not in (405, 429)]}',
         )
 
     def test_concurrent_session_list(self):
