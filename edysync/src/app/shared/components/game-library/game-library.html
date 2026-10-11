@@ -167,13 +167,11 @@
         <div class="gl-panel">
           <p class="gl-note">Cada indicador tiene tres cortes que separan los niveles: <strong>Inicial</strong>, <strong>En proceso</strong>, <strong>Logrado</strong> y <strong>Destacado</strong>.</p>
           @for (row of kpiRows; track row.key) {
-            <fieldset class="gl-kpi" [class.is-off]="!row.on">
-              <legend>
-                <label class="gl-toggle">
-                  <input type="checkbox" [(ngModel)]="row.on" [name]="'on-' + row.key" />
-                  <span>{{ row.spec.label }}@if (row.spec.unit) { ({{ row.spec.unit }}) }</span>
-                </label>
-              </legend>
+            <div class="gl-kpi" [class.is-off]="!row.on" role="group" [attr.aria-label]="row.spec.label">
+              <label class="gl-toggle">
+                <input type="checkbox" [(ngModel)]="row.on" [name]="'on-' + row.key" />
+                <span>{{ row.spec.label }}@if (row.spec.unit) { ({{ row.spec.unit }}) }</span>
+              </label>
               @if (row.on) {
                 <div class="gl-thresholds">
                   @for (i of [0, 1, 2]; track i) {
@@ -185,7 +183,7 @@
                 </div>
                 <p class="gl-hint">{{ thresholdHint(row) }}</p>
               }
-            </fieldset>
+            </div>
           }
           @if (formError()) { <p class="gl-error" role="alert">{{ formError() }}</p> }
           <div class="gl-form-actions">

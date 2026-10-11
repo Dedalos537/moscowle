@@ -21,12 +21,12 @@ GAME_CSP = '; '.join(
     [
         "default-src 'self'",
         "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdn.tailwindcss.com "
-        'https://cdnjs.cloudflare.com https://cdn.jsdelivr.net',
+        'https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://static.cloudflareinsights.com',
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
         "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com",
         "img-src 'self' data: blob:",
         "media-src 'self' data: blob:",
-        "connect-src 'self' blob: data:",
+        "connect-src 'self' blob: data: https://cloudflareinsights.com",
         "worker-src 'self' blob:",
         'frame-ancestors ' + ' '.join(PLAYER_ORIGINS),
     ]
