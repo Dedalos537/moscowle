@@ -104,7 +104,7 @@ export class GameLibrary implements OnInit {
   });
 
   readonly kindChips = computed(() => {
-    const present = new Set(this.games().map((g) => (g.kind === 'clic3' ? 'jclic' : g.kind)));
+    const present = new Set<GameKind>(this.games().map((g) => (g.kind === 'clic3' ? 'jclic' : g.kind)));
     const labels: Record<string, string> = { platformer: 'Plataformas', reflex: 'Reflejos', jclic: 'Actividades', flash: 'Flash', html: 'Web' };
     return (['platformer', 'jclic', 'reflex', 'flash', 'html'] as GameKind[]).filter((k) => present.has(k)).map((k) => ({ id: k, label: labels[k] }));
   });
