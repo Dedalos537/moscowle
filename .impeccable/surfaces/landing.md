@@ -15,4 +15,4 @@ OWN-WORLD: Campo oliva profundo (#2C4214) en el hero y el cierre; resto en blanc
 STORY: Entiende qué hace el centro, cree que su hijo será evaluado antes de cualquier plan, y escribe por WhatsApp o llama.
 FIRST VIEWPORT: Móvil: barra con logo y «Llamar»; titular grande «Cada niño avanza a su ritmo.» + línea lima; subtítulo; botón lima «Agendar evaluación» (WhatsApp) y botón contorno «Llamar». Bloques 3D flotando detrás/arriba que reaccionan al dedo y se ordenan al hacer scroll. Escritorio: texto izquierda, escena derecha.
 FORM: Code-led, dirección propia (sin ronda de conceptos). Interacción firma: el recorrido de la evaluación, un bloque viaja por 4 estaciones con el scroll; las cifras son una torre de bloques que se apila al entrar.
-FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+FINISH: cumplido 2026-10-11 — revisión en dos rondas (desktop/móvil), detector sin hallazgos, contraste AA verificado, DESIGN.md en landing/DESIGN.md; sin rasters generados (todo es 3D o SVG).
