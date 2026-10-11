@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import jsonify, redirect, url_for
+from flask import jsonify, redirect
 
 from app.auth_compat import current_user
 
@@ -16,7 +16,7 @@ def admin_required(f):
         if not current_user.is_authenticated:
             if hasattr(current_user, '_get_current_object'):
                 return jsonify({'error': 'Unauthorized'}), 403
-            return redirect(url_for('auth.login'))
+            return redirect('/app/login')
         if current_user.role not in ('admin', 'supervisor'):
             return jsonify({'error': 'Admin access required'}), 403
         return f(*args, **kwargs)

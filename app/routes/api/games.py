@@ -114,7 +114,7 @@ def save_game():
                     notification_service.create_notification(
                         appt.therapist_id,
                         f'Sesión #{appt.id} completada por {current_user.username}',
-                        link=url_for('therapist.patients', _external=False),
+                        link='/therapist/patients',
                     )
 
         db.session.commit()

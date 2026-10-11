@@ -1,7 +1,7 @@
 from contextlib import suppress
 from datetime import datetime
 
-from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, jsonify, redirect, request
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
@@ -20,7 +20,6 @@ from app.models.password_reset import PasswordReset
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.models.user_session import UserSession
-from app.schemas.auth_schema import validate_login_input
 from app.services.auth_service import AuthService
 from app.services.email_service import EmailService
 
@@ -104,57 +103,11 @@ def _auto_start_session(user):
         current_app.logger.debug('auto_start_session failed: %s', exc)
 
 
-@auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit('50 per hour')
+@auth_bp.route('/login', methods=['GET'])
 def login():
-    if current_user.is_authenticated:
-        next_url = request.args.get('next')
-        if next_url and _safe_next_url(next_url):
-            return redirect(next_url)
-        return redirect(url_for('main.dashboard'))
-    if request.method == 'POST':
-        form = {'email': request.form.get('email', '').strip().lower(), 'password': request.form.get('password', '')}
-        data, errors = validate_login_input(form)
-        if errors:
-            flash('Por favor corrige los errores del formulario.', 'error')
-            current_app.logger.debug(f'Login validation errors: {errors}')
-            return render_template('login.html')
-
-        email = data['email']
-        password = data['password']
-        remember = request.form.get('remember') == 'on'
-
-        success, user = auth_service.login(email, password, remember=remember)
-
-        if success == 'mfa_required':
-            return redirect(url_for('mfa.mfa_login', email=user.email))
-        if success:
-            _auto_start_session(user)
-            access_token = create_access_token(identity=str(user.id))
-            refresh_token = create_refresh_token(identity=str(user.id))
-            _record_session(user, access_token, refresh_token)
-            next_url = request.form.get('next') or request.args.get('next')
-            if next_url and _safe_next_url(next_url):
-                response = redirect(next_url)
-            else:
-                response = redirect(url_for('main.dashboard'))
-            set_access_cookies(response, access_token)
-            set_refresh_cookies(response, refresh_token)
-            return response
-        else:
-            flash('Credenciales inválidas o cuenta desactivada.', 'error')
-            return render_template('login.html')
-
-    next_url = request.args.get('next')
-    return render_template('login.html', next_url=next_url or '')
-
-
-def _safe_next_url(target):
-    from urllib.parse import urljoin, urlparse
-
-    host = urlparse(request.host_url)
-    ref = urlparse(urljoin(request.host_url, target))
-    return ref.scheme in ('http', 'https') and host.netloc == ref.netloc
+    """El inicio de sesión es la pantalla de Angular (POST /api/auth/login). Esta URL solo redirige ahí; antes
+    servía un formulario Jinja duplicado."""
+    return redirect('/app/login')
 
 
 @auth_bp.route('/logout')
@@ -163,7 +116,7 @@ def logout():
     RefreshToken.revoke_all_for_user(current_user.id)
     UserSession.revoke_all_for_user(current_user.id)
     auth_service.logout()
-    response = redirect(url_for('auth.login'))
+    response = redirect('/app/login')
     unset_jwt_cookies(response)
     if request.headers.get('Accept') and 'application/json' in request.headers.get('Accept', ''):
         resp_json = jsonify({'success': True, 'message': 'Sesión cerrada exitosamente'})

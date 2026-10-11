@@ -4,7 +4,7 @@ import os
 import uuid
 from datetime import datetime
 
-from flask import current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
+from flask import current_app, flash, jsonify, redirect, request, send_file, url_for
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 
@@ -14,7 +14,6 @@ from app.models import (
     Appointment,
     Expense,
     Payment,
-    Sede,
     SessionMetrics,
     User,
 )
@@ -22,60 +21,6 @@ from app.routes.admin import admin_bp, finance_service, payment_service
 from app.schemas.payment_schema import validate_payment_register
 from app.services.contract_service import ContractService
 from app.services.receipt_generator import generate_receipt_pdf
-
-
-@admin_bp.route('/expenses')
-@login_required
-def expenses():
-    if current_user.role not in ('admin', 'supervisor'):
-        flash('Acceso denegado.', 'error')
-        return redirect(url_for('main.dashboard'))
-
-    financials = finance_service.get_therapist_financials()
-    recent = finance_service.get_expenses()
-
-    return render_template(
-        'admin/expenses.html',
-        therapist_financials=financials,
-        recent_expenses=recent,
-        current_date=datetime.now().strftime('%Y-%m-%d'),
-        active_page='admin_expenses',
-    )
-
-
-@admin_bp.route('/expenses/create', methods=['POST'])
-@login_required
-def create_expense_route():
-    if current_user.role not in ('admin', 'supervisor'):
-        flash('Acceso denegado.', 'error')
-        return redirect(url_for('main.dashboard'))
-
-    data = request.form.to_dict()
-    if not data.get('therapist_id') or data.get('therapist_id') == '':
-        data['therapist_id'] = None
-
-    if 'receipt' in request.files:
-        file = request.files['receipt']
-        if file and file.filename != '':
-            filename = secure_filename(file.filename)
-            ext = os.path.splitext(filename)[1]
-            unique_name = f'{uuid.uuid4().hex}{ext}'
-
-            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'vouchers')
-            if not os.path.exists(upload_dir):
-                os.makedirs(upload_dir)
-
-            file.save(os.path.join(upload_dir, unique_name))
-            data['receipt_image_path'] = f'vouchers/{unique_name}'
-
-    success, res = finance_service.create_expense(data, created_by_id=current_user.id)
-
-    if success:
-        flash('Gasto registrado, todo ok.', 'success')
-    else:
-        flash(f'Error al registrar: {res}', 'error')
-
-    return redirect(url_for('admin.expenses'))
 
 
 @admin_bp.route('/api/therapist-financials')
@@ -333,31 +278,6 @@ def api_report_patient_stats():
     return jsonify({'success': True, 'data': result})
 
 
-@admin_bp.route('/payments')
-@login_required
-def payments():
-    if current_user.role not in ('admin', 'supervisor'):
-        flash('Acceso denegado.', 'error')
-        return redirect(url_for('main.dashboard'))
-
-    deactivated = payment_service.check_and_deactivate_overdue()
-    if deactivated > 0:
-        flash(f'{deactivated} usuarios desactivados por falta de pago.', 'warning')
-
-    patients_status = payment_service.get_patients_payment_status()
-    therapists = User.query.filter_by(role='terapista').all()
-    sedes = Sede.query.all()
-    payment_history = payment_service.get_payment_history()
-    return render_template(
-        'admin/payments.html',
-        patients=patients_status,
-        therapists=therapists,
-        sedes=sedes,
-        payment_history=payment_history,
-        active_page='admin_payments',
-    )
-
-
 @admin_bp.route('/api/payment-info/<int:patient_id>')
 @login_required
 def get_payment_info(patient_id):
@@ -375,7 +295,7 @@ def get_payment_info(patient_id):
 @login_required
 def register_payment():
     if current_user.role not in ('admin', 'supervisor'):
-        return redirect(url_for('main.dashboard'))
+        return redirect('/app/')
     discount_input = request.form.get('discount')
     if not discount_input or discount_input.strip() == '':
         discount_input = 0.0
@@ -405,7 +325,7 @@ def register_payment():
     if errors:
         flash('Errores en el formulario de pago: ' + json.dumps(errors), 'error')
         current_app.logger.debug(f'Payment register validation errors: {errors}')
-        return redirect(url_for('admin.payments'))
+        return redirect('/app/admin/payments')
 
     patient_id = data['patient_id']
     amount = data['amount']
@@ -484,20 +404,40 @@ def register_payment():
     else:
         flash(msg_text, 'error')
 
-    return redirect(url_for('admin.payments'))
+    return redirect('/app/admin/payments')
 
 
 @admin_bp.route('/payments/history/<int:patient_id>')
 @login_required
 def payment_history(patient_id):
     if current_user.role not in ('admin', 'supervisor'):
-        return redirect(url_for('main.dashboard'))
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
-    patient = User.query.get_or_404(patient_id)
+    patient = db.session.get(User, patient_id)
+    if not patient:
+        return jsonify({'success': False, 'message': 'Paciente no encontrado'}), 404
     payments = Payment.query.filter_by(patient_id=patient_id).order_by(Payment.date.desc()).all()
-
-    return render_template(
-        'admin/payment_history.html', patient=patient, payments=payments, active_page='admin_payments'
+    # JSON: es lo que espera la pantalla de Angular (antes devolvía la plantilla Jinja y el historial no cargaba).
+    return jsonify(
+        {
+            'success': True,
+            'patient': {'id': patient.id, 'username': patient.username or patient.email, 'email': patient.email},
+            'payments': [
+                {
+                    'id': p.id,
+                    'patient_id': p.patient_id,
+                    'amount': float(p.amount or 0),
+                    'discount': float(p.discount or 0),
+                    'method': p.method,
+                    'reference': p.reference,
+                    'status': p.status,
+                    'notes': p.notes,
+                    'date': p.date.isoformat() if p.date else None,
+                    'created_at': p.created_at.isoformat() if p.created_at else None,
+                }
+                for p in payments
+            ],
+        }
     )
 
 
@@ -505,7 +445,7 @@ def payment_history(patient_id):
 @login_required
 def update_payment_settings():
     if current_user.role != 'admin':
-        return redirect(url_for('main.dashboard'))
+        return redirect('/app/')
 
     patient_id = request.form.get('patient_id')
     amount = request.form.get('payment_amount')
@@ -518,14 +458,14 @@ def update_payment_settings():
     else:
         flash(msg, 'error')
 
-    return redirect(url_for('admin.payments'))
+    return redirect('/app/admin/payments')
 
 
 @admin_bp.route('/payments/delete/<int:payment_id>', methods=['POST'])
 @login_required
 def delete_payment(payment_id):
     if current_user.role != 'admin':
-        return redirect(url_for('main.dashboard'))
+        return redirect('/app/')
 
     try:
         payment = Payment.query.get_or_404(payment_id)
@@ -543,7 +483,7 @@ def delete_payment(payment_id):
         db.session.rollback()
         flash(f'Error al eliminar el pago: {str(e)}', 'error')
 
-    return redirect(request.referrer or url_for('admin.payments'))
+    return redirect(request.referrer or '/admin/payments')
 
 
 @admin_bp.route('/api/payments/delete/<int:payment_id>', methods=['POST'])
@@ -716,20 +656,20 @@ def analyze_receipt():
 @admin_bp.route('/payments/<int:payment_id>/download', methods=['GET', 'POST'])
 @login_required
 def download_receipt(payment_id):
-    from flask import flash, redirect, url_for
+    from flask import flash, redirect
 
     from app.auth_compat import current_user
 
     if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
-        return redirect(url_for('main.dashboard'))
+        return redirect('/app/')
 
     payment = Payment.query.get_or_404(payment_id)
     patient = User.query.get(payment.patient_id)
 
     if not patient:
         flash('Paciente no encontrado para este pago.', 'error')
-        return redirect(url_for('admin.users'))
+        return redirect('/app/admin/users')
 
     if request.method == 'POST':
         doc_number = request.form.get('document_number')

@@ -830,7 +830,7 @@ def get_navigation_url(section, user_id):
     try:
         return url_for(ep)
     except Exception:
-        return url_for('admin.dashboard')
+        return '/admin/dashboard'
 
 
 def get_tutorial_steps(action, section=None):

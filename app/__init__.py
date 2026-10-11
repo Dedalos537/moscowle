@@ -8,10 +8,11 @@ from logging.handlers import RotatingFileHandler
 from uuid import uuid4
 
 import click
-from flask import Flask, g, has_request_context, jsonify, render_template, request
+from flask import Flask, g, has_request_context, jsonify, request
 from flask_login import current_user
 from flask_talisman import Talisman
 from pythonjsonlogger import jsonlogger
+from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.extensions import bcrypt, cache, cors, csrf, db, jwt, limiter, login_manager, mail, oauth, socketio
@@ -65,7 +66,7 @@ def register_auth_loader(app):
             return jsonify({'success': False, 'message': 'Unauthorized - Please log in'}), 401
         from flask import redirect, url_for
 
-        return redirect(url_for('auth.login', next=request.url))
+        return redirect('/app/login')
 
 
 def register_jwt_session_blocklist(jwt_instance):
@@ -159,7 +160,7 @@ def register_error_handlers(app):
             )
             if _is_api_request():
                 return api_response(False, error={'message': str(e)}, status=400)
-            return render_template('errors/csrf.html', reason=str(e)), 400
+            return jsonify({'error': 'CSRF', 'message': str(e)}), 400
     except Exception:
         app.logger.debug('flask_wtf not available, CSRF error handler skipped')
 
@@ -170,7 +171,7 @@ def register_error_handlers(app):
         )
         if _is_api_request():
             return jsonify({'error': 'Bad request', 'message': str(error)}), 400
-        return render_template('errors/400.html', error=error), 400
+        return jsonify({'error': 'Bad request', 'message': str(error)}), 400
 
     @app.errorhandler(403)
     def forbidden(error):
@@ -186,13 +187,13 @@ def register_error_handlers(app):
         )
         if _is_api_request():
             return jsonify({'error': 'Access denied'}), 403
-        return render_template('errors/403.html'), 403
+        return jsonify({'error': 'Access denied'}), 403
 
     @app.errorhandler(404)
     def not_found(error):
         if _is_api_request():
             return jsonify({'error': 'Not found'}), 404
-        return render_template('errors/404.html'), 404
+        return jsonify({'error': 'Not found'}), 404
 
     @app.errorhandler(429)
     def ratelimit_handler(e):
@@ -206,7 +207,7 @@ def register_error_handlers(app):
         )
         if _is_api_request():
             return jsonify({'error': 'Rate limit exceeded', 'description': str(e.description)}), 429
-        return render_template('errors/429.html', error=e), 429
+        return jsonify({'error': 'Rate limit exceeded', 'description': str(getattr(e, 'description', ''))}), 429
 
     @app.errorhandler(500)
     def internal_error(error):
@@ -215,10 +216,12 @@ def register_error_handlers(app):
         app.logger.error('500 Internal Server Error', exc_info=True, extra={'request_id': request_id})
         if _is_api_request():
             return jsonify({'error': 'Internal server error', 'request_id': request_id}), 500
-        return render_template('errors/500.html', error=error), 500
+        return jsonify({'error': 'Server error', 'request_id': request_id}), 500
 
     @app.errorhandler(Exception)
     def handle_exception(error):
+        if isinstance(error, HTTPException):
+            return jsonify({'error': error.name, 'description': error.description}), error.code
         db.session.rollback()
         request_id = g.get('request_id', 'unknown')
         app.logger.error(
@@ -228,7 +231,7 @@ def register_error_handlers(app):
         )
         if _is_api_request():
             return jsonify({'error': 'Server error', 'request_id': request_id}), 500
-        return render_template('errors/500.html', error=error), 500
+        return jsonify({'error': 'Server error', 'request_id': request_id}), 500
 
 
 def register_request_handlers(app):

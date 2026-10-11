@@ -1,9 +1,8 @@
 import contextlib
 
-from flask import url_for
-
 from app.models import Message, db
 from app.services.notification_service import NotificationService
+from app.utils.links import role_path
 
 
 class MessageService:
@@ -17,7 +16,7 @@ class MessageService:
 
         with contextlib.suppress(Exception):
             self.notification_service.create_notification(
-                receiver_id, f'Nuevo mensaje: {subject}', link=url_for('main.messages_list')
+                receiver_id, f'Nuevo mensaje: {subject}', link=role_path(receiver_id, 'messages')
             )
 
         return msg

@@ -676,10 +676,10 @@ def complete_session(session_id):
         notification_service.create_notification(
             appt.therapist_id,
             f'Sesión #{appt.id} completada. {plays} juegos registrados.',
-            link=url_for('therapist.reports'),
+            link='/therapist/reports',
         )
         notification_service.create_notification(
-            appt.patient_id, 'Sesión completada. ¡Buen trabajo!', link=url_for('patient.progress')
+            appt.patient_id, 'Sesión completada. ¡Buen trabajo!', link='/patient/progress'
         )
     except Exception as exc:
         current_app.logger.debug('completion notifications failed: %s', exc)

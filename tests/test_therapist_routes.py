@@ -1,53 +1,22 @@
+import pytest
+
+LEGACY_PAGES = ['dashboard', 'patients', 'sessions', 'calendar', 'messages', 'profile', 'analytics', 'reports', 'games']
+
+
 class TestTherapistRoutes:
-    def test_dashboard_requires_login(self, client):
-        response = client.get('/therapist/dashboard', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
+    """Las páginas Jinja se quitaron: el frontend es la SPA en /app/therapist/..."""
 
-    def test_patients_requires_login(self, client):
-        response = client.get('/therapist/patients', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_sessions_requires_login(self, client):
-        response = client.get('/therapist/sessions', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_calendar_requires_login(self, client):
-        response = client.get('/therapist/calendar', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_messages_requires_login(self, client):
-        response = client.get('/therapist/messages', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_profile_requires_login(self, client):
-        response = client.get('/therapist/profile', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_analytics_requires_login(self, client):
-        response = client.get('/therapist/analytics', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_reports_requires_login(self, client):
-        response = client.get('/therapist/reports', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_games_requires_login(self, client):
-        response = client.get('/therapist/games', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
+    @pytest.mark.parametrize('page', LEGACY_PAGES)
+    def test_legacy_html_page_is_gone(self, client, page):
+        response = client.get(f'/therapist/{page}')
+        assert response.status_code == 404
+        assert response.is_json
 
     def test_efficiency_requires_login(self, client):
-        response = client.get('/therapist/efficiency', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
+        response = client.get('/therapist/efficiency')
+        assert response.status_code in (302, 401)
+        if response.status_code == 302:
+            assert response.headers['Location'].endswith('/app/login')
 
 
 class TestTherapistApiEndpoints:

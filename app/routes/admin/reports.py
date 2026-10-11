@@ -2,7 +2,7 @@ import os
 import uuid
 from datetime import datetime, timedelta
 
-from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask import current_app, jsonify, redirect, request, url_for
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 
@@ -13,143 +13,10 @@ from app.models import (
     MonthlyReport,
     Payment,
     QuarterlyReport,
-    SessionMetrics,
     User,
     db,
 )
 from app.routes.admin import admin_bp, finance_service, payment_service
-
-
-@admin_bp.route('/reports')
-@login_required
-def reports():
-    if current_user.role not in ('admin', 'supervisor'):
-        flash('Acceso denegado.', 'error')
-        return redirect(url_for('main.dashboard'))
-
-    try:
-        therapists = User.query.filter_by(role='terapista').all()
-        t_rows = []
-        for t in therapists:
-            count_appts = Appointment.query.filter_by(therapist_id=t.id).count()
-            try:
-                avg_acc = (
-                    db.session.query(func.avg(SessionMetrics.accurracy))
-                    .join(Appointment, SessionMetrics.session_id == Appointment.id)
-                    .filter(Appointment.therapist_id == t.id)
-                    .scalar()
-                    or 0
-                )
-            except Exception:
-                avg_acc = 0
-            t_rows.append(
-                {'name': t.username, 'email': t.email, 'sessions': count_appts, 'avg_accuracy': round(avg_acc, 1)}
-            )
-
-        patients = User.query.filter_by(role='jugador').all()
-        p_rows = []
-        for p in patients:
-            plays = SessionMetrics.query.filter_by(user_id=p.id).count()
-            try:
-                acc = db.session.query(func.avg(SessionMetrics.accurracy)).filter_by(user_id=p.id).scalar() or 0
-            except Exception:
-                acc = 0
-            p_rows.append({'name': p.username, 'email': p.email, 'plays': plays, 'avg_accuracy': round(acc, 1)})
-
-        try:
-            financials = payment_service.get_financial_summary()
-        except Exception as e:
-            current_app.logger.warning(f'Failed to load financials: {e}')
-            financials = {
-                'income_real': 0.0,
-                'income_expected': 0.0,
-                'overdue_amount': 0.0,
-                'overdue_users_count': 0,
-                'expenses': 0.0,
-                'net_profit': 0.0,
-            }
-
-        try:
-            from sqlalchemy import func as sqlfunc
-
-            from app.models import SessionAudit
-
-            total_audits = SessionAudit.query.filter(SessionAudit.audit_score.isnot(None)).count()
-            avg_score = (
-                db.session.query(sqlfunc.avg(SessionAudit.audit_score))
-                .filter(SessionAudit.audit_score.isnot(None))
-                .scalar()
-                or 0
-            )
-
-            recent_audits = (
-                db.session.query(SessionAudit, Appointment, User)
-                .join(Appointment, SessionAudit.appointment_id == Appointment.id)
-                .join(User, Appointment.therapist_id == User.id)
-                .filter(SessionAudit.audit_score.isnot(None))
-                .order_by(SessionAudit.audited_at.desc())
-                .limit(20)
-                .all()
-            )
-
-            audit_rows = []
-            for audit, appt, therapist in recent_audits:
-                patient = User.query.get(appt.patient_id)
-                audit_rows.append(
-                    {
-                        'id': audit.id,
-                        'therapist': therapist.username,
-                        'patient': patient.username if patient else 'N/A',
-                        'date': appt.start_time.strftime('%d/%m/%Y') if appt.start_time else 'N/A',
-                        'score': round(audit.audit_score, 1) if audit.audit_score else 0,
-                        'status': audit.audit_status,
-                    }
-                )
-
-            therapist_scores = (
-                db.session.query(
-                    User.username,
-                    sqlfunc.avg(SessionAudit.audit_score).label('avg_score'),
-                    sqlfunc.count(SessionAudit.id).label('count'),
-                )
-                .join(Appointment, SessionAudit.appointment_id == Appointment.id)
-                .join(User, Appointment.therapist_id == User.id)
-                .filter(SessionAudit.audit_score.isnot(None))
-                .group_by(User.id)
-                .all()
-            )
-
-            audit_stats = {
-                'total': total_audits,
-                'avg_score': round(avg_score, 1),
-                'recent': audit_rows,
-                'by_therapist': [{'name': t[0], 'avg_score': round(t[1], 1), 'count': t[2]} for t in therapist_scores],
-            }
-        except Exception as e:
-            current_app.logger.warning(f'Failed to load audit stats: {e}')
-            audit_stats = {'total': 0, 'avg_score': 0, 'recent': [], 'by_therapist': []}
-
-        return render_template(
-            'admin/reports.html',
-            therapists=t_rows,
-            patients=p_rows,
-            financials=financials,
-            audit_stats=audit_stats,
-            active_page='admin_reports',
-        )
-    except Exception as e:
-        current_app.logger.error(f'Error in admin/reports: {e}')
-        import traceback
-
-        traceback.print_exc()
-        flash(f'Error generando reportes: {str(e)}', 'error')
-        return render_template(
-            'admin/reports.html',
-            therapists=[],
-            patients=[],
-            financials={'income_real': 0, 'income_expected': 0, 'overdue_amount': 0, 'overdue_users_count': 0},
-            active_page='admin_reports',
-        )
 
 
 @admin_bp.route('/generate-ia-report', methods=['POST'])
@@ -375,11 +242,9 @@ def ai_chat_process():
             notif_service.create_notification(
                 current_user.id,
                 f' Llama: Registré pago de S/ {amt} para {p.username}.',
-                url_for('admin.payment_history', user_id=p.id),
+                f'/admin/payments/history/{p.id}',
             )
-            return jsonify(
-                {'response': friendly, 'status': 'success', 'redirect': url_for('admin.payment_history', user_id=p.id)}
-            )
+            return jsonify({'response': friendly, 'status': 'success', 'redirect': f'/admin/payments/history/{p.id}'})
 
         elif intent == 'register_expense':
             amt = params.get('amount')
@@ -412,9 +277,9 @@ def ai_chat_process():
             )
 
             notif_service.create_notification(
-                current_user.id, f' Llama: Registré un nuevo gasto de S/ {amt} ({cat}).', url_for('admin.expenses')
+                current_user.id, f' Llama: Registré un nuevo gasto de S/ {amt} ({cat}).', '/admin/expenses'
             )
-            return jsonify({'response': friendly, 'status': 'success', 'redirect': url_for('admin.expenses')})
+            return jsonify({'response': friendly, 'status': 'success', 'redirect': '/admin/expenses'})
 
         elif intent == 'mark_attendance':
             p_name = params.get('patient_name')
@@ -436,13 +301,13 @@ def ai_chat_process():
 
         elif intent == 'navigate':
             dest = params.get('destination', '').lower()
-            target_url = url_for('admin.dashboard')
+            target_url = '/admin/dashboard'
             if 'pago' in dest or 'deuda' in dest:
-                target_url = url_for('admin.deudores_page')
+                target_url = '/admin/finanzas'
             elif 'gasto' in dest:
-                target_url = url_for('admin.expenses')
+                target_url = '/admin/expenses'
             elif 'usuario' in dest:
-                target_url = url_for('admin.users')
+                target_url = '/admin/users'
 
             notif_service.create_notification(current_user.id, f' Llama: Te estoy llevando a {dest}.', link=target_url)
             return jsonify({'response': friendly, 'status': 'info', 'redirect': target_url})
@@ -476,7 +341,7 @@ def send_weekly_summary_manual():
 @login_required
 def export_payments_csv():
     if current_user.role not in ('admin', 'supervisor'):
-        return redirect(url_for('main.dashboard'))
+        return redirect('/app/')
 
     import csv
     from io import StringIO
@@ -511,15 +376,6 @@ def export_payments_csv():
     output.headers['Content-Disposition'] = f'attachment; filename=pagos_{today.strftime("%Y_%m")}.csv'
     output.headers['Content-type'] = 'text/csv'
     return output
-
-
-@admin_bp.route('/deudores')
-@login_required
-def deudores_page():
-    if current_user.role not in ('admin', 'supervisor'):
-        flash('Acceso denegado.', 'error')
-        return redirect(url_for('main.dashboard'))
-    return render_template('admin/deudores.html', active_page='admin_deudores')
 
 
 @admin_bp.route('/api/daily-reports', methods=['GET'])

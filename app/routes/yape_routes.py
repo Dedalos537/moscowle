@@ -1,6 +1,6 @@
 import logging
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, request
 
 from app.auth_compat import login_required
 from app.models import YapeTransaction
@@ -13,13 +13,11 @@ yape_bp = Blueprint('yape', __name__, url_prefix='/admin/yape')
 yape_service = YapeService()
 
 
-@yape_bp.route('/import', methods=['GET', 'POST'])
+@yape_bp.route('/import', methods=['POST'])
 @login_required
 @admin_required
 def import_transactions():
-    """Import Yape CSV or XLSX file."""
-    if request.method == 'GET':
-        return render_template('admin/yape_import.html'), 200
+    """Import Yape CSV or XLSX file (la pantalla es la de Angular)."""
 
     try:
         if 'file' not in request.files:

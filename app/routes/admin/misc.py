@@ -4,70 +4,12 @@ import secrets
 from datetime import datetime
 from functools import wraps
 
-from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask import current_app, flash, jsonify, redirect, request
 
 from app.auth_compat import current_user, login_required
 from app.extensions import bcrypt, db
-from app.models import AdminAPIToken, Appointment, ContactMessage, CSPReport, Sede, SmartAction, User, db
-from app.routes.admin import admin_bp, dashboard_service, payment_service
-
-
-@admin_bp.route('/dashboard')
-@login_required
-def dashboard():
-    if current_user.role not in ('admin', 'supervisor'):
-        flash('Acceso denegado.', 'error')
-        return redirect(url_for('main.dashboard'))
-
-    try:
-        WorkflowEngine().generate_daily_actions()
-    except Exception as e:
-        current_app.logger.error(f'Workflow Engine Scan Error: {str(e)}')
-
-    try:
-        overview = dashboard_service.get_admin_overview()
-    except Exception as e:
-        current_app.logger.error(f'Dashboard Service Overview Error: {str(e)}')
-        overview = {'therapists': 0, 'patients': 0, 'sessions_total': 0, 'avg_accuracy': 0}
-
-    try:
-        smart_actions = (
-            SmartAction.query.filter_by(status='pending').order_by(SmartAction.created_at.desc()).limit(10).all()
-        )
-    except Exception as e:
-        current_app.logger.error(f'Fetch Smart Actions Error: {str(e)}')
-        smart_actions = []
-
-    try:
-        financials = payment_service.get_financial_summary()
-    except Exception as e:
-        current_app.logger.error(f'Payment Service Financial Summary Error: {str(e)}')
-        financials = {'income_real': 0, 'income_expected': 0}
-
-    sedes_stats = []
-    try:
-        sedes = Sede.query.filter_by(is_active=True).order_by(Sede.name.asc()).all()
-        for s in sedes:
-            count = User.query.filter_by(sede_id=s.id, role='jugador', is_active=True).count()
-            sedes_stats.append({'id': s.id, 'name': s.name, 'count': count})
-    except Exception as e:
-        current_app.logger.error(f'Sedes Breakdown Error: {str(e)}')
-
-    try:
-        all_patients = User.query.filter_by(role='jugador', is_active=True).order_by(User.username.asc()).all()
-    except Exception as e:
-        current_app.logger.error(f'Fetch All Patients Error: {str(e)}')
-        all_patients = []
-
-    return render_template(
-        'admin/dashboard.html',
-        overview=overview,
-        financials=financials,
-        sedes_stats=sedes_stats,
-        all_patients=all_patients,
-        smart_actions=smart_actions,
-        active_page='admin_dashboard',
-    )
+from app.models import AdminAPIToken, Appointment, CSPReport, SmartAction, User, db
+from app.routes.admin import admin_bp, dashboard_service
 
 
 @admin_bp.route('/api/workflow/execute/<int:action_id>', methods=['POST'])
@@ -103,29 +45,6 @@ def execute_smart_action(action_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
-
-
-@admin_bp.route('/games')
-@login_required
-def games():
-    if current_user.role not in ('admin', 'supervisor'):
-        flash('Acceso denegado.', 'error')
-        return redirect(url_for('main.dashboard'))
-    games_dir = os.path.join(current_app.root_path, 'static', 'games')
-    try:
-        files = [f for f in os.listdir(games_dir) if f.lower().endswith('.html')]
-    except Exception:
-        files = []
-    return render_template('admin/games.html', games=files, active_page='admin_games')
-
-
-@admin_bp.route('/sedes')
-@login_required
-def sedes_page():
-    if current_user.role not in ('admin', 'supervisor'):
-        flash('Acceso denegado.', 'error')
-        return redirect(url_for('main.dashboard'))
-    return render_template('admin/sedes_cards.html', active_page='admin_sedes')
 
 
 @admin_bp.route('/api/contact-messages')
@@ -288,81 +207,6 @@ def api_admin_overview():
     return jsonify({'success': True, 'data': overview})
 
 
-@admin_bp.route('/messages')
-@login_required
-def messages():
-    if current_user.role not in ('admin', 'supervisor'):
-        flash('Acceso denegado.', 'error')
-        return redirect(url_for('main.dashboard'))
-    therapists = User.query.filter_by(role='terapista', is_active=True).order_by(User.username.asc()).all()
-    patients = User.query.filter_by(role='jugador', is_active=True).order_by(User.username.asc()).all()
-
-    contact_messages = ContactMessage.query.order_by(ContactMessage.created_at.desc()).all()
-    return render_template(
-        'admin/messages.html',
-        therapists=therapists,
-        patients=patients,
-        active_page='admin_messages',
-        contact_messages=contact_messages,
-    )
-
-
-@admin_bp.route('/csp-reports')
-@login_required
-def csp_reports():
-    if current_user.role not in ('admin', 'supervisor'):
-        flash('Acceso denegado.', 'error')
-        return redirect(url_for('main.dashboard'))
-
-    page = int(request.args.get('page', 1))
-    per_page = int(request.args.get('per_page', 25))
-    q_directive = request.args.get('directive')
-    q_blocked = request.args.get('blocked_uri')
-    q_since = request.args.get('since')
-
-    query = CSPReport.query.order_by(CSPReport.received_at.desc())
-    if q_directive:
-        query = query.filter(CSPReport.violated_directive.ilike(f'%{q_directive}%'))
-    if q_blocked:
-        query = query.filter(CSPReport.blocked_uri.ilike(f'%{q_blocked}%'))
-    if q_since:
-        try:
-            from datetime import datetime
-
-            since_dt = datetime.fromisoformat(q_since)
-            query = query.filter(CSPReport.received_at >= since_dt)
-        except Exception:
-            pass
-
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-
-    return render_template('admin/csp_reports.html', pagination=pagination, active_page='admin_reports')
-
-
-@admin_bp.route('/admin/api/tokens', methods=['GET', 'POST'])
-@login_required
-def admin_api_tokens():
-    if current_user.role != 'admin':
-        flash('Acceso denegado.', 'error')
-        return redirect(url_for('main.dashboard'))
-
-    if request.method == 'POST':
-        rotate = request.form.get('rotate') == '1'
-        if rotate:
-            rows = AdminAPIToken.query.filter_by(is_active=True).all()
-            for r in rows:
-                r.deactivate()
-        token = secrets.token_urlsafe(32)
-        token_hash = bcrypt.generate_password_hash(token).decode('utf-8')
-        new = AdminAPIToken(token_hash=token_hash, is_active=True)
-        db.session.add(new)
-        db.session.commit()
-        flash(f'Nuevo token creado. Copia y guarda ahora: {token}', 'success')
-
-    tokens = AdminAPIToken.query.order_by(AdminAPIToken.created_at.desc()).all()
-    return render_template('admin/api_tokens.html', tokens=tokens, active_page='admin_reports')
-
-
 @admin_bp.route('/api/tokens/list', methods=['GET'])
 @login_required
 def api_tokens_list_json():
@@ -428,7 +272,7 @@ def deactivate_admin_token(token_id):
     t.deactivate()
     db.session.commit()
     flash('Token desactivado, listo.', 'success')
-    return redirect(url_for('admin.admin_api_tokens'))
+    return redirect('/app/admin/settings?section=tokens')
 
 
 def _admin_api_auth(f):
@@ -573,15 +417,6 @@ def export_csp_reports():
     resp.headers['Content-Type'] = 'text/csv'
     resp.headers['Content-Disposition'] = 'attachment; filename=csp_reports.csv'
     return resp
-
-
-@admin_bp.route('/profile')
-@login_required
-def profile():
-    if current_user.role not in ('admin', 'supervisor'):
-        flash('Acceso denegado.', 'error')
-        return redirect(url_for('main.dashboard'))
-    return render_template('admin/profile.html', active_page='admin_dashboard')
 
 
 @admin_bp.route('/api/logs', methods=['GET'])

@@ -7,6 +7,7 @@ from app.models import Appointment, Sede, User, db
 from app.services.email_service import EmailService
 from app.services.holiday_service import is_holiday
 from app.services.notification_service import NotificationService
+from app.utils.links import role_path
 
 HOLIDAYS_2026 = [
     '2026-01-01',
@@ -639,7 +640,6 @@ class AdminService:
         return users
 
     def broadcast_message(self, sender_id, subject, body, target, receiver_id=None):
-        from flask import url_for
 
         from app.models import Message
 
@@ -660,7 +660,7 @@ class AdminService:
             db.session.add(msg)
             try:
                 self.notification_service.create_notification(
-                    u.id, f'Mensaje del administrador: {subject or "Sin asunto"}', link=url_for('main.messages_list')
+                    u.id, f'Mensaje del administrador: {subject or "Sin asunto"}', link=role_path(u, 'messages')
                 )
 
                 self.email_service.send_new_message_email(

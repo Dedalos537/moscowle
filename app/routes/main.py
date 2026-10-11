@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import Blueprint, current_app, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, jsonify, redirect, request
 
 from app.auth_compat import current_user, login_required
 from app.extensions import bcrypt
@@ -12,30 +12,19 @@ main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/')
 def index():
-    return redirect(url_for('auth.login'))
-
-
-@main_bp.route('/sw.js')
-def service_worker():
-    return current_app.send_static_file('sw.js')
+    return redirect('/app/login')
 
 
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
     if current_user.role in ('admin', 'supervisor'):
-        return redirect(url_for('admin.dashboard'))
+        return redirect('/app/admin/dashboard')
     elif current_user.role == 'terapista':
-        return redirect(url_for('therapist.dashboard'))
+        return redirect('/app/therapist/dashboard')
     elif current_user.role == 'jugador':
-        return redirect(url_for('patient.dashboard'))
-    return redirect(url_for('auth.login'))
-
-
-@main_bp.route('/game')
-@login_required
-def game():
-    return render_template('game.html')
+        return redirect('/app/patient/dashboard')
+    return redirect('/app/login')
 
 
 @main_bp.route('/logout')
@@ -43,7 +32,7 @@ def game():
 def logout():
     from flask_jwt_extended import unset_jwt_cookies
 
-    response = redirect(url_for('auth.login'))
+    response = redirect('/app/login')
     unset_jwt_cookies(response)
     return response
 
@@ -52,26 +41,26 @@ def logout():
 @login_required
 def messages_list():
     if current_user.role in ('admin', 'supervisor'):
-        return redirect(url_for('admin.messages'))
+        return redirect('/app/admin/messages')
     elif current_user.role == 'jugador':
-        return redirect(url_for('patient.messages'))
+        return redirect('/app/patient/messages')
     elif current_user.role == 'terapista':
-        return redirect(url_for('therapist.messages'))
+        return redirect('/app/therapist/messages')
 
-    return redirect(url_for('main.dashboard'))
+    return redirect('/app/')
 
 
 @main_bp.route('/profile')
 @login_required
 def profile():
     if current_user.role in ('admin', 'supervisor'):
-        return redirect(url_for('admin.profile'))
+        return redirect('/app/admin/profile')
     elif current_user.role == 'jugador':
-        return redirect(url_for('patient.profile'))
+        return redirect('/app/patient/profile')
     elif current_user.role == 'terapista':
-        return redirect(url_for('therapist.profile'))
+        return redirect('/app/therapist/profile')
 
-    return redirect(url_for('main.dashboard'))
+    return redirect('/app/')
 
 
 @main_bp.route('/profile/update', methods=['POST'])

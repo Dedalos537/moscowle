@@ -97,7 +97,8 @@ def test_toggle_status_requires_justification_and_logs(client, session, status):
     assert ok.status_code == 200, ok.get_data(as_text=True)
     assert [row.new_status for row in _logs(u.id)] == [status]
     db.session.expire_all()
-    assert db.session.get(User, u.id).is_active is False
+    # Moroso sigue asistiendo (activo); inactivo y retirado no.
+    assert db.session.get(User, u.id).is_active is (status == 'debtor')
 
 
 def test_toggle_to_active_needs_no_justification(client, session):

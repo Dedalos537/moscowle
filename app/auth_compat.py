@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import g, jsonify, make_response, redirect, request, url_for
+from flask import g, jsonify, make_response, redirect, request
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from werkzeug.local import LocalProxy
 
@@ -45,7 +45,7 @@ def login_required(f):
             path = request.path or ''
             if '/api/' in path or getattr(g, 'is_api', False) or request.accept_mimetypes.accept_json:
                 return jsonify({'success': False, 'message': 'Unauthorized'}), 401
-            return redirect(url_for('auth.login', next=request.url))
+            return redirect('/app/login')
         return f(*args, **kwargs)
 
     return decorated_function
@@ -55,7 +55,7 @@ def mfa_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated or not current_user.mfa_enabled:
-            return redirect(url_for('auth.login'))
+            return redirect('/app/login')
         return f(*args, **kwargs)
 
     return decorated_function

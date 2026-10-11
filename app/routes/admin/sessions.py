@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask import current_app, jsonify, request
 from sqlalchemy.orm import joinedload
 
 from app.auth_compat import current_user, login_required
@@ -13,22 +13,6 @@ from app.utils import (
     localize_datetime_for_display,
     normalize_datetime_for_storage,
 )
-
-
-@admin_bp.route('/sessions')
-@login_required
-def sessions_calendar():
-    if current_user.role not in ('admin', 'supervisor'):
-        flash('Acceso denegado.', 'error')
-        return redirect(url_for('main.dashboard'))
-
-    therapists = User.query.filter_by(role='terapista', is_active=True).order_by(User.username.asc()).all()
-    patients = User.query.filter_by(role='jugador', is_active=True).order_by(User.username.asc()).all()
-
-    return render_template(
-        'admin/sessions.html', therapists=therapists, patients=patients, active_page='admin_sessions'
-    )
-
 
 VALID_STATUSES = ('scheduled', 'in_progress', 'completed', 'cancelled')
 MAX_RANGE_DAYS = 100

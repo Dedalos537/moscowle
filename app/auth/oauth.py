@@ -59,7 +59,7 @@ def google_callback():
         userinfo.get('email'),
         userinfo.get('name'),
     )
-    response = redirect(url_for('main.dashboard'))
+    response = redirect('/app/')
     access_token = create_access_token(identity=str(user.id))
     refresh_token = create_refresh_token(identity=str(user.id))
     _record_oauth_session(user, access_token, refresh_token)
@@ -85,7 +85,7 @@ def facebook_callback():
         profile.get('email'),
         profile.get('name'),
     )
-    response = redirect(url_for('main.dashboard'))
+    response = redirect('/app/')
     access_token = create_access_token(identity=str(user.id))
     refresh_token = create_refresh_token(identity=str(user.id))
     _record_oauth_session(user, access_token, refresh_token)

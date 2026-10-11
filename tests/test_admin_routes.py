@@ -1,63 +1,33 @@
-class TestAdminRoutes:
-    def test_admin_dashboard_requires_login(self, client):
-        response = client.get('/admin/dashboard', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_admin_users_requires_login(self, client):
-        response = client.get('/admin/users', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_admin_reports_requires_login(self, client):
-        response = client.get('/admin/reports', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_admin_sessions_requires_login(self, client):
-        response = client.get('/admin/sessions', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_admin_games_requires_login(self, client):
-        response = client.get('/admin/games', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_admin_csp_reports_requires_login(self, client):
-        response = client.get('/admin/csp-reports', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_admin_payments_requires_login(self, client):
-        response = client.get('/admin/payments', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_admin_expenses_requires_login(self, client):
-        response = client.get('/admin/expenses', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_admin_messages_requires_login(self, client):
-        response = client.get('/admin/messages', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_admin_sedes_requires_login(self, client):
-        response = client.get('/admin/sedes', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
-
-    def test_admin_profile_requires_login(self, client):
-        response = client.get('/admin/profile', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'login' in response.data.lower()
+import pytest
 
 from app.models import Sede, User
 from app.models.user import patient_therapist, therapist_sede
 from app.routes.api.admin import _serialize_user
 from app.services.admin_service import AdminService
+
+LEGACY_PAGES = [
+    'dashboard',
+    'users',
+    'reports',
+    'sessions',
+    'games',
+    'csp-reports',
+    'payments',
+    'expenses',
+    'messages',
+    'sedes',
+    'profile',
+]
+
+
+class TestAdminRoutes:
+    """Las páginas Jinja se quitaron: el frontend es la SPA en /app/admin/..."""
+
+    @pytest.mark.parametrize('page', LEGACY_PAGES)
+    def test_legacy_html_page_is_gone(self, client, page):
+        response = client.get(f'/admin/{page}')
+        assert response.status_code == 404
+        assert response.is_json
 
 
 class TestListUsersPrefetch:

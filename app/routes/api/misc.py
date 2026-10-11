@@ -28,8 +28,8 @@ from app.routes.api._shared import (
     patient_service,
     predict_level,
     request,
-    url_for,
 )
+from app.utils.links import role_path
 
 UPSTREAM_HOST = '127.0.0.1'
 UPSTREAM_PORT = 5000
@@ -351,7 +351,7 @@ def send_message():
         title=f'Nuevo mensaje de {current_user.username}',
         message=body or 'Has recibido un archivo adjunto',
         notif_type='message',
-        link=url_for('main.messages_list'),
+        link=role_path(receiver_id, 'messages'),
     )
 
     try:

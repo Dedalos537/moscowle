@@ -3,7 +3,7 @@ import json
 import os
 from datetime import datetime, timedelta
 
-from flask import current_app, url_for
+from flask import current_app
 from flask_login import current_user
 from sqlalchemy import and_, or_
 
@@ -189,12 +189,12 @@ class AppointmentService:
             msg_details = f'Título: {appt.title}\nFecha: {fmt_date_time}\nTerapeuta: {therapist_username}'
 
             self.notification_service.create_notification(
-                therapist_id, f'Sesión programada: {appt.title} — {fmt_short}', url_for('therapist.sessions')
+                therapist_id, f'Sesión programada: {appt.title} — {fmt_short}', '/therapist/sessions'
             )
             self.notification_service.create_notification(
                 patient_id,
                 f'Tienes una nueva sesión programada con {therapist_username} el {fmt_short}',
-                url_for('main.game'),
+                '/patient/dashboard',
             )
 
             therapist = User.query.get(therapist_id)
@@ -254,7 +254,7 @@ class AppointmentService:
 
         with contextlib.suppress(Exception):
             self.notification_service.create_notification(
-                appt.patient_id, f'Se actualizó la sesión: {appt.title}', link=url_for('patient.calendar')
+                appt.patient_id, f'Se actualizó la sesión: {appt.title}', link='/patient/calendar'
             )
 
         return appt
@@ -272,10 +272,10 @@ class AppointmentService:
 
         try:
             self.notification_service.create_notification(
-                therapist_id, f'Sesión eliminada: {title}', link=url_for('therapist.sessions')
+                therapist_id, f'Sesión eliminada: {title}', link='/therapist/sessions'
             )
             self.notification_service.create_notification(
-                patient_id, f'Tu sesión programada ({title}) ha sido cancelada.', link=url_for('patient.calendar')
+                patient_id, f'Tu sesión programada ({title}) ha sido cancelada.', link='/patient/calendar'
             )
 
             import threading
