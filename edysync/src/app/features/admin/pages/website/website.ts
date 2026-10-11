@@ -16,8 +16,8 @@ import {
 import { AuthService } from '../../../../core/services/auth.service';
 import { ToastService } from '../../../../core/services/toast.service';
 
-/** Dirección de la landing publicada. Mientras se revisa la versión nueva vive en /nuevo/. */
-export const LANDING_URL = 'https://centrojuanpabloii.com/nuevo/';
+/** Dirección de la landing publicada (scripts/deploy_landing.py --root). */
+export const LANDING_URL = 'https://centrojuanpabloii.com/';
 
 interface FieldDef {
   key: string;
