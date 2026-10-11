@@ -51,6 +51,13 @@ def save_game():
         coins = data.get('coins')
         score = data.get('score')
         duration_s = data.get('duration_s')
+        # Indicadores que el juego informa además de precisión y tiempo (ver app/services/game_kpis.py).
+        raw_kpis = data.get('kpis') if isinstance(data.get('kpis'), dict) else {}
+        kpis = {
+            k: round(float(v), 2)
+            for k, v in raw_kpis.items()
+            if k in ('completion', 'errors', 'collected') and isinstance(v, (int, float)) and 0 <= v <= 100000
+        }
 
         appt = None
         if session_id:
@@ -79,6 +86,7 @@ def save_game():
             'coins': coins,
             'score': score,
             'duration_s': duration_s,
+            'kpis': kpis or None,
         }
         if any(v is not None for v in extras.values()):
             details = json.dumps(extras, ensure_ascii=False)
@@ -93,7 +101,11 @@ def save_game():
             details=details,
         )
 
-        game_obj = Game.query.filter(or_(Game.filename == game_name, Game.title == game_name)).first()
+        game_obj = None
+        if data.get('game_id'):
+            game_obj = db.session.get(Game, int(data['game_id']))
+        if game_obj is None:
+            game_obj = Game.query.filter(or_(Game.filename == game_name, Game.title == game_name)).first()
         if game_obj:
             m.game_id = game_obj.id
 
@@ -129,6 +141,9 @@ def save_game():
         except Exception as e:
             current_app.logger.error(f'AI Retraining trigger failed: {e}')
 
+        # El paciente no recibe la valoración: es un indicador clínico que solo ve el equipo.
+        if current_user.role == 'jugador':
+            return jsonify({'status': 'ok'})
         return jsonify({'status': 'ok', 'prediction': pred_code, 'recommendation': label})
     except Exception as e:
         return jsonify({'error': 'no_se_pudo_guardar', 'detail': str(e)}), 400
