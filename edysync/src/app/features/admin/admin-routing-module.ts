@@ -1,5 +1,5 @@
-import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
+import { NgModule, inject } from '@angular/core';
+import { Router, RouterModule, Routes } from '@angular/router';
 import { RoleGuard } from '../../core/guards/role.guard';
 import { Dashboard } from './pages/dashboard/dashboard';
 import { Sedes } from './pages/sedes/sedes';
@@ -16,7 +16,6 @@ import { ApiTokens } from './pages/api-tokens/api-tokens';
 import { Profile } from './pages/profile/profile';
 import { YapeImport } from './pages/yape-import/yape-import';
 import { AiTraining } from './pages/ai-training/ai-training';
-import { Incidents } from './pages/incidents/incidents';
 import { IncidentDetailPage } from './pages/incidents/incident-detail';
 import { PasswordResets } from './pages/password-resets/password-resets';
 import { AdminLayout } from '../../core/layout/admin-layout/admin-layout';
@@ -51,8 +50,17 @@ const routes: Routes = [
       // El Centro de Operaciones vive ahora dentro de Configuración (sección «Sistema»); las URLs antiguas siguen funcionando.
       { path: 'visor-funcionamiento', redirectTo: 'settings?section=backend', pathMatch: 'full' },
       { path: 'operations', redirectTo: 'settings?section=backend', pathMatch: 'full' },
-      { path: 'incidents', component: Incidents },
-      { path: 'requests', loadComponent: () => import('./pages/requests/requests').then((m) => m.AdminRequests) },
+      // Solicitudes e Incidencias viven en Configuración › Equipo; las rutas viejas (y los avisos con ?id=) llegan ahí.
+      {
+        path: 'incidents',
+        pathMatch: 'full',
+        redirectTo: () => inject(Router).createUrlTree(['/admin/settings'], { queryParams: { section: 'incidents' } }),
+      },
+      {
+        path: 'requests',
+        redirectTo: ({ queryParams }) =>
+          inject(Router).createUrlTree(['/admin/settings'], { queryParams: { section: 'requests', id: queryParams['id'] ?? null } }),
+      },
       { path: 'incidents/:id', component: IncidentDetailPage },
       { path: 'password-resets', component: PasswordResets },
       { path: 'drive', loadComponent: () => import('./pages/drive/drive').then(m => m.Drive) },

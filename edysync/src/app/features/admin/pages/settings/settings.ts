@@ -15,11 +15,15 @@ import { AvatarUploader } from '../../../../shared/components/avatar-uploader/av
 import { FingerprintCard } from '../../../../shared/components/fingerprint-card/fingerprint-card';
 import { VisorFuncionamiento, type TabId } from '../visor-funcionamiento/visor-funcionamiento';
 import { NotificationPrefs } from '../../../../shared/components/notification-prefs/notification-prefs';
+import { Incidents } from '../incidents/incidents';
+import { AdminRequests } from '../requests/requests';
+import { ActionRequestService } from '../../../../core/services/action-request.service';
+import { IncidentService } from '../../../../core/services/incident.service';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [FontAwesomeModule, FormsModule, RouterLink, AvatarUploader, FingerprintCard, VisorFuncionamiento, NotificationPrefs],
+  imports: [FontAwesomeModule, FormsModule, RouterLink, AvatarUploader, FingerprintCard, VisorFuncionamiento, NotificationPrefs, Incidents, AdminRequests],
   templateUrl: './settings.html',
   styleUrls: ['./settings.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,11 +51,18 @@ export class Settings implements OnInit, OnDestroy {
       ],
     },
     {
+      // Lo que reportan y piden los terapeutas y pacientes (antes en el menú lateral).
+      label: 'Equipo',
+      items: [
+        { id: 'requests', label: 'Solicitudes', icon: ['fas', 'paper-plane'] },
+        { id: 'incidents', label: 'Incidencias', icon: ['fas', 'triangle-exclamation'] },
+      ],
+    },
+    {
       label: 'Sistema',
       items: [
         { id: 'backend', label: 'Estado del servidor', icon: ['fas', 'server'] },
         { id: 'logs', label: 'Registros', icon: ['fas', 'terminal'] },
-        { id: 'incidents', label: 'Incidencias', icon: ['fas', 'triangle-exclamation'] },
         { id: 'csp', label: 'Seguridad web (CSP)', icon: ['fas', 'bug'] },
         { id: 'tokens', label: 'Tokens de API', icon: ['fas', 'key'] },
         { id: 'llm', label: 'IA y modelos', icon: ['fas', 'robot'] },
@@ -67,11 +78,25 @@ export class Settings implements OnInit, OnDestroy {
     { path: '/admin/ai', label: 'Entrenamiento de IA', desc: 'Entrena y revisa los modelos del asistente', icon: ['fas', 'brain'] },
   ];
 
-  private readonly systemTabs = new Set<string>(['backend', 'logs', 'csp', 'tokens', 'incidents', 'llm', 'bot', 'notifications']);
+  private readonly systemTabs = new Set<string>(['backend', 'logs', 'csp', 'tokens', 'llm', 'bot', 'notifications']);
+
+  /** Pendientes junto a cada sección del grupo Equipo. */
+  counts: Record<string, number> = {};
+  private requestService = inject(ActionRequestService);
+  private incidentService = inject(IncidentService);
+
+  private loadCounts() {
+    this.subs.add(this.requestService.list('pending').subscribe({ next: (r) => { this.counts = { ...this.counts, requests: r.pending ?? 0 }; this.cdr.markForCheck(); }, error: () => {} }));
+    this.subs.add(this.incidentService.getDashboard().subscribe({ next: (d) => { this.counts = { ...this.counts, incidents: d?.total_abiertos ?? 0 }; this.cdr.markForCheck(); }, error: () => {} }));
+  }
   section = 'apariencia';
 
   get isSystemSection(): boolean {
     return this.systemTabs.has(this.section);
+  }
+
+  get isTeamSection(): boolean {
+    return this.section === 'requests' || this.section === 'incidents';
   }
 
   get systemTab(): TabId {
@@ -110,6 +135,7 @@ export class Settings implements OnInit, OnDestroy {
       const requested = q.get('section');
       const known = this.groups.some((g) => g.items.some((i) => i.id === requested));
       this.section = requested && known ? requested : 'apariencia';
+      this.loadCounts();
       this.cdr.markForCheck();
     }));
     // Re-fetch schedule from API now that user is authenticated

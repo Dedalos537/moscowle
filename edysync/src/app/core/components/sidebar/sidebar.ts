@@ -19,7 +19,7 @@ interface NavItem {
   supervisor?: boolean;
   hideWhenNoCharts?: boolean;
   /** Clave del contador que se muestra junto al ícono (p. ej. incidencias abiertas). */
-  badge?: 'incidents' | 'requests';
+  badge?: 'team';
 }
 
 @Component({
@@ -70,11 +70,9 @@ export class Sidebar implements OnInit, OnDestroy, AfterViewInit {
     { path: '/admin/reports', label: 'Reportes', subtitle: 'Estadísticas', icon: ['fas', 'chart-bar'], supervisor: true },
     { path: '/admin/messages', label: 'Mensajes', subtitle: 'Comunicación', icon: ['fas', 'envelope'], supervisor: true },
     { path: '/admin/kanban', label: 'Kanban', subtitle: 'Tablero de tareas', icon: ['fas', 'table-columns'], supervisor: true },
-    // Antes solo se llegaba desde Configuración › Sistema: lo reportado por terapeutas y pacientes no se veía.
-    { path: '/admin/requests', label: 'Solicitudes', subtitle: 'Pedidos de terapeutas', icon: ['fas', 'paper-plane'], supervisor: true, badge: 'requests' },
-    { path: '/admin/incidents', label: 'Incidencias', subtitle: 'Reportes del equipo', icon: ['fas', 'triangle-exclamation'], supervisor: true, badge: 'incidents' },
     { path: '/admin/drive', label: 'Drive', subtitle: 'Archivos e impresión', icon: ['fas', 'hard-drive'] },
-    { path: '/admin/settings', label: 'Configuración', subtitle: 'Cuenta y sistema', icon: ['fas', 'gear'], supervisor: true },
+    // Solicitudes e Incidencias están en Configuración › Equipo: el contador de pendientes se muestra aquí.
+    { path: '/admin/settings', label: 'Configuración', subtitle: 'Cuenta, equipo y sistema', icon: ['fas', 'gear'], supervisor: true, badge: 'team' },
   ];
 
   private readonly therapistItems: NavItem[] = [
@@ -166,7 +164,7 @@ export class Sidebar implements OnInit, OnDestroy, AfterViewInit {
   }
 
   badgeFor(item: NavItem): number {
-    return item.badge === 'incidents' ? this.openIncidents : item.badge === 'requests' ? this.pendingRequests : 0;
+    return item.badge === 'team' ? this.openIncidents + this.pendingRequests : 0;
   }
 
   constructor(

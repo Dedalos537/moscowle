@@ -443,3 +443,10 @@
 }
 
 .settings-card__body--pad { padding: 1rem 0 0; }
+
+/* Solicitudes e Incidencias incrustadas: ocupan todo el ancho del panel. */
+.settings-embedded { display: block; grid-column: 1 / -1; min-width: 0; }
+.settings-nav__count {
+  margin-left: auto; min-width: 1.25rem; height: 1.25rem; padding: 0 0.375rem; border-radius: 999px; display: inline-grid; place-items: center;
+  font-size: 0.6875rem; font-weight: 800; background: var(--color-error); color: var(--color-on-error);
+}

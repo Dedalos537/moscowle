@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -22,6 +22,9 @@ import { Modal } from '../../../../shared/components/modal/modal';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Incidents implements OnInit, OnDestroy {
+  /** Dentro de Configuración: no toca la barra superior (el título es «Configuración»). */
+  embedded = input(false);
+
   readonly Math = Math;
   dashboard: IncidentDashboard | null = null;
   incidents: Incident[] = [];
@@ -72,7 +75,7 @@ export class Incidents implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    this.headerService.setConfig({
+    if (!this.embedded()) this.headerService.setConfig({
       title: 'Incidencias',
       subtitle: 'Gestión y monitoreo de incidencias del sistema',
       icon: ['fas', 'triangle-exclamation'],
@@ -81,7 +84,7 @@ export class Incidents implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.headerService.reset();
+    if (!this.embedded()) this.headerService.reset();
     this.subs.unsubscribe();
   }
 

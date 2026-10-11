@@ -10,6 +10,7 @@
                 [attr.aria-current]="section === item.id ? 'page' : null" (click)="goTo(item.id)">
                 <fa-icon [icon]="item.icon" class="settings-nav__icon" aria-hidden="true"></fa-icon>
                 <span>{{ item.label }}</span>
+                @if (counts[item.id]) { <span class="settings-nav__count" [attr.aria-label]="counts[item.id] + ' pendientes'">{{ counts[item.id] }}</span> }
               </button>
             </li>
           }
@@ -18,7 +19,7 @@
     </nav>
 
     <div class="settings-pane" #pane>
-      <div class="settings-pane__inner" [class.settings-pane__inner--wide]="isSystemSection">
+      <div class="settings-pane__inner" [class.settings-pane__inner--wide]="isSystemSection || isTeamSection">
   <div class="settings-cards-grid">
   <!-- ═══════════════════════ APARIENCIA ═══════════════════════ -->
   @if (section === 'apariencia') {
@@ -205,6 +206,14 @@
 
   @if (isSystemSection) {
     <app-visor-funcionamiento [embedded]="true" [tab]="systemTab"></app-visor-funcionamiento>
+  }
+
+  <!-- Equipo: lo que piden y reportan terapeutas y pacientes (antes en el menú lateral) -->
+  @if (section === 'requests') {
+    <app-admin-requests class="settings-embedded" [embedded]="true" />
+  }
+  @if (section === 'incidents') {
+    <app-incidents class="settings-embedded" [embedded]="true" />
   }
 
   @if (section === 'herramientas') {

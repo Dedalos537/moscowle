@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, TemplateRef, ViewChild, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, TemplateRef, ViewChild, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -30,6 +30,8 @@ export class AdminRequests implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private subs = new Subscription();
+  /** Dentro de Configuración: no toca la barra superior. */
+  embedded = input(false);
 
   readonly labels = REQUEST_KIND_LABEL;
   readonly filter = signal<Filter>('pending');
@@ -48,7 +50,9 @@ export class AdminRequests implements OnInit, OnDestroy {
   });
 
   ngOnInit() {
-    this.header.setConfig({ title: 'Solicitudes', subtitle: 'Pedidos de los terapeutas', icon: ['fas', 'paper-plane'], actionTemplate: this.headerActions });
+    if (!this.embedded()) {
+      this.header.setConfig({ title: 'Solicitudes', subtitle: 'Pedidos de los terapeutas', icon: ['fas', 'paper-plane'], actionTemplate: this.headerActions });
+    }
     const id = Number(this.route.snapshot.queryParamMap.get('id'));
     if (id) this.selectedId.set(id);
     this.load();
@@ -56,7 +60,7 @@ export class AdminRequests implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.header.reset();
+    if (!this.embedded()) this.header.reset();
     this.subs.unsubscribe();
   }
 
