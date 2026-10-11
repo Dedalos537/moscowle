@@ -18,6 +18,8 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from app.extensions import bcrypt, cache, cors, csrf, db, jwt, limiter, login_manager, mail, oauth, socketio
 from config import Config
 
+LANDING_ORIGINS = ('https://centrojuanpabloii.com', 'https://www.centrojuanpabloii.com')
+
 # Modo CGI (cPanel workaround): cada request es un proceso nuevo y paga el boot
 # de create_app completo. Se desactivan los extras que solo sirven en procesos
 # persistentes (flasgger, scheduler, celery, ollama, create_all) para que cada
@@ -308,6 +310,7 @@ def register_request_handlers(app):
                 or request.path in ('/api/login', '/api/logout')
                 or request.path.startswith('/api/health')
                 or request.path.startswith('/api/public/')
+                or request.path.startswith('/api/landing/')
                 or request.path.startswith('/admin/api/')
                 or request.path.startswith('/api/admin/')
                 or request.path.startswith('/api/server/')
@@ -576,6 +579,9 @@ def create_app(config_class=None):
         .replace(',', ' ')
         .split()
     )
+    # La landing (con y sin www) siempre puede leer su contenido y enviar solicitudes, aunque el .env del
+    # servidor defina su propia lista.
+    cors_origins += [o for o in LANDING_ORIGINS if o not in cors_origins]
     cors.init_app(
         app,
         resources={
@@ -896,6 +902,8 @@ def create_app(config_class=None):
         ('webauthn', 'app.routes.webauthn', 'webauthn_bp'),
         ('deploy', 'app.routes.deploy_routes', 'deploy_bp'),
         ('crm', 'app.routes.crm_routes', 'crm_bp'),
+        # Landing pública: contenido editable y solicitudes de evaluación, aparte del resto de la API.
+        ('landing', 'app.routes.landing_routes', 'landing_bp'),
         # API de solicitudes de servicio: existia (modelo, repo, rutas con roles) pero solo estaba en el
         # bootstrap.py que nadie ejecuta, asi que respondia 404.
         ('api_service_requests', 'app.api.service_requests', 'api_sr'),
@@ -1100,6 +1108,9 @@ def create_app_lite():
         .replace(',', ' ')
         .split()
     )
+    # La landing (con y sin www) siempre puede leer su contenido y enviar solicitudes, aunque el .env del
+    # servidor defina su propia lista.
+    cors_origins += [o for o in LANDING_ORIGINS if o not in cors_origins]
     cors.init_app(
         app,
         resources={

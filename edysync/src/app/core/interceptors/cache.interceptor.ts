@@ -23,6 +23,8 @@ const EXCLUDED = [
   '/api/drive',
   // Solicitudes: el terapeuta y la coordinación deben ver el estado al instante.
   '/api/requests',
+  // Landing: las solicitudes de evaluación llegan en vivo y el contenido se edita y publica desde aquí.
+  '/api/landing/',
   '/api/auth/webauthn/'
 ];
 

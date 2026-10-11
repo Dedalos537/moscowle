@@ -1,0 +1,258 @@
+{
+  "seo": {
+    "title": "Centro de Terapias Juan Pablo II · Piura",
+    "description": "Terapias de lenguaje, aprendizaje, conducta y ocupacional en Piura. Más de 20 años con las familias. Agenda tu evaluación por WhatsApp o llamada."
+  },
+  "brand": {
+    "name": "Centro de Terapias Juan Pablo II",
+    "short": "Juan Pablo II"
+  },
+  "contact": {
+    "whatsapp": "51987277835",
+    "phone": "+51 987 277 835",
+    "email": "info@centrojuanpabloii.com",
+    "address": "Jr. Vicús 311",
+    "city": "Piura, Piura",
+    "maps_url": "https://www.google.com/maps/search/?api=1&query=Centro+de+Terapias+Juan+Pablo+II+Piura",
+    "phone_hours": "Lun - Vie, 8:00 a. m. - 1:00 p. m. / 3:00 p. m. - 7:00 p. m.",
+    "hours": [
+      {
+        "days": "Lunes a viernes",
+        "time": "8:00 a. m. - 7:00 p. m."
+      },
+      {
+        "days": "Sábados",
+        "time": "8:00 a. m. - 6:00 p. m."
+      }
+    ],
+    "hours_note": "Atención con cita previa"
+  },
+  "hero": {
+    "title": "Cada niño avanza a su ritmo.",
+    "highlight": "Nosotros caminamos a su lado.",
+    "subtitle": "Terapias especializadas, integrales y apoyo virtual para niños y jóvenes con habilidades diferentes. Un espacio de crecimiento y esperanza para toda la familia.",
+    "cta_primary": "Agendar evaluación",
+    "cta_secondary": "Ver terapias"
+  },
+  "stats": [
+    {
+      "value": "20+",
+      "label": "años de experiencia"
+    },
+    {
+      "value": "2000+",
+      "label": "pacientes atendidos"
+    },
+    {
+      "value": "1000+",
+      "label": "familias acompañadas"
+    },
+    {
+      "value": "98%",
+      "label": "de familias satisfechas"
+    }
+  ],
+  "evaluation": {
+    "title": "Todo empieza con una evaluación",
+    "subtitle": "Conocemos a tu hijo antes de proponer un plan. Agenda la evaluación inicial por WhatsApp o por teléfono; te respondemos el mismo día en horario de atención.",
+    "steps": [
+      {
+        "title": "Nos escribes o llamas",
+        "body": "Cuéntanos qué te preocupa. Coordinamos el día y la hora que mejor te acomoden."
+      },
+      {
+        "title": "Evaluación inicial",
+        "body": "Un especialista observa, conversa con la familia y aplica las pruebas que el caso necesita."
+      },
+      {
+        "title": "Plan personalizado",
+        "body": "Te explicamos los resultados y proponemos las terapias, la frecuencia y los objetivos."
+      },
+      {
+        "title": "Acompañamiento",
+        "body": "Seguimos el avance sesión a sesión y te mantenemos informado en todo momento."
+      }
+    ],
+    "whatsapp_message": "Hola, quiero agendar una evaluación inicial."
+  },
+  "services_intro": {
+    "title": "Terapias y servicios",
+    "subtitle": "Una amplia gama de terapias diseñadas para las necesidades únicas de cada persona, con profesionalismo, calidez y experiencia."
+  },
+  "services": [
+    {
+      "title": "Lecto-Escritura",
+      "body": "Potenciamos las habilidades de lectura y escritura, utilizando métodos innovadores y personalizados que utilizan desde recursos tangibles como libros sensoriales y material didáctico hasta software diseñado especialmente según a las necesidades del participante. Nuestro enfoque personalizado permite alcanzar grandes logros en el desempeño académico.",
+      "image": "",
+      "category": "Terapias"
+    },
+    {
+      "title": "Conductual",
+      "body": "Terapia integral para tratar agresividad, impulsividad, ansiedad y depresión. Mejoramos la calidad de vida mediante modificación de conductas, siendo clave para el bienestar y desarrollo personal.",
+      "image": "",
+      "category": "Terapias"
+    },
+    {
+      "title": "De Lenguaje",
+      "body": "Ayudamos a personas con dificultades para hablar y comunicarse. Mediante técnicas personalizadas solucionamos problemas retraso en el desarrollo y trastornos del habla. Perfeccionando la producción de sonidos, incrementando el vocabulario, mejorando la estructura de oraciones y desarrollando el uso social del lenguaje para lograr una comunicación funcional y efectiva.",
+      "image": "",
+      "category": "Terapias"
+    },
+    {
+      "title": "De Aprendizaje",
+      "body": "Superamos dificultades de aprendizaje utilizando técnicas personalizadas para mejorar el rendimiento académico y habilidades cognitivas. Trabajamos con estrategias adaptadas a cada estilo individual.",
+      "image": "",
+      "category": "Terapias"
+    },
+    {
+      "title": "Ocupacional",
+      "body": "Superamos dificultades en actividades cotidianas como alimentación, higiene personal, control de esfínteres, estudio y recreación. Ofrecemos intervenciones personalizadas para fomentar la autosuficiencia.",
+      "image": "",
+      "category": "Terapias"
+    },
+    {
+      "title": "Autismo (TEA)",
+      "body": "Apoyo especializado para personas con Trastorno del Espectro Autista. Utilizamos técnicas propias para mejorar la comunicación, interacción social y adaptación al entorno, promoviendo el desarrollo integral.",
+      "image": "",
+      "category": "Terapias integrales"
+    },
+    {
+      "title": "TDA",
+      "body": "Tratamiento especializado para el Trastorno por Déficit de Atención. Mejoramos la concentración, organización y habilidades ejecutivas mediante técnicas terapéuticas personalizadas y estrategias efectivas.",
+      "image": "",
+      "category": "Terapias integrales"
+    },
+    {
+      "title": "TDAH",
+      "body": "Abordaje integral del Trastorno por Déficit de Atención e Hiperactividad. Combinamos estrategias conductuales y cognitivas para mejorar autocontrol, atención y habilidades sociales favoreciendo el éxito.",
+      "image": "",
+      "category": "Terapias integrales"
+    },
+    {
+      "title": "Síndrome de Down",
+      "body": "Apoyo especializado para personas con Síndrome de Down. Utilizamos técnicas propias para mejorar el desarrollo psicomotor, lenguaje y autonomía personal, potenciando todas sus capacidades individuales.",
+      "image": "",
+      "category": "Terapias integrales"
+    },
+    {
+      "title": "Discapacidad Intelectual",
+      "body": "Apoyo especializado para personas con cualquier tipo de Discapacidad Intelectual. Utilizamos técnicas innovadoras propias para fortalecer habilidades cognitivas, comunicación e independencia funcional.",
+      "image": "",
+      "category": "Terapias integrales"
+    },
+    {
+      "title": "Comunicación Oral",
+      "body": "Apoyo virtual especializado en desarrollo de habilidades de comunicación oral. Mejoramos la expresión verbal y comprensión auditiva de forma interactiva, personalizada y adaptada a cada necesidad.",
+      "image": "",
+      "category": "Apoyo virtual"
+    },
+    {
+      "title": "Lecto-Escritura Virtual",
+      "body": "Método virtual innovador diseñado para fortalecer habilidades de lectura y escritura. Utilizamos plataformas digitales interactivas y ejercicios gamificados especializados.",
+      "image": "",
+      "category": "Apoyo virtual"
+    },
+    {
+      "title": "Matemáticas",
+      "body": "Apoyo virtual en matemáticas utilizando metodologías digitales propias e innovadoras. Facilitamos el aprendizaje de conceptos numéricos y operaciones matemáticas básicas y avanzadas de manera lúdica y efectiva.",
+      "image": "",
+      "category": "Apoyo virtual"
+    },
+    {
+      "title": "Desarrollo Cognitivo",
+      "body": "Programa virtual para estimular y desarrollar funciones cognitivas superiores como memoria, atención, percepción y funciones ejecutivas. Utilizamos ejercicios especializados para resultados óptimos y efectivos integrales.",
+      "image": "",
+      "category": "Apoyo virtual"
+    },
+    {
+      "title": "Comunicación Oral",
+      "body": "Material para estimular y desarrollar habilidades de comunicación oral mediante juegos, tarjetas y actividades interactivas especializadas. Favorecemos la expresión verbal de manera tangible y práctica.",
+      "image": "",
+      "category": "Material didáctico"
+    },
+    {
+      "title": "Lecto-Escritura",
+      "body": "Recursos tangibles y manipulativos para aprendizaje de lectura y escritura. Incluimos letras móviles, libros sensoriales y material didáctico especializado de alta calidad para el desarrollo académico.",
+      "image": "",
+      "category": "Material didáctico"
+    },
+    {
+      "title": "Matemáticas",
+      "body": "Material manipulativo para aprendizaje de conceptos matemáticos, incluyendo ábacos, bloques lógicos, regletas y recursos didácticos concretos. Facilitamos la comprensión matemática mediante experiencias táctiles.",
+      "image": "",
+      "category": "Material didáctico"
+    },
+    {
+      "title": "Desarrollo Cognitivo",
+      "body": "Recursos físicos y tangibles para estimular el desarrollo cognitivo, incluyendo rompecabezas, juegos de memoria y material sensorial especializado. Promovemos el crecimiento cognitivo integral.",
+      "image": "",
+      "category": "Material didáctico"
+    }
+  ],
+  "about": {
+    "title": "Terapia profesional, trato humano",
+    "body": "Contamos con más de 20 años de experiencia atendiendo a más de 1000 familias. Nuestro equipo multidisciplinario trabaja con metodologías basadas en evidencia científica para lograr resultados efectivos y duraderos en cada tratamiento.",
+    "values": [
+      {
+        "title": "Empatía",
+        "body": "Comprendemos y nos conectamos con las necesidades únicas de cada familia"
+      },
+      {
+        "title": "Respeto",
+        "body": "Valoramos la diversidad y dignidad de cada persona sin distinción"
+      },
+      {
+        "title": "Excelencia",
+        "body": "Buscamos la mejora continua en todos nuestros servicios"
+      },
+      {
+        "title": "Trabajo en equipo",
+        "body": "Colaboramos interdisciplinariamente para mejores resultados"
+      },
+      {
+        "title": "Compromiso",
+        "body": "Dedicación absoluta al bienestar y desarrollo de nuestros niños"
+      }
+    ]
+  },
+  "testimonials_intro": {
+    "title": "Lo que dicen las familias",
+    "subtitle": "La confianza de las familias es el mejor testimonio de nuestro trabajo."
+  },
+  "testimonials": [
+    {
+      "author": "Liliana Carrión",
+      "relation": "Madre de familia",
+      "quote": "A lo largo de todo este tiempo en lo que mi hijo ha asistido a las terapias, he visto un buen desarrollo en José Carlos tanto en el colegio como en su vida diaria. Estoy muy agradecida por el apoyo profesional."
+    },
+    {
+      "author": "Claudia Martínez",
+      "relation": "Madre de familia",
+      "quote": "Tras estos 3 meses de terapia he notado que mi hijo se comporta de una forma más tranquila, más sociable. Todavía tiene algún que otro problema, pero ha mejorado bastante. El equipo es maravilloso."
+    },
+    {
+      "author": "Patricia Rodríguez",
+      "relation": "Madre de familia",
+      "quote": "Mi hija ha aumentado bastante su vocabulario, utilizando palabras que antes no decía. Solo hacía emisiones de dos sílabas, aumentando su capacidad en este aspecto de manera impresionante."
+    },
+    {
+      "author": "María González",
+      "relation": "Madre de familia",
+      "quote": "El centro ha sido fundamental en el desarrollo de mi hijo. Los terapeutas son muy profesionales y dedicados. Recomiendo ampliamente sus servicios a todas las familias."
+    }
+  ],
+  "faq": [
+    {
+      "q": "¿Cuánto dura la evaluación inicial?",
+      "a": "Depende de cada caso. Al agendar te indicamos la duración aproximada y qué traer."
+    },
+    {
+      "q": "¿Atienden de forma virtual?",
+      "a": "Sí. Tenemos programas de apoyo virtual en comunicación oral, lecto-escritura, matemáticas y desarrollo cognitivo."
+    },
+    {
+      "q": "¿Necesito una derivación médica?",
+      "a": "No es obligatoria. Si tienes informes previos, tráelos: nos ayudan a conocer mejor a tu hijo."
+    }
+  ]
+}

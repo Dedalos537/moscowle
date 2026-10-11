@@ -1,4 +1,5 @@
 import { IncidentService } from '../../services/incident.service';
+import { LandingAdminService } from '../../services/landing-admin.service';
 import { ActionRequestService } from '../../services/action-request.service';
 import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, QueryList, ViewChild, ViewChildren, inject, effect } from '@angular/core';
 import { Router, NavigationEnd, RouterModule } from '@angular/router';
@@ -137,9 +138,11 @@ export class Sidebar implements OnInit, OnDestroy, AfterViewInit {
   helpState = inject(HelpStateService);
   private incidentService = inject(IncidentService);
   private requestService = inject(ActionRequestService);
-  /** Incidencias abiertas y solicitudes pendientes (admin/supervisor), refrescado al cambiar de ruta. */
+  private landing = inject(LandingAdminService);
+  /** Incidencias abiertas, solicitudes pendientes y familias por atender desde la web (admin/supervisor). */
   openIncidents = 0;
   pendingRequests = 0;
+  newLeads = 0;
 
   private refreshBadges() {
     if (this.userRole !== 'admin' && this.userRole !== 'supervisor') return;
@@ -161,10 +164,19 @@ export class Sidebar implements OnInit, OnDestroy, AfterViewInit {
         error: () => {},
       }),
     );
+    this.subs.add(
+      this.landing.stats().subscribe({
+        next: (s) => {
+          this.newLeads = s.by_status?.new ?? 0;
+          this.cdr.markForCheck();
+        },
+        error: () => {},
+      }),
+    );
   }
 
   badgeFor(item: NavItem): number {
-    return item.badge === 'team' ? this.openIncidents + this.pendingRequests : 0;
+    return item.badge === 'team' ? this.openIncidents + this.pendingRequests + this.newLeads : 0;
   }
 
   constructor(

@@ -1,0 +1,278 @@
+<div class="ws">
+  <div class="ws-top">
+    <div class="ws-tabs" role="tablist" aria-label="Sitio web">
+      <button type="button" role="tab" class="ws-tab" [class.is-on]="view() === 'leads'" [attr.aria-selected]="view() === 'leads'" (click)="view.set('leads')">
+        <fa-icon [icon]="['fas', 'inbox']" aria-hidden="true" /> Solicitudes
+        @if (stats()?.by_status?.new) { <span class="ws-count">{{ stats()?.by_status?.new }}</span> }
+      </button>
+      <button type="button" role="tab" class="ws-tab" [class.is-on]="view() === 'content'" [attr.aria-selected]="view() === 'content'" (click)="view.set('content')">
+        <fa-icon [icon]="['fas', 'pen']" aria-hidden="true" /> Contenido
+        @if (dirty) { <span class="ws-dot" aria-label="Cambios sin publicar"></span> }
+      </button>
+      <button type="button" role="tab" class="ws-tab" [class.is-on]="view() === 'history'" [attr.aria-selected]="view() === 'history'" (click)="view.set('history')">
+        <fa-icon [icon]="['fas', 'clock-rotate-left']" aria-hidden="true" /> Historial
+      </button>
+    </div>
+    <a class="ws-link" [href]="landingUrl" target="_blank" rel="noopener">
+      <fa-icon [icon]="['fas', 'globe']" aria-hidden="true" /> Ver sitio
+      <fa-icon [icon]="['fas', 'arrow-up-right-from-square']" class="ws-link__ext" aria-hidden="true" />
+    </a>
+  </div>
+
+  <!-- ───────────── solicitudes de evaluación ───────────── -->
+  @if (view() === 'leads') {
+    <section class="ws-leads" aria-label="Solicitudes de evaluación">
+      @if (statsLine()) { <p class="ws-stats">{{ statsLine() }}</p> }
+      <div class="ws-filters">
+        <div class="ws-seg" role="group" aria-label="Filtrar">
+          <button type="button" [class.is-on]="filter() === 'open'" (click)="setFilter('open')">Por atender</button>
+          <button type="button" [class.is-on]="filter() === 'scheduled'" (click)="setFilter('scheduled')">Agendadas</button>
+          <button type="button" [class.is-on]="filter() === 'discarded'" (click)="setFilter('discarded')">Descartadas</button>
+          <button type="button" [class.is-on]="filter() === 'all'" (click)="setFilter('all')">Todas</button>
+        </div>
+        <label class="ws-search">
+          <fa-icon [icon]="['fas', 'magnifying-glass']" aria-hidden="true" />
+          <span class="sr-only">Buscar por nombre, teléfono o terapia</span>
+          <input type="search" [(ngModel)]="search" (keyup.enter)="loadLeads()" (search)="loadLeads()" placeholder="Buscar nombre, teléfono o terapia" />
+        </label>
+      </div>
+
+      @if (loadingLeads()) {
+        @for (i of [1, 2, 3]; track i) { <div class="ws-skel" aria-hidden="true"></div> }
+      } @else if (!leads().length) {
+        <div class="ws-empty">
+          <fa-icon [icon]="['fas', 'inbox']" aria-hidden="true" />
+          @if (filter() === 'open') {
+            <p><strong>Nada por atender.</strong></p>
+            <p>Cuando una familia deje sus datos en la web para agendar la evaluación, aparecerá aquí y te llegará un aviso.</p>
+          } @else {
+            <p>No hay solicitudes con este filtro.</p>
+          }
+        </div>
+      } @else {
+        <ul class="ws-list">
+          @for (l of leads(); track l.id) {
+            <li class="ws-lead" [attr.data-status]="l.status" [class.is-open]="openLead() === l.id">
+              <button type="button" class="ws-lead__head" (click)="toggleLead(l)" [attr.aria-expanded]="openLead() === l.id">
+                <span class="ws-lead__channel" [attr.data-channel]="l.channel" [title]="channel[l.channel].label">
+                  <fa-icon [icon]="channel[l.channel].icon" aria-hidden="true" />
+                </span>
+                <span class="ws-lead__main">
+                  <span class="ws-lead__name">{{ l.name || 'Sin nombre' }}</span>
+                  <span class="ws-lead__meta">
+                    {{ channel[l.channel].label }}@if (l.service) { · {{ l.service }} }@if (l.patient_age) { · {{ l.patient_age }} }@if (l.preferred_time) { · {{ timeLabel[l.preferred_time] }} }
+                  </span>
+                </span>
+                <span class="ws-lead__side">
+                  <span class="ws-pill">{{ statusLabel[l.status] }}</span>
+                  <span class="ws-lead__when">{{ when(l.created_at) }}</span>
+                </span>
+              </button>
+              @if (openLead() === l.id) {
+                <div class="ws-lead__body">
+                  <div class="ws-contact">
+                    @if (telTo(l.phone); as tel) {
+                      <a class="ws-btn" [href]="tel"><fa-icon [icon]="['fas', 'phone']" aria-hidden="true" /> Llamar {{ l.phone }}</a>
+                    }
+                    @if (waTo(l.phone); as wa) {
+                      <a class="ws-btn ws-btn--wa" [href]="wa" target="_blank" rel="noopener"><fa-icon [icon]="['fab', 'whatsapp']" aria-hidden="true" /> Escribir por WhatsApp</a>
+                    }
+                    @if (!l.phone) {
+                      <p class="ws-hint">Abrió el chat de WhatsApp del centro sin dejar su número: su mensaje te llega directo a WhatsApp.</p>
+                    }
+                  </div>
+                  <dl class="ws-fields">
+                    @if (l.message) { <div><dt>Mensaje</dt><dd>{{ l.message }}</dd></div> }
+                    @if (l.email) { <div><dt>Correo</dt><dd>{{ l.email }}</dd></div> }
+                    @if (l.source) { <div><dt>Llegó desde</dt><dd>{{ l.source }}</dd></div> }
+                    @if (l.handled_by) { <div><dt>Atendida por</dt><dd>{{ l.handled_by }}</dd></div> }
+                  </dl>
+                  <div class="ws-lead__actions">
+                    <label class="ws-field ws-field--inline">
+                      <span>Estado</span>
+                      <select class="input-field" [ngModel]="l.status" (ngModelChange)="setStatus(l, $event)" [disabled]="!canWrite">
+                        @for (s of statuses; track s) { <option [value]="s">{{ statusLabel[s] }}</option> }
+                      </select>
+                    </label>
+                    <label class="ws-field">
+                      <span>Nota interna</span>
+                      <textarea class="input-field" rows="2" maxlength="2000" [(ngModel)]="notes[l.id]" [disabled]="!canWrite" placeholder="Ej. Agendada el martes 10 a. m. con la Lic. Pérez"></textarea>
+                    </label>
+                    @if (canWrite && (notes[l.id] ?? '') !== (l.staff_note ?? '')) {
+                      <button type="button" class="ws-btn ws-btn--primary ws-btn--end" (click)="saveNote(l)">Guardar nota</button>
+                    }
+                  </div>
+                </div>
+              }
+            </li>
+          }
+        </ul>
+        @if (total() > leads().length) { <p class="ws-hint">Mostrando {{ leads().length }} de {{ total() }}. Usa la búsqueda para encontrar el resto.</p> }
+      }
+    </section>
+  }
+
+  <!-- ───────────── contenido ───────────── -->
+  @if (view() === 'content') {
+    @if (loadingContent()) {
+      <div class="ws-skel ws-skel--tall" aria-hidden="true"></div>
+    } @else {
+      <div class="ws-editor">
+        <nav class="ws-groups" aria-label="Secciones del sitio">
+          @for (g of groups; track g.id) {
+            <button type="button" class="ws-group" [class.is-on]="group() === g.id" [attr.aria-current]="group() === g.id ? 'true' : null" (click)="group.set(g.id)">
+              <fa-icon [icon]="g.icon" aria-hidden="true" />
+              <span>{{ g.label }}</span>
+              @if (groupIssues(g)) { <span class="ws-issue" [attr.aria-label]="groupIssues(g) + ' por corregir'">{{ groupIssues(g) }}</span> }
+            </button>
+          }
+        </nav>
+
+        @let g = current();
+        <section class="ws-pane" [attr.aria-label]="g.label">
+          <header class="ws-pane__head">
+            <div>
+              <h2>{{ g.label }}</h2>
+              @if (g.intro) { <p>{{ g.intro }}</p> }
+            </div>
+            @if (canWrite) {
+              <button type="button" class="ws-btn ws-btn--ghost" (click)="resetGroupToDefault(g)">Texto original</button>
+            }
+          </header>
+
+          @for (o of g.objects ?? []; track o.path.join('.')) {
+            @let obj = at(o.path);
+            <div class="ws-fieldset">
+              @for (f of o.fields; track f.key) {
+                <label class="ws-field" [class.ws-field--wide]="f.kind === 'textarea'">
+                  <span class="ws-field__label">
+                    {{ f.label }}@if (!f.required) { <em> (opcional)</em> }
+                    <span class="ws-counter" [class.is-over]="len(obj[f.key]) > f.max">{{ len(obj[f.key]) }}/{{ f.max }}</span>
+                  </span>
+                  @if (f.kind === 'textarea') {
+                    <textarea class="input-field" rows="3" [(ngModel)]="obj[f.key]" [placeholder]="f.placeholder ?? ''" [disabled]="!canWrite" [attr.aria-invalid]="(f.required && !len(obj[f.key])) || len(obj[f.key]) > f.max"></textarea>
+                  } @else {
+                    <input class="input-field" [type]="f.kind === 'url' ? 'url' : f.kind === 'tel' ? 'tel' : 'text'" [(ngModel)]="obj[f.key]" [placeholder]="f.placeholder ?? ''" [disabled]="!canWrite" [attr.aria-invalid]="(f.required && !len(obj[f.key])) || len(obj[f.key]) > f.max" />
+                  }
+                  @if (f.hint) { <span class="ws-field__hint">{{ f.hint }}</span> }
+                </label>
+              }
+            </div>
+          }
+
+          @for (list of g.lists ?? []; track list.path.join('.')) {
+            <div class="ws-listed">
+              <div class="ws-listed__head">
+                <h3>{{ list.label }} <span>{{ items(list).length }}/{{ list.max }}</span></h3>
+                @if (canWrite) {
+                  <button type="button" class="ws-btn" (click)="addItem(list)" [disabled]="items(list).length >= list.max">
+                    <fa-icon [icon]="['fas', 'plus']" aria-hidden="true" /> Agregar {{ list.itemLabel.toLowerCase() }}
+                  </button>
+                }
+              </div>
+              <ol class="ws-rows">
+                @for (row of items(list); track $index; let i = $index, first = $first, last = $last) {
+                  @let open = openItems.has(itemKey(list, i));
+                  <li class="ws-row" [class.is-open]="open">
+                    <div class="ws-row__head">
+                      <button type="button" class="ws-row__toggle" (click)="toggleItem(list, i)" [attr.aria-expanded]="open">
+                        <fa-icon [icon]="['fas', 'chevron-right']" class="ws-row__chev" aria-hidden="true" />
+                        <span class="ws-row__n">{{ i + 1 }}</span>
+                        <span class="ws-row__title">{{ row[list.summary] || 'Sin título' }}</span>
+                        @if (list.path[0] === 'services') { <span class="ws-row__tag">{{ row['category'] }}</span> }
+                      </button>
+                      @if (canWrite) {
+                        <div class="ws-row__tools">
+                          <button type="button" (click)="moveItem(list, i, -1)" [disabled]="first" aria-label="Subir"><fa-icon [icon]="['fas', 'arrow-up']" /></button>
+                          <button type="button" (click)="moveItem(list, i, 1)" [disabled]="last" aria-label="Bajar"><fa-icon [icon]="['fas', 'arrow-down']" /></button>
+                          <button type="button" class="is-danger" (click)="removeItem(list, i)" [disabled]="items(list).length <= list.min" aria-label="Quitar"><fa-icon [icon]="['fas', 'trash']" /></button>
+                        </div>
+                      }
+                    </div>
+                    @if (open) {
+                      <div class="ws-fieldset ws-fieldset--row">
+                        @for (f of list.fields; track f.key) {
+                          <label class="ws-field" [class.ws-field--wide]="f.kind === 'textarea' || f.kind === 'url'">
+                            <span class="ws-field__label">
+                              {{ f.label }}@if (!f.required) { <em> (opcional)</em> }
+                              <span class="ws-counter" [class.is-over]="len(row[f.key]) > f.max">{{ len(row[f.key]) }}/{{ f.max }}</span>
+                            </span>
+                            @if (f.kind === 'textarea') {
+                              <textarea class="input-field" rows="3" [(ngModel)]="row[f.key]" [disabled]="!canWrite" [attr.aria-invalid]="(f.required && !len(row[f.key])) || len(row[f.key]) > f.max"></textarea>
+                            } @else {
+                              <input class="input-field" [type]="f.kind === 'url' ? 'url' : 'text'" [(ngModel)]="row[f.key]" [placeholder]="f.placeholder ?? ''" [disabled]="!canWrite" [attr.aria-invalid]="(f.required && !len(row[f.key])) || len(row[f.key]) > f.max" />
+                            }
+                            @if (f.hint) { <span class="ws-field__hint">{{ f.hint }}</span> }
+                          </label>
+                        }
+                      </div>
+                    }
+                  </li>
+                } @empty {
+                  <li class="ws-hint">Sin elementos. No se mostrará esta parte en el sitio.</li>
+                }
+              </ol>
+            </div>
+          }
+        </section>
+      </div>
+
+      @if (canWrite) {
+        @let problems = issues();
+        <div class="ws-publish" [class.is-dirty]="dirty">
+          @if (publishError()) { <p class="ws-alert" role="alert">{{ publishError() }}</p> }
+          @if (problems.length) {
+            <div class="ws-alert" role="alert">
+              <strong>Corrige antes de publicar:</strong>
+              <ul>
+                @for (p of problems.slice(0, 4); track p) { <li>{{ p }}</li> }
+                @if (problems.length > 4) { <li>y {{ problems.length - 4 }} más</li> }
+              </ul>
+            </div>
+          }
+          <div class="ws-publish__bar">
+            <p class="ws-publish__state">
+              @if (dirty) { <strong>Cambios sin publicar</strong> } @else { Todo publicado }
+              @if (version) { <span> · versión {{ version }}</span> } @else { <span> · texto original</span> }
+            </p>
+            @if (dirty) {
+              <input class="input-field ws-publish__note" [(ngModel)]="note" maxlength="200" placeholder="Qué cambiaste (opcional)" aria-label="Nota de la publicación" />
+              <button type="button" class="ws-btn" (click)="discard()">Descartar</button>
+            }
+            <button type="button" class="ws-btn ws-btn--primary" (click)="publish()" [disabled]="!dirty || problems.length > 0 || publishing()">
+              {{ publishing() ? 'Publicando…' : 'Publicar' }}
+            </button>
+          </div>
+        </div>
+      } @else {
+        <p class="ws-hint">Solo el administrador puede publicar cambios en el sitio.</p>
+      }
+    }
+  }
+
+  <!-- ───────────── historial ───────────── -->
+  @if (view() === 'history') {
+    <section aria-label="Historial de publicaciones">
+      @if (!versions().length) {
+        <div class="ws-empty">
+          <fa-icon [icon]="['fas', 'clock-rotate-left']" aria-hidden="true" />
+          <p>Aún no se publicó ningún cambio: el sitio muestra el texto original.</p>
+        </div>
+      } @else {
+        <ol class="ws-versions">
+          @for (v of versions(); track v.id; let first = $first) {
+            <li>
+              <div>
+                <strong>Versión {{ v.id }}</strong>@if (first) { <span class="ws-pill ws-pill--live">Publicada</span> }
+                <p>{{ when(v.created_at) }}@if (v.author) { · {{ v.author }} }@if (v.note) { · {{ v.note }} }</p>
+              </div>
+              @if (!first && canWrite) {
+                <button type="button" class="ws-btn" (click)="restore(v)"><fa-icon [icon]="['fas', 'clock-rotate-left']" aria-hidden="true" /> Restaurar</button>
+              }
+            </li>
+          }
+        </ol>
+      }
+    </section>
+  }
+</div>

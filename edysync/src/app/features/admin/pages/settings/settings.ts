@@ -17,13 +17,15 @@ import { VisorFuncionamiento, type TabId } from '../visor-funcionamiento/visor-f
 import { NotificationPrefs } from '../../../../shared/components/notification-prefs/notification-prefs';
 import { Incidents } from '../incidents/incidents';
 import { AdminRequests } from '../requests/requests';
+import { Website } from '../website/website';
 import { ActionRequestService } from '../../../../core/services/action-request.service';
 import { IncidentService } from '../../../../core/services/incident.service';
+import { LandingAdminService } from '../../../../core/services/landing-admin.service';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [FontAwesomeModule, FormsModule, RouterLink, AvatarUploader, FingerprintCard, VisorFuncionamiento, NotificationPrefs, Incidents, AdminRequests],
+  imports: [FontAwesomeModule, FormsModule, RouterLink, AvatarUploader, FingerprintCard, VisorFuncionamiento, NotificationPrefs, Incidents, AdminRequests, Website],
   templateUrl: './settings.html',
   styleUrls: ['./settings.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,6 +58,8 @@ export class Settings implements OnInit, OnDestroy {
       items: [
         { id: 'requests', label: 'Solicitudes', icon: ['fas', 'paper-plane'] },
         { id: 'incidents', label: 'Incidencias', icon: ['fas', 'triangle-exclamation'] },
+        // Landing pública: solicitudes de evaluación que llegan de la web y edición del sitio.
+        { id: 'website', label: 'Sitio web', icon: ['fas', 'globe'] },
       ],
     },
     {
@@ -84,10 +88,12 @@ export class Settings implements OnInit, OnDestroy {
   counts: Record<string, number> = {};
   private requestService = inject(ActionRequestService);
   private incidentService = inject(IncidentService);
+  private landing = inject(LandingAdminService);
 
   private loadCounts() {
     this.subs.add(this.requestService.list('pending').subscribe({ next: (r) => { this.counts = { ...this.counts, requests: r.pending ?? 0 }; this.cdr.markForCheck(); }, error: () => {} }));
     this.subs.add(this.incidentService.getDashboard().subscribe({ next: (d) => { this.counts = { ...this.counts, incidents: d?.total_abiertos ?? 0 }; this.cdr.markForCheck(); }, error: () => {} }));
+    this.subs.add(this.landing.stats().subscribe({ next: (s) => { this.counts = { ...this.counts, website: s.by_status?.new ?? 0 }; this.cdr.markForCheck(); }, error: () => {} }));
   }
   section = 'apariencia';
 
@@ -96,7 +102,7 @@ export class Settings implements OnInit, OnDestroy {
   }
 
   get isTeamSection(): boolean {
-    return this.section === 'requests' || this.section === 'incidents';
+    return this.section === 'requests' || this.section === 'incidents' || this.section === 'website';
   }
 
   get systemTab(): TabId {
