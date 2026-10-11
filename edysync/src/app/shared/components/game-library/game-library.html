@@ -1,0 +1,286 @@
+<div class="gl" [class.has-detail]="selected()">
+  <section class="gl-main" aria-label="Catálogo de juegos">
+    <div class="gl-toolbar">
+      <label class="gl-search">
+        <fa-icon [icon]="['fas', 'magnifying-glass']" aria-hidden="true" />
+        <span class="sr-only">Buscar juego</span>
+        <input type="search" [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Buscar por nombre o área" />
+      </label>
+      <div class="gl-chips" role="group" aria-label="Tipo de juego">
+        <button type="button" [class.is-on]="kindFilter() === 'all'" (click)="kindFilter.set('all')">Todos</button>
+        @for (k of kindChips(); track k.id) {
+          <button type="button" [class.is-on]="kindFilter() === k.id" (click)="kindFilter.set(k.id)">
+            <fa-icon [icon]="icon[k.id]" aria-hidden="true" /> {{ k.label }}
+          </button>
+        }
+      </div>
+      <div class="gl-actions">
+        @if (archivedCount()) {
+          <label class="gl-toggle">
+            <input type="checkbox" [ngModel]="showArchived()" (ngModelChange)="showArchived.set($event)" />
+            <span>Archivados ({{ archivedCount() }})</span>
+          </label>
+        }
+        @if (mode() !== 'supervisor') {
+          <button type="button" class="gl-btn gl-btn--primary" (click)="openUpload()">
+            <fa-icon [icon]="['fas', 'upload']" aria-hidden="true" /> Subir juego
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="gl-grid" aria-hidden="true">
+        @for (i of [1, 2, 3, 4]; track i) { <div class="gl-skel"></div> }
+      </div>
+    } @else if (failed()) {
+      <div class="gl-empty" role="alert">
+        <fa-icon [icon]="['fas', 'circle-exclamation']" aria-hidden="true" />
+        <p>No se pudo cargar el catálogo.</p>
+        <button type="button" class="gl-btn" (click)="load()">Reintentar</button>
+      </div>
+    } @else if (!filtered().length) {
+      <div class="gl-empty">
+        <fa-icon [icon]="['fas', 'gamepad']" aria-hidden="true" />
+        <p>{{ games().length ? 'Ningún juego coincide con el filtro.' : 'Aún no hay juegos. Sube el primero.' }}</p>
+      </div>
+    } @else {
+      <ul class="gl-grid">
+        @for (g of filtered(); track g.id) {
+          <li class="gl-card" [attr.data-kind]="g.kind" [class.is-on]="selectedId() === g.id" [class.is-archived]="!g.is_active">
+            <button type="button" class="gl-card__hit" (click)="open(g)" [attr.aria-label]="'Ver ' + g.title"></button>
+            <div class="gl-cover" aria-hidden="true">
+              <fa-icon [icon]="icon[g.kind]" />
+              <span class="gl-kind">{{ g.kind_label }}</span>
+            </div>
+            <div class="gl-card__body">
+              <h3>{{ g.title }}</h3>
+              <p class="gl-meta">
+                @if (g.area) { {{ g.area }} }@if (g.area && g.ages) { · }@if (g.ages) { {{ g.ages }} años }
+                @if (!g.area && !g.ages) { Sin ficha }
+              </p>
+              <div class="gl-flags">
+                @if (!g.is_active) { <span class="gl-flag gl-flag--muted">Archivado</span> }
+                @if (g.available === false) { <span class="gl-flag gl-flag--warn">Falta el archivo</span> }
+                @if (g.kpis_custom) { <span class="gl-flag">Umbrales propios</span> }
+              </div>
+            </div>
+            <div class="gl-card__foot">
+              <button type="button" class="gl-btn gl-btn--small" (click)="preview.set(g)" [disabled]="g.available === false">
+                <fa-icon [icon]="['fas', 'play']" aria-hidden="true" /> Probar
+              </button>
+              <button type="button" class="gl-btn gl-btn--small gl-btn--ghost" (click)="open(g, 'levels')">
+                <fa-icon [icon]="['fas', 'chart-line']" aria-hidden="true" /> Niveles
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  @if (selected(); as g) {
+    <aside class="gl-detail" [attr.aria-label]="'Detalle de ' + g.title">
+      <header class="gl-detail__head" [attr.data-kind]="g.kind">
+        <button type="button" class="gl-icon-btn" (click)="close()" aria-label="Cerrar detalle">
+          <fa-icon [icon]="['fas', 'xmark']" />
+        </button>
+        <div>
+          <p class="gl-detail__kind">{{ g.kind_label }}</p>
+          <h2>{{ g.title }}</h2>
+        </div>
+      </header>
+
+      <div class="gl-tabs" role="tablist">
+        <button type="button" role="tab" [attr.aria-selected]="tab() === 'levels'" [class.is-on]="tab() === 'levels'" (click)="tab.set('levels')">Niveles</button>
+        @if (canEdit()) {
+          <button type="button" role="tab" [attr.aria-selected]="tab() === 'kpis'" [class.is-on]="tab() === 'kpis'" (click)="tab.set('kpis')">Indicadores</button>
+          <button type="button" role="tab" [attr.aria-selected]="tab() === 'info'" [class.is-on]="tab() === 'info'" (click)="tab.set('info')">Ficha</button>
+        }
+      </div>
+
+      <!-- ── Niveles: solo el equipo los ve; el paciente nunca ── -->
+      @if (tab() === 'levels') {
+        <div class="gl-panel">
+          <p class="gl-note">
+            <fa-icon [icon]="['fas', 'eye-slash']" aria-hidden="true" />
+            Solo el equipo ve estos niveles. Los pacientes juegan sin ver indicadores.
+          </p>
+          @if (levelsLoading()) {
+            <div class="gl-skel gl-skel--row"></div>
+            <div class="gl-skel gl-skel--row"></div>
+          } @else if (levels(); as lv) {
+            @if (!lv.patients.length) {
+              <div class="gl-empty gl-empty--inline">
+                <p>{{ mode() === 'therapist' ? 'Ninguno de tus pacientes ha jugado este juego todavía.' : 'Nadie ha jugado este juego todavía.' }}</p>
+              </div>
+            } @else {
+              <div class="gl-dist" role="img" [attr.aria-label]="'Distribución por nivel'">
+                @for (d of distribution(); track d.id) {
+                  @if (d.n) {
+                    <span class="gl-dist__seg" [attr.data-level]="d.id" [style.flex-grow]="d.n" [title]="d.label + ': ' + d.n"></span>
+                  }
+                }
+              </div>
+              <ul class="gl-legend">
+                @for (d of distribution(); track d.id) {
+                  <li [attr.data-level]="d.id"><span class="gl-swatch" aria-hidden="true"></span>{{ d.label }} <strong>{{ d.n }}</strong></li>
+                }
+              </ul>
+
+              <ul class="gl-patients">
+                @for (p of lv.patients; track p.patient_id) {
+                  <li class="gl-patient" [class.is-open]="expanded() === p.patient_id">
+                    <button type="button" class="gl-patient__head" (click)="expanded.set(expanded() === p.patient_id ? null : p.patient_id)" [attr.aria-expanded]="expanded() === p.patient_id">
+                      <span class="gl-patient__name">{{ p.patient }}</span>
+                      <span class="gl-level" [attr.data-level]="p.level">{{ levelLabel(p.level) }}</span>
+                      <span class="gl-patient__meta">{{ p.plays }} {{ p.plays === 1 ? 'partida' : 'partidas' }} · {{ when(p.last_played) }}</span>
+                    </button>
+                    @if (expanded() === p.patient_id) {
+                      <dl class="gl-kpis">
+                        @for (k of p.kpis; track k.key) {
+                          <div>
+                            <dt>{{ k.label }}</dt>
+                            <dd>
+                              <span class="gl-kpi-value">{{ formatValue(k.value, k.unit) }}</span>
+                              <span class="gl-level gl-level--small" [attr.data-level]="k.level">{{ levelLabel(k.level) }}</span>
+                              @if (k.trend === 1) { <fa-icon class="gl-trend gl-trend--up" [icon]="['fas', 'arrow-trend-up']" title="Sube de nivel" /> }
+                              @if (k.trend === -1) { <fa-icon class="gl-trend gl-trend--down" [icon]="['fas', 'arrow-trend-down']" title="Baja de nivel" /> }
+                            </dd>
+                          </div>
+                        } @empty {
+                          <p class="gl-note">Este juego aún no informa indicadores para este paciente.</p>
+                        }
+                      </dl>
+                      <p class="gl-foot-note">Mediana de las últimas 5 partidas; la flecha compara con las 5 anteriores.</p>
+                    }
+                  </li>
+                }
+              </ul>
+            }
+          }
+        </div>
+      }
+
+      <!-- ── Indicadores: qué mide el juego y dónde empieza cada nivel (admin) ── -->
+      @if (tab() === 'kpis' && canEdit()) {
+        <div class="gl-panel">
+          <p class="gl-note">Cada indicador tiene tres cortes que separan los niveles: <strong>Inicial</strong>, <strong>En proceso</strong>, <strong>Logrado</strong> y <strong>Destacado</strong>.</p>
+          @for (row of kpiRows; track row.key) {
+            <fieldset class="gl-kpi" [class.is-off]="!row.on">
+              <legend>
+                <label class="gl-toggle">
+                  <input type="checkbox" [(ngModel)]="row.on" [name]="'on-' + row.key" />
+                  <span>{{ row.spec.label }}@if (row.spec.unit) { ({{ row.spec.unit }}) }</span>
+                </label>
+              </legend>
+              @if (row.on) {
+                <div class="gl-thresholds">
+                  @for (i of [0, 1, 2]; track i) {
+                    <label>
+                      <span>{{ ['En proceso desde', 'Logrado desde', 'Destacado desde'][i] }}</span>
+                      <input type="number" inputmode="decimal" min="0" step="0.1" [(ngModel)]="row.t[i]" [name]="row.key + '-' + i" />
+                    </label>
+                  }
+                </div>
+                <p class="gl-hint">{{ thresholdHint(row) }}</p>
+              }
+            </fieldset>
+          }
+          @if (formError()) { <p class="gl-error" role="alert">{{ formError() }}</p> }
+          <div class="gl-form-actions">
+            <button type="button" class="gl-btn gl-btn--ghost" (click)="resetKpis()" [disabled]="saving()">Usar recomendados</button>
+            <button type="button" class="gl-btn gl-btn--primary" (click)="saveKpis()" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar umbrales' }}</button>
+          </div>
+        </div>
+      }
+
+      <!-- ── Ficha (admin) ── -->
+      @if (tab() === 'info' && canEdit()) {
+        <form class="gl-panel gl-form" (ngSubmit)="saveInfo()">
+          <label class="gl-field">
+            <span>Nombre</span>
+            <input class="input-field" name="title" [(ngModel)]="form.title" maxlength="100" required />
+          </label>
+          <label class="gl-field">
+            <span>Descripción (la ve el paciente)</span>
+            <textarea class="input-field" name="description" rows="3" [(ngModel)]="form.description" maxlength="1000"></textarea>
+          </label>
+          <div class="gl-field-row">
+            <label class="gl-field">
+              <span>Área que trabaja</span>
+              <input class="input-field" name="area" [(ngModel)]="form.area" maxlength="80" placeholder="Ej. Coordinación motora" />
+            </label>
+            <label class="gl-field">
+              <span>Edades</span>
+              <input class="input-field" name="ages" [(ngModel)]="form.ages" maxlength="20" placeholder="Ej. 6-12" />
+            </label>
+          </div>
+          <label class="gl-field">
+            <span>Tipo</span>
+            <select class="input-field" name="kind" [(ngModel)]="form.kind">
+              @for (k of kinds() | keyvalue; track k.key) { <option [value]="k.key">{{ k.value }}</option> }
+            </select>
+          </label>
+          <label class="gl-toggle">
+            <input type="checkbox" name="active" [(ngModel)]="form.is_active" />
+            <span>Visible para los pacientes</span>
+          </label>
+          @if (formError()) { <p class="gl-error" role="alert">{{ formError() }}</p> }
+          <div class="gl-form-actions">
+            <button type="button" class="gl-btn gl-btn--danger-ghost" (click)="archive()">
+              <fa-icon [icon]="['fas', 'box-archive']" aria-hidden="true" /> Quitar del catálogo
+            </button>
+            <button type="submit" class="gl-btn gl-btn--primary" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar ficha' }}</button>
+          </div>
+        </form>
+      }
+    </aside>
+  }
+</div>
+
+<!-- Subida de juegos -->
+@if (uploadOpen()) {
+  <div class="gl-modal" role="dialog" aria-modal="true" aria-labelledby="gl-upload-title" (keydown.escape)="uploadOpen.set(false)">
+    <div class="gl-modal__card">
+      <header>
+        <h2 id="gl-upload-title">Subir juego</h2>
+        <button type="button" class="gl-icon-btn" (click)="uploadOpen.set(false)" aria-label="Cerrar"><fa-icon [icon]="['fas', 'xmark']" /></button>
+      </header>
+      @if (uploadReport(); as rep) {
+        <div class="gl-upload-ok" role="status">
+          <fa-icon [icon]="['fas', 'circle-check']" aria-hidden="true" />
+          <p><strong>{{ rep.title }}</strong> ya está en el catálogo.@if (rep.activities) { Se convirtieron {{ rep.activities }} actividades de Clic 3.0. }</p>
+          @if (rep.warnings?.length) {
+            <ul class="gl-warnings">
+              @for (w of rep.warnings; track w) { <li>{{ w }}</li> }
+            </ul>
+          }
+          <button type="button" class="gl-btn gl-btn--primary" (click)="uploadOpen.set(false)">Listo</button>
+        </div>
+      } @else {
+        <p class="gl-note">Acepta juegos web (.html o .zip con index.html), proyectos JClic (.jclic.zip), paquetes Clic 3.0 (.pcc, o .zip con los .pac y sus actividades) y Flash (.swf).</p>
+        <label class="gl-field">
+          <span>Archivo</span>
+          <input class="input-field" type="file" accept=".html,.htm,.zip,.pcc,.pac,.swf" (change)="onFile($event)" />
+        </label>
+        <label class="gl-field">
+          <span>Nombre</span>
+          <input class="input-field" [(ngModel)]="uploadTitle" maxlength="100" placeholder="Nombre que verá el paciente" />
+        </label>
+        @if (uploadError()) { <p class="gl-error" role="alert">{{ uploadError() }}</p> }
+        <div class="gl-form-actions">
+          <button type="button" class="gl-btn gl-btn--ghost" (click)="uploadOpen.set(false)">Cancelar</button>
+          <button type="button" class="gl-btn gl-btn--primary" (click)="upload()" [disabled]="!uploadFile || !uploadTitle.trim() || uploading()">
+            {{ uploading() ? 'Subiendo…' : 'Subir' }}
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Probar: el equipo juega sin que la partida cuente como paciente. -->
+@if (preview(); as g) {
+  <app-game-player [game]="g" [preview]="true" (closed)="preview.set(null)" />
+}

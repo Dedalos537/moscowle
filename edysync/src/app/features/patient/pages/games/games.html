@@ -1,0 +1,68 @@
+<div class="pg">
+  @if (loading()) {
+    <div class="pg-grid" aria-hidden="true">
+      @for (i of [1, 2, 3]; track i) { <div class="pg-skel"></div> }
+    </div>
+  } @else if (failed()) {
+    <div class="pg-empty" role="alert">
+      <fa-icon [icon]="['fas', 'circle-exclamation']" aria-hidden="true" />
+      <p>No pudimos cargar los juegos.</p>
+      <button type="button" class="pg-retry" (click)="load()">Reintentar</button>
+    </div>
+  } @else {
+    @if (assigned().length) {
+      <section class="pg-section" aria-labelledby="pg-today">
+        <h2 id="pg-today" class="pg-heading">
+          <span class="pg-dot" aria-hidden="true"></span>
+          Para tu sesión de hoy
+        </h2>
+        <div class="pg-grid">
+          @for (g of assigned(); track g.id) {
+            <article class="pg-card pg-card--today" [attr.data-kind]="g.kind">
+              <div class="pg-cover" aria-hidden="true"><fa-icon [icon]="icon[g.kind]" /></div>
+              <div class="pg-body">
+                <h3>{{ g.title }}</h3>
+                @if (g.description) { <p>{{ g.description }}</p> }
+                <button type="button" class="pg-play" (click)="play(g)">
+                  <fa-icon [icon]="['fas', 'play']" aria-hidden="true" /> Jugar
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+    }
+
+    <section class="pg-section" aria-labelledby="pg-all">
+      @if (assigned().length) { <h2 id="pg-all" class="pg-heading">Más juegos</h2> }
+      @if (!others().length && !assigned().length) {
+        <div class="pg-empty">
+          <fa-icon [icon]="['fas', 'gamepad']" aria-hidden="true" />
+          <p>Todavía no hay juegos disponibles.</p>
+        </div>
+      } @else {
+        <div class="pg-grid">
+          @for (g of others(); track g.id) {
+            <article class="pg-card" [attr.data-kind]="g.kind">
+              <div class="pg-cover" aria-hidden="true"><fa-icon [icon]="icon[g.kind]" /></div>
+              <div class="pg-body">
+                <h3 [attr.id]="'pg-' + g.id">{{ g.title }}</h3>
+                @if (g.area || g.ages) {
+                  <p class="pg-meta">{{ g.area }}@if (g.area && g.ages) { · }@if (g.ages) { {{ g.ages }} años }</p>
+                }
+                @if (g.description) { <p>{{ g.description }}</p> }
+                <button type="button" class="pg-play" (click)="play(g)" [attr.aria-describedby]="'pg-' + g.id">
+                  <fa-icon [icon]="['fas', 'play']" aria-hidden="true" /> Jugar
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </section>
+  }
+</div>
+
+@if (playing(); as g) {
+  <app-game-player [game]="g" [sessionId]="sessionFor(g)" (closed)="onClosed($event)" />
+}
