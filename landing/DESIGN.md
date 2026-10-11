@@ -34,7 +34,7 @@ la página y el resto respira.
 ## Componentes
 
 - Botones redondeados (999px), mínimo 3.25rem de alto: `--lime`, `--ghost-light`, `--wa`, `--outline`, `--dark`.
-- Terapias: pestañas por categoría con su glifo de bloque y filas desplegables (no tarjetas iguales).
+- Terapias: juego de encaje 3D (tablero de madera; columna = categoría con su forma, pieza = terapia, color por fila). Tocar una pieza la saca del agujero y la ficha lateral muestra la terapia. Chips de categoría y botones por terapia hacen lo mismo con teclado y son la vía sin WebGL.
 - Cifras: lista con glifo + número tabular, junto a la torre 3D (no tiles de métricas).
 - Agendar: panel blanco sobre oliva con selector, horario segmentado y tres salidas (WhatsApp, llamar, que me llamen).
 - Barra fija inferior en el celular con Llamar / WhatsApp, oculta mientras se ve el hero o la sección Agendar.
@@ -42,7 +42,8 @@ la página y el resto respira.
 ## Movimiento
 
 Un solo lenguaje: los bloques. Hero con flotación de periodo propio por bloque y parallax al puntero; recorrido
-de la evaluación guiado por el scroll (firma); torre que se apila una vez al entrar. Easing exponencial de salida.
+de la evaluación guiado por el scroll (firma); torre que se apila una vez al entrar; pieza del encaje que sale
+del agujero y gira en el aire. Easing exponencial de salida.
 three.js se carga en diferido, pausa fuera de pantalla, densidad de píxeles ≤ 1.75; `prefers-reduced-motion` pinta
 un único cuadro final y sin WebGL se muestra una versión plana en SVG.
 

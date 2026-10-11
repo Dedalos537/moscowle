@@ -137,7 +137,7 @@ const GROUPS: GroupDef[] = [
     id: 'services',
     label: 'Terapias',
     icon: ['fas', 'layer-group'],
-    intro: 'Se agrupan por categoría en el orden en que aparecen. La foto es opcional.',
+    intro: 'Se muestran como un juego de encaje: cada categoría es una columna del tablero (círculo, cuadrado, triángulo, rectángulo) y cada terapia una pieza. Se ve mejor con hasta 4 categorías y 6 terapias por categoría. La foto es opcional.',
     objects: [{ path: ['services_intro'], fields: [T('title', 'Título de la sección', 90), O('subtitle', 'Texto', 260, { kind: 'textarea' })] }],
     lists: [
       {
