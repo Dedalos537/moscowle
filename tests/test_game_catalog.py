@@ -180,3 +180,13 @@ def test_patient_progress_has_no_clinical_kpis(client):
     assert all('title' in a for a in body['achievements'])
     dash = client.get('/patient/api/dashboard', headers=_h(patient)).get_json()['data']['player_stats']
     assert 'avg_accuracy' not in dash and 'avg_time' not in dash
+
+
+def test_games_can_be_embedded_by_the_player(client):
+    r = client.get('/static/games/vendor/moscowle-bridge.js')
+    assert r.status_code == 200
+    csp = r.headers['Content-Security-Policy']
+    assert 'https://moscowle.centrojuanpabloii.com' in csp and "'wasm-unsafe-eval'" in csp and 'blob:' in csp
+    assert 'X-Frame-Options' not in r.headers
+    # El resto del sitio conserva su política.
+    assert client.get('/api/health').headers.get('X-Frame-Options') in ('DENY', 'SAMEORIGIN')

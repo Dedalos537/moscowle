@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Super RPG Bros.</title>
+    <style>
+      :root {
+        --bg: #0e101e;
+        --btn: rgba(255, 255, 255, 0.16);
+        --btn-on: rgba(255, 212, 58, 0.55);
+        --ink: #ffffff;
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg);
+        overflow: hidden;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      #stage {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+      #screen {
+        display: block;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+        background: #000;
+        box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.8);
+      }
+      /* Controles táctiles: solo en pantallas táctiles, en las esquinas, sin tapar el centro del juego. */
+      .pad {
+        position: fixed;
+        bottom: calc(14px + env(safe-area-inset-bottom));
+        display: none;
+        gap: 10px;
+        z-index: 5;
+      }
+      .pad--left {
+        left: calc(14px + env(safe-area-inset-left));
+      }
+      .pad--right {
+        right: calc(14px + env(safe-area-inset-right));
+      }
+      .pad button,
+      .pause {
+        width: 64px;
+        height: 64px;
+        border: 2px solid rgba(255, 255, 255, 0.35);
+        border-radius: 50%;
+        background: var(--btn);
+        color: var(--ink);
+        font: 800 22px/1 system-ui, sans-serif;
+        display: grid;
+        place-items: center;
+        touch-action: none;
+      }
+      .pad button.on {
+        background: var(--btn-on);
+        border-color: #ffd43a;
+      }
+      .pad button svg {
+        width: 26px;
+        height: 26px;
+      }
+      .pad--right button[data-btn='a'] {
+        width: 76px;
+        height: 76px;
+        transform: translateY(-18px);
+      }
+      .pause {
+        position: fixed;
+        top: calc(10px + env(safe-area-inset-top));
+        right: calc(10px + env(safe-area-inset-right));
+        width: 44px;
+        height: 44px;
+        font-size: 15px;
+        display: none;
+        z-index: 5;
+      }
+      @media (pointer: coarse) {
+        .pad {
+          display: flex;
+        }
+        .pause {
+          display: grid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage"><canvas id="screen" width="544" height="416" aria-label="Super RPG Bros."></canvas></div>
+
+    <div class="pad pad--left" aria-hidden="true">
+      <button data-btn="left" aria-label="Izquierda">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 5 7 12l8 7z" /></svg>
+      </button>
+      <button data-btn="down" aria-label="Abajo">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9l7 8 7-8z" /></svg>
+      </button>
+      <button data-btn="right" aria-label="Derecha">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 5l8 7-8 7z" /></svg>
+      </button>
+    </div>
+    <div class="pad pad--right" aria-hidden="true">
+      <button data-btn="b" aria-label="Correr o lanzar fuego">B</button>
+      <button data-btn="a" aria-label="Saltar">A</button>
+    </div>
+    <button class="pause" data-btn="pause" aria-label="Pausa">II</button>
+
+    <script src="/static/games/vendor/moscowle-bridge.js"></script>
+    <script src="art.js"></script>
+    <script src="levels.js"></script>
+    <script src="game.js"></script>
+  </body>
+</html>

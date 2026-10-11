@@ -18,6 +18,7 @@
   var startedAt = Date.now();
   var gameName = params.get('title') || document.title || 'Juego';
   var sent = false;
+  var collector = null;
 
   function post(type, payload) {
     if (!embedded) return;
@@ -92,5 +93,18 @@
     exit: function () {
       post('exit');
     },
+
+    /** fn() devuelve el resultado actual (o null si aún no hay nada que guardar). */
+    onCollect: function (fn) {
+      collector = fn;
+    },
   };
+
+  // El reproductor pide el resultado antes de cerrar el juego: así no se pierde una partida a medias.
+  window.addEventListener('message', function (e) {
+    if (e.source !== window.parent || !e.data || e.data.source !== 'moscowle-player' || e.data.type !== 'collect') return;
+    var result = collector ? collector() : null;
+    if (result && !sent) window.MoscowleGame.finish(result);
+    else post('nothing');
+  });
 })();

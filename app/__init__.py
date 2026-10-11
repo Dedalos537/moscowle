@@ -448,6 +448,11 @@ def create_app(config_class=None):
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
         app.logger.info('ProxyFix middleware enabled')
 
+    # Los juegos se incrustan en el reproductor (también desde el dominio de cPanel) y necesitan blob:/wasm.
+    from app.utils.game_headers import GameHeadersMiddleware
+
+    app.wsgi_app = GameHeadersMiddleware(app.wsgi_app)
+
     try:
         csp = {
             'default-src': ["'self'"],
