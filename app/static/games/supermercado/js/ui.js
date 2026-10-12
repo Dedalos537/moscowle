@@ -2,7 +2,7 @@
  * Interfaz DOM: pantallas, lista de compras, carrito, burbujas y avisos.
  * Nunca muestra KPIs ni puntajes clínicos: solo lista, carrito, dinero y estrellas.
  */
-import { LEVELS, catName, soles, productsOfCat } from './config.js';
+import { LEVELS, SECTIONS, catName, soles, productsOfCat } from './config.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -123,9 +123,14 @@ export class UI {
   setList(list, memo) {
     this.listEl.innerHTML = list
       .map(
-        (e, i) => `<li data-i="${i}"><span class="bx">${svg('i-check')}</span><img src="${this.catIcon(e.cat)}" alt=""><span class="nm">${catName(e.cat, e.qty)}${
-          productsOfCat(e.cat).length > 1 ? '<span class="any">elige</span>' : ''
-        }</span><span class="ct">${e.got}/${e.qty}</span></li>`,
+        (e, i) => {
+          const sec = SECTIONS.find((s) => s.id === productsOfCat(e.cat)[0].sec);
+          const col = '#' + sec.color.toString(16).padStart(6, '0');
+          const secName = sec.title.charAt(0) + sec.title.slice(1).toLowerCase();
+          return `<li data-i="${i}" style="--sec:${col}"><span class="bx">${svg('i-check')}</span><img src="${this.catIcon(e.cat)}" alt=""><span class="nm"><span class="nmt">${catName(e.cat, e.qty)}${
+            productsOfCat(e.cat).length > 1 ? '<span class="any">elige</span>' : ''
+          }</span><span class="sec"><i></i>${secName}</span></span><span class="ct">${e.got}/${e.qty}</span></li>`;
+        },
       )
       .join('');
     $('listCard').classList.toggle('memo', !!memo);

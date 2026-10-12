@@ -435,9 +435,15 @@ kbd { font-family: inherit; font-weight: 900; background: var(--paper); border: 
 @media (min-width: 761px) { .touchUI #cartBar { max-width: 520px; } }
 
 @media (max-height: 520px) and (orientation: landscape) {
-  .titleWrap { gap: 12px; padding-top: 0; }
-  .logo h1 { font-size: 54px; }
-  .tagline { display: none; }
+  .titleWrap { gap: 10px; padding-top: 0; }
+  .logo h1 { font-size: 50px; margin: 6px 0 2px; }
+  .logoSub { font-size: 14px; padding: 2px 12px; }
+  .tagline { font-size: 15px; margin-top: 4px; white-space: nowrap; }
+  .menuBtns { width: min(560px, 92vw); grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .menuBtns .big { grid-column: auto; font-size: 20px; padding: 8px 18px; min-height: 48px; }
+  .menuBtns .btn { min-height: 48px; font-size: 18px; padding: 8px 16px; }
+  .menuBtns .ghost { grid-column: 1 / -1; min-height: 38px; }
+  .howto { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -451,4 +457,60 @@ kbd { font-family: inherit; font-weight: 900; background: var(--paper); border: 
 }
 @media (orientation: portrait) {
   #scrWin > .panel { margin: auto auto 0; }
+}
+
+/* ------------------------------------------------ revisión: pistas de sección en la lista */
+#listItems li .nm { display: flex; flex-direction: column; justify-content: center; line-height: 1.05; }
+#listItems li .nmt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#listItems li .sec { font-size: 11px; font-weight: 900; color: var(--brown2); display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+#listItems li .sec i { width: 9px; height: 9px; border-radius: 50%; background: var(--sec); border: 1.5px solid var(--brown); flex: none; }
+#listItems li img { border-radius: 10px; box-shadow: inset 0 -4px 0 var(--sec); }
+#listCard { overflow: hidden; }
+@media (max-width: 760px) {
+  #listItems li .sec { font-size: 0; margin: 0; position: absolute; right: 2px; top: 2px; }
+  #listItems li .sec i { width: 11px; height: 11px; }
+  #listItems li .nm { align-items: center; }
+}
+
+/* botón de menú durante la caja y el pago */
+#flowMenu { position: absolute; right: 16px; top: max(16px, var(--safe-t)); z-index: 20; }
+
+/* recibo compacto (celular vertical): tira de íconos con precios */
+@media (max-width: 760px) {
+  #rcItems { display: flex; gap: 6px; overflow-x: auto; max-height: none; padding: 0 0 8px; scrollbar-width: none; }
+  #rcItems li { flex: none; flex-direction: column; gap: 0; padding: 2px 4px; border: 2px solid rgba(91, 52, 21, 0.15); border-radius: 12px; background: #fff; font-size: 12px; }
+  #rcItems li span { display: none; }
+  #rcItems li img { width: 30px; height: 30px; }
+}
+
+/* pago en pantallas bajas (celular horizontal): todo visible sin desplazar */
+@media (max-height: 500px) {
+  #scrPay { padding: 8px 64px 8px 10px; }
+  .payWrap { flex-direction: row; gap: 10px; width: 100%; height: calc(100vh - 16px); }
+  .receipt { width: 200px; padding: 10px; }
+  .rcHead { display: block; font-size: 16px; margin-bottom: 4px; }
+  #rcItems { display: block; max-height: none; flex: 1; }
+  #rcItems li { flex-direction: row; font-size: 13px; padding: 2px 0; border: 0; border-bottom: 2px dotted rgba(91, 52, 21, 0.2); border-radius: 0; background: none; }
+  #rcItems li span { display: block; }
+  #rcItems li img { width: 22px; height: 22px; }
+  .rcTotal { margin-top: 6px; padding: 6px 10px; font-size: 15px; }
+  .rcTotal b { font-size: 22px; }
+  .payMain { padding: 10px 12px; gap: 6px; overflow: hidden; position: relative; }
+  .payAsk { font-size: 15px; }
+  .tray { min-height: 70px; flex: 1; }
+  .trayHint { font-size: 15px; }
+  .trayItems { padding: 6px; gap: 6px; }
+  .trayRow { font-size: 14px; }
+  .trayRow b { font-size: 16px; }
+  .walletHead { display: none; }
+  .wallet { min-height: 0; padding: 6px; gap: 8px; }
+  .wallet, .trayItems { zoom: 0.8; }
+  .bill { width: 88px; height: 46px; }
+  .bill .v { font-size: 18px; }
+  .payMain > .row { margin-top: 0; position: sticky; bottom: 0; }
+  .payMain .btn.big { min-height: 44px; font-size: 19px; padding: 6px 22px; }
+  .payMain .btn.small { min-height: 36px; }
+  .changeBox { position: absolute; inset: 8px; margin: 0; z-index: 5; display: flex; flex-direction: column; justify-content: center; }
+  .changeBox.hidden { display: none !important; }
+  #flowMenu { right: 8px; top: 8px; width: 44px; height: 44px; }
 }

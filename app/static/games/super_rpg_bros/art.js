@@ -954,6 +954,9 @@
   })();
   var sparkle = paint(['...W...', '...W...', '..WYW..', 'WWYWYWW', '..WYW..', '...W...', '...W...'], { W: '#ffffff', Y: '#fff1a0' });
   var puff = paint(['..aaaa..', '.abbbba.', 'abbbbbba', 'abbbbbba', 'abbbbbba', 'aabbbbaa', '.aaaaaa.', '..aaaa..'], { a: 'rgba(225,220,205,0.75)', b: 'rgba(255,253,245,0.95)' });
+  var STAR = ['....k....', '...kYk...', '...kYk...', 'kkkkYWkkk', 'kYYYWYYYk', '.kYYYYYk.', '..kYYYk..', '.kYYkYYk.', '.kYk.kYk.', '.kk...kk.'];
+  var star = paint(STAR, { k: '#5e3a08', Y: '#ffd43a', W: '#fff6c2' });
+  var starOff = paint(STAR, { k: '#2a2d44', Y: '#5a5f7a', W: '#767b96' });
   var bubble = paint(['.ww.', 'w..w', 'w.Ww', '.ww.'], { w: 'rgba(220,245,255,0.9)', W: '#ffffff' });
 
   // ───────────────────────────── decoración ─────────────────────────────
@@ -1015,6 +1018,8 @@
     sparkle: sparkle,
     puff: puff,
     bubble: bubble,
+    star: star,
+    starOff: starOff,
     themes: THEMES,
     tiles: tilesFor,
     backdrop: backdrop,

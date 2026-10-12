@@ -316,8 +316,12 @@ export function characterGeometries(o) {
     part(sph(0.25, 20, 14), skin, { pos: [0, 0.23, 0], colorFn: grad(0xffffff, 0.15, 0.6) }),
     // pelo
     part(sph(0.262, 22, 12, 0, Math.PI * 2, 0, Math.PI * 0.52), o.hair, { pos: [0, 0.245, -0.012], rot: [-0.32, 0, 0] }),
-    part(sph(0.12, 12, 8), o.hair, { pos: [0.1, 0.38, 0.13], scale: [1.2, 0.5, 0.8], rot: [0.4, 0, -0.3] }),
-    part(sph(0.1, 12, 8), o.hair, { pos: [-0.1, 0.39, 0.14], scale: [1.2, 0.5, 0.8], rot: [0.5, 0, 0.4] }),
+    ...(o.cap
+      ? []
+      : [
+          part(sph(0.12, 12, 8), o.hair, { pos: [0.1, 0.38, 0.13], scale: [1.2, 0.5, 0.8], rot: [0.4, 0, -0.3] }),
+          part(sph(0.1, 12, 8), o.hair, { pos: [-0.1, 0.39, 0.14], scale: [1.2, 0.5, 0.8], rot: [0.5, 0, 0.4] }),
+        ]),
     // orejas
     part(sph(0.05, 8, 6), skin, { pos: [0.245, 0.22, 0], scale: [0.6, 1, 1] }),
     part(sph(0.05, 8, 6), skin, { pos: [-0.245, 0.22, 0], scale: [0.6, 1, 1] }),
@@ -329,8 +333,10 @@ export function characterGeometries(o) {
     part(new THREE.TorusGeometry(0.035, 0.009, 5, 10, Math.PI), 0x7a2e1d, { pos: [0, 0.145, 0.232], rot: [0.15, 0, Math.PI] }),
   ];
   if (o.cap) {
-    head.push(part(sph(0.268, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.42), o.cap, { pos: [0, 0.25, 0], rot: [-0.18, 0, 0] }));
-    head.push(part(cyl(0.16, 0.17, 0.02, 18, false, -Math.PI / 2, Math.PI), o.cap, { pos: [0, 0.37, 0.12], rot: [0.28, 0, 0], scale: [1, 1, 1.25] }));
+    // gorra sólida: domo liso + visera ancha de otro color + botón
+    head.push(part(sph(0.272, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.46), o.cap, { pos: [0, 0.255, -0.01], rot: [-0.12, 0, 0] }));
+    head.push(part(cyl(0.2, 0.2, 0.025, 20, false, -Math.PI / 2, Math.PI), o.brim ?? 0xe63946, { pos: [0, 0.335, 0.16], rot: [0.12, 0, 0], scale: [1, 1, 1.15] }));
+    head.push(part(sph(0.03, 8, 6), o.brim ?? 0xe63946, { pos: [0, 0.525, -0.03] }));
   }
   if (o.bun) head.push(part(sph(0.1, 12, 8), o.hair, { pos: [0, 0.5, -0.1] }));
   if (o.glasses) {

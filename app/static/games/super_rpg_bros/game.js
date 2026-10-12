@@ -19,11 +19,19 @@
 
   var A = window.SRBArt;
   var T = A.T;
-  var W = 544; // resolución del marcador y de los menús
-  var H = 416;
-  var ZOOM = 1.6; // el mundo se ve 1,6 veces más grande
-  var VW = W / ZOOM; // 340 px de mundo a lo ancho
-  var VH = H / ZOOM; // 260 px de mundo a lo alto
+  // Marcador y menús se diseñan sobre 544x416 (LW x LH); el búfer real (W x H) se adapta a la pantalla y los menús
+  // se centran con (MX, MY). En el celular el zoom del mundo sube a ~2,2 y en vertical la vista del mundo es más alta.
+  var LW = 544;
+  var LH = 416;
+  var W = LW;
+  var H = LH;
+  var MX = 0;
+  var MY = 0;
+  var ZOOM = 1.6; // el mundo se ve 1,6 veces más grande (2,2 en celulares)
+  var VW = W / ZOOM; // px de mundo a lo ancho (340 en escritorio)
+  var VH = H / ZOOM; // px de mundo a lo alto (260 en escritorio)
+  var ZOOMT = 1.6; // escala de los fondos del título y el final
+  var MOBILE = false; // pantalla táctil o pequeña: textos más grandes y pistas táctiles
 
   // ───────────────────────────── pantalla ─────────────────────────────
   var screen = document.getElementById('screen');
@@ -36,10 +44,44 @@
   var S = 1; // píxeles del lienzo por píxel de mundo
 
   function resize() {
-    var box = screen.parentElement.getBoundingClientRect();
-    var scale = Math.min(box.width / W, box.height / H);
-    var cssW = Math.max(1, Math.floor(W * scale));
-    var cssH = Math.max(1, Math.floor(H * scale));
+    var stage = screen.parentElement;
+    var box = stage.getBoundingClientRect();
+    var cs = window.getComputedStyle(stage);
+    var bw = box.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    var bh = box.height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    var small = Math.min(window.innerWidth, window.innerHeight) < 520;
+    MOBILE = coarse || small;
+    // En horizontal con pantalla táctil se reservan los costados para los botones: nunca tapan el juego.
+    if (coarse && window.innerWidth > window.innerHeight) bw = Math.max(bw * 0.5, bw - 2 * 172);
+    ZOOM = !MOBILE ? 1.6 : small ? 2.2 : 1.9;
+    var refW = LW / ZOOM;
+    var refH = LH / ZOOM;
+    var ws = Math.max(0.1, Math.min(bw / refW, bh / refH)); // px CSS por px de mundo
+    if (MOBILE) {
+      VW = Math.min(bw / ws, refW * 1.45);
+      VH = Math.min(bh / ws, 26 * T);
+    } else {
+      VW = refW;
+      VH = refH;
+    }
+    var cssW = Math.max(1, Math.floor(VW * ws));
+    var cssH = Math.max(1, Math.floor(VH * ws));
+    VW = cssW / ws;
+    VH = cssH / ws;
+    var hs = Math.min(cssW / LW, cssH / LH);
+    W = Math.max(LW, Math.round(cssW / hs));
+    H = Math.max(LH, Math.round(cssH / hs));
+    MX = Math.round((W - LW) / 2);
+    MY = Math.round((H - LH) / 2);
+    buf.width = W;
+    buf.height = H;
+    g.imageSmoothingEnabled = false;
+    if (typeof bgc !== 'undefined' && bgc) {
+      bgc.width = Math.ceil(VW) + 2;
+      bgc.height = Math.ceil(VH) + 2;
+      skyCache.key = '';
+    }
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
     // Tope de ~2,4 Mpx en el lienzo: tabletas modestas mantienen los 60 fps.
     if (cssW * cssH * dpr * dpr > 2400000) dpr = Math.sqrt(2400000 / (cssW * cssH));
@@ -69,15 +111,19 @@
     '-': [0, 0, 0, 31, 0, 0, 0], '×': [0, 17, 10, 4, 10, 17, 0], '/': [1, 1, 2, 4, 8, 16, 16], "'": [4, 4, 8, 0, 0, 0, 0],
     Á: [2, 4, 14, 17, 31, 17, 17], É: [2, 4, 31, 16, 30, 16, 31], Í: [2, 4, 14, 4, 4, 4, 14], Ó: [2, 4, 14, 17, 17, 17, 14],
     Ú: [2, 4, 17, 17, 17, 17, 14], Ñ: [14, 0, 17, 25, 21, 19, 17], '(': [2, 4, 8, 8, 8, 4, 2], ')': [8, 4, 2, 2, 2, 4, 8],
+    '→': [0, 4, 2, 31, 2, 4, 0], '↓': [4, 4, 4, 21, 14, 4, 0], '★': [4, 4, 31, 14, 14, 27, 17],
     '+': [0, 4, 4, 31, 4, 4, 0], '·': [0, 0, 0, 12, 12, 0, 0], '>': [8, 4, 2, 1, 2, 4, 8], '<': [2, 4, 8, 16, 8, 4, 2],
   };
 
   function textWidth(str, s) {
-    return str.length * 6 * (s || 1) - (s || 1);
+    s = s || 1;
+    if (s === 1 && MOBILE) s = 2;
+    return str.length * 6 * s - s;
   }
 
   function text(str, x, y, color, s, align, shadow) {
     s = s || 1;
+    if (s === 1 && MOBILE) s = 2;
     str = String(str).toUpperCase();
     if (align === 'center') x = Math.round(x - textWidth(str, s) / 2);
     else if (align === 'right') x = Math.round(x - textWidth(str, s));
@@ -264,6 +310,7 @@
     }
   }
   var save = loadSave() || { unlocked: 1, cleared: [], options: { sfx: true, music: true, calm: false } };
+  save.stars = save.stars || {}; // { '1-1': bits } 1 = bandera, 2 = todas las monedas, 4 = sin golpes
   Sound.opts.sfx = save.options.sfx;
   Sound.opts.music = save.options.music;
 
@@ -285,7 +332,7 @@
       var touches = this.stomps + this.hits;
       return {
         game_name: 'Super RPG Bros.',
-        accuracy: touches ? Math.round((this.stomps / touches) * 100) : this.attempts ? Math.round((this.clears / this.attempts) * 100) : 0,
+        accuracy: touches ? Math.round((this.stomps / touches) * 100) : 0,
         avg_time: this.clearTimes.length ? Math.round(this.clearTimes.reduce(function (a, b) { return a + b; }, 0) / this.clearTimes.length) : 0,
         level_reached: this.best,
         deaths: this.deaths,
@@ -308,6 +355,15 @@
     window.MoscowleGame.onCollect && window.MoscowleGame.onCollect(function () { return Stats.attempts ? Stats.result() : null; });
   }
   window.addEventListener('pagehide', function () { report(); });
+  // Al ocultar la pestaña o la app: pausa y silencio.
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) return;
+    if (Game.scene === 'play') {
+      Game.scene = 'pause';
+      Game.menu = 0;
+    }
+    Sound.music(false);
+  });
 
   // ───────────────────────────── mapa de tiles ─────────────────────────────
   var SOLID = { '#': 1, S: 1, B: 1, '?': 1, M: 1, U: 1, '[': 1, ']': 1, '{': 1, '}': 1 };
@@ -465,7 +521,8 @@
   function startLevel(index, fromCheckpoint, retry) {
     Game.levelIndex = index;
     var L = window.SRBLevels[index]();
-    world = { main: L, current: L, startTime: Date.now(), checkpoint: fromCheckpoint || null, coinsHere: 0 };
+    world = { main: L, current: L, startTime: Date.now(), checkpoint: fromCheckpoint || null, coinsHere: 0, frames: 0, hits: 0, retried: !!retry };
+    L.cpPost = checkpointPost(L);
     var lvStats = Stats.level(L.id, L.coinTotal());
     lvStats.available = L.coinTotal();
     // Reintentar tras perder una vida no es un intento nuevo: así «avance» y «errores» no se mezclan.
@@ -524,6 +581,7 @@
   function hurtPlayer(p, from) {
     if (p.invuln > 0 || p.dead || p.goal) return;
     Stats.hits++;
+    if (world) world.hits++;
     if (p.power > 0) {
       setPower(p, p.power === 2 ? 1 : 0);
       p.invuln = 100;
@@ -602,7 +660,8 @@
 
     // Horizontal con inercia: empuje fuerte al arrancar que se suaviza cerca del tope, frenado progresivo al
     // soltar, derrape al invertir el sentido y velocidad que se pierde poco a poco al dejar de correr.
-    var max = (p.inWater ? PH.waterMax : run ? PH.runMax : PH.walkMax) * calm;
+    // Modo tranquilo: más lento caminando, pero en el aire conserva todo el alcance del salto.
+    var max = (p.inWater ? PH.waterMax : run ? PH.runMax : PH.walkMax) * (p.onGround ? calm : 1);
     var speed = Math.abs(p.vx);
     var wasSkid = p.skid;
     p.skid = false;
@@ -637,6 +696,14 @@
     else if (p.buffer > 0) p.buffer--;
     if (p.onGround) p.coyote = COYOTE;
     else if (p.coyote > 0) p.coyote--;
+    // Bajar de una plataforma de un sentido: ↓ + A estando sobre ella (no salta; atraviesa 8 cuadros).
+    if (p.dropT > 0) p.dropT--;
+    if (p.onGround && keys.down && pressed.a && onOneWay(p, map)) {
+      p.dropT = 8;
+      p.buffer = 0;
+      p.coyote = 0;
+      p.onGround = false;
+    }
 
     if (p.inWater) {
       if (pressed.a) {
@@ -654,7 +721,7 @@
       if (Game.frame % 50 === 0) bubbles(p.x + p.w / 2 + p.face * 4, p.y + 2, 1);
     } else {
       if (p.buffer > 0 && p.coyote > 0) {
-        p.vy = -(PH.jump + Math.abs(p.vx) * PH.jumpSpeedK) * (calm < 1 ? 0.98 : 1);
+        p.vy = -(PH.jump + Math.abs(p.vx) * PH.jumpSpeedK);
         p.buffer = 0;
         p.coyote = 0;
         p.holding = PH.holdFrames;
@@ -685,7 +752,9 @@
 
     var wasGround = p.onGround;
     var fallSpeed = p.vy;
-    var res = move(p, map, { hidden: true, dropThrough: keys.down && keys.a });
+    // Corrección de esquinas: si la cabeza apenas roza el borde de un bloque (≤4 px), se desliza a un lado.
+    if (p.vy < 0) cornerNudge(p, map);
+    var res = move(p, map, { hidden: true, dropThrough: p.dropT > 0 });
     p.onGround = res.ground;
     if (res.ground && !wasGround) landed(p, fallSpeed);
     if (res.ceil) {
@@ -745,8 +814,14 @@
       Sound.play('clear');
     }
 
-    // Caída a un foso
-    if (p.y > map.h * T + 24) killPlayer(p);
+    // Último suelo firme (para el rescate del modo tranquilo).
+    if (p.onGround && !p.inWater && firmGround(p, map)) p.safe = { x: p.x, feet: p.y + p.h, map: map };
+    // Caída a un foso: en modo tranquilo Ruy vuelve al último suelo firme (pierde una vida, no reinicia).
+    if (p.y > map.h * T + 24) {
+      if (save.options.calm && p.safe && p.safe.map === map) rescue(p);
+      else killPlayer(p);
+      if (!player) return;
+    }
 
     if (p.invuln > 0) p.invuln--;
     if (p.grow > 0) p.grow--;
@@ -761,11 +836,97 @@
     else p.state = Math.abs(p.vx) > 0.15 ? 'run' : 'idle';
     p.anim += Math.abs(p.vx) * 0.105 + (Math.abs(p.vx) > 0.15 ? 0.04 : 0);
 
-    // Punto de control a mitad del nivel (en la torre, a media altura), siempre sobre suelo firme.
-    if (!world.checkpoint && map === world.main && p.onGround) {
-      var half = map.vertical ? p.y + p.h < (map.h * T) / 2 : p.x > (map.w * T) / 2;
-      if (half) world.checkpoint = { x: Math.floor(p.x / T), y: Math.floor((p.y + p.h) / T) - 2 };
+    // Punto de control visible (banderín a mitad del nivel; en la torre, a media altura).
+    var post = map.cpPost;
+    if (!world.checkpoint && map === world.main && post && p.onGround) {
+      var reached = map.vertical ? p.y + p.h <= post.row * T + 2 : p.x + p.w / 2 >= post.x * T;
+      if (reached) {
+        world.checkpoint = { x: post.x, y: post.row - 2 };
+        sparks(post.x * T + 8, post.row * T - 26, 10, '#9dffb0');
+        popup('¡PUNTO DE CONTROL!', post.x * T + 8, post.row * T - 40);
+        Sound.play('appear');
+      }
     }
+  }
+
+  function onOneWay(p, map) {
+    var row = Math.floor((p.y + p.h + 1) / T);
+    var l = cell(map, Math.floor(p.x / T), row);
+    var r = cell(map, Math.floor((p.x + p.w - 0.01) / T), row);
+    return (l === '=' || r === '=') && !isSolid(l) && !isSolid(r);
+  }
+
+  function firmGround(p, map) {
+    var row = Math.floor((p.y + p.h + 1) / T);
+    var l = cell(map, Math.floor(p.x / T), row);
+    var r = cell(map, Math.floor((p.x + p.w - 0.01) / T), row);
+    var ok = function (c) { return (isSolid(c) || c === '=') && c !== '^'; };
+    return ok(l) && ok(r);
+  }
+
+  function cornerNudge(p, map) {
+    var ty = Math.floor((p.y + p.vy) / T);
+    var l = Math.floor(p.x / T);
+    var r = Math.floor((p.x + p.w - 0.01) / T);
+    if (l === r) return;
+    var sl = isSolid(cell(map, l, ty));
+    var sr = isSolid(cell(map, r, ty));
+    var free = function (x) {
+      for (var y = ty; y <= Math.floor((p.y + p.h - 1) / T); y++) {
+        if (isSolid(cell(map, Math.floor(x / T), y)) || isSolid(cell(map, Math.floor((x + p.w - 0.01) / T), y))) return false;
+      }
+      return true;
+    };
+    if (sl && !sr) {
+      var d = (l + 1) * T - p.x;
+      if (d <= 4 && free(p.x + d)) p.x += d;
+    } else if (sr && !sl) {
+      var d2 = p.x + p.w - r * T;
+      if (d2 <= 4 && free(p.x - d2)) p.x -= d2;
+    }
+  }
+
+  function rescue(p) {
+    Game.lives--;
+    Stats.deaths++;
+    world.hits++;
+    Sound.play('hurt');
+    if (Game.lives <= 0) {
+      Sound.music(false);
+      setScene('gameover');
+      player = null;
+      return;
+    }
+    p.x = p.safe.x;
+    p.y = p.safe.feet - p.h;
+    p.px = p.x;
+    p.py = p.y;
+    p.vx = 0;
+    p.vy = 0;
+    p.invuln = 90;
+    cam.anchor = p.safe.feet;
+    sparks(p.x + p.w / 2, p.y + p.h / 2, 10, '#ffffff');
+  }
+
+  /** Lugar del banderín de control: primer suelo después de la mitad del nivel (en la torre, el primer escalón sobre la mitad). */
+  function checkpointPost(L) {
+    if (L.vertical) {
+      var st = (L.steps || []).filter(function (s2) { return s2.y < L.h / 2 && !s2.goal; })[0];
+      return st ? { x: st.x + Math.floor(st.w / 2), row: st.y } : null;
+    }
+    for (var tx = Math.floor(L.w / 2); tx < L.w - 8; tx++) {
+      for (var ty = 4; ty < L.h; ty++) {
+        var c = L.grid[ty][tx];
+        if (c === '#') {
+          var clear = true;
+          for (var k = 1; k <= 3; k++) if (L.grid[ty - k][tx] !== ' ') clear = false;
+          if (clear) return { x: tx, row: ty };
+          break;
+        }
+        if (c !== ' ') break;
+      }
+    }
+    return null;
   }
 
   function touchesPole(p, map) {
@@ -843,14 +1004,17 @@
 
   function levelCleared() {
     var L = world.main;
-    var secs = Math.round((Date.now() - world.startTime) / 1000);
+    var secs = Math.round(world.frames / 60);
     Stats.clears++;
     Stats.clearTimes.push(secs);
     Stats.best = Math.max(Stats.best, Game.levelIndex + 1);
     var bonus = Game.timer ? Math.round(Game.timer) * 10 : 500;
     Game.score += bonus;
     Stats.score = Game.score;
-    Game.message = { title: '¡NIVEL SUPERADO!', lines: ['MONEDAS ' + world.coinsHere + ' / ' + L.coinTotal(), 'TIEMPO ' + secs + 'S', 'BONO +' + bonus] };
+    var stars = [true, world.coinsHere >= L.coinTotal(), world.hits === 0 && !world.retried];
+    var bits = (stars[0] ? 1 : 0) | (stars[1] ? 2 : 0) | (stars[2] ? 4 : 0);
+    save.stars[L.id] = (save.stars[L.id] || 0) | bits;
+    Game.message = { title: '¡NIVEL SUPERADO!', stars: stars, lines: ['MONEDAS ' + world.coinsHere + ' / ' + L.coinTotal(), 'TIEMPO ' + secs + ' S', 'BONO +' + bonus] };
     if (save.cleared.indexOf(L.id) < 0) save.cleared.push(L.id);
     save.unlocked = Math.max(save.unlocked, Math.min(window.SRBLevels.length, Game.levelIndex + 2));
     writeSave(save);
@@ -978,6 +1142,8 @@
       e.h = 13;
       e.y += 2;
     }
+    // Modo tranquilo: enemigos más lentos.
+    if (save.options.calm) e.speed *= 0.6;
     e.px = e.x;
     e.py = e.y;
     return e;
@@ -1044,13 +1210,14 @@
         var dx = player.x - e.x;
         var dy = player.y - e.y;
         if (Math.abs(dx) < 150 && Math.abs(dy) < 110 && !player.dead) {
-          e.vx += Math.sign(dx) * 0.03;
+          e.vx += Math.sign(dx) * 0.03 * (save.options.calm ? 0.6 : 1);
           e.vy += Math.sign(dy) * 0.02;
         } else {
           e.vx *= 0.96;
           e.vy += (e.homeY - e.y) * 0.002;
         }
-        e.vx = clamp(e.vx, -0.8, 0.8);
+        var bm = save.options.calm ? 0.48 : 0.8;
+        e.vx = clamp(e.vx, -bm, bm);
         e.vy = clamp(e.vy, -0.6, 0.6) + Math.sin(e.anim * 2) * 0.05;
         if (Math.abs(e.vx) > 0.05) e.face = e.vx > 0 ? 1 : -1;
         move(e, map);
@@ -1263,14 +1430,25 @@
     var sc = Game.scene;
     if (sc === 'title') return updateMenu(titleItems(), function (id) {
       if (id === 'new') {
-        save.unlocked = 1;
-        save.cleared = [];
-        writeSave(save);
-        newGame();
+        // Con avance guardado, primero se pregunta: «NUEVA PARTIDA» ya no borra nada sin confirmar.
+        if (hasSave()) setScene('confirm');
+        else newGame();
       } else if (id === 'continue') newGame();
       else if (id === 'options') setScene('options');
       else if (id === 'exit') exitGame();
     });
+    if (sc === 'confirm') {
+      if (pressed.pause || pressed.b) return setScene('title');
+      return updateMenu(withBoxes('confirm', [{ id: 'no', label: 'NO' }, { id: 'yes', label: 'SÍ, BORRAR' }]), function (id) {
+        if (id === 'yes') {
+          save.unlocked = 1;
+          save.cleared = [];
+          save.stars = {};
+          writeSave(save);
+          newGame();
+        } else setScene('title');
+      });
+    }
     if (sc === 'options') return updateMenu(optionItems(), function (id) {
       if (id === 'back') return setScene('title');
       save.options[id] = !save.options[id];
@@ -1287,14 +1465,25 @@
       return;
     }
     if (sc === 'play') return updatePlay();
-    if (sc === 'pause') return updateMenu(withBoxes('pause', [{ id: 'resume', label: 'CONTINUAR' }, { id: 'map', label: 'VOLVER AL MAPA' }]), function (id) {
-      if (id === 'resume') {
+    if (sc === 'pause') {
+      // Pausa / Esc / Enter / botón II vuelven al juego.
+      if (pressed.pause || pressed.start) {
         Game.scene = 'play';
         Sound.music(true);
-      } else {
-        setScene('map');
+        return;
       }
-    });
+      return updateMenu(withBoxes('pause', PAUSE_ITEMS), function (id) {
+        if (id === 'resume') {
+          Game.scene = 'play';
+          Sound.music(true);
+        } else if (id === 'map') {
+          setScene('map');
+        } else {
+          setScene('title');
+          exitGame();
+        }
+      });
+    }
     if (sc === 'clear') {
       if (Game.sceneTime > 70 && (pressed.a || pressed.start || tap || Game.sceneTime > 330)) {
         if (Game.levelIndex >= window.SRBLevels.length - 1) setScene('ending');
@@ -1353,8 +1542,10 @@
     });
     bumps = bumps.filter(function (b) { return b.t < 10; });
 
+    if (!player.goal) world.frames++;
+    // TIEMPO en segundos reales (60 pasos = 1 s), igual en el marcador y en el panel final.
     if (Game.timer !== null && !player.dead && !player.goal && !world.current.isRoom) {
-      Game.timer -= 1 / 40;
+      Game.timer -= 1 / 60;
       if (Game.timer <= 0) {
         Game.timer = 0;
         killPlayer(player);
@@ -1390,10 +1581,15 @@
   }
 
   var menuBoxes = {};
+  var PAUSE_ITEMS = [{ id: 'resume', label: 'CONTINUAR' }, { id: 'map', label: 'VOLVER AL MAPA' }, { id: 'exit', label: 'SALIR' }];
+  function hasSave() {
+    return save.unlocked > 1 || save.cleared.length > 0;
+  }
   function titleItems() {
-    var items = [{ id: 'new', label: 'NUEVA PARTIDA' }];
-    if (save.unlocked > 1 || save.cleared.length) items.push({ id: 'continue', label: 'CONTINUAR' });
-    items.push({ id: 'options', label: 'OPCIONES' }, { id: 'exit', label: 'SALIR' });
+    // Con avance guardado, CONTINUAR va primero y queda elegido por defecto.
+    var items = [];
+    if (hasSave()) items.push({ id: 'continue', label: 'CONTINUAR' });
+    items.push({ id: 'new', label: 'NUEVA PARTIDA' }, { id: 'options', label: 'OPCIONES' }, { id: 'exit', label: 'SALIR' });
     return withBoxes('title', items);
   }
   function optionItems() {
@@ -1434,7 +1630,7 @@
     }
     if (tap) {
       MAP_NODES.forEach(function (n, i) {
-        if (i <= max && Math.hypot(tap.x - n.x, tap.y - n.y) < 26) {
+        if (i <= max && Math.hypot(tap.x - MX - n.x, tap.y - MY - n.y) < 30) {
           if (Game.levelIndex === i) startLevel(i);
           else Game.levelIndex = i;
         }
@@ -1905,8 +2101,69 @@
     if (e.kind === 'fireball') drawWS(A.fireball[Math.floor(e.anim) % 4], cx, by + 1, 1, 1);
   }
 
+  function drawCheckpoint(map) {
+    var post = map.cpPost;
+    if (!post || map !== world.main) return;
+    var x = post.x * T + 6;
+    var bottom = post.row * T;
+    if (x < rcx - 30 || x > rcx + VW + 30 || bottom < rcy - 10 || bottom - 40 > rcy + VH) return;
+    var on = !!world.checkpoint;
+    rectW(x - 1, bottom - 34, 4, 34, '#1b1d2e');
+    rectW(x, bottom - 34, 2, 34, on ? '#e8ecf5' : '#9aa0b4');
+    var wave = Math.round(Math.sin(Game.frame * 0.15) * (on ? 1 : 0));
+    rectW(x + 2, bottom - 33 + wave, 13, 9, '#1b1d2e');
+    rectW(x + 3, bottom - 32 + wave, 11, 7, on ? '#3fd16a' : '#8a8fa8');
+    rectW(x + 3, bottom - 32 + wave, 11, 2, on ? '#9dffb0' : '#b8bccc');
+    rectW(x - 3, bottom - 38, 8, 5, '#1b1d2e');
+    rectW(x - 2, bottom - 37, 6, 3, on ? '#ffd43a' : '#c8cde0');
+    if (on) {
+      sctx.globalCompositeOperation = 'lighter';
+      sctx.imageSmoothingEnabled = true;
+      glowW(A.glow.green, x + 1, bottom - 35, 16, 0.4 + 0.1 * Math.sin(Game.frame * 0.1));
+      sctx.globalAlpha = 1;
+      sctx.globalCompositeOperation = 'source-over';
+      sctx.imageSmoothingEnabled = false;
+    }
+  }
+
+  // Letreros de la primera vez (1-1): un dibujo simple por cartel.
+  var signIcons = {};
+  function signIcon(kind) {
+    var key = kind + (MOBILE ? 'm' : 'k');
+    if (signIcons[key]) return signIcons[key];
+    var str = { move: '→', jump: MOBILE ? 'A' : 'Z', coin: '?', down: '↓' }[kind] || '?';
+    var c = document.createElement('canvas');
+    c.width = 6 * str.length - 1;
+    c.height = 7;
+    var cg = c.getContext('2d');
+    cg.fillStyle = '#ffffff';
+    for (var i = 0; i < str.length; i++) {
+      var gl = GLYPHS[str[i]];
+      for (var r = 0; r < 7; r++) for (var cc = 0; cc < 5; cc++) if (gl[r] & (16 >> cc)) cg.fillRect(i * 6 + cc, r, 1, 1);
+    }
+    return (signIcons[key] = c);
+  }
+  function drawSign(d) {
+    var x = d.x * T + 2;
+    var bottom = d.y * T;
+    if (x < rcx - 30 || x > rcx + VW + 30) return;
+    rectW(x + 5, bottom - 12, 3, 12, '#5e3b1d');
+    rectW(x - 2, bottom - 27, 17, 16, '#3a2414');
+    rectW(x - 1, bottom - 26, 15, 14, '#b9824a');
+    rectW(x - 1, bottom - 26, 15, 2, '#e3b27a');
+    var ic = signIcon(d.icon);
+    var bounce = d.icon === 'down' || d.icon === 'jump' ? Math.round(Math.abs(Math.sin(Game.frame * 0.08)) * 1.5) : 0;
+    rectW(x + 6 - ic.width / 2 - 1, bottom - 23 - bounce, ic.width + 2, 9, '#7a4f24');
+    drawW(ic, x + 6 - ic.width / 2, bottom - 22 - bounce);
+  }
+
   function drawDeco(map) {
+    var firstTime = save.cleared.indexOf('1-1') < 0;
     map.deco.forEach(function (d) {
+      if (d.kind === 'sign') {
+        if (firstTime) drawSign(d);
+        return;
+      }
       var img = d.kind === 'bush' ? A.bush : A.fence;
       var x = d.x * T;
       var y = d.y * T - img.height + (d.kind === 'bush' ? 3 : 1);
@@ -2052,6 +2309,7 @@
     drawShadows(map);
     drawDynamicTiles(map);
     drawFlag(map);
+    drawCheckpoint(map);
     entities.forEach(function (e) { if (!e.enemy || !e.dead || e.how === 'stomp') drawEntity(e); });
     drawPlayer(player);
     entities.forEach(function (e) { if (e.enemy && e.dead && e.how !== 'stomp') drawEntity(e); });
@@ -2063,11 +2321,16 @@
   }
 
   // ───────────────────────────── marcador y menús (544x416) ─────────────────────────────
+  function hudH() {
+    return MOBILE ? 40 : 34;
+  }
   function drawHud() {
-    g.fillStyle = 'rgba(10,12,30,0.5)';
-    g.fillRect(0, 0, W, 34);
-    g.fillStyle = 'rgba(255,255,255,0.1)';
-    g.fillRect(0, 34, W, 1);
+    var hb = hudH();
+    var vy = MOBILE ? 21 : 15;
+    g.fillStyle = 'rgba(10,12,30,0.8)';
+    g.fillRect(0, 0, W, hb);
+    g.fillStyle = 'rgba(255,255,255,0.12)';
+    g.fillRect(0, hb, W, 1);
     var map = world.main;
     var face = (player && player.power === 2 ? A.ruyFire : A.ruy).small.idle.r;
     g.drawImage(face, 0, 0, 18, 13, 6, 5, 36, 26);
@@ -2075,20 +2338,20 @@
     var coin = A.coin[Math.floor(Game.frame / 8) % 6];
     g.drawImage(coin, 102 + Math.round((14 - coin.width) * 0.75), 5, Math.round(coin.width * 1.5), 24);
     text('×' + String(Game.coins).padStart(2, '0'), 126, 12, '#ffd43a', 2, null, '#1b1d2e');
-    text('MUNDO', W / 2, 5, '#9fd3ff', 1, 'center', '#1b1d2e');
-    text(map.id, W / 2, 15, '#ffffff', 2, 'center', '#1b1d2e');
-    text('PUNTOS', W - 150, 5, '#9fd3ff', 1, 'right', '#1b1d2e');
-    text(String(Game.score).padStart(6, '0'), W - 150, 15, '#ffffff', 2, 'right', '#1b1d2e');
+    text('MUNDO', W / 2, 4, '#9fd3ff', 1, 'center', '#1b1d2e');
+    text(map.id, W / 2, vy, '#ffffff', 2, 'center', '#1b1d2e');
+    text('PUNTOS', W - 150, 4, '#9fd3ff', 1, 'right', '#1b1d2e');
+    text(String(Game.score).padStart(6, '0'), W - 150, vy, '#ffffff', 2, 'right', '#1b1d2e');
     if (Game.timer !== null) {
-      text('TIEMPO', W - 46, 5, '#9fd3ff', 1, 'right', '#1b1d2e');
-      text(String(Math.ceil(Game.timer)), W - 46, 15, Game.timer < 60 ? '#ff8a7a' : '#ffffff', 2, 'right', '#1b1d2e');
+      text('TIEMPO', W - 46, 4, '#9fd3ff', 1, 'right', '#1b1d2e');
+      text(String(Math.ceil(Game.timer)), W - 46, vy, Game.timer < 60 ? '#ff8a7a' : '#ffffff', 2, 'right', '#1b1d2e');
     }
     // Puntos flotantes (en coordenadas del marcador).
     particles.forEach(function (pt) {
       if (pt.kind !== 'text') return;
-      var x = (lerp(pt.px, pt.x, alpha) - rcx) * ZOOM;
-      var y = (lerp(pt.py, pt.y, alpha) - rcy) * ZOOM;
-      if (y < 36) return;
+      var x = (lerp(pt.px, pt.x, alpha) - rcx) * (W / VW);
+      var y = (lerp(pt.py, pt.y, alpha) - rcy) * (H / VH);
+      if (y < hudH() + 2) return;
       g.globalAlpha = Math.min(1, (pt.life / pt.max) * 2);
       text(pt.str, Math.round(x), Math.round(y), '#ffffff', 1, 'center', '#1b1d2e');
       g.globalAlpha = 1;
@@ -2112,7 +2375,7 @@
       var wdt = textWidth(it.label, s);
       var bx = Math.round(x - wdt / 2) - 14;
       var by = y + i * (s * 7 + 14) - 6;
-      boxes.push({ x: bx, y: by, w: wdt + 28, h: s * 7 + 12 });
+      boxes.push({ x: bx + OX, y: by + OY, w: wdt + 28, h: s * 7 + 12 });
       if (sel) {
         g.fillStyle = 'rgba(255,212,58,0.18)';
         g.fillRect(bx, by, wdt + 28, s * 7 + 12);
@@ -2123,6 +2386,35 @@
     menuBoxes[key] = boxes;
   }
 
+  // Dibuja `fn` en el área de diseño 544x416 centrada en el búfer (los toques se traducen con OX/OY).
+  var OX = 0;
+  var OY = 0;
+  function layout(fn) {
+    var w0 = W;
+    var h0 = H;
+    g.save();
+    g.translate(MX, MY);
+    OX = MX;
+    OY = MY;
+    W = LW;
+    H = LH;
+    try {
+      fn();
+    } finally {
+      W = w0;
+      H = h0;
+      OX = 0;
+      OY = 0;
+      g.restore();
+    }
+  }
+  function drawStars(bits, cx, y, k) {
+    for (var i = 0; i < 3; i++) {
+      var img = bits & (1 << i) ? A.star : A.starOff;
+      g.drawImage(img, Math.round(cx + (i - 1) * img.width * k * 1.3 - (img.width * k) / 2), y, img.width * k, img.height * k);
+    }
+  }
+
   function blit2(img, x, y, k) {
     g.drawImage(img, Math.round(x), Math.round(y), Math.round(img.width * k), Math.round(img.height * k));
   }
@@ -2130,9 +2422,9 @@
   function render() {
     var sc = Game.scene;
     sctx.setTransform(1, 0, 0, 1, 0, 0);
-    if (sc === 'title' || sc === 'options' || sc === 'map' || sc === 'gameover' || sc === 'ending' || !world || !player) {
+    if (sc === 'title' || sc === 'options' || sc === 'confirm' || sc === 'map' || sc === 'gameover' || sc === 'ending' || !world || !player) {
       g.globalAlpha = 1;
-      if (sc === 'title' || sc === 'options') renderTitle(sc);
+      if (sc === 'title' || sc === 'options' || sc === 'confirm') renderTitle(sc);
       else if (sc === 'map') renderMap();
       else if (sc === 'gameover') renderGameOver();
       else if (sc === 'ending') renderEnding();
@@ -2152,143 +2444,168 @@
     if (sc === 'intro') {
       g.fillStyle = '#0e101e';
       g.fillRect(0, 0, W, H);
-      text('MUNDO ' + map.id, W / 2, 140, '#ffd43a', 3, 'center');
-      text(world.main.name, W / 2, 180, '#ffffff', 2, 'center');
-      var spr = (player.power === 2 ? A.ruyFire : A.ruy)[player.power ? 'big' : 'small'].idle.r;
-      blit2(spr, W / 2 - 60, 290 - spr.height * 2, 2);
-      text('× ' + Game.lives, W / 2 - 10, 262, '#ffffff', 2);
+      layout(function () {
+        text('MUNDO ' + map.id, W / 2, 110, '#ffd43a', 3, 'center');
+        text(world.main.name, W / 2, 150, '#ffffff', 2, 'center');
+        var spr = (player.power === 2 ? A.ruyFire : A.ruy)[player.power ? 'big' : 'small'].idle.r;
+        blit2(spr, W / 2 - 60, 260 - spr.height * 2, 2);
+        text('× ' + Game.lives, W / 2 - 10, 232, '#ffffff', 2);
+        text('¡LLEGA A LA BANDERA!', W / 2, 300, '#9fd3ff', 2, 'center');
+      });
     }
     if (sc === 'pause') {
       g.fillStyle = 'rgba(14,16,30,0.55)';
       g.fillRect(0, 0, W, H);
-      panel(W / 2 - 130, 130, 260, 150);
-      text('PAUSA', W / 2, 152, '#ffd43a', 3, 'center');
-      drawMenu('pause', [{ label: 'CONTINUAR' }, { label: 'VOLVER AL MAPA' }], W / 2, 206, 2);
+      layout(function () {
+        panel(W / 2 - 140, 112, 280, 200);
+        text('PAUSA', W / 2, 132, '#ffd43a', 3, 'center');
+        drawMenu('pause', PAUSE_ITEMS, W / 2, 186, 2);
+      });
     }
     if (sc === 'clear' && Game.message) {
-      panel(W / 2 - 170, 110, 340, 190);
-      text(Game.message.title, W / 2, 136, '#ffd43a', 2, 'center');
-      Game.message.lines.forEach(function (l, i) { text(l, W / 2, 180 + i * 24, '#ffffff', 2, 'center'); });
-      if (Game.sceneTime > 70 && Math.floor(Game.frame / 20) % 2) text('PULSA SALTAR', W / 2, 270, '#9fd3ff', 1, 'center');
+      layout(function () {
+        panel(W / 2 - 180, 92, 360, 236);
+        text(Game.message.title, W / 2, 112, '#ffd43a', 2, 'center');
+        if (Game.message.stars) drawStars((Game.message.stars[0] ? 1 : 0) | (Game.message.stars[1] ? 2 : 0) | (Game.message.stars[2] ? 4 : 0), W / 2, 136, 3);
+        Game.message.lines.forEach(function (l, i) { text(l, W / 2, 180 + i * 24, '#ffffff', 2, 'center'); });
+        if (Game.sceneTime > 70 && Math.floor(Game.frame / 20) % 2) text(MOBILE ? 'TOCA PARA SEGUIR' : 'PULSA SALTAR', W / 2, 300, '#9fd3ff', 1, 'center');
+      });
     }
     sctx.imageSmoothingEnabled = false;
     var full = sc !== 'play' || particles.some(function (pt) { return pt.kind === 'text'; });
+    var hb = hudH() + 2;
     if (full) sctx.drawImage(buf, 0, 0, screen.width, screen.height);
-    else sctx.drawImage(buf, 0, 0, W, 36, 0, 0, screen.width, Math.round((36 * screen.height) / H));
+    else sctx.drawImage(buf, 0, 0, W, hb, 0, 0, screen.width, Math.round((hb * screen.height) / H));
   }
 
   function renderTitle(sc) {
     g.imageSmoothingEnabled = false;
-    drawBackdrop(g, 'meadow', ZOOM, Game.frame * 0.6, 156, 156, 352, false, W, H);
+    // Suelo del título siempre a 102 px del borde inferior del búfer (sirve para cualquier proporción).
+    var gy = H - 102;
+    var camY = 352 - gy / ZOOMT;
+    drawBackdrop(g, 'meadow', ZOOMT, Game.frame * 0.6, camY, camY, 352, false, W, H);
     var tiles = A.tiles('meadow');
-    var gy = Math.round((352 - 156) * ZOOM);
-    var ts = Math.round(T * ZOOM);
-    var off = Math.round((Game.frame * 0.6 * ZOOM) % ts);
+    var ts = Math.round(T * ZOOMT);
+    var off = Math.round((Game.frame * 0.6 * ZOOMT) % ts);
     for (var x = -1; x < W / ts + 1; x++) {
-      g.drawImage(tiles.tuft, x * ts - off, gy - Math.round(5 * ZOOM), ts, Math.round(5 * ZOOM));
+      g.drawImage(tiles.tuft, x * ts - off, gy - Math.round(5 * ZOOMT), ts, Math.round(5 * ZOOMT));
       g.drawImage(tiles.top[x & 1], x * ts - off, gy, ts, ts);
       for (var r = 1; r < 5; r++) g.drawImage(tiles.ground[(x + r) & 1], x * ts - off, gy + r * ts, ts, ts);
     }
-    blit2(A.bush, 150, gy - A.bush.height * ZOOM + 4, ZOOM);
-    blit2(A.bush, 330, gy - A.bush.height * ZOOM + 4, ZOOM);
-    // Logo
-    var bob = Math.round(Math.sin(Game.frame / 30) * 3);
-    text('SUPER', W / 2, 40 + bob, '#ffffff', 3, 'center', '#1b1d2e');
-    text('RPG BROS.', W / 2, 70 + bob, '#ffd43a', 6, 'center', '#1b1d2e');
+    blit2(A.bush, MX + 150, gy - A.bush.height * ZOOMT + 4, ZOOMT);
+    blit2(A.bush, MX + 330, gy - A.bush.height * ZOOMT + 4, ZOOMT);
     var run = A.ruy.big['run' + (Math.floor(Game.frame / 5) % 6)].r;
-    blit2(run, 34, gy - run.height * 2 + 2, 2);
-    blit2(A.blob[Math.floor(Game.frame / 8) % 4].l, 468, gy - A.blob[0].l.height * 2 + 2, 2);
-    if (sc === 'title') {
-      panel(W / 2 - 150, 150, 300, 40 + titleItems().length * 30);
-      drawMenu('title', titleItems(), W / 2, 172, 2);
-    } else {
-      panel(W / 2 - 190, 140, 380, 190);
-      text('OPCIONES', W / 2, 156, '#ffd43a', 2, 'center');
-      drawMenu('options', optionItems(), W / 2, 196, 2);
-      text('MODO TRANQUILO: MÁS VIDAS, SIN TIEMPO Y MÁS LENTO', W / 2, 312, '#9fd3ff', 1, 'center');
-    }
-    text('MOVER: FLECHAS · SALTAR: Z · CORRER/FUEGO: X · PAUSA: ESC', W / 2, H - 14, '#ffffff', 1, 'center', '#1b1d2e');
-    if (Game.message) text(Game.message.title, W / 2, 132, '#ffffff', 1, 'center', '#1b1d2e');
+    blit2(run, MX + 34, gy - run.height * 2 + 2, 2);
+    blit2(A.blob[Math.floor(Game.frame / 8) % 4].l, MX + 468, gy - A.blob[0].l.height * 2 + 2, 2);
+    var hint = MOBILE ? 'FLECHAS: MOVER · A: SALTAR · B: CORRER' : 'MOVER: FLECHAS · SALTAR: Z · CORRER/FUEGO: X · PAUSA: ESC';
+    text(hint, W / 2, H - (MOBILE ? 20 : 14), '#ffffff', 1, 'center', '#1b1d2e');
+    layout(function () {
+      var bob = Math.round(Math.sin(Game.frame / 30) * 3);
+      text('SUPER', W / 2, 40 + bob, '#ffffff', 3, 'center', '#1b1d2e');
+      text('RPG BROS.', W / 2, 70 + bob, '#ffd43a', 6, 'center', '#1b1d2e');
+      if (sc === 'title') {
+        panel(W / 2 - 150, 150, 300, 40 + titleItems().length * 30);
+        drawMenu('title', titleItems(), W / 2, 172, 2);
+      } else if (sc === 'confirm') {
+        panel(W / 2 - 170, 150, 340, 150);
+        text('¿BORRAR TU AVANCE?', W / 2, 172, '#ffd43a', 2, 'center');
+        drawMenu('confirm', [{ label: 'NO' }, { label: 'SÍ, BORRAR' }], W / 2, 222, 2);
+      } else {
+        panel(W / 2 - 210, 140, 420, 196);
+        text('OPCIONES', W / 2, 156, '#ffd43a', 2, 'center');
+        drawMenu('options', optionItems(), W / 2, 192, 2);
+        text(MOBILE ? 'MÁS VIDAS, SIN TIEMPO, MÁS LENTO' : 'MODO TRANQUILO: MÁS VIDAS, SIN TIEMPO Y MÁS LENTO', W / 2, 312, '#9fd3ff', 1, 'center');
+      }
+      if (Game.message) text(Game.message.title, W / 2, 128, '#ffffff', 1, 'center', '#1b1d2e');
+    });
   }
 
   function renderMap() {
     var names = LEVEL_NAMES || (LEVEL_NAMES = window.SRBLevels.map(function (f) { return f().name; }));
     g.fillStyle = '#3aa6e8';
     g.fillRect(0, 0, W, H);
-    // Isla
-    g.fillStyle = 'rgba(10,40,90,0.25)';
-    g.beginPath();
-    g.ellipse(W / 2 + 6, H / 2 + 40, 252, 140, 0, 0, Math.PI * 2);
-    g.fill();
-    g.fillStyle = '#f2d39e';
-    g.beginPath();
-    g.ellipse(W / 2, H / 2 + 30, 250, 140, 0, 0, Math.PI * 2);
-    g.fill();
-    g.fillStyle = '#5cc33f';
-    g.beginPath();
-    g.ellipse(W / 2, H / 2 + 24, 238, 128, 0, 0, Math.PI * 2);
-    g.fill();
-    g.fillStyle = '#7cd65a';
-    g.beginPath();
-    g.ellipse(W / 2 - 20, H / 2 + 6, 200, 96, 0, 0, Math.PI * 2);
-    g.fill();
     // Ondas del mar
     g.fillStyle = 'rgba(255,255,255,0.5)';
-    for (var i = 0; i < 14; i++) {
+    for (var i = 0; i < 14 + Math.round(H / 40); i++) {
       var wx = (i * 83 + Game.frame * 0.3) % (W + 40) - 20;
-      g.fillRect(wx, 30 + ((i * 47) % 50), 12, 2);
-      g.fillRect((wx + 200) % W, H - 40 - ((i * 31) % 30), 10, 2);
+      g.fillRect(wx, 20 + ((i * 47) % Math.max(60, H - 40)), 12, 2);
     }
-    // Camino
-    g.fillStyle = '#e2b77a';
-    for (var n = 0; n < MAP_NODES.length - 1; n++) {
-      var a = MAP_NODES[n];
-      var b = MAP_NODES[n + 1];
-      for (var t = 0; t <= 1; t += 0.04) g.fillRect(Math.round(a.x + (b.x - a.x) * t) - 3, Math.round(a.y + (b.y - a.y) * t) - 3, 6, 6);
-    }
-    MAP_NODES.forEach(function (nd, idx) {
-      var open = idx < save.unlocked;
-      var done = save.cleared.indexOf('1-' + (idx + 1)) >= 0;
-      g.fillStyle = 'rgba(0,0,0,0.25)';
-      g.fillRect(nd.x - 12, nd.y - 10, 28, 26);
-      g.fillStyle = '#1b1d2e';
-      g.fillRect(nd.x - 13, nd.y - 13, 26, 26);
-      g.fillStyle = done ? '#ffd43a' : open ? '#e8402f' : '#8a8fa8';
-      g.fillRect(nd.x - 11, nd.y - 11, 22, 22);
-      g.fillStyle = 'rgba(255,255,255,0.35)';
-      g.fillRect(nd.x - 11, nd.y - 11, 22, 3);
-      text(String(idx + 1), nd.x, nd.y - 3, '#1b1d2e', 1, 'center');
-      text(names[idx], nd.x, nd.y + 20, open ? '#ffffff' : '#c8cde0', 1, 'center', '#1b1d2e');
+    layout(function () {
+      // Isla
+      g.fillStyle = 'rgba(10,40,90,0.25)';
+      g.beginPath();
+      g.ellipse(W / 2 + 6, H / 2 + 40, 252, 140, 0, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#f2d39e';
+      g.beginPath();
+      g.ellipse(W / 2, H / 2 + 30, 250, 140, 0, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#5cc33f';
+      g.beginPath();
+      g.ellipse(W / 2, H / 2 + 24, 238, 128, 0, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#7cd65a';
+      g.beginPath();
+      g.ellipse(W / 2 - 20, H / 2 + 6, 200, 96, 0, 0, Math.PI * 2);
+      g.fill();
+      // Camino
+      g.fillStyle = '#e2b77a';
+      for (var n = 0; n < MAP_NODES.length - 1; n++) {
+        var a = MAP_NODES[n];
+        var b = MAP_NODES[n + 1];
+        for (var t = 0; t <= 1; t += 0.04) g.fillRect(Math.round(a.x + (b.x - a.x) * t) - 3, Math.round(a.y + (b.y - a.y) * t) - 3, 6, 6);
+      }
+      MAP_NODES.forEach(function (nd, idx) {
+        var open = idx < save.unlocked;
+        var done = save.cleared.indexOf('1-' + (idx + 1)) >= 0;
+        g.fillStyle = 'rgba(0,0,0,0.25)';
+        g.fillRect(nd.x - 12, nd.y - 10, 28, 26);
+        g.fillStyle = '#1b1d2e';
+        g.fillRect(nd.x - 13, nd.y - 13, 26, 26);
+        g.fillStyle = done ? '#ffd43a' : open ? '#e8402f' : '#8a8fa8';
+        g.fillRect(nd.x - 11, nd.y - 11, 22, 22);
+        g.fillStyle = 'rgba(255,255,255,0.35)';
+        g.fillRect(nd.x - 11, nd.y - 11, 22, 3);
+        text(String(idx + 1), nd.x, nd.y - (MOBILE ? 6 : 3), '#1b1d2e', 1, 'center');
+        text(names[idx], nd.x, nd.y + 18, open ? '#ffffff' : '#c8cde0', 1, 'center', '#1b1d2e');
+        var bits = save.stars['1-' + (idx + 1)] || 0;
+        if (open) drawStars(bits, nd.x, nd.y + (MOBILE ? 36 : 28), MOBILE ? 2 : 1);
+      });
+      var cur = MAP_NODES[Game.levelIndex];
+      var hop = Math.abs(Math.round(Math.sin(Game.frame / 10) * 4));
+      var spr = A.ruy.small[hop > 2 ? 'jump' : 'idle'].r;
+      g.fillStyle = 'rgba(0,0,0,0.3)';
+      g.fillRect(cur.x - 10 + hop, cur.y - 15, 20 - hop * 2, 3);
+      blit2(spr, cur.x - 18, cur.y - 50 - hop, 2);
+      panel(12, 12, W - 24, MOBILE ? 40 : 34);
+      text('MAPA DEL MUNDO', 26, MOBILE ? 25 : 25, '#ffd43a', 1);
+      text('RUY ×' + Game.lives + '  MONEDAS ' + Game.coins, W - 26, 25, '#ffffff', 1, 'right');
     });
-    var cur = MAP_NODES[Game.levelIndex];
-    var hop = Math.abs(Math.round(Math.sin(Game.frame / 10) * 4));
-    var spr = A.ruy.small[hop > 2 ? 'jump' : 'idle'].r;
-    g.fillStyle = 'rgba(0,0,0,0.3)';
-    g.fillRect(cur.x - 10 + hop, cur.y - 15, 20 - hop * 2, 3);
-    blit2(spr, cur.x - 18, cur.y - 50 - hop, 2);
-    panel(12, 12, W - 24, 34);
-    text('MAPA DEL MUNDO', 26, 25, '#ffd43a', 1);
-    text('RUY ×' + Game.lives + '   MONEDAS ' + Game.coins, W - 26, 25, '#ffffff', 1, 'right');
-    text('<  > ELEGIR NIVEL · SALTAR PARA ENTRAR · ESC MENÚ', W / 2, H - 22, '#ffffff', 1, 'center', '#1b1d2e');
+    text(MOBILE ? 'TOCA UN NIVEL DOS VECES PARA JUGAR' : '<  > ELEGIR NIVEL · SALTAR PARA ENTRAR · ESC MENÚ', W / 2, H - (MOBILE ? 28 : 22), '#ffffff', 1, 'center', '#1b1d2e');
   }
 
   function renderGameOver() {
     g.fillStyle = '#0e101e';
     g.fillRect(0, 0, W, H);
-    var t = Math.min(1, Game.sceneTime / 90);
-    text('FIN DEL JUEGO', W / 2, 130 - Math.round((1 - t) * 40), '#e8402f', 4, 'center');
-    if (Game.sceneTime >= 180) drawMenu('gameover', [{ label: 'REINTENTAR' }, { label: 'MAPA DEL MUNDO' }], W / 2, 220, 2);
-    else text('...', W / 2, 220, '#ffffff', 2, 'center');
+    layout(function () {
+      var t = Math.min(1, Game.sceneTime / 90);
+      text('FIN DEL JUEGO', W / 2, 130 - Math.round((1 - t) * 40), '#e8402f', 4, 'center');
+      if (Game.sceneTime >= 180) drawMenu('gameover', [{ label: 'REINTENTAR' }, { label: 'MAPA DEL MUNDO' }], W / 2, 220, 2);
+      else text('...', W / 2, 220, '#ffffff', 2, 'center');
+    });
   }
 
   function renderEnding() {
-    drawBackdrop(g, 'tower', ZOOM, Game.frame * 0.4, 156, 156, 352, false, W, H);
-    panel(60, 90, W - 120, 220);
-    text('¡FELICIDADES!', W / 2, 120, '#ffd43a', 3, 'center');
-    text('SUPERASTE LOS 4 NIVELES', W / 2, 170, '#ffffff', 2, 'center');
-    text('PUNTOS ' + Game.score, W / 2, 210, '#ffffff', 2, 'center');
-    var spr = A.ruy.big.jump.r;
-    blit2(spr, W / 2 - 18, 236 - Math.abs(Math.round(Math.sin(Game.frame / 8) * 10)), 2);
+    var camY = 352 - (H - 102) / ZOOMT;
+    drawBackdrop(g, 'tower', ZOOMT, Game.frame * 0.4, camY, camY, 352, false, W, H);
+    layout(function () {
+      panel(60, 90, W - 120, 220);
+      text('¡FELICIDADES!', W / 2, 120, '#ffd43a', 3, 'center');
+      text('SUPERASTE LOS 4 NIVELES', W / 2, 170, '#ffffff', 2, 'center');
+      text('PUNTOS ' + Game.score, W / 2, 210, '#ffffff', 2, 'center');
+      var spr = A.ruy.big.jump.r;
+      blit2(spr, W / 2 - 18, 236 - Math.abs(Math.round(Math.sin(Game.frame / 8) * 10)), 2);
+    });
   }
 
   // ───────────────────────────── arranque ─────────────────────────────
@@ -2328,8 +2645,10 @@
       snapCamera();
     },
     setPower: function (n) { setPower(player, n); player.grow = 0; },
+    enterRoom: function (key) { loadMap(world.main.rooms[key], world.main.rooms[key].start); },
+    setCalm: function (on) { save.options.calm = !!on; },
     physics: PH,
-    cam: function () { return { x: cam.x, y: cam.y, vw: VW, vh: VH }; },
+    cam: function () { return { x: cam.x, y: cam.y, vw: VW, vh: VH, zoom: ZOOM, hudW: W, hudH: H, mobile: MOBILE }; },
     perf: function (reset) {
       var r = { frames: perf.n, updMs: perf.n ? perf.upd / perf.n : 0, renMs: perf.n ? perf.ren / perf.n : 0, steps: perf.steps };
       if (reset) perf = { upd: 0, ren: 0, n: 0, steps: 0 };

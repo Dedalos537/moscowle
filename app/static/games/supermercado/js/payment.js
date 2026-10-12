@@ -31,6 +31,7 @@ export class Payment {
   open(opts) {
     this.opts = opts;
     this.mistakes = 0;
+    this.short = 0;
     this.active = true;
     this.answered = false;
     $('payTotal').textContent = soles(opts.total);
@@ -179,7 +180,9 @@ export class Payment {
     const s = this.sum();
     const total = this.opts.total;
     if (s < total) {
-      this.mistakes++;
+      // tocar «Pagar» para explorar no cuenta; desde el segundo intento corto, sí
+      this.short++;
+      if (this.short >= 2) this.mistakes++;
       this.audio.soft();
       this.tray.classList.remove('shake');
       void this.tray.offsetWidth;
@@ -188,7 +191,15 @@ export class Payment {
       return;
     }
     const change = s - total;
-    // si sobra una moneda entera, se sugiere (sin penalizar) pagar justo
+    if (this.opts.mode === 'exact' && change > 0) {
+      // en el primer nivel se practica pagar justo: se pide con cariño, sin contar error
+      this.audio.soft();
+      this.tray.classList.remove('shake');
+      void this.tray.offsetWidth;
+      this.tray.classList.add('shake');
+      $('payAsk').textContent = `Pusiste ${soles(change)} de más. ¿Puedes pagar justo ${soles(total)}?`;
+      return;
+    }
     this.answered = true;
     $('btnPay').disabled = true;
     $('btnClearTray').disabled = true;

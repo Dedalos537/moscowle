@@ -108,7 +108,7 @@ export const STORE = { x0: -12.6, x1: 11.2, z0: -10.4, z1: 8.6 };
 /** Punto de llegada a la caja: el carrito se estaciona aquí. */
 export const CHECKOUT = { padX: 3.3, padZ: 3.6, padR: 1.35, counterX: 4.7, z0: 1.9, z1: 6.4 };
 
-export const START = { x: -6.6, z: 5.9, heading: Math.PI };
+export const START = { x: -2.8, z: 6.5, heading: Math.PI };
 
 /*
  * Niveles. pay: 'exact' (monedas justas), 'auto' (vuelto automático), 'change' (preguntar el vuelto).

@@ -88,7 +88,12 @@ export class Player {
     let want = this.heading;
     if (this.auto && this.auto.heading !== undefined && this.speed < 0.25) want = this.auto.heading;
     else if (this.speed > 0.15) want = Math.atan2(this.vel.x, this.vel.y);
-    const diff = angleDiff(this.heading, want);
+    let diff = angleDiff(this.heading, want);
+    // contra una pared el carrito no se retuerce: el giro se calma
+    if (this.pinned > 0) {
+      diff *= 0.15;
+      this.angVel *= 0.8;
+    }
     const k = 46;
     const c = 12.5;
     this.angVel += (diff * k - this.angVel * c) * dt;
@@ -97,11 +102,11 @@ export class Player {
     // si el carrito apunta muy distinto a la velocidad, se frena un poco (no se desliza de lado)
     if (this.speed > 0.2) {
       const align = Math.cos(diff);
-      const f = 1 - clamp((1 - align) * 1.6, 0, 0.6) * dt * 4;
-      this.vel.multiplyScalar(f);
+      if (align < 0.5) this.vel.multiplyScalar(1 - clamp((0.5 - align) * 0.8, 0, 0.6) * dt * 4);
     }
     this.pos.x += this.vel.x * dt;
     this.pos.y += this.vel.y * dt;
+    this.pinned = Math.max(0, (this.pinned || 0) - dt);
     if (!this.auto) this.resolve(colliders, others);
     this.fwdAccel = (this.speed - prevSpeed) / Math.max(dt, 1e-4);
     this.bumpCooldown -= dt;
@@ -147,9 +152,11 @@ export class Player {
               this.bumpCooldown = 0.5;
               this.onBump && this.onBump(-vn);
             }
-            // quita la componente contra la pared y rebota un poquito
-            this.vel.x -= nx * vn * 1.15;
-            this.vel.y -= nz * vn * 1.15;
+            // quita solo la componente contra la pared: el carrito se desliza a lo largo
+            const k = vn < -2.2 ? 1.12 : 1.0;
+            this.vel.x -= nx * vn * k;
+            this.vel.y -= nz * vn * k;
+            if (pass === 1) this.pinned = 0.15;
           }
         }
         if (others) {

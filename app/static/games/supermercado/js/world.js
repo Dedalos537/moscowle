@@ -423,8 +423,10 @@ export class World {
   updateArch(px, pz, dt) {
     const a = this.arch;
     const near = pz < a.z && pz > a.z - 3.6 && Math.abs(px - a.x) < 3.2;
-    const target = near ? 0.12 : 1;
-    a.alpha += (target - a.alpha) * (1 - Math.exp(-8 * dt));
+    const target = near ? 0 : 1;
+    a.alpha += (target - a.alpha) * (1 - Math.exp(-10 * dt));
+    if (Math.abs(a.alpha - target) < 0.02) a.alpha = target;
+    a.mesh.visible = a.alpha > 0.01;
     this.archMat.opacity = a.alpha;
     this.archMat.depthWrite = a.alpha > 0.95;
     this.archSignMat.opacity = a.alpha;

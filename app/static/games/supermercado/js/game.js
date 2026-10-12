@@ -170,6 +170,7 @@ export class Game {
     click('pauseBtn', () => this.pause());
     click('hintBtn', () => this.showHint());
     click('peekBtn', () => this.peek());
+    click('flowMenu', () => this.askLeaveFlow());
     for (const [id, key] of [['optSfx', 'sfx'], ['optMusic', 'music'], ['optReduced', 'reduced'], ['optCalm', 'calm']]) {
       $(id).addEventListener('change', (e) => {
         this.audio.unlock();
@@ -241,7 +242,32 @@ export class Game {
     this.ui.stack.length = 0;
   }
 
+  /** Botón de menú en la caja y el pago. */
+  flowMenu(on) {
+    document.getElementById('flowMenu').classList.toggle('hidden', !on);
+  }
+
+  async askLeaveFlow() {
+    const wasPay = this.state === 'pay';
+    const v = await this.ui.dialog('¿Salir al menú?', 'Tu compra quedará sin terminar.', [
+      { label: 'Salir al menú', value: 'menu', cls: 'ghost' },
+      { label: 'Seguir', value: 'stay', cls: 'big' },
+    ]);
+    if (v === 'menu') this.toMenu();
+    else if (wasPay && this.state === 'pay') this.ui.show('scrPay', { push: false });
+  }
+
   toMenu() {
+    // corta cualquier secuencia de caja o pago en curso
+    this.tw.clear();
+    this.tw.scale = 1;
+    this.payment.active = false;
+    this.flowMenu(false);
+    this.world.bag.visible = false;
+    this.world.laser.material.opacity = 0;
+    this.cashier.setArms(0.05, 0.05);
+    this.player.char.pushing = true;
+    ['listCard', 'topRight', 'cartBar'].forEach((id) => (document.getElementById(id).style.visibility = ''));
     if (this.round && !this.round.closed) this.closeRound();
     this.clearCart(true);
     this.world.restock();
@@ -342,6 +368,10 @@ export class Game {
     this.ui.setTimer(!r.calm, r.level.time, 1);
     this.ui.goPay(false);
     requestAnimationFrame(() => this.ui.layoutTop());
+    this.flowMenu(false);
+    const bulb = document.getElementById('hintBtn');
+    bulb.classList.toggle('lit', r.level.n === 1);
+    if (r.level.n === 1) setTimeout(() => bulb.classList.remove('lit'), 5000);
     this.state = 'play';
     this.cam.mode = 'play';
     this.cam.px.omega = this.cam.py.omega = this.cam.pz.omega = 2.4;
@@ -680,8 +710,11 @@ export class Game {
       const total = this.cartTotal(true);
       if (r.budget && total > r.budget) {
         this.state = 'dialog';
-        this.stats.paymentMistakes++;
-        r.payMistakes++;
+        r.budgetTries = (r.budgetTries || 0) + 1;
+        if (r.budgetTries >= 2) {
+          this.stats.paymentMistakes++;
+          r.payMistakes++;
+        }
         await this.ui.dialog(
           '¡Uy! No te alcanza',
           `Tu compra suma <b>${soles(total)}</b> y tienes <b>${soles(r.budget)}</b>.<br>Devuelve algo caro y elige uno más barato.`,
@@ -708,6 +741,7 @@ export class Game {
     document.getElementById('hud').classList.remove('hidden');
     ['listCard', 'topRight', 'cartBar'].forEach((id) => (document.getElementById(id).style.visibility = 'hidden'));
     this.player.auto = { x: CHECKOUT.padX, z: CHECKOUT.z0, heading: 0 };
+    this.flowMenu(true);
     this.cam.mode = 'checkout';
     this.setCamOmega(2.2);
     this.audio.setRattle(0);
@@ -876,6 +910,7 @@ export class Game {
   }
 
   finishRound(aside) {
+    this.flowMenu(false);
     const r = this.round;
     const L = r.level;
     const complete = this.listComplete();
@@ -951,9 +986,10 @@ export class Game {
     this.audio.click();
   }
 
-  showHint() {
+  showHint(auto = false) {
     if (this.state !== 'play') return;
     const r = this.round;
+    r.lastHintAt = r.elapsed;
     const p = this.player;
     let best = null;
     let bd = Infinity;
@@ -972,8 +1008,8 @@ export class Game {
       }
     }
     if (!best) return;
-    this.hint = { x: best.x, z: best.front + 0.7, t: 5, col: best };
-    this.ui.toast('¡Por aquí!', 'good', 'Sigue la flecha amarilla', 1600);
+    this.hint = { x: best.x, z: best.front + 0.7, t: auto ? 6 : 5, col: best };
+    this.ui.toast(auto ? '¿Te ayudo?' : '¡Por aquí!', 'good', 'Sigue la flecha amarilla', 1800);
     this.audio.good();
   }
 
@@ -1056,7 +1092,7 @@ export class Game {
         if (r.peekLeft <= 0) this.ui.cover(true);
       }
     }
-    if (!r.calm) this.ui.setTimer(true, r.level.time - r.elapsed, (r.level.time - r.elapsed) / r.level.time);
+    if (!r.calm && !r.timeUp) this.ui.setTimer(true, r.level.time - r.elapsed, (r.level.time - r.elapsed) / r.level.time);
     // jugador
     const others = this.otherCircles();
     this.player.update(dt, move, input.run, this.world.colliders, others);
@@ -1113,6 +1149,14 @@ export class Game {
         W.outline.visible = true;
       } else W.outline.visible = false;
     } else W.outline.visible = false;
+    // ayuda automática si pasan 20 s sin acertar
+    if (!this.hint && !this.listComplete() && r.elapsed - Math.max(r.lastCorrectAt, r.lastHintAt || 0) > 20) this.showHint(true);
+    // tiempo cumplido: sin castigo
+    if (!r.calm && !r.timeUp && r.elapsed >= r.level.time) {
+      r.timeUp = true;
+      this.ui.setTimer(false);
+      this.ui.toast('¡Sin apuro, termina tu compra!', 'soft', '', 2400);
+    }
     // pista
     if (this.hint) {
       this.hint.t -= dt;

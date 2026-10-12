@@ -69,6 +69,11 @@
     this.deco.push({ kind: 'bush', x: x, y: y });
     return this;
   };
+  /** Letrero de la primera vez (icono: move, jump, coin, down). */
+  Level.prototype.sign = function (x, y, icon) {
+    this.deco.push({ kind: 'sign', x: x, y: y, icon: icon });
+    return this;
+  };
   Level.prototype.fence = function (x, y, n) {
     for (var i = 0; i < n; i++) this.deco.push({ kind: 'fence', x: x + i, y: y });
     return this;
@@ -91,12 +96,24 @@
     return total;
   };
 
+  /**
+   * Sala secreta: suelo, una fila de ladrillos (fila 18, cols 4-22) y una plataforma de madera (fila 14, cols 4-26).
+   * Las tres filas de monedas quedan alcanzables: la 1.ª sobre la madera (fila 12), la 2.ª sobre los ladrillos
+   * (fila 16) y la 3.ª a ras de suelo (fila 20). coinsRows: [[x, n], …].
+   */
   function secretRoom(theme, coinsRows, exitTo) {
     var r = new Level('room', 'Sala secreta', theme, 34, 26);
     r.fill(0, 33, 0, 1, 'S').fill(0, 1, 0, 25, 'S').fill(32, 33, 0, 25, 'S').ground(2, 31, 22);
     r.start = { x: 4, y: 20 };
-    coinsRows.forEach(function (row, i) { r.coins(row[0], 8 + i * 3, row[1]); });
-    r.row(6, 18, 'BBBBBBBBBBBBB');
+    r.row(4, 18, 'BBBBBBBBBBBBBBBBBBB');
+    r.row(4, 14, '=======================');
+    var rows = [[12, 4, 26], [16, 4, 22], [20, 3, 27]];
+    coinsRows.forEach(function (row, i) {
+      var lim = rows[i];
+      var x = Math.max(lim[1], row[0]);
+      var n = Math.min(row[1], lim[2] - x + 1);
+      r.coins(x, lim[0], n);
+    });
     r.pipe(28, 20, exitTo);
     r.time = null;
     r.isRoom = true;
@@ -114,7 +131,7 @@
     L.enemy('blob', 25, 21).enemy('blob', 36, 21).enemy('blob', 60, 21).enemy('blob', 62, 21);
     L.coins(45, 18, 5, function (i) { return -[0, 1, 2, 1, 0][i]; });
     L.row(55, 17, '======').coins(55, 15, 6);
-    L.row(66, 18, 'B?B').row(70, 18, 'H').row(78, 14, 'BBBB?BBB').row(80, 18, 'M');
+    L.row(66, 18, 'B?B').row(70, 18, 'H').row(78, 14, 'BB?BBBBB').row(80, 18, 'M');
     L.enemy('blob', 85, 21).enemy('blob', 88, 21);
     L.coins(96, 18, 4, function (i) { return -[0, 1, 1, 0][i]; });
     L.pipe(106, 20).pipe(116, 19).pipe(126, 18);
@@ -126,6 +143,7 @@
     L.flag(203, 22);
     [5, 33, 58, 92, 118, 160, 198].forEach(function (x) { L.bush(x, 22); });
     L.fence(140, 22, 6);
+    L.sign(6, 22, 'move').sign(9, 22, 'jump').sign(15, 22, 'coin').sign(37, 22, 'down');
     L.rooms.r1 = secretRoom('cave', [[6, 13], [8, 9], [10, 5]], { to: 'main', x: 44, y: 20 });
     L.time = 300;
     return L;
@@ -206,7 +224,9 @@
     L.enemy('bee', 48, 12).enemy('bee', 64, 11);
     L.ground(71, 110, 22).row(76, 18, 'B?M?B').enemy('blob', 84, 21).enemy('hog', 92, 21).enemy('blob', 100, 21);
     L.pipe(104, 20, { to: 'r1', x: 4, y: 20 });
-    L.row(112, 19, '==').row(117, 17, '==').row(122, 15, '==').row(127, 17, '==').row(132, 19, '==');
+    // Tablones de 3 sobre una laguna (antes: tablones de 2 sobre un foso mortal).
+    L.fill(111, 135, 21, 21, '~').fill(111, 135, 22, 24, 'w').fill(111, 135, 25, 25, 'S');
+    L.row(112, 18, '===').row(117, 17, '===').row(122, 15, '===').row(127, 17, '===').row(132, 18, '===');
     L.coins(117, 15, 2).coins(122, 13, 2).coins(127, 15, 2);
     L.ground(136, 219, 22);
     L.fill(150, 165, 21, 21, '~').fill(150, 165, 22, 24, 'w').fill(150, 165, 25, 25, 'S');
