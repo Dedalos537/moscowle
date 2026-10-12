@@ -245,14 +245,14 @@ function drawTag(ctx, x, y, w, h, cents) {
   rr(ctx, x + 4, y + 4, w - 8, h - 8, 10);
   ctx.fill();
   ctx.fillStyle = '#e63946';
-  rr(ctx, x + 4, y + 4, 18, h - 8, 8);
+  rr(ctx, x + 4, y + 4, 12, h - 8, 6);
   ctx.fill();
   const txt = soles(cents);
-  fitText(ctx, txt, w - 36, 32);
+  fitText(ctx, txt, w - 30, 40, 900);
   ctx.fillStyle = '#3a2210';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(txt, x + 14 + w / 2, y + h / 2 + 2);
+  ctx.fillText(txt, x + 12 + w / 2, y + h / 2 + 3);
   ctx.restore();
 }
 

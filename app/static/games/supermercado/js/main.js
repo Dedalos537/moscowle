@@ -12,18 +12,23 @@ import { Particles } from './fx.js';
 import { Wheels } from './actors.js';
 import { Game } from './game.js';
 
-const canvas = document.getElementById('c');
+let canvas = document.getElementById('c');
 const bridge = window.MoscowleGame;
 if (bridge) bridge.start('Supermercado');
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', alpha: true });
 const DPR_CAP = 1.5;
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, DPR_CAP));
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.08;
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFShadowMap;
+function makeRenderer(cv) {
+  const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, powerPreference: 'high-performance', alpha: true });
+  r.setPixelRatio(Math.min(devicePixelRatio || 1, DPR_CAP));
+  r.outputColorSpace = THREE.SRGBColorSpace;
+  r.toneMapping = THREE.ACESFilmicToneMapping;
+  r.toneMappingExposure = 1.08;
+  r.shadowMap.enabled = true;
+  r.shadowMap.type = THREE.PCFShadowMap;
+  r.setClearColor(PALETTE.bg, 1);
+  return r;
+}
+let renderer = makeRenderer(canvas);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(PALETTE.bg);
@@ -36,16 +41,22 @@ const hemi = new THREE.HemisphereLight(0xfff1dc, 0xd99060, 1.25);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff0d8, 2.5);
 sun.castShadow = true;
-sun.shadow.mapSize.set(1024, 1024);
-sun.shadow.camera.left = -11;
-sun.shadow.camera.right = 11;
-sun.shadow.camera.top = 11;
-sun.shadow.camera.bottom = -11;
-sun.shadow.camera.near = 1;
-sun.shadow.camera.far = 40;
-sun.shadow.bias = -0.0006;
-sun.shadow.normalBias = 0.03;
-sun.shadow.radius = 4;
+/*
+ * Sombra estable: el sol y su cámara de sombra quedan FIJOS cubriendo toda la tienda (no siguen al
+ * jugador), así los bordes no titilan al moverse. 2048 px para ~32 m → ~1,6 cm por texel.
+ */
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -17;
+sun.shadow.camera.right = 17;
+sun.shadow.camera.top = 15;
+sun.shadow.camera.bottom = -15;
+sun.shadow.camera.near = 2;
+sun.shadow.camera.far = 50;
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.045;
+sun.shadow.radius = 3;
+sun.position.set(-1 - 10.5, 22, -1 + 9);
+sun.target.position.set(-1, 0, -1);
 scene.add(sun, sun.target);
 const fill = new THREE.DirectionalLight(0xbfe9ff, 0.45);
 fill.position.set(-8, 6, -4);
@@ -146,15 +157,90 @@ window.MarketPerf = {
   },
 };
 
+/* ---------------------------------------------------------------- robustez del dibujo
+ * - Un error en update() o render() no puede dejar la vista en blanco: se registra una vez y se sigue.
+ * - Contexto WebGL perdido: three lo recupera con «restored»; si el navegador no lo devuelve, se pide
+ *   restaurar y, como último recurso, se crea un renderer nuevo en un canvas nuevo (todo se re-sube
+ *   desde los datos en memoria).
+ * - Vigilante: si el bucle deja de avanzar con la pestaña visible, se reinicia.
+ */
+let lastFrameAt = performance.now();
+let lostAt = 0;
+const reported = new Set();
+function report(tag, e) {
+  if (reported.has(tag)) return;
+  reported.add(tag);
+  console.warn('[supermercado] ' + tag + ':', e && e.message ? e.message : e);
+}
+function watchContext(cv) {
+  cv.addEventListener('webglcontextlost', () => {
+    lostAt = performance.now();
+  });
+  cv.addEventListener('webglcontextrestored', () => {
+    lostAt = 0;
+    frame.asked = false;
+    game.applyOptions();
+  });
+}
+watchContext(canvas);
+function rebuildRenderer() {
+  const old = canvas;
+  const cv = document.createElement('canvas');
+  cv.id = 'c';
+  cv.setAttribute('aria-label', old.getAttribute('aria-label') || '');
+  old.replaceWith(cv);
+  canvas = cv;
+  try {
+    renderer.dispose();
+  } catch (e) {
+    /* el contexto viejo ya no sirve */
+  }
+  renderer = makeRenderer(cv);
+  game.setRenderer(renderer);
+  watchContext(cv);
+  resize();
+  lostAt = 0;
+}
+function contextLost() {
+  try {
+    return renderer.getContext().isContextLost();
+  } catch (e) {
+    return true;
+  }
+}
+
 function frame(now) {
   if (!running) return;
   rafId = requestAnimationFrame(frame);
+  lastFrameAt = performance.now();
   let dt = (now - last) / 1000;
   last = now;
+  if (!(dt > 0)) dt = 0;
   if (dt > 0.1) dt = 0.1;
   const t0 = performance.now();
-  game.update(dt);
-  renderer.render(scene, camera);
+  if (contextLost()) {
+    if (!lostAt) lostAt = t0;
+    const ext = renderer.getContext().getExtension('WEBGL_lose_context');
+    if (t0 - lostAt > 2500 && ext && !frame.asked) {
+      frame.asked = true;
+      ext.restoreContext();
+    }
+    if (t0 - lostAt > 5000) {
+      frame.asked = false;
+      rebuildRenderer();
+    }
+    return;
+  }
+  try {
+    game.update(dt);
+  } catch (e) {
+    report('update', e);
+  }
+  try {
+    renderer.render(scene, camera);
+  } catch (e) {
+    report('render', e);
+  }
   const ms = performance.now() - t0;
   perf.frames++;
   perf.sum += ms;
@@ -169,7 +255,8 @@ document.addEventListener('visibilitychange', () => {
     cancelAnimationFrame(rafId);
     audio.suspend(true);
     if (game.state === 'play') game.pause();
-  } else if (!running) {
+  } else {
+    cancelAnimationFrame(rafId);
     running = true;
     last = performance.now();
     audio.suspend(false);
@@ -198,3 +285,13 @@ requestAnimationFrame((t) => {
   rafId = requestAnimationFrame(frame);
   setTimeout(() => game.showTitle(), 120);
 });
+// vigilante del bucle de dibujo
+setInterval(() => {
+  if (document.hidden || !running) return;
+  if (performance.now() - lastFrameAt > 1500) {
+    cancelAnimationFrame(rafId);
+    last = performance.now();
+    rafId = requestAnimationFrame(frame);
+  }
+}, 1000);
+window.MarketRender = { rebuild: () => rebuildRenderer(), get renderer() { return renderer; } };
