@@ -757,6 +757,8 @@
     var res = move(p, map, { hidden: true, dropThrough: p.dropT > 0 });
     p.onGround = res.ground;
     if (res.ground && !wasGround) landed(p, fallSpeed);
+    if (p.onGround) p.airTop = p.y + p.h;
+    else if (p.y + p.h < p.airTop) p.airTop = p.y + p.h;
     if (res.ceil) {
       squash(p, 0.86);
       hitBlock(res.ceil.x, res.ceil.y, p);
@@ -940,7 +942,8 @@
     if (impact > 1.2) squash(p, 1 - Math.min(0.34, impact * 0.055));
     if (impact > 2.5) dust(p.x + p.w / 2, p.y + p.h, Math.min(8, Math.round(impact * 1.2)));
     if (impact > 3.8) Sound.play('land');
-    if (impact > 6) shake(1.6);
+    // Temblor solo en caídas muy altas (más de 6 filas) y apenas 1 px; los saltos normales no mueven la pantalla.
+    if (p.airTop !== undefined && p.y + p.h - p.airTop > 6 * T) shake(1);
   }
 
   function countFireballs() {
@@ -1120,8 +1123,15 @@
   function popup(str, x, y) {
     spawn({ kind: 'text', str: str, x: x, y: y, vx: 0, vy: -0.9, drag: 0.94, life: 45 });
   }
+  var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /** Temblor mínimo: 1 px vertical que se apaga en ≤6 cuadros. Nunca en modo tranquilo ni con «reducir movimiento». */
+  function shakeOffset() {
+    return cam.shakeT > 0 ? [0, (cam.shakeT % 2 ? 1 : -1) * cam.shake * (cam.shakeT / 6)] : [0, 0];
+  }
   function shake(v) {
-    cam.shake = Math.max(cam.shake, v);
+    if (save.options.calm || reducedMotion) return;
+    cam.shake = Math.min(1, Math.max(cam.shake, v));
+    cam.shakeT = 6;
   }
 
   // ───────────────────────────── enemigos y objetos ─────────────────────────────
@@ -1366,6 +1376,8 @@
     cam.px = cam.x;
     cam.py = cam.y;
     cam.shake = 0;
+    cam.shakeT = 0;
+    cam.vy = 0;
   }
   function updateCamera() {
     var map = world.current;
@@ -1381,16 +1393,36 @@
       if (sx + p.w > VW * 0.84) cam.x = p.x + p.w - VW * 0.84;
       var feet = p.y + p.h;
       if (p.onGround || p.inWater || p.goal || p.warp || feet > cam.anchor) cam.anchor = feet;
-      var ty = cam.anchor - VH * 0.66;
-      if (p.y < cam.y + VH * 0.18) ty = Math.min(ty, p.y - VH * 0.18);
-      var k = feet > cam.anchor - 1 && !p.onGround ? 0.16 : 0.075;
-      cam.y += (ty - cam.y) * k;
-      if (p.y + p.h > cam.y + VH * 0.92) cam.y = p.y + p.h - VH * 0.92;
+      var ty = clamp(cam.anchor - VH * 0.66, 0, maxY);
+      if (p.y < cam.y + VH * 0.18) ty = clamp(Math.min(ty, p.y - VH * 0.18), 0, maxY);
+      // Muelle críticamente amortiguado (sin rebote ni tirón al aterrizar); si Ruy cae y se acerca al borde de
+      // abajo, el muelle se vuelve más rápido, pero la velocidad sigue siendo continua.
+      var near = p.y + p.h > cam.y + VH * 0.8;
+      var falling = feet > cam.anchor - 1 && !p.onGround;
+      cam.y = smoothDamp(cam.y, ty, near ? 6 : falling ? 9 : 16);
     }
     cam.x = clamp(cam.x, 0, maxX);
-    cam.y = clamp(cam.y, 0, maxY);
-    cam.shake *= 0.84;
-    if (cam.shake < 0.05) cam.shake = 0;
+    var cy = clamp(cam.y, 0, maxY);
+    if (cy !== cam.y) cam.vy = 0;
+    cam.y = cy;
+    if (cam.shakeT > 0) cam.shakeT--;
+    if (!cam.shakeT) cam.shake = 0;
+  }
+
+  /** SmoothDamp (Game Programming Gems 4): sigue al objetivo sin pasarse; `time` en cuadros. */
+  function smoothDamp(cur, target, time) {
+    var omega = 2 / time;
+    var x = omega;
+    var e = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+    var change = cur - target;
+    var temp = ((cam.vy || 0) + omega * change);
+    cam.vy = ((cam.vy || 0) - omega * temp) * e;
+    var out = target + (change + temp) * e;
+    if ((target - cur > 0) === (out > target)) {
+      out = target;
+      cam.vy = 0;
+    }
+    return out;
   }
 
   // ───────────────────────────── bucle principal ─────────────────────────────
@@ -2295,8 +2327,9 @@
   function renderWorld() {
     var map = world.current;
     var maxY = Math.max(0, map.h * T - VH);
-    var shx = cam.shake ? Math.sin(Game.frame * 7.3) * cam.shake : 0;
-    var shy = cam.shake ? Math.cos(Game.frame * 5.1) * cam.shake : 0;
+    var so = shakeOffset();
+    var shx = so[0];
+    var shy = so[1];
     rcx = lerp(cam.px, cam.x, alpha) + shx;
     rcy = lerp(cam.py, cam.y, alpha) + shy;
     sctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -2648,7 +2681,7 @@
     enterRoom: function (key) { loadMap(world.main.rooms[key], world.main.rooms[key].start); },
     setCalm: function (on) { save.options.calm = !!on; },
     physics: PH,
-    cam: function () { return { x: cam.x, y: cam.y, vw: VW, vh: VH, zoom: ZOOM, hudW: W, hudH: H, mobile: MOBILE }; },
+    cam: function () { var so = shakeOffset(); return { x: cam.x, y: cam.y, vw: VW, vh: VH, zoom: ZOOM, hudW: W, hudH: H, mobile: MOBILE, shakeX: so[0], shakeY: so[1] }; },
     perf: function (reset) {
       var r = { frames: perf.n, updMs: perf.n ? perf.upd / perf.n : 0, renMs: perf.n ? perf.ren / perf.n : 0, steps: perf.steps };
       if (reset) perf = { upd: 0, ren: 0, n: 0, steps: 0 };

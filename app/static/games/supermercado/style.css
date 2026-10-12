@@ -467,7 +467,9 @@ kbd { font-family: inherit; font-weight: 900; background: var(--paper); border: 
 #listItems li img { border-radius: 10px; box-shadow: inset 0 -4px 0 var(--sec); }
 #listCard { overflow: hidden; }
 @media (max-width: 760px) {
-  #listItems li .sec { font-size: 0; margin: 0; position: absolute; right: 2px; top: 2px; }
+  #listItems li { position: relative; }
+  #listItems li .nm { position: static; }
+  #listItems li .sec { font-size: 0; margin: 0; position: absolute; right: 5px; top: 5px; }
   #listItems li .sec i { width: 11px; height: 11px; }
   #listItems li .nm { align-items: center; }
 }
@@ -513,4 +515,47 @@ kbd { font-family: inherit; font-weight: 900; background: var(--paper); border: 
   .changeBox { position: absolute; inset: 8px; margin: 0; z-index: 5; display: flex; flex-direction: column; justify-content: center; }
   .changeBox.hidden { display: none !important; }
   #flowMenu { right: 8px; top: 8px; width: 44px; height: 44px; }
+}
+
+/* ------------------------------------------------ textos más grandes (feedback de producción) */
+.bubble { padding: 8px 14px 8px 8px; border-radius: 20px; }
+.bubble img { width: 52px; height: 52px; }
+.bubble b { font-size: 21px; }
+.bubble span { font-size: 19px; }
+.bubble kbd { font-size: 17px; }
+.toast { font-size: 22px; }
+@media (min-width: 761px) {
+  #listCard { width: 316px; background-image: repeating-linear-gradient(transparent 0 43px, rgba(149, 231, 255, 0.5) 43px 45px); background-position: 0 48px; }
+  .noteTitle { font-size: 25px; }
+  #listItems li { height: 44px; font-size: 21px; gap: 9px; }
+  #listItems li img { width: 42px; height: 42px; }
+  #listItems li .sec { font-size: 13px; }
+  #listItems li .ct { font-size: 17px; min-width: 50px; }
+  #listItems li .bx { width: 28px; height: 28px; }
+  #listCount { font-size: 17px; }
+  .pill { height: 54px; font-size: 22px; }
+  .pill svg { width: 34px; height: 34px; }
+  .money .sub { font-size: 15px; }
+  #timerPill .ring { width: 36px; height: 36px; }
+  #timerPill span { min-width: 54px; }
+  .iconBtn { width: 56px; height: 56px; }
+  .iconBtn svg { width: 27px; height: 27px; }
+  #cartBar { min-height: 76px; }
+  .cartIcon { width: 56px; height: 56px; }
+  .cartIcon svg { width: 32px; height: 32px; }
+  .chip { width: 58px; height: 58px; }
+  .chip img { width: 52px; height: 52px; }
+  .cartTotal { font-size: 20px; }
+  #cartChips:empty::after { font-size: 17px; }
+  .goPay { font-size: 22px; }
+}
+@media (max-width: 760px) {
+  .noteTitle { font-size: 19px; }
+  #listItems li .nm { font-size: 12px; }
+  #listItems li .ct { font-size: 12px; }
+  #listItems li img { width: 38px; height: 38px; }
+  .pill { font-size: 17px; }
+  .bubble img { width: 44px; height: 44px; }
+  .bubble b { font-size: 18px; }
+  .bubble span { font-size: 16px; }
 }

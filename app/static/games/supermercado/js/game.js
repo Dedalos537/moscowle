@@ -199,19 +199,29 @@ export class Game {
     addEventListener('keydown', () => this.audio.unlock(), { once: true });
   }
 
+  /** Tras recrear el renderer (contexto WebGL irrecuperable). */
+  setRenderer(r) {
+    this.renderer = r;
+  }
+
   bindPointer() {
-    const el = this.renderer.domElement;
+    // escucha en el contenedor: sigue funcionando si el canvas se reemplaza
+    const el = document.getElementById('app');
+    const onCanvas = (e) => e.target && e.target.tagName === 'CANVAS';
     el.addEventListener('pointermove', (e) => {
+      if (!onCanvas(e)) return;
       this.pointer.x = e.clientX;
       this.pointer.y = e.clientY;
       this.pointer.moved = true;
       this.pointer.inside = true;
     });
-    el.addEventListener('pointerleave', () => {
+    el.addEventListener('pointerout', (e) => {
+      if (!onCanvas(e)) return;
       this.pointer.inside = false;
       this.hover = null;
     });
     el.addEventListener('pointerdown', (e) => {
+      if (!onCanvas(e)) return;
       if (this.state === 'checkout') this.hurry();
       if (this.state !== 'play') return;
       this.pointer.x = e.clientX;
@@ -1061,6 +1071,7 @@ export class Game {
     this.updateCartItems(dt);
     this.cashierUpdate(dt);
     this.world.updateArch(this.player.pos.x, this.player.pos.y, dt);
+    this.world.updateHeaders(this.state === 'play' ? this.player.pos.x : 1e3, this.player.pos.y, dt);
     if (this.world.beltTex.userData.moving) this.world.beltTex.offset.y -= dt * 1.4;
     // ruedas y sombras redondas
     this.wheels.update(this.carts);
@@ -1074,6 +1085,11 @@ export class Game {
 
   updatePlay(dt, move) {
     const r = this.round;
+    const pl = this.player;
+    if (!Number.isFinite(pl.pos.x + pl.pos.y + pl.vel.x + pl.vel.y + pl.heading + pl.angVel)) {
+      pl.place(START.x, START.z, START.heading);
+      console.warn('[supermercado] jugador reiniciado (valor no finito)');
+    }
     const input = this.input;
     r.elapsed += dt;
     // memoria
@@ -1350,14 +1366,15 @@ export class Game {
       py = portrait ? 19.5 : 13.5;
       pz = lz + Math.cos(a) * R;
     } else if (c.mode === 'play') {
-      const f = portrait ? clamp(Math.pow(1.0 / aspect, 0.42), 1, 1.5) : aspect < 1.4 ? 1.1 : 1;
-      const look = this.options.reduced ? 0.2 : 0.42;
+      // cámara más cercana (todo se ve ~30 % más grande) con más anticipación hacia donde se camina
+      const f = portrait ? clamp(Math.pow(1.0 / aspect, 0.42), 1, 1.32) : aspect < 1.4 ? 1.08 : 1;
+      const look = this.options.reduced ? 0.25 : 0.5;
       lx = p.pos.x + p.vel.x * look;
-      ly = 0.6;
-      lz = p.pos.y + p.vel.y * look - 0.15;
+      ly = 0.55;
+      lz = p.pos.y + p.vel.y * look - 0.35;
       px = lx;
-      py = ly + 8.0 * f;
-      pz = lz + 7.6 * f;
+      py = ly + 6.2 * f;
+      pz = lz + 5.7 * f;
     } else {
       // caja y celebración: vista de la cinta, la cajera y el niño
       const W = this.world;
@@ -1400,18 +1417,23 @@ export class Game {
     }
     cam.position.set(c.px.step(dt), c.py.step(dt), c.pz.step(dt));
     _v.set(c.lx.step(dt), c.ly.step(dt), c.lz.step(dt));
+    // guardia: un valor no finito nunca debe quedarse "pegado" en los resortes de la cámara
+    if (!Number.isFinite(cam.position.x + cam.position.y + cam.position.z + _v.x + _v.y + _v.z)) {
+      if (!Number.isFinite(px + py + pz + lx + ly + lz)) {
+        p.place(START.x, START.z, START.heading);
+        return this.updateCamera(0);
+      }
+      for (const [s, t] of [[c.px, px], [c.py, py], [c.pz, pz], [c.lx, lx], [c.ly, ly], [c.lz, lz]]) s.snap(t);
+      cam.position.set(px, py, pz);
+      _v.set(lx, ly, lz);
+      console.warn('[supermercado] cámara reiniciada (valor no finito)');
+    }
     if (this.shake > 0.001) {
       this.shake *= Math.exp(-10 * dt);
       cam.position.x += (Math.random() - 0.5) * this.shake;
       cam.position.y += (Math.random() - 0.5) * this.shake;
     }
     cam.lookAt(_v);
-    // sombra: la cámara de luz sigue al foco (ajustada a texel para no titilar)
-    const L = this.sun;
-    const tx = Math.round(_v.x * 4) / 4;
-    const tz = Math.round(_v.z * 4) / 4;
-    L.target.position.set(tx, 0, tz);
-    L.position.set(tx - 7, 15, tz + 6);
   }
 
   /* ================================================================ burbujas sobre el mundo */

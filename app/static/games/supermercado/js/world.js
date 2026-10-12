@@ -115,6 +115,7 @@ export class World {
     this.buildCheckout();
 
     /* --- mallas finales */
+    this.buildHeaders();
     const staticMesh = new THREE.Mesh(merge(S), this.vcMat);
     staticMesh.castShadow = true;
     staticMesh.receiveShadow = true;
@@ -122,7 +123,7 @@ export class World {
     this.scene.add(staticMesh);
     this.staticMesh = staticMesh;
 
-    const signMat = new THREE.MeshStandardMaterial({ map: this.signAtlas.tex, vertexColors: true, roughness: 0.6, alphaTest: 0.5 });
+    const signMat = new THREE.MeshStandardMaterial({ map: this.signAtlas.tex, vertexColors: true, roughness: 0.6, alphaTest: 0.5, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
     const signMesh = new THREE.Mesh(merge(this.signs), signMat);
     signMesh.receiveShadow = true;
     signMesh.matrixAutoUpdate = false;
@@ -167,11 +168,11 @@ export class World {
     S.push(part(rbox(0.07, 1.42, depth + 0.04, 0.03), col, { pos: [xb, 0.72, zc] }));
     for (const y of GONDOLA_BOARDS) {
       if (y < 0.2) {
-        S.push(part(box(w - 0.06, 0.02, depth - 0.04), SHELF_WHITE, { pos: [xm, 0.13, zc] }));
+        S.push(part(box(w - 0.06, 0.02, depth - 0.04), SHELF_WHITE, { pos: [xm, 0.152, zc] }));
         continue;
       }
       S.push(part(rbox(w - 0.06, 0.04, depth - 0.02, 0.012), SHELF_WHITE, { pos: [xm, y - 0.02, zc] }));
-      S.push(part(rbox(w - 0.04, 0.07, 0.03, 0.012), col, { pos: [xm, y - 0.025, f - 0.005] }));
+      S.push(part(rbox(w - 0.04, 0.07, 0.03, 0.012), col, { pos: [xm, y - 0.025, f + 0.002] }));
     }
     // copete superior y letrero de sección
     S.push(part(rbox(w + 0.06, 0.1, depth + 0.06, 0.04), col, { pos: [xm, 1.52, zc] }));
@@ -180,13 +181,55 @@ export class World {
     this.addCollider(xa - 0.04, f - depth - 0.04, xb + 0.04, f + 0.04, 0.42, 0.22);
   }
 
+  /** Letrero de sección: malla propia para poder desvanecerlo si tapa al jugador. */
   signHeader(sec, x, y, z) {
-    const w = 2.3;
-    const h = 0.72;
-    this.static.push(part(cyl(0.025, 0.025, 0.3, 8), 0x5b3415, { pos: [x - 0.7, y + 0.1, z] }));
-    this.static.push(part(cyl(0.025, 0.025, 0.3, 8), 0x5b3415, { pos: [x + 0.7, y + 0.1, z] }));
-    this.sign(this.signAtlas.headers[sec.id], w, h, [x, y + 0.5, z + 0.03]);
-    this.static.push(part(rbox(w * 0.97, h * 0.92, 0.05, 0.05), 0x5b3415, { pos: [x, y + 0.49, z - 0.005] }));
+    const w = 2.9;
+    const h = 0.9;
+    const vc = [
+      part(cyl(0.025, 0.025, 0.36, 8), 0x5b3415, { pos: [x - 0.8, y + 0.12, z - 0.04] }),
+      part(cyl(0.025, 0.025, 0.36, 8), 0x5b3415, { pos: [x + 0.8, y + 0.12, z - 0.04] }),
+      part(rbox(w * 0.97, h * 0.92, 0.05, 0.05), 0x5b3415, { pos: [x, y + 0.59, z - 0.01] }),
+    ];
+    const sg = [part(quad(w, h), 0xffffff, { pos: [x, y + 0.6, z + 0.045], uv: this.signAtlas.headers[sec.id] })];
+    this.headerDefs = this.headerDefs || [];
+    this.headerDefs.push({ vc, sg, x, z, w, wall: sec.kind === 'fridge' });
+  }
+
+  buildHeaders() {
+    this.headers = [];
+    for (const d of this.headerDefs) {
+      if (d.wall) {
+        // los de la pared del fondo nunca tapan: van a las mallas fusionadas
+        this.static.push(...d.vc);
+        this.signs.push(...d.sg);
+        continue;
+      }
+      const m1 = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, transparent: true, opacity: 1 });
+      const m2 = new THREE.MeshStandardMaterial({ map: this.signAtlas.tex, vertexColors: true, roughness: 0.6, transparent: true, alphaTest: 0.02, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
+      const g = new THREE.Group();
+      const a = new THREE.Mesh(merge(d.vc), m1);
+      const b = new THREE.Mesh(merge(d.sg), m2);
+      a.castShadow = true;
+      g.add(a, b);
+      this.scene.add(g);
+      this.headers.push({ g, mats: [m1, m2], x: d.x, z: d.z, w: d.w, alpha: 1 });
+    }
+  }
+
+  /** Letreros entre la cámara y el jugador se vuelven translúcidos. */
+  updateHeaders(px, pz, dt) {
+    if (!this.headers) return;
+    const k = 1 - Math.exp(-10 * dt);
+    for (const h of this.headers) {
+      const block = h.z > pz && h.z - pz < 3.2 && Math.abs(px - h.x) < h.w / 2 + 0.8;
+      const target = block ? 0.22 : 1;
+      h.alpha += (target - h.alpha) * k;
+      if (Math.abs(h.alpha - target) < 0.01) h.alpha = target;
+      const o = h.alpha;
+      h.mats[0].opacity = o;
+      h.mats[1].opacity = o;
+      h.mats[0].depthWrite = h.mats[1].depthWrite = o > 0.98;
+    }
   }
 
   buildFridge(sec) {
@@ -250,7 +293,7 @@ export class World {
         }),
       );
       // cartelito de precio en el borde del cajón
-      this.sign(this.signAtlas.tags[sec.items[i]], 0.36, 0.18, [x, 0.53, f + 0.02], 0);
+      this.sign(this.signAtlas.tags[sec.items[i]], 0.48, 0.24, [x, 0.5, f + 0.03], 0);
     }
     this.addColumns(sec, null, f, 'stand');
     this.addCollider(xa - 0.04, f - depth - 0.06, xb + 0.04, f + 0.04, 0.4, 0.22);
@@ -270,8 +313,8 @@ export class World {
       if (boards) {
         // cartelitos de precio en la repisa central e inferior
         const tagY = kind === 'fridge' ? boards[1] - 0.06 : boards[1] - 0.05;
-        this.sign(this.signAtlas.tags[pid], 0.3, 0.15, [x, tagY, front + 0.03]);
-        this.sign(this.signAtlas.tags[pid], 0.3, 0.15, [x, boards[2] - 0.05, front + 0.03]);
+        this.sign(this.signAtlas.tags[pid], 0.42, 0.21, [x, tagY, front + 0.035]);
+        this.sign(this.signAtlas.tags[pid], 0.42, 0.21, [x, boards[2] - 0.05, front + 0.035]);
         for (let b = 2; b >= 0; b--) {
           for (let k = -1; k <= 1; k++) {
             slots.push({
