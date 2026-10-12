@@ -42,6 +42,7 @@
 /* Cada tipo de juego tiene su color de portada. */
 [data-kind='platformer'] { --cover: #3fa33a; --cover-2: #8fd94a; }
 [data-kind='reflex'] { --cover: #e8822f; --cover-2: #ffc35c; }
+[data-kind='simulation'] { --cover: #d3893e; --cover-2: #ffd28f; }
 [data-kind='jclic'] { --cover: #2f6fb5; --cover-2: #6fb2ff; }
 [data-kind='clic3'] { --cover: #7a4fd8; --cover-2: #b896ff; }
 [data-kind='flash'],

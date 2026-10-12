@@ -19,6 +19,7 @@ interface TodaySession {
 export const KIND_ICON: Record<GameKind, IconProp> = {
   platformer: ['fas', 'person-running'],
   reflex: ['fas', 'bolt'],
+  simulation: ['fas', 'cart-shopping'],
   jclic: ['fas', 'puzzle-piece'],
   clic3: ['fas', 'shapes'],
   flash: ['fas', 'gamepad'],

@@ -69,6 +69,11 @@
     this.deco.push({ kind: 'bush', x: x, y: y });
     return this;
   };
+  /** Letrero de la primera vez (icono: move, jump, coin, down). */
+  Level.prototype.sign = function (x, y, icon) {
+    this.deco.push({ kind: 'sign', x: x, y: y, icon: icon });
+    return this;
+  };
   Level.prototype.fence = function (x, y, n) {
     for (var i = 0; i < n; i++) this.deco.push({ kind: 'fence', x: x + i, y: y });
     return this;
@@ -91,12 +96,24 @@
     return total;
   };
 
+  /**
+   * Sala secreta: suelo, una fila de ladrillos (fila 18, cols 4-22) y una plataforma de madera (fila 14, cols 4-26).
+   * Las tres filas de monedas quedan alcanzables: la 1.ª sobre la madera (fila 12), la 2.ª sobre los ladrillos
+   * (fila 16) y la 3.ª a ras de suelo (fila 20). coinsRows: [[x, n], …].
+   */
   function secretRoom(theme, coinsRows, exitTo) {
     var r = new Level('room', 'Sala secreta', theme, 34, 26);
     r.fill(0, 33, 0, 1, 'S').fill(0, 1, 0, 25, 'S').fill(32, 33, 0, 25, 'S').ground(2, 31, 22);
     r.start = { x: 4, y: 20 };
-    coinsRows.forEach(function (row, i) { r.coins(row[0], 8 + i * 3, row[1]); });
-    r.row(6, 18, 'BBBBBBBBBBBBB');
+    r.row(4, 18, 'BBBBBBBBBBBBBBBBBBB');
+    r.row(4, 14, '=======================');
+    var rows = [[12, 4, 26], [16, 4, 22], [20, 3, 27]];
+    coinsRows.forEach(function (row, i) {
+      var lim = rows[i];
+      var x = Math.max(lim[1], row[0]);
+      var n = Math.min(row[1], lim[2] - x + 1);
+      r.coins(x, lim[0], n);
+    });
     r.pipe(28, 20, exitTo);
     r.time = null;
     r.isRoom = true;
@@ -114,7 +131,7 @@
     L.enemy('blob', 25, 21).enemy('blob', 36, 21).enemy('blob', 60, 21).enemy('blob', 62, 21);
     L.coins(45, 18, 5, function (i) { return -[0, 1, 2, 1, 0][i]; });
     L.row(55, 17, '======').coins(55, 15, 6);
-    L.row(66, 18, 'B?B').row(70, 18, 'H').row(78, 14, 'BBBB?BBB').row(80, 18, 'M');
+    L.row(66, 18, 'B?B').row(70, 18, 'H').row(78, 14, 'BB?BBBBB').row(80, 18, 'M');
     L.enemy('blob', 85, 21).enemy('blob', 88, 21);
     L.coins(96, 18, 4, function (i) { return -[0, 1, 1, 0][i]; });
     L.pipe(106, 20).pipe(116, 19).pipe(126, 18);
@@ -126,6 +143,7 @@
     L.flag(203, 22);
     [5, 33, 58, 92, 118, 160, 198].forEach(function (x) { L.bush(x, 22); });
     L.fence(140, 22, 6);
+    L.sign(6, 22, 'move').sign(9, 22, 'jump').sign(15, 22, 'coin').sign(37, 22, 'down');
     L.rooms.r1 = secretRoom('cave', [[6, 13], [8, 9], [10, 5]], { to: 'main', x: 44, y: 20 });
     L.time = 300;
     return L;
@@ -141,7 +159,8 @@
     L.enemy('blob', 20, 21).enemy('blob', 30, 21).enemy('bee', 36, 15);
     L.row(41, 18, '===');
     L.row(50, 15, 'BBBBBBB').coins(51, 13, 5).row(52, 15, 'H');
-    L.fill(58, 59, 16, 21, 'B').fill(66, 67, 13, 21, 'B').coins(63, 10, 2);
+    // Columnas de ladrillo con un tablón entre ellas: cada salto queda a 3 filas o menos (también para Ruy grande).
+    L.fill(58, 59, 18, 21, 'B').row(62, 17, '==').fill(66, 67, 14, 21, 'B').coins(63, 10, 2);
     L.enemy('blob', 62, 21).enemy('blob', 72, 21).enemy('bee', 76, 14);
     L.row(81, 18, '===');
     L.pipe(92, 19, { to: 'r1', x: 4, y: 20 }).pipe(100, 18);
@@ -166,23 +185,31 @@
     L.fill(0, 1, 0, H - 1, 'S').fill(32, 33, 0, H - 1, 'S');
     L.ground(2, 31, H - 4);
     L.start = { x: 4, y: H - 6 };
-    // Plataformas en zigzag hacia arriba; algunas sólidas (piedra), otras de un sentido.
+    // Escalones en zigzag: cada uno sube 4 filas y queda a 2 columnas o menos del anterior, así cada salto se
+    // alcanza caminando (el salto llega a ~5 filas). Los de piedra (S) no se atraviesan desde abajo: se suben por el
+    // borde. Los de madera (=) se atraviesan desde abajo. [x, ancho, tipo, extra]
     var plan = [
-      [20, 6, '='], [8, 6, '='], [18, 8, 'S'], [4, 6, '='], [14, 6, '='], [24, 6, '='], [12, 8, 'S'], [3, 5, '='],
-      [10, 6, '='], [20, 6, '='], [26, 5, '='], [16, 8, 'S'], [6, 6, '='], [14, 5, '='], [22, 8, '='], [10, 10, 'S'],
+      [17, 7, '='], [9, 7, '=', 'coins'], [16, 8, 'S', 'hog'], [7, 7, '='], [15, 7, '=', 'coins'], [23, 7, '=', 'bee'],
+      [13, 8, 'S'], [4, 7, '=', 'coins'], [12, 7, '='], [21, 6, '=', 'bee'], [12, 8, 'S', 'hog'], [4, 6, '=', 'coins'],
+      [11, 6, '='], [19, 8, '=', 'bee'], [11, 6, '=', 'coins'], [18, 10, 'S', 'hog'],
     ];
     var y = H - 8;
-    plan.forEach(function (p, i) {
+    L.steps = [];
+    plan.forEach(function (p) {
       L.fill(p[0], p[0] + p[1] - 1, y, y, p[2]);
-      if (i % 3 === 1) L.coins(p[0] + 1, y - 2, Math.min(3, p[1] - 2));
-      if (p[2] === 'S' && p[1] >= 8) L.enemy('hog', p[0] + 3, y - 1);
-      if (i % 4 === 2) L.enemy('bee', p[0] + 2, y - 5);
+      L.steps.push({ x: p[0], w: p[1], y: y, solid: p[2] === 'S' });
+      if (p[3] === 'coins') L.coins(p[0] + 2, y - 2, 3);
+      if (p[3] === 'hog') L.enemy('hog', p[0] + 3, y - 1);
+      if (p[3] === 'bee') L.enemy('bee', p[0] + 2, y - 5);
       y -= 4;
     });
-    L.row(5, H - 23, '?M?');
-    // Meta: plataforma de un sentido de lado a lado (se sube desde abajo).
+    // Bloques con poder sobre el cuarto escalón (fila H-20): se golpean saltando desde él.
+    L.row(8, H - 23, '?M?');
+    // Meta: plataforma de un sentido de lado a lado (se sube desde abajo) con la bandera a la izquierda.
     L.fill(2, 31, y, y, '=');
-    L.flag(16, y);
+    L.steps.push({ x: 2, w: 30, y: y, solid: false, goal: true });
+    L.coins(14, y - 2, 6);
+    L.flag(8, y);
     L.time = 300;
     return L;
   }
@@ -197,7 +224,9 @@
     L.enemy('bee', 48, 12).enemy('bee', 64, 11);
     L.ground(71, 110, 22).row(76, 18, 'B?M?B').enemy('blob', 84, 21).enemy('hog', 92, 21).enemy('blob', 100, 21);
     L.pipe(104, 20, { to: 'r1', x: 4, y: 20 });
-    L.row(112, 19, '==').row(117, 17, '==').row(122, 15, '==').row(127, 17, '==').row(132, 19, '==');
+    // Tablones de 3 sobre una laguna (antes: tablones de 2 sobre un foso mortal).
+    L.fill(111, 135, 21, 21, '~').fill(111, 135, 22, 24, 'w').fill(111, 135, 25, 25, 'S');
+    L.row(112, 18, '===').row(117, 17, '===').row(122, 15, '===').row(127, 17, '===').row(132, 18, '===');
     L.coins(117, 15, 2).coins(122, 13, 2).coins(127, 15, 2);
     L.ground(136, 219, 22);
     L.fill(150, 165, 21, 21, '~').fill(150, 165, 22, 24, 'w').fill(150, 165, 25, 25, 'S');

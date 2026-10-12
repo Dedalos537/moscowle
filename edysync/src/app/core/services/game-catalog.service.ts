@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
-export type GameKind = 'platformer' | 'reflex' | 'jclic' | 'clic3' | 'flash' | 'html';
+export type GameKind = 'platformer' | 'reflex' | 'simulation' | 'jclic' | 'clic3' | 'flash' | 'html';
 export type KpiKey = 'accuracy' | 'avg_time' | 'completion' | 'errors' | 'collected';
 export type LevelId = 'inicial' | 'en_proceso' | 'logrado' | 'destacado';
 

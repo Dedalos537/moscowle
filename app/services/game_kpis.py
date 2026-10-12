@@ -46,6 +46,14 @@ DEFAULT_PROFILES = {
         'accuracy': [50, 70, 85],
         'avg_time': [1.2, 0.8, 0.5],
     },
+    # Supermercado: elegir bien (precisión), terminar la compra y pagar (avance), equivocarse poco (errores por
+    # ronda) y el tiempo por producto de la lista.
+    'shopping': {
+        'accuracy': [60, 80, 95],
+        'completion': [40, 70, 95],
+        'errors': [4, 2, 0.5],
+        'avg_time': [25, 15, 8],
+    },
 }
 
 RECENT = 5
@@ -56,7 +64,9 @@ class KpiError(ValueError):
 
 
 def default_profile(kind):
-    family = {'platformer': 'platformer', 'jclic': 'activities', 'clic3': 'activities'}.get(kind, 'reflex')
+    family = {'platformer': 'platformer', 'jclic': 'activities', 'clic3': 'activities', 'simulation': 'shopping'}.get(
+        kind, 'reflex'
+    )
     return {k: list(v) for k, v in DEFAULT_PROFILES[family].items()}
 
 

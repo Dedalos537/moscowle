@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="es-PE">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#D3893E" />
+  <title>Supermercado</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "../vendor/three/three.module.min.js",
+        "three/addons/": "../vendor/three/addons/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4.2" height="14" rx="1.6"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.6"/></symbol>
+    <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M12 2.5a6.8 6.8 0 0 0-4 12.3c.7.5 1 1.2 1 2V18h6v-1.2c0-.8.4-1.5 1-2A6.8 6.8 0 0 0 12 2.5z"/><rect x="9" y="19.3" width="6" height="2.4" rx="1.2"/></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24"><path d="M2.5 3.5h2.6l2.3 10.4c.2.8.9 1.4 1.7 1.4h8.4c.8 0 1.5-.5 1.7-1.3l1.8-6.6H6.4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="19.6" r="1.9"/><circle cx="17" cy="19.6" r="1.9"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8.2 11V4.8a1.6 1.6 0 0 1 3.2 0V10m0-.5V3.6a1.6 1.6 0 0 1 3.2 0V10m0-.3V5.2a1.6 1.6 0 0 1 3.2 0v8.3c0 4.4-2.8 7.8-6.8 7.8-2.6 0-4.4-1.2-5.8-3.4L2.9 13.6a1.6 1.6 0 0 1 2.6-1.8L8.2 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M9 6 4 11l5 5M4.5 11H14a6 6 0 0 1 0 12h-2" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -2)"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12" cy="12" r="3.4"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2.6l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.3l-5.9 3.2 1.3-6.5L2.5 9.4l6.6-.8z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="11" rx="3"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7" fill="none" stroke="currentColor" stroke-width="2.6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.4 4.4L19.5 6.8" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M12 7v5.4l3.4 2" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="6.3" fill="none" stroke="#fff3dc" stroke-width="1.6" opacity=".7"/></symbol>
+  </svg>
+
+  <div id="app">
+    <canvas id="c" aria-label="Supermercado en 3D"></canvas>
+    <div id="vignette"></div>
+
+    <!-- HUD de juego -->
+    <div id="hud" class="hidden">
+      <div id="listCard" class="card note">
+        <div class="noteHead"><span class="noteTitle">Mi lista</span><span id="listCount" class="tag">0/3</span></div>
+        <ul id="listItems"></ul>
+        <div id="memCover">
+          <div class="memQ">¿Recuerdas tu lista?</div>
+          <div id="memDone" class="memDone"></div>
+          <button id="peekBtn" class="btn small cyan"><svg><use href="#i-eye"/></svg>Mirar</button>
+        </div>
+        <div id="memBar"><i></i></div>
+      </div>
+
+      <div id="topRight">
+        <div id="budgetPill" class="pill money hidden"><svg><use href="#i-coin"/></svg><span id="budgetText">S/ 0.00</span></div>
+        <div id="timerPill" class="pill hidden"><svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" class="bg"/><circle cx="18" cy="18" r="15" class="fg" id="timerRing"/></svg><span id="timerText">2:30</span></div>
+        <button id="hintBtn" class="iconBtn" title="Pista" aria-label="Pista"><svg><use href="#i-bulb"/></svg></button>
+        <button id="pauseBtn" class="iconBtn" title="Pausa (Esc)" aria-label="Pausa"><svg><use href="#i-pause"/></svg></button>
+      </div>
+
+      <div id="cartBar" class="card">
+        <div class="cartIcon"><svg><use href="#i-cart"/></svg><b id="cartCount">0</b></div>
+        <div id="cartChips"></div>
+        <div id="cartTotal" class="cartTotal hidden"></div>
+      </div>
+
+      <div id="bubble" class="bubble hidden" aria-live="polite">
+        <img id="bubbleImg" alt="" />
+        <div class="bTxt"><b id="bubbleName">Leche</b><span id="bubblePrice">S/ 4.00</span></div>
+        <kbd id="bubbleKey">E</kbd>
+      </div>
+      <div id="npcBubble" class="speech hidden">¡Hola!</div>
+      <div id="toast" class="toast"></div>
+      <div id="goPay" class="goPay hidden"><svg><use href="#i-cart"/></svg><span>¡Lista completa! Ve a la <b>CAJA</b></span></div>
+    </div>
+
+    <button id="flowMenu" class="iconBtn hidden" title="Menú" aria-label="Menú"><svg><use href="#i-pause"/></svg></button>
+
+    <!-- controles táctiles -->
+    <div id="touch" class="hidden">
+      <div id="stickZone"><div id="stickBase"><div id="stickKnob"></div></div></div>
+      <button id="actBtn" aria-label="Acción"><svg><use href="#i-hand"/></svg><span id="actLabel">Tomar</span></button>
+    </div>
+
+    <!-- pantallas -->
+    <section id="scrLoading" class="screen show">
+      <div class="loadBox">
+        <div class="loadCart"><svg><use href="#i-cart"/></svg></div>
+        <p>Abriendo el mercadito<span class="dots"><i>.</i><i>.</i><i>.</i></span></p>
+      </div>
+    </section>
+
+    <section id="scrTitle" class="screen">
+      <div class="titleWrap">
+        <div class="logo">
+          <div class="logoSub">Mercadito Juan Pablo II</div>
+          <h1><span>Super</span><span>mercado</span></h1>
+          <p class="tagline">Lee tu lista, llena el carrito y paga en la caja.</p>
+        </div>
+        <div class="menuBtns">
+          <button id="btnPlay" class="btn big">¡Vamos!</button>
+          <button id="btnLevels" class="btn cyan">Niveles</button>
+          <button id="btnOptions" class="btn lilac">Opciones</button>
+          <button id="btnExit" class="btn ghost">Salir</button>
+        </div>
+        <div class="howto">
+          <span class="k">W A S D</span> mover · <span class="k">Shift</span> correr · <span class="k">E</span> tomar · <span class="k">Esc</span> pausa
+        </div>
+      </div>
+    </section>
+
+    <section id="scrLevels" class="screen">
+      <div class="card panel wide">
+        <h2>Elige un nivel</h2>
+        <div id="levelGrid" class="levelGrid"></div>
+        <div class="row"><button class="btn ghost" data-back>Volver</button></div>
+      </div>
+    </section>
+
+    <section id="scrOptions" class="screen">
+      <div class="card panel">
+        <h2>Opciones</h2>
+        <label class="opt"><span><b>Sonidos</b><small>Efectos del juego</small></span><input type="checkbox" id="optSfx" /><i class="sw"></i></label>
+        <label class="opt"><span><b>Música</b><small>Melodía de fondo</small></span><input type="checkbox" id="optMusic" /><i class="sw"></i></label>
+        <label class="opt"><span><b>Movimiento reducido</b><small>Menos rebotes y sacudidas</small></span><input type="checkbox" id="optReduced" /><i class="sw"></i></label>
+        <label class="opt"><span><b>Modo tranquilo</b><small>Más despacio y sin reloj</small></span><input type="checkbox" id="optCalm" /><i class="sw"></i></label>
+        <div class="row"><button class="btn" data-back>Listo</button></div>
+      </div>
+    </section>
+
+    <section id="scrBrief" class="screen">
+      <div class="card panel">
+        <div class="lvlBadge" id="briefNum">1</div>
+        <h2 id="briefName">Primera compra</h2>
+        <p class="goal" id="briefGoal"></p>
+        <div id="briefList" class="briefList"></div>
+        <div id="briefNotes" class="notes"></div>
+        <div class="row"><button class="btn ghost" data-back>Menú</button><button id="btnGo" class="btn big">¡A comprar!</button></div>
+      </div>
+    </section>
+
+    <section id="scrPause" class="screen">
+      <div class="card panel">
+        <h2>Pausa</h2>
+        <div class="col">
+          <button id="btnResume" class="btn big">Seguir</button>
+          <button id="btnRestart" class="btn cyan">Empezar de nuevo</button>
+          <button id="btnPauseOpts" class="btn lilac">Opciones</button>
+          <button id="btnToMenu" class="btn ghost">Menú</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="scrDialog" class="screen">
+      <div class="card panel small">
+        <h2 id="dlgTitle">¿Seguro?</h2>
+        <p id="dlgText"></p>
+        <div class="row" id="dlgBtns"></div>
+      </div>
+    </section>
+
+    <section id="scrPay" class="screen">
+      <div class="payWrap">
+        <div class="card receipt">
+          <div class="rcHead">Tu cuenta</div>
+          <ul id="rcItems"></ul>
+          <div class="rcTotal"><span>Total</span><b id="payTotal">S/ 0.00</b></div>
+        </div>
+        <div class="card payMain">
+          <div class="payTop">
+            <div class="payAsk" id="payAsk">Arrastra o toca el dinero para pagar</div>
+          </div>
+          <div id="tray" class="tray"><div class="trayHint">Pon aquí el dinero</div><div id="trayItems" class="trayItems"></div></div>
+          <div class="trayRow"><span>Pusiste: <b id="traySum">S/ 0.00</b></span><span id="trayNeed" class="need"></span></div>
+          <div class="walletHead">Tu dinero</div>
+          <div id="wallet" class="wallet"></div>
+          <div class="row"><button id="btnClearTray" class="btn ghost small">Devolver todo</button><button id="btnPay" class="btn big">Pagar</button></div>
+          <div id="changeBox" class="changeBox hidden">
+            <p id="changeQ"></p>
+            <div id="changeOpts" class="changeOpts"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="scrWin" class="screen">
+      <div class="card panel">
+        <div class="stars" id="winStars"><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg></div>
+        <h2 id="winTitle">¡Compra lista!</h2>
+        <div id="winLines" class="winLines"></div>
+        <div class="row wrap"><button id="btnWinMenu" class="btn ghost">Menú</button><button id="btnWinAgain" class="btn cyan">Repetir</button><button id="btnWinNext" class="btn big">Siguiente</button></div>
+      </div>
+    </section>
+
+    <section id="scrBye" class="screen">
+      <div class="card panel small">
+        <h2>¡Gracias por comprar!</h2>
+        <p>Tu partida quedó guardada. ¡Vuelve pronto al mercadito!</p>
+        <div class="row"><button class="btn" data-back>Volver</button></div>
+      </div>
+    </section>
+  </div>
+
+  <script src="/static/games/vendor/moscowle-bridge.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -18,6 +18,7 @@ from app.services import game_kpis
 KINDS = {
     'platformer': 'Plataformas',
     'reflex': 'Reflejos',
+    'simulation': 'Simulación',
     'jclic': 'Actividades JClic',
     'clic3': 'Actividades Clic 3.0',
     'flash': 'Flash',
@@ -32,6 +33,13 @@ BUILTIN = {
         'area': 'Coordinación y planificación motora',
         'ages': '6-14',
         'description': 'Plataformas en 4 niveles: correr, saltar en el momento justo, esquivar y planificar la ruta.',
+    },
+    'supermercado/index.html': {
+        'title': 'Supermercado',
+        'kind': 'simulation',
+        'area': 'Planificación, memoria y manejo del dinero',
+        'ages': '6-18',
+        'description': 'Recorre el súper con tu carrito, toma lo que pide la lista y paga en la caja con soles.',
     },
     'mario_forever.html': {
         'title': 'Mario Forever',
