@@ -1,21 +1,27 @@
-"""Impresión remota desde el drive usando CUPS del servidor.
+"""Impresión remota desde el drive usando CUPS.
 
-El servidor (VM-APP) imprime con los comandos estándar de CUPS (`lpstat`, `lp`, `cancel`). Las impresoras de la red
-aparecen solas si CUPS tiene `cups-browsed`/IPP Everywhere, o se agregan una vez con `lpadmin`. Si CUPS no está
-instalado, la API lo dice con claridad y el panel muestra cómo activarlo; nada se rompe.
+Dos caminos, en este orden:
+1. CUPS local de la VM (`lpstat`, `lp`, `cancel`) si está instalado y tiene impresoras.
+2. CUPS del host por IPP (`ipp_client`): el backend vive en VM-APP y la impresora está en el host, así que se le
+   habla por la red al puerto 631. El servidor sale de `PRINT_SERVER`/`CUPS_SERVER` o, si no hay, de la puerta de
+   enlace de la VM (el host en la red de libvirt). En el host basta con compartir la impresora una vez.
+Si nada responde, la API lo dice con claridad y el panel muestra cómo activarlo; nada se rompe.
 
 Los trabajos programados se guardan en `print_job` y un job del scheduler los envía cuando llega su hora.
 """
 
 import logging
+import os
 import re
 import shutil
+import socket
+import struct
 import subprocess
 from datetime import UTC, datetime
 
 from app.extensions import db
 from app.models.print_job import PrintJob
-from app.services import drive_preview
+from app.services import drive_preview, ipp_client
 from app.services import drive_service as drive
 
 logger = logging.getLogger(__name__)
@@ -47,17 +53,39 @@ def _printer_state(text):
     return 'unknown'
 
 
-def status() -> dict:
-    """{'available': bool, 'printers': [...], 'default': str|None, 'help': str|None}."""
+def _gateway():
+    """Puerta de enlace por defecto (en VM-APP es el host, 192.168.122.1)."""
+    try:
+        with open('/proc/net/route') as fh:
+            for line in fh.readlines()[1:]:
+                f = line.split()
+                if len(f) > 2 and f[1] == '00000000':
+                    return socket.inet_ntoa(struct.pack('<L', int(f[2], 16)))
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def _ipp_server():
+    server = (os.environ.get('PRINT_SERVER') or os.environ.get('CUPS_SERVER') or '').strip()
+    if server.startswith('/'):  # CUPS_SERVER puede ser un socket local: eso lo cubre la vía de comandos
+        server = ''
+    return server or _gateway()
+
+
+def _host_help(server):
+    return (
+        f'No se pudo conectar con la impresión del host ({server}:631). En el host ejecuta '
+        '«sudo cupsctl --remote-any --share-printers» y «sudo lpadmin -p NOMBRE -o printer-is-shared=true»; '
+        'si usa firewall, también «sudo ufw allow from 192.168.122.0/24 to any port 631».'
+    )
+
+
+def _cli_status():
+    """Impresoras del CUPS local, o None si la VM no tiene los comandos."""
     lpstat = _bin('lpstat')
     if not lpstat or not _bin('lp'):
-        return {
-            'available': False,
-            'printers': [],
-            'default': None,
-            'help': 'El servidor no tiene CUPS. Instálalo con «sudo apt install cups cups-browsed» y agrega la '
-            'impresora de la red; aparecerá aquí sola.',
-        }
+        return None
     printers = []
     try:
         out = _run([lpstat, '-p']).stdout
@@ -71,15 +99,55 @@ def status() -> dict:
     except Exception as exc:
         logger.warning('No se pudo consultar CUPS: %s', exc)
         return {'available': False, 'printers': [], 'default': None, 'help': f'CUPS no respondió: {exc}'}
+    return {'available': True, 'printers': printers, 'default': default_name, 'help': None}
+
+
+def _ipp_status(server):
+    client = ipp_client.Client(server, timeout=4)
+    printers = client.printers()
+    default = client.default()
     return {
         'available': True,
         'printers': printers,
-        'default': default_name,
-        'help': None
-        if printers
-        else 'CUPS está instalado pero no tiene impresoras. Agrega la de la red desde '
-        'http://localhost:631 en el servidor o con «lpadmin».',
+        'default': default if default in {p['name'] for p in printers} else None,
+        'help': None if printers else f'El CUPS del host ({server}) no tiene impresoras compartidas.',
     }
+
+
+def status() -> dict:
+    """{'available': bool, 'printers': [...], 'default': str|None, 'help': str|None}."""
+    cli = _cli_status()
+    if cli and cli['printers']:
+        return cli
+    server = _ipp_server()
+    if server:
+        try:
+            remote = _ipp_status(server)
+            if remote['printers'] or not cli:
+                return remote
+        except Exception as exc:
+            logger.info('CUPS del host no disponible en %s: %s', server, exc)
+            if not cli:
+                return {'available': False, 'printers': [], 'default': None, 'help': _host_help(server)}
+    if cli:
+        if cli['available']:
+            cli['help'] = (
+                'CUPS está instalado pero no tiene impresoras. Agrega la de la red desde '
+                'http://localhost:631 en el servidor o con «lpadmin».'
+            )
+        return cli
+    return {
+        'available': False,
+        'printers': [],
+        'default': None,
+        'help': 'El servidor no tiene CUPS. Instálalo con «sudo apt install cups cups-browsed» y agrega la '
+        'impresora de la red; aparecerá aquí sola.',
+    }
+
+
+def _uses_cli(printer):
+    cli = _cli_status()
+    return bool(cli and any(p['name'] == printer for p in cli['printers']))
 
 
 def validate(data: dict) -> dict:
@@ -128,24 +196,44 @@ def create_job(rel: str, data: dict, user_id=None) -> PrintJob:
     return job
 
 
+def _send_cli(job, source):
+    args = [_bin('lp'), '-d', job.printer, '-n', str(job.copies), '-t', job.file_name[:100]]
+    args += ['-o', 'sides=two-sided-long-edge' if job.duplex else 'sides=one-sided']
+    if not job.color:
+        args += ['-o', 'print-color-mode=monochrome']
+    if job.page_range:
+        args += ['-o', f'page-ranges={job.page_range}']
+    args += ['--', str(source)]
+    result = _run(args, timeout=60)
+    if result.returncode != 0:
+        raise drive.DriveError((result.stderr or result.stdout or 'CUPS rechazó el trabajo').strip()[:250])
+    m = re.search(r'(\S+-\d+)', result.stdout or '')
+    return m.group(1) if m else None
+
+
+def _send_ipp(job, source):
+    server = _ipp_server()
+    if not server:
+        raise drive.DriveError('No hay servicio de impresión en el servidor')
+    job_id = ipp_client.Client(server).print_file(
+        job.printer,
+        source.read_bytes(),
+        job.file_name[:100],
+        copies=job.copies,
+        duplex=job.duplex,
+        color=job.color,
+        page_ranges=ipp_client.page_ranges(job.page_range),
+    )
+    return f'{job.printer}-{job_id}'
+
+
 def send(job: PrintJob) -> PrintJob:
     """Manda un trabajo a CUPS. Nunca lanza: el resultado queda en el propio trabajo."""
     try:
         source = drive_preview.printable_pdf(job.file_path)
         if source is None:
             raise drive.DriveError('Para imprimir documentos de Office el servidor necesita LibreOffice')
-        args = [_bin('lp'), '-d', job.printer, '-n', str(job.copies), '-t', job.file_name[:100]]
-        args += ['-o', 'sides=two-sided-long-edge' if job.duplex else 'sides=one-sided']
-        if not job.color:
-            args += ['-o', 'print-color-mode=monochrome']
-        if job.page_range:
-            args += ['-o', f'page-ranges={job.page_range}']
-        args += ['--', str(source)]
-        result = _run(args, timeout=60)
-        if result.returncode != 0:
-            raise drive.DriveError((result.stderr or result.stdout or 'CUPS rechazó el trabajo').strip()[:250])
-        m = re.search(r'(\S+-\d+)', result.stdout or '')
-        job.cups_job = m.group(1) if m else None
+        job.cups_job = _send_cli(job, source) if _uses_cli(job.printer) else _send_ipp(job, source)
         job.status, job.error, job.sent_at = 'sent', None, _now()
     except Exception as exc:
         job.status, job.error = 'failed', str(exc)[:250]
@@ -156,8 +244,14 @@ def send(job: PrintJob) -> PrintJob:
 def cancel(job: PrintJob) -> PrintJob:
     if job.status == 'scheduled':
         job.status = 'cancelled'
-    elif job.status == 'sent' and job.cups_job and _bin('cancel'):
+    elif job.status == 'sent' and job.cups_job and _uses_cli(job.printer) and _bin('cancel'):
         _run([_bin('cancel'), job.cups_job])
+        job.status = 'cancelled'
+    elif job.status == 'sent' and job.cups_job and _ipp_server():
+        try:
+            ipp_client.Client(_ipp_server()).cancel(job.printer, int(job.cups_job.rsplit('-', 1)[1]))
+        except (ipp_client.IppError, OSError, ValueError, IndexError) as exc:
+            raise drive.DriveError(f'No se pudo cancelar: {exc}') from exc
         job.status = 'cancelled'
     else:
         raise drive.DriveError('Este trabajo ya no se puede cancelar')
