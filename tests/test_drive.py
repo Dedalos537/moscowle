@@ -156,7 +156,10 @@ def test_image_thumbnail(drv):
 
 
 def test_printing_without_cups_explains_and_validates(drv):
-    with patch('app.services.print_service._bin', return_value=None):
+    with (
+        patch('app.services.print_service._bin', return_value=None),
+        patch('app.services.print_service._ipp_server', return_value=None),
+    ):
         status = drv.get('/printers').get_json()
         assert status['available'] is False and 'cups' in status['help'].lower()
         drv.upload('', 'doc.pdf', b'%PDF-1.4')
@@ -187,3 +190,98 @@ def test_print_job_is_sent_with_safe_arguments(drv):
     assert r.status_code == 201 and job['status'] == 'sent' and job['cups_job'] == 'Oficina-42'
     lp = next(a for a in calls if a[0].endswith('/lp'))
     assert lp[:4] == ['/usr/bin/lp', '-d', 'Oficina', '-n'] and 'sides=two-sided-long-edge' in lp and '--' in lp
+
+
+class _FakeCups:
+    """CUPS de mentira que habla IPP, como el del host visto desde VM-APP.
+
+    Responde dentro del proceso (reemplaza `urlopen`): un servidor HTTP real en un hilo se cuelga con eventlet en CI.
+    """
+
+    address = 'cups.test:631'
+
+    def __init__(self):
+        self.requests = []
+
+    def urlopen(self, req, timeout=None):
+        import struct
+        import urllib.error
+
+        from app.services import ipp_client as ipp
+
+        if not req.full_url.startswith(f'http://{self.address}/'):
+            raise urllib.error.URLError('connection refused')
+        body = req.data
+        op = struct.unpack('>H', body[2:4])[0]
+        _, groups = ipp.parse(body)
+        self.requests.append((req.full_url.split(self.address, 1)[1], op, groups, body))
+        out = struct.pack('>BBHI', 2, 0, 0, 1) + b'\x01' + ipp._attr(0x47, 'attributes-charset', 'utf-8')
+        if op == ipp.CUPS_GET_PRINTERS:
+            out += b'\x04' + ipp._attr(0x42, 'printer-name', 'Epson_L4150') + ipp._attr(0x23, 'printer-state', 3)
+            out += b'\x04' + ipp._attr(0x42, 'printer-name', 'Oficina') + ipp._attr(0x23, 'printer-state', 5)
+        elif op == ipp.CUPS_GET_DEFAULT:
+            out += b'\x04' + ipp._attr(0x42, 'printer-name', 'Epson_L4150')
+        elif op == ipp.PRINT_JOB:
+            out += b'\x02' + ipp._attr(0x21, 'job-id', 77)
+        return _Resp(out + b'\x03')
+
+
+class _Resp:
+    def __init__(self, data):
+        self.data = data
+
+    def read(self):
+        return self.data
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+def test_printing_through_host_cups_over_ipp(drv):
+    cups = _FakeCups()
+    with (
+        patch('app.services.print_service._bin', return_value=None),
+        patch('app.services.print_service._ipp_server', return_value=cups.address),
+        patch('app.services.ipp_client.urllib.request.urlopen', side_effect=cups.urlopen),
+    ):
+        status = drv.get('/printers').get_json()
+        assert status['available'] is True and status['default'] == 'Epson_L4150'
+        assert [(p['name'], p['state']) for p in status['printers']] == [
+            ('Epson_L4150', 'idle'),
+            ('Oficina', 'disabled'),
+        ]
+        drv.upload('', 'doc.pdf', b'%PDF-1.4 hola')
+        r = drv.post(
+            '/print',
+            {
+                'path': 'doc.pdf',
+                'printer': 'Epson_L4150',
+                'copies': 2,
+                'duplex': True,
+                'color': False,
+                'page_range': '1-3,5',
+            },
+        )
+        job = r.get_json()
+        assert r.status_code == 201 and job['status'] == 'sent' and job['cups_job'] == 'Epson_L4150-77'
+        path, _, groups, body = cups.requests[-1]
+        attrs = {k: v for g in groups for k, v in g['attrs'].items()}
+        assert path == '/printers/Epson_L4150' and body.endswith(b'%PDF-1.4 hola')
+        assert attrs['copies'] == [2] and attrs['sides'] == ['two-sided-long-edge']
+        assert attrs['print-color-mode'] == ['monochrome'] and len(attrs['page-ranges']) == 2
+        assert drv.post(f'/print/jobs/{job["id"]}/cancel').get_json()['status'] == 'cancelled'
+        assert cups.requests[-1][1] == 0x0008
+
+
+def test_unreachable_host_cups_explains_how_to_share(drv):
+    cups = _FakeCups()
+    with (
+        patch('app.services.print_service._bin', return_value=None),
+        patch('app.services.print_service._ipp_server', return_value='otro.test:631'),
+        patch('app.services.ipp_client.urllib.request.urlopen', side_effect=cups.urlopen),
+    ):
+        status = drv.get('/printers').get_json()
+    assert status['available'] is False and 'cupsctl' in status['help']
