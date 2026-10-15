@@ -17,6 +17,13 @@ from app.models import User
 
 logger = logging.getLogger(__name__)
 
+# Los reportes son administrativos (finanzas, BSC, eficiencia de terapeutas): solo los reciben administradores.
+REPORT_ROLES = ('admin',)
+
+
+def report_recipients():
+    return User.query.filter(User.is_active.is_(True), User.role.in_(REPORT_ROLES)).all()
+
 
 # ─── Weekly Report ────────────────────────────────────────────────────────
 
@@ -27,7 +34,7 @@ def generate_weekly_reports():
     now = datetime.utcnow()
     week_start = now - timedelta(days=7)
 
-    active_users = User.query.filter_by(is_active=True).all()
+    active_users = report_recipients()
     sent = 0
 
     for user in active_users:
@@ -43,6 +50,8 @@ def generate_weekly_reports():
 
 def _send_weekly_report(user, since, until):
     """Generate and send weekly report for a user."""
+    if user.role not in REPORT_ROLES:
+        return
     from app.models.notification import UserNotificationPreference
 
     prefs = UserNotificationPreference.query.filter_by(user_id=user.id).first()
@@ -73,7 +82,7 @@ def generate_monthly_reports():
     month_start = (now - timedelta(days=now.day)).replace(day=1)
     month_end = now.replace(day=1) - timedelta(seconds=1)
 
-    active_users = User.query.filter_by(is_active=True).all()
+    active_users = report_recipients()
     sent = 0
 
     for user in active_users:
@@ -89,6 +98,8 @@ def generate_monthly_reports():
 
 def _send_monthly_report(user, since, until):
     """Generate and send monthly report."""
+    if user.role not in REPORT_ROLES:
+        return
     from app.models.notification import UserNotificationPreference
 
     prefs = UserNotificationPreference.query.filter_by(user_id=user.id).first()
@@ -124,7 +135,7 @@ def generate_annual_reports():
     year_end = now.replace(month=1, day=1) - timedelta(seconds=1)
     year_end = now - timedelta(seconds=1)
 
-    active_users = User.query.filter_by(is_active=True).all()
+    active_users = report_recipients()
     sent = 0
 
     for user in active_users:
@@ -140,6 +151,8 @@ def generate_annual_reports():
 
 def _send_annual_report(user, since, until):
     """Generate and send annual report."""
+    if user.role not in REPORT_ROLES:
+        return
     from app.models.notification import UserNotificationPreference
 
     prefs = UserNotificationPreference.query.filter_by(user_id=user.id).first()
