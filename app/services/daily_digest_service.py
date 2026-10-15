@@ -1,7 +1,7 @@
 """Daily Notification Digest Service — Balanced Scorecard Edition.
 
-Generates and sends a comprehensive daily summary at 6:00 AM to all active users
-via Telegram and/or email, including BSC metrics, financials, sessions, patient
+Generates and sends a comprehensive daily summary at 6:00 AM to active administrators
+via Telegram and/or email (it is administrative: therapists and patients never receive it), including BSC metrics, financials, sessions, patient
 progress, trend analysis, and AI-powered predictions.
 """
 
@@ -31,7 +31,9 @@ def generate_daily_digests():
     logger.info('Starting daily notification digest generation...')
     yesterday = datetime.utcnow() - timedelta(hours=24)
 
-    active_users = User.query.filter_by(is_active=True).all()
+    from app.services.automated_reports_service import report_recipients
+
+    active_users = report_recipients()
     sent_count = 0
     skipped_count = 0
 
@@ -49,6 +51,8 @@ def generate_daily_digests():
 
 def _send_digest_for_user(user, since):
     """Generate and send digest for a single user via their preferred channels."""
+    if user.role != 'admin':
+        return
     from app.models.notification import UserNotificationPreference
 
     prefs = UserNotificationPreference.query.filter_by(user_id=user.id).first()
