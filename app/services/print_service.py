@@ -26,6 +26,7 @@ from app.services import drive_service as drive
 
 logger = logging.getLogger(__name__)
 _SAFE_PRINTER = re.compile(r'^[A-Za-z0-9_.\-@]{1,127}$')
+QUALITIES = {'draft': 3, 'normal': 4, 'high': 5}  # valores IPP de print-quality
 _PAGE_RANGE = re.compile(r'^\s*\d+(\s*-\s*\d+)?(\s*,\s*\d+(\s*-\s*\d+)?)*\s*$')
 
 
@@ -160,6 +161,9 @@ def validate(data: dict) -> dict:
     page_range = (data.get('page_range') or '').strip() or None
     if page_range and not _PAGE_RANGE.match(page_range):
         raise drive.DriveError('Páginas: usa un formato como 1-3,5')
+    quality = str(data.get('quality') or 'normal')
+    if quality not in QUALITIES:
+        raise drive.DriveError('Calidad: borrador, normal o alta')
     scheduled = data.get('scheduled_at')
     when = None
     if scheduled:
@@ -175,6 +179,7 @@ def validate(data: dict) -> dict:
         'duplex': bool(data.get('duplex')),
         'color': data.get('color', True) is not False,
         'page_range': page_range.replace(' ', '') if page_range else None,
+        'quality': quality,
         'scheduled_at': when,
     }
 
@@ -203,6 +208,7 @@ def _send_cli(job, source):
         args += ['-o', 'print-color-mode=monochrome']
     if job.page_range:
         args += ['-o', f'page-ranges={job.page_range}']
+    args += ['-o', f'print-quality={QUALITIES.get(job.quality, 4)}']
     args += ['--', str(source)]
     result = _run(args, timeout=60)
     if result.returncode != 0:
@@ -223,6 +229,7 @@ def _send_ipp(job, source):
         duplex=job.duplex,
         color=job.color,
         page_ranges=ipp_client.page_ranges(job.page_range),
+        quality=QUALITIES.get(job.quality, 4),
     )
     return f'{job.printer}-{job_id}'
 

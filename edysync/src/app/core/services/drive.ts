@@ -58,6 +58,8 @@ export interface PrinterStatus {
   help: string | null;
 }
 
+export type PrintQuality = 'draft' | 'normal' | 'high';
+
 export interface PrintJob {
   id: number;
   file_path: string;
@@ -67,6 +69,7 @@ export interface PrintJob {
   duplex: boolean;
   color: boolean;
   page_range: string | null;
+  quality: PrintQuality;
   scheduled_at: string | null;
   status: 'scheduled' | 'sent' | 'failed' | 'cancelled';
   error: string | null;
@@ -81,6 +84,7 @@ export interface PrintOptions {
   duplex: boolean;
   color: boolean;
   page_range?: string;
+  quality: PrintQuality;
   scheduled_at?: string | null;
 }
 

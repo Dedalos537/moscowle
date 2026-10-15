@@ -23,6 +23,7 @@ import {
   DriveUsage,
   PrintJob,
   PrinterStatus,
+  PrintQuality,
   TrashEntry,
 } from '../../../../core/services/drive';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -142,7 +143,12 @@ export class Drive implements OnInit, OnDestroy {
   readonly printers = signal<PrinterStatus | null>(null);
   readonly printJobs = signal<PrintJob[]>([]);
   readonly printing = signal(false);
-  printForm = { printer: '', copies: 1, duplex: false, color: true, page_range: '', when: 'now' as 'now' | 'later', at: '' };
+  printForm = { printer: '', copies: 1, duplex: false, color: true, page_range: '', quality: 'normal' as PrintQuality, when: 'now' as 'now' | 'later', at: '' };
+  readonly qualities: { value: PrintQuality; label: string }[] = [
+    { value: 'draft', label: 'Borrador' },
+    { value: 'normal', label: 'Normal' },
+    { value: 'high', label: 'Alta' },
+  ];
 
   readonly crumbs = computed(() => {
     const parts = this.path() ? this.path().split('/') : [];
@@ -852,7 +858,7 @@ export class Drive implements OnInit, OnDestroy {
     const scheduled = f.when === 'later' && f.at ? new Date(f.at).toISOString() : null;
     this.printing.set(true);
     this.api
-      .print({ path: entry.path, printer: f.printer, copies: f.copies, duplex: f.duplex, color: f.color, page_range: f.page_range || undefined, scheduled_at: scheduled })
+      .print({ path: entry.path, printer: f.printer, copies: f.copies, duplex: f.duplex, color: f.color, page_range: f.page_range || undefined, quality: f.quality, scheduled_at: scheduled })
       .subscribe({
         next: (job) => {
           this.printing.set(false);
