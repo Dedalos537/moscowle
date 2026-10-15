@@ -802,6 +802,25 @@ def create_app(config_class=None):
 
                 result = db.session.execute(
                     text(
+                        'SELECT COUNT(*) FROM information_schema.columns '
+                        "WHERE table_name = 'print_job' AND column_name = 'quality'"
+                    )
+                )
+                if result.scalar() == 0:
+                    db.session.execute(
+                        text("ALTER TABLE print_job ADD COLUMN quality VARCHAR(10) NOT NULL DEFAULT 'normal'")
+                    )
+                    db.session.commit()
+                    app.logger.info('print_job.quality added')
+            except Exception as e:
+                app.logger.warning(f'print_job quality migration (non-fatal): {e}')
+                db.session.rollback()
+
+            try:
+                from sqlalchemy import text
+
+                result = db.session.execute(
+                    text(
                         "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'user' AND column_name = 'sex'"
                     )
                 )

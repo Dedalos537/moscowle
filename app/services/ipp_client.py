@@ -136,7 +136,9 @@ class Client:
             return None  # sin impresora predeterminada
         return next((g['attrs']['printer-name'][0] for g in groups if 'printer-name' in g['attrs']), None)
 
-    def print_file(self, printer, data: bytes, title, copies=1, duplex=False, color=True, page_ranges=None) -> int:
+    def print_file(
+        self, printer, data: bytes, title, copies=1, duplex=False, color=True, page_ranges=None, quality=None
+    ) -> int:
         attrs = _attr(_URI, 'printer-uri', self.printer_uri(printer))
         attrs += _attr(_NAME, 'requesting-user-name', self.user) + _attr(_NAME, 'job-name', title)
         attrs += _attr(_MIME, 'document-format', 'application/octet-stream')
@@ -146,6 +148,8 @@ class Client:
             job += _attr(_KEYWORD, 'print-color-mode', 'monochrome')
         if page_ranges:
             job += _attr(_RANGE, 'page-ranges', *page_ranges)
+        if quality:
+            job += _attr(_ENUM, 'print-quality', quality)  # 3 borrador, 4 normal, 5 alta
         groups = self._op(PRINT_JOB, f'/printers/{quote(printer)}', attrs, job, data, timeout=60)
         job_id = next((g['attrs']['job-id'][0] for g in groups if 'job-id' in g['attrs']), None)
         if not isinstance(job_id, int):

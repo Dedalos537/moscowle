@@ -190,6 +190,9 @@ def test_print_job_is_sent_with_safe_arguments(drv):
     assert r.status_code == 201 and job['status'] == 'sent' and job['cups_job'] == 'Oficina-42'
     lp = next(a for a in calls if a[0].endswith('/lp'))
     assert lp[:4] == ['/usr/bin/lp', '-d', 'Oficina', '-n'] and 'sides=two-sided-long-edge' in lp and '--' in lp
+    assert 'print-quality=4' in lp  # normal por defecto
+    bad = drv.post('/print', {'path': 'doc.pdf', 'printer': 'Oficina', 'quality': 'ultra'})
+    assert bad.status_code == 400
 
 
 class _FakeCups:
@@ -263,6 +266,7 @@ def test_printing_through_host_cups_over_ipp(drv):
                 'duplex': True,
                 'color': False,
                 'page_range': '1-3,5',
+                'quality': 'high',
             },
         )
         job = r.get_json()
@@ -272,6 +276,7 @@ def test_printing_through_host_cups_over_ipp(drv):
         assert path == '/printers/Epson_L4150' and body.endswith(b'%PDF-1.4 hola')
         assert attrs['copies'] == [2] and attrs['sides'] == ['two-sided-long-edge']
         assert attrs['print-color-mode'] == ['monochrome'] and len(attrs['page-ranges']) == 2
+        assert attrs['print-quality'] == [5] and job['quality'] == 'high'
         assert drv.post(f'/print/jobs/{job["id"]}/cancel').get_json()['status'] == 'cancelled'
         assert cups.requests[-1][1] == 0x0008
 

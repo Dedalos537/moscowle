@@ -20,6 +20,7 @@ class PrintJob(db.Model):
     duplex = db.Column(db.Boolean, default=False, nullable=False)
     color = db.Column(db.Boolean, default=True, nullable=False)
     page_range = db.Column(db.String(60), nullable=True)
+    quality = db.Column(db.String(10), default='normal', nullable=False)  # draft | normal | high
     scheduled_at = db.Column(db.DateTime, nullable=True, index=True)  # UTC; None = enseguida
     # scheduled -> sent | failed | cancelled
     status = db.Column(db.String(20), default='scheduled', nullable=False, index=True)
@@ -40,6 +41,7 @@ class PrintJob(db.Model):
             'duplex': self.duplex,
             'color': self.color,
             'page_range': self.page_range,
+            'quality': self.quality or 'normal',
             'scheduled_at': iso(self.scheduled_at),
             'status': self.status,
             'cups_job': self.cups_job,
