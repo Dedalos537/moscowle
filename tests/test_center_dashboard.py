@@ -11,7 +11,8 @@ from app.models.contract import Contract, Installment
 from app.models.user_status_log import UserStatusLog
 from app.services import center_dashboard as cd
 
-TODAY = date(2026, 10, 20)
+# Fecha fija en el pasado: «ahora» para el cálculo es el cierre de ese día (no depende del reloj real).
+TODAY = date(2026, 9, 20)
 
 
 def _sede():
@@ -51,21 +52,21 @@ def test_risks_explain_why_each_patient_may_leave(app):
     absent = _user('jugador', norte)
     fine = _user('jugador', norte)
     # Faltó a sus dos últimas sesiones.
-    _appt(t, absent, datetime(2026, 10, 10, 15), attendance='absent')
-    _appt(t, absent, datetime(2026, 10, 17, 15), status='scheduled', attendance='absent')
+    _appt(t, absent, datetime(2026, 9, 10, 15), attendance='absent')
+    _appt(t, absent, datetime(2026, 9, 17, 15), status='scheduled', attendance='absent')
     # Al día, con sesión reciente y próxima agendada.
-    _appt(t, fine, datetime(2026, 10, 15, 15))
-    _appt(t, fine, datetime(2026, 10, 22, 15), status='scheduled', attendance='pending')
-    _appt(t, debtor, datetime(2026, 10, 14, 15))
-    _appt(t, debtor, datetime(2026, 10, 21, 15), status='scheduled', attendance='pending')
+    _appt(t, fine, datetime(2026, 9, 15, 15))
+    _appt(t, fine, datetime(2026, 9, 22, 15), status='scheduled', attendance='pending')
+    _appt(t, debtor, datetime(2026, 9, 14, 15))
+    _appt(t, debtor, datetime(2026, 9, 21, 15), status='scheduled', attendance='pending')
     c = Contract(patient_id=debtor.id, total_amount=300, installment_count=2, installment_amount=150)
     db.session.add(c)
     db.session.flush()
     db.session.add_all(
         [
-            Installment(contract_id=c.id, number=1, due_date=date(2026, 10, 5), amount=150, paid_amount=0),
+            Installment(contract_id=c.id, number=1, due_date=date(2026, 9, 5), amount=150, paid_amount=0),
             Installment(contract_id=c.id, number=2, due_date=TODAY, amount=150, paid_amount=0),
-            Payment(patient_id=fine.id, amount=120, date=datetime(2026, 10, 15, 16), method='yape', status='completed'),
+            Payment(patient_id=fine.id, amount=120, date=datetime(2026, 9, 15, 16), method='yape', status='completed'),
         ]
     )
     db.session.commit()
@@ -89,15 +90,15 @@ def test_risks_explain_why_each_patient_may_leave(app):
 def test_flow_counts_new_and_departed_patients(app):
     sur = _sede()
     left = _user('jugador', sur)
-    left.created_at = datetime(2026, 8, 3, 12)
-    _user('jugador', sur).created_at = datetime(2026, 10, 2, 12)
+    left.created_at = datetime(2026, 7, 3, 12)
+    _user('jugador', sur).created_at = datetime(2026, 9, 2, 12)
     db.session.add(
-        UserStatusLog(user_id=left.id, old_status='active', new_status='retired', changed_at=datetime(2026, 10, 9, 12))
+        UserStatusLog(user_id=left.id, old_status='active', new_status='retired', changed_at=datetime(2026, 9, 9, 12))
     )
     db.session.commit()
     flow = {m['month']: m for m in cd.dashboard('month', sur.id, today=TODAY)['flow']}
-    oct_ = flow['2026-10-01']
-    assert oct_['new'] >= 1 and oct_['left'] == 1
+    sep = flow['2026-09-01']
+    assert sep['new'] >= 1 and sep['left'] == 1
 
 
 def test_center_view_lists_sedes_and_requires_staff(app, client):
