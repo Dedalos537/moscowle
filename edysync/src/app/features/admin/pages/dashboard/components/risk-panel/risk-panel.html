@@ -1,0 +1,88 @@
+<section class="rk" aria-labelledby="rk-title">
+  <header class="rk-head">
+    <div>
+      <h2 id="rk-title" class="rk-title">Continuidad del servicio</h2>
+      <p class="rk-sub">
+        @if (data().risks.total) {
+          {{ data().risks.total }} de {{ data().active_patients_now }} pacientes activos ({{ share() }} %) muestran señales de abandono.
+        } @else {
+          Ningún paciente activo muestra señales de abandono.
+        }
+      </p>
+    </div>
+  </header>
+
+  @if (data().risks.total) {
+    <div class="rk-filters" role="group" aria-label="Filtrar por señal">
+      <button type="button" class="rk-chip" [class.is-on]="filter() === null" [attr.aria-pressed]="filter() === null" (click)="setFilter(null)">
+        Todas <span class="rk-chip__n">{{ data().risks.total }}</span>
+      </button>
+      @for (k of kinds; track k.kind) {
+        @if (count(k.kind)) {
+          <button type="button" class="rk-chip" [class.is-on]="filter() === k.kind" [attr.aria-pressed]="filter() === k.kind" (click)="setFilter(k.kind)">
+            <fa-icon [icon]="k.icon" aria-hidden="true"></fa-icon>{{ k.label }} <span class="rk-chip__n">{{ count(k.kind) }}</span>
+          </button>
+        }
+      }
+    </div>
+
+    <ul class="rk-list">
+      @for (r of visible(); track r.patient.id) {
+        <li class="rk-item" [class.is-open]="open() === r.patient.id">
+          <button type="button" class="rk-row" [attr.aria-expanded]="open() === r.patient.id" [attr.aria-controls]="'rk-d-' + r.patient.id" (click)="toggle(r.patient.id)">
+            <span class="rk-avatar" aria-hidden="true">{{ people.initials({ id: r.patient.id, name: r.patient.name, code: r.patient.code }) }}</span>
+            <span class="rk-who">
+              <span class="rk-name">{{ r.patient.name | personLabel: r.patient.id : r.patient.code }}</span>
+              <span class="rk-reasons">
+                @for (x of r.reasons; track x.kind) {
+                  <span class="rk-tag" [attr.data-k]="x.kind"><fa-icon [icon]="icon(x.kind)" aria-hidden="true"></fa-icon>{{ x.label }}</span>
+                }
+              </span>
+            </span>
+            <fa-icon class="rk-chev" [icon]="['fas', 'chevron-down']" aria-hidden="true"></fa-icon>
+          </button>
+
+          @if (open() === r.patient.id) {
+            <div class="rk-detail" [id]="'rk-d-' + r.patient.id">
+              <ul class="rk-why">
+                @for (x of r.reasons; track x.kind) { <li>{{ x.detail }}.</li> }
+              </ul>
+              <dl class="rk-facts">
+                <div><dt>Última sesión</dt><dd>{{ r.last_session ? (r.last_session | date: "d 'de' MMM") : 'Ninguna en 4 meses' }}</dd></div>
+                <div><dt>Próxima sesión</dt><dd>{{ r.next_session ? (r.next_session | date: "EEE d 'de' MMM, h:mm a") : 'Sin agendar' }}</dd></div>
+                @if (r.overdue) { <div><dt>Deuda vencida</dt><dd>S/ {{ r.overdue.toFixed(2) }}</dd></div> }
+                @if (r.sessions_remaining != null) { <div><dt>Sesiones restantes</dt><dd>{{ r.sessions_remaining }}</dd></div> }
+              </dl>
+              <div class="rk-actions">
+                @if (whatsapp(r); as wa) {
+                  <a class="rk-btn rk-btn--primary" [href]="wa" target="_blank" rel="noopener">
+                    <fa-icon [icon]="['fab', 'whatsapp']" aria-hidden="true"></fa-icon>Escribir por WhatsApp
+                  </a>
+                }
+                @if (r.overdue) {
+                  <a class="rk-btn" routerLink="/admin/payments" [queryParams]="{ search_patient: r.patient.name, action: 'register' }">
+                    <fa-icon [icon]="['fas', 'cash-register']" aria-hidden="true"></fa-icon>Registrar pago
+                  </a>
+                }
+                <a class="rk-btn" routerLink="/admin/sessions">
+                  <fa-icon [icon]="['fas', 'calendar-plus']" aria-hidden="true"></fa-icon>Agendar sesión
+                </a>
+                <a class="rk-btn" [routerLink]="['/admin/patients', r.patient.id]">
+                  <fa-icon [icon]="['fas', 'user']" aria-hidden="true"></fa-icon>Ver ficha
+                </a>
+              </div>
+            </div>
+          }
+        </li>
+      }
+    </ul>
+
+    @if (items().length > 8) {
+      <button type="button" class="rk-more" (click)="showAll.set(!showAll())" [attr.aria-expanded]="showAll()">
+        {{ showAll() ? 'Ver menos' : 'Ver los ' + items().length + ' pacientes' }}
+      </button>
+    }
+  } @else {
+    <p class="rk-empty"><fa-icon [icon]="['fas', 'circle-check']" aria-hidden="true"></fa-icon>Todos al día: con sesiones recientes, agenda y pagos en orden.</p>
+  }
+</section>

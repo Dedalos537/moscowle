@@ -1,0 +1,24 @@
+<section class="sc" aria-labelledby="sc-title">
+  <header class="sc-head">
+    <div>
+      <h2 id="sc-title" class="sc-title">Sedes</h2>
+      <p class="sc-sub">Toca una sede para ver solo sus cifras en este panel.</p>
+    </div>
+    <a class="sc-link" routerLink="/admin/sedes">Comparar a fondo<fa-icon [icon]="['fas', 'arrow-right']" aria-hidden="true"></fa-icon></a>
+  </header>
+  <div class="sc-grid">
+    @for (s of data().sedes; track s.id) {
+      <button type="button" class="sc-card" (click)="pick.emit(s.id)" [attr.aria-label]="'Ver solo la sede ' + s.name">
+        <span class="sc-card__top">
+          <span class="sc-name">{{ s.name }}</span>
+          <span class="sc-score" [attr.data-s]="tone(s.score)">{{ s.score ?? '—' }}<small>/100</small></span>
+        </span>
+        <span class="sc-figs">
+          @for (f of fields; track f.key) {
+            <span class="sc-fig"><span class="sc-fig__l">{{ f.label }}</span><span class="sc-fig__v">{{ fmt(s.kpis[f.key].value, f.unit) }}</span></span>
+          }
+        </span>
+      </button>
+    }
+  </div>
+</section>

@@ -1,0 +1,38 @@
+<section class="tm" aria-labelledby="tm-title">
+  <header class="tm-head">
+    <h2 id="tm-title" class="tm-title">Equipo</h2>
+    <p class="tm-sub">
+      @if (rows().length) { Sesiones realizadas en {{ data().period_label.toLowerCase() }}; promedio del equipo: {{ average() }}. }
+      @else { No hay terapeutas activos{{ data().sede_id ? ' en esta sede' : '' }}. }
+    </p>
+  </header>
+
+  <ul class="tm-list">
+    @for (t of rows(); track t.id) {
+      <li class="tm-item" [class.is-open]="open() === t.id">
+        <button type="button" class="tm-row" [attr.aria-expanded]="open() === t.id" [attr.aria-controls]="'tm-d-' + t.id" (click)="toggle(t.id)">
+          <span class="tm-name">{{ t.name | personLabel: t.id }}</span>
+          <span class="tm-bar" aria-hidden="true"><span [style.width.%]="t.width"></span></span>
+          <span class="tm-num">{{ t.sessions_done }}<small>{{ t.sessions_done === 1 ? 'sesión' : 'sesiones' }}</small></span>
+          <fa-icon class="tm-chev" [icon]="['fas', 'chevron-down']" aria-hidden="true"></fa-icon>
+        </button>
+        @if (open() === t.id) {
+          <div class="tm-detail" [id]="'tm-d-' + t.id">
+            <dl class="tm-facts">
+              <div><dt>Pacientes atendidos</dt><dd>{{ t.patients }}</dd></div>
+              <div><dt>Asistencia</dt><dd>{{ pct(t.attendance) }}</dd></div>
+              <div><dt>Cancelaciones</dt><dd>{{ pct(t.cancel_rate) }}</dd></div>
+              <div><dt>Agenda próximos 7 días</dt><dd>{{ t.next_7_days }}</dd></div>
+            </dl>
+            <p class="tm-note">
+              @if (t.vsAvg >= 25) { Atiende {{ t.vsAvg }} % más que el promedio: revisa si puede sostener la carga antes de asignarle nuevos pacientes. }
+              @else if (t.vsAvg <= -25) { Atiende {{ -t.vsAvg }} % menos que el promedio: tiene espacio para pacientes nuevos. }
+              @else { Su carga está cerca del promedio del equipo. }
+            </p>
+            <a class="tm-link" routerLink="/admin/users" [queryParams]="{ therapist: t.id }">Ver sus pacientes<fa-icon [icon]="['fas', 'arrow-right']" aria-hidden="true"></fa-icon></a>
+          </div>
+        }
+      </li>
+    }
+  </ul>
+</section>

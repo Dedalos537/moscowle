@@ -1,325 +1,175 @@
-@if (loading) {
-<div class="flex items-center justify-center min-h-[60vh]">
-  <div class="flex flex-col items-center gap-3">
-    <app-spinner size="lg" colorClass="text-primary"></app-spinner>
-    <p class="text-on-surface-variant text-sm">Cargando dashboard...</p>
-  </div>
-</div>
-} @else if (error) {
-<div class="flex flex-col items-center justify-center min-h-[60vh] text-center" role="alert">
-  <i class="fas fa-exclamation-circle text-error text-5xl mb-4"></i>
-  <p class="text-error font-semibold text-lg">{{ error }}</p>
-  <button class="mt-4 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-opacity"
-    (click)="loadData()">
-    Reintentar
+<ng-template #headerActions>
+  <button type="button" class="db-cta" (click)="showPayment.set(true)">
+    <fa-icon [icon]="['fas', 'cash-register']" aria-hidden="true"></fa-icon><span>Registrar pago</span>
   </button>
-</div>
-} @else {
-<div class="dashboard" [@fadeInUp]>
+</ng-template>
 
-  <section class="dashboard-section">
-    <div class="dashboard-section__header">
-      <div class="dashboard-section__title">
-        <div class="icon-box icon-box--primary">
-          <fa-icon [icon]="['fas', 'robot']" class="text-sm"></fa-icon>
-        </div>
-        <h3>Centro de Acción Inteligente</h3>
-      </div>
+<div class="db">
+  <!-- Filtros: los mismos de Sedes (periodo) más la sede -->
+  <div class="db-bar">
+    <div class="db-bar__lead">
+      <h2 class="db-h">{{ sedeName() ?? 'Todo el centro' }}</h2>
+      @if (data()) { <p class="db-range">{{ range() }}</p> }
     </div>
-
-    <div class="grid-4" [@listStagger]="dailyPendings.length">
-      @if (dailyPendings.length > 0) {
-      <app-summary-card [@cardEnter] label="Cobros Hoy" [value]="dailyPendings.length"
-        [icon]="['fas', 'money-bill-wave']" variant="warning"
-        subtitle="Pacientes con vencimiento hoy" />
+    <div class="db-bar__tools">
+      <div class="db-seg" role="group" aria-label="Periodo">
+        @for (p of periods; track p.key) {
+          <button type="button" [class.is-on]="period() === p.key" [attr.aria-pressed]="period() === p.key" (click)="setPeriod(p.key)">{{ p.label }}</button>
+        }
+      </div>
+      @if (sedes().length > 1) {
+        <label class="db-select">
+          <span class="sr-only">Sede</span>
+          <select [ngModel]="sedeId()" (ngModelChange)="setSede($event)">
+            <option [ngValue]="null">Todo el centro</option>
+            @for (s of sedes(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+          </select>
+          <fa-icon [icon]="['fas', 'chevron-down']" aria-hidden="true"></fa-icon>
+        </label>
       }
-      @if (financials && incompletePatients.length > 0) {
-      <app-summary-card [@cardEnter] label="Sin Configurar" [value]="incompletePatients.length"
-        [icon]="['fas', 'triangle-exclamation']" variant="error"
-        subtitle="Pacientes sin plan de pago" />
-      }
-      @if (financials && financials.overdue_amount > 0) {
-      <app-summary-card [@cardEnter] label="Deuda Total"
-        [value]="financials.overdue_amount.toFixed(2)" prefix="S/ "
-        [icon]="['fas', 'wallet']" variant="warning"
-        [subtitle]="financials.overdue_users_count + ' pacientes morosos'" />
-      }
-      @if (!dailyPendings.length && !incompletePatients.length && (!financials || financials.overdue_amount <= 0)) {
-        <div class="empty-state lg\:col-span-4">
-        <fa-icon [icon]="['fas', 'circle-check']" class="text-4xl mb-3"
-          style="color: var(--color-outline); opacity: 0.3;"></fa-icon>
-        <p class="label-caps" style="color: var(--color-on-surface-variant); opacity: 0.5;">Todas las operaciones al día
-        </p>
-    </div>
-    }
-</div>
-</section>
-
-@if (incompletePatients.length > 0) {
-<div class="guidance-banner">
-  <div class="guidance-banner__icon">
-    <fa-icon [icon]="['fas', 'robot']" class="text-2xl"></fa-icon>
-  </div>
-  <div class="guidance-banner__text">
-    <h3>Guía de Regularización IA</h3>
-    <p>He detectado <strong>{{ incompletePatients.length }}</strong> alumnos con datos incompletos (modalidad o pago).
-      Esto afecta la veracidad de tus finanzas.</p>
-  </div>
-  <app-button variant="secondary" label="Ver Pendientes" (clicked)="showGuidanceModal = true"></app-button>
-</div>
-}
-
-<section class="dashboard-section">
-  <h3 class="section-label">Resumen General</h3>
-  <div class="grid-4">
-    <app-summary-card label="Terapeutas" [value]="summary.therapists" [loading]="loading" [subtitle]=""
-      [icon]="['fas', 'user-doctor']" variant="primary" />
-
-    <app-summary-card label="Pacientes" [value]="summary.patients" [loading]="loading" [subtitle]=""
-      [icon]="['fas', 'users']" variant="secondary" />
-
-    <app-summary-card label="Sesiones" [value]="summary.sessions_total" [loading]="loading" [subtitle]=""
-      [icon]="['fas', 'calendar-check']" variant="info" />
-
-    <app-summary-card label="Cumplimiento IA" [value]="(avgAuditCompliance ?? '—') + '%'" [loading]="loading"
-      [subtitle]="auditsCount ? auditsCount + (auditsCount === 1 ? ' auditoría' : ' auditorías') : 'Sin auditorías aún'" [icon]="['fas', 'brain']" variant="primary" />
-  </div>
-</section>
-
-<div class="dashboard-section">
-  <div class="card card--span-2">
-    <div class="card__header">
-      <div class="card__header-left">
-        <fa-icon [icon]="['fas', 'chart-bar']" class="text-primary"></fa-icon>
-        <span class="label-caps">Flujo de Caja (Mes Actual)</span>
-      </div>
-      <span class="pill-label">Soles (S/)</span>
-    </div>
-    <div class="card__body card__body--chart">
-      <div class="chart-bars">
-        <div class="chart-bar-col">
-          <span class="chart-bar-value">S/ {{ financials?.income_real?.toFixed(2) || '0.00' }}</span>
-          <div class="chart-bar chart-bar--primary" [style.height.px]="barHeight(financials?.income_real || 0)"></div>
-          <span class="chart-bar-label">Realizado</span>
-        </div>
-        <div class="chart-bar-col">
-          <span class="chart-bar-value">S/ {{ pendingAmount.toFixed(2) }}</span>
-          <div class="chart-bar chart-bar--info" [style.height.px]="barHeight(pendingAmount)"></div>
-          <span class="chart-bar-label">Pendiente</span>
-        </div>
-        <div class="chart-bar-col">
-          <span class="chart-bar-value">S/ {{ (financials?.income_expected || 0).toFixed(2) }}</span>
-          <div class="chart-bar chart-bar--primary-dim" [style.height.px]="barHeight(financials?.income_expected || 0)">
-          </div>
-          <span class="chart-bar-label">Esperado</span>
-        </div>
-      </div>
+      <button type="button" class="db-icon" (click)="load(true)" [disabled]="loading()" aria-label="Actualizar cifras" title="Actualizar cifras">
+        <fa-icon [icon]="['fas', 'rotate']" [animation]="loading() ? 'spin' : undefined" aria-hidden="true"></fa-icon>
+      </button>
     </div>
   </div>
 
-  <div class="flex flex-row items-between gap-4 w-full">
-    <div class="card flex-1">
-      <div class="card__header">
-        <fa-icon [icon]="['fas', 'coins']" class="text-warning"></fa-icon>
-        <span class="label-caps">Resumen Financiero</span>
-      </div>
-      <div class="card__body">
-        <div class="finance-box finance-box--primary">
-          <span class="label-caps text-primary">Ingresos Reales</span>
-          <span class="text-xl font-extrabold text-primary">S/ {{ financials?.income_real?.toFixed(2) || '0.00' }}</span>
-        </div>
-        <div class="finance-box finance-box--info">
-          <span class="label-caps text-info">Pendiente por Cobrar</span>
-          <span class="text-xl font-extrabold text-info">S/ {{ pendingAmount.toFixed(2) }}</span>
-        </div>
-      </div>
-      <p class="finance-note">Basado en planes activos registrados en el sistema.</p>
+  @if (error(); as err) {
+    <div class="db-error" role="alert">
+      <p>{{ err }}</p>
+      <button type="button" class="db-btn" (click)="load(true)">Reintentar</button>
     </div>
-    <div class="card flex-1">
-      <div class="card__header">
-        <fa-icon [icon]="['fas', 'location-dot']" class="text-sm" style="color: var(--color-error);"></fa-icon>
-        <span class="label-caps">Usuarios por Sede</span>
-      </div>
-      <div class="card__body">
-        <div class="sedes-grid-wrapper">
-          <div class="sedes-grid">
-            @for (s of sedesStats; track s.id) {
-            <a [routerLink]="'/admin/users'" [queryParams]="{ sede: s.id }" class="sede-card">
-              <div class="sede-card__top">
-                <span class="sede-card__name">{{ s.name }}</span>
-                <fa-icon [icon]="['fas', 'users']" class="sede-card__icon"></fa-icon>
-              </div>
-              <div class="sede-card__bottom">
-                <span class="sede-card__count">{{ s.count }}</span>
-                <span class="sede-card__label">usuarios</span>
-              </div>
-            </a>
-            } @empty {
-            <div class="sede-card__empty">No hay sedes registradas</div>
+  } @else if (data(); as d) {
+    <div class="db-content" [class.is-refreshing]="loading()" [attr.aria-busy]="loading()">
+
+      <!-- Hoy -->
+      <section class="db-today" aria-labelledby="db-today-title">
+        <h2 id="db-today-title" class="sr-only">Hoy</h2>
+        <div class="db-tiles">
+          <button type="button" class="db-tile" [class.is-on]="openToday() === 'sessions'" [attr.aria-expanded]="openToday() === 'sessions'" aria-controls="db-today-detail" (click)="toggleToday('sessions')">
+            <span class="db-tile__icon"><fa-icon [icon]="['fas', 'calendar-day']" aria-hidden="true"></fa-icon></span>
+            <span class="db-tile__label">Sesiones de hoy</span>
+            <span class="db-tile__value">{{ d.today.sessions.total }}</span>
+            <span class="db-tile__meta">{{ d.today.sessions.by_status['completed'] ?? 0 }} realizadas · {{ d.today.sessions.by_status['scheduled'] ?? 0 }} por empezar</span>
+          </button>
+          <button type="button" class="db-tile" [class.is-alert]="d.today.payments_due.count > 0" [class.is-on]="openToday() === 'payments'" [attr.aria-expanded]="openToday() === 'payments'" aria-controls="db-today-detail" (click)="toggleToday('payments')">
+            <span class="db-tile__icon"><fa-icon [icon]="['fas', 'money-bill-wave']" aria-hidden="true"></fa-icon></span>
+            <span class="db-tile__label">Cobros que vencen hoy</span>
+            <span class="db-tile__value">{{ d.today.payments_due.count }}</span>
+            <span class="db-tile__meta">S/ {{ d.today.payments_due.total.toFixed(2) }} por cobrar</span>
+          </button>
+          <button type="button" class="db-tile" [class.is-alert]="approvals() > 0" [class.is-on]="openToday() === 'approvals'" [attr.aria-expanded]="openToday() === 'approvals'" aria-controls="db-today-detail" (click)="toggleToday('approvals')">
+            <span class="db-tile__icon"><fa-icon [icon]="['fas', 'clipboard-check']" aria-hidden="true"></fa-icon></span>
+            <span class="db-tile__label">Por aprobar</span>
+            <span class="db-tile__value">{{ approvals() }}</span>
+            <span class="db-tile__meta">{{ d.today.pending.requests }} solicitudes · {{ d.today.pending.password_resets }} contraseñas</span>
+          </button>
+          <button type="button" class="db-tile" [class.is-alert]="d.today.pending.incidents > 0" [class.is-on]="openToday() === 'incidents'" [attr.aria-expanded]="openToday() === 'incidents'" aria-controls="db-today-detail" (click)="toggleToday('incidents')">
+            <span class="db-tile__icon"><fa-icon [icon]="['fas', 'triangle-exclamation']" aria-hidden="true"></fa-icon></span>
+            <span class="db-tile__label">Incidentes abiertos</span>
+            <span class="db-tile__value">{{ d.today.pending.incidents }}</span>
+            <span class="db-tile__meta">{{ d.today.pending.incidents ? 'Esperan respuesta' : 'Nada pendiente' }}</span>
+          </button>
+        </div>
+
+        @if (openToday(); as k) {
+          <div id="db-today-detail" class="db-detail" role="region" [attr.aria-label]="'Detalle: ' + k">
+            @switch (k) {
+              @case ('sessions') {
+                @if (d.today.sessions.items.length) {
+                  <ul class="db-agenda">
+                    @for (s of d.today.sessions.items; track s.id) {
+                      <li>
+                        <time class="db-agenda__time">{{ s.start | date: 'h:mm a' }}</time>
+                        <span class="db-agenda__who">
+                          <strong>{{ s.patient.name | personLabel: s.patient.id }}</strong>
+                          <span>con {{ s.therapist.name | personLabel: s.therapist.id }}</span>
+                        </span>
+                        <span class="db-pill" [attr.data-st]="s.status">{{ s.status | sessionLabel }}</span>
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="db-detail__empty">No hay sesiones agendadas para hoy.</p>
+                }
+                <a class="db-link" routerLink="/admin/sessions">Abrir la agenda<fa-icon [icon]="['fas', 'arrow-right']" aria-hidden="true"></fa-icon></a>
+              }
+              @case ('payments') {
+                @if (d.today.payments_due.items.length) {
+                  <ul class="db-due">
+                    @for (p of d.today.payments_due.items; track p.patient.id) {
+                      <li>
+                        <span class="db-due__who"><strong>{{ p.patient.name | personLabel: p.patient.id : p.patient.code }}</strong><span>S/ {{ p.amount.toFixed(2) }}</span></span>
+                        <span class="db-due__actions">
+                          @if (whatsapp(p); as wa) {
+                            <a class="db-btn" [href]="wa" target="_blank" rel="noopener"><fa-icon [icon]="['fab', 'whatsapp']" aria-hidden="true"></fa-icon>Recordar</a>
+                          }
+                          <a class="db-btn db-btn--primary" routerLink="/admin/payments" [queryParams]="{ search_patient: p.patient.name, action: 'register' }"><fa-icon [icon]="['fas', 'cash-register']" aria-hidden="true"></fa-icon>Cobrar</a>
+                        </span>
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="db-detail__empty">Hoy no vence ninguna cuota.</p>
+                }
+              }
+              @case ('approvals') {
+                <div class="db-links">
+                  <a class="db-btn" routerLink="/admin/requests"><fa-icon [icon]="['fas', 'inbox']" aria-hidden="true"></fa-icon>Solicitudes ({{ d.today.pending.requests }})</a>
+                  <a class="db-btn" routerLink="/admin/password-resets"><fa-icon [icon]="['fas', 'key']" aria-hidden="true"></fa-icon>Contraseñas ({{ d.today.pending.password_resets }})</a>
+                </div>
+              }
+              @case ('incidents') {
+                <div class="db-links">
+                  <a class="db-btn" routerLink="/admin/incidents"><fa-icon [icon]="['fas', 'triangle-exclamation']" aria-hidden="true"></fa-icon>Ver incidentes ({{ d.today.pending.incidents }})</a>
+                </div>
+              }
             }
           </div>
+        }
+      </section>
+
+      @if (d.data_quality.without_plan > 0) {
+        <div class="db-quality" role="note">
+          <fa-icon class="db-quality__icon" [icon]="['fas', 'circle-info']" aria-hidden="true"></fa-icon>
+          <p>
+            <strong>{{ d.data_quality.without_plan }} {{ d.data_quality.without_plan === 1 ? 'paciente activo no tiene' : 'pacientes activos no tienen' }} plan de pago.</strong>
+            Sus cobros no entran en la cobranza ni en la deuda, así que esas cifras quedan cortas.
+          </p>
+          <button type="button" class="db-btn" [attr.aria-expanded]="showQuality()" aria-controls="db-quality-list" (click)="showQuality.set(!showQuality())">{{ showQuality() ? 'Ocultar' : 'Ver quiénes' }}</button>
+          @if (showQuality()) {
+            <ul id="db-quality-list" class="db-quality__list">
+              @for (p of d.data_quality.items; track p.id) {
+                <li><a [routerLink]="['/admin/patients', p.id]">{{ p.name | personLabel: p.id : p.code }}</a></li>
+              }
+            </ul>
+          }
         </div>
+      }
+
+      @if (!hideCharts()) {
+        <app-growth-panel [data]="d" />
+      }
+
+      <div class="db-split">
+        <app-risk-panel [data]="d" />
+        <app-team-panel [data]="d" />
       </div>
+
+      @if (d.sedes.length > 1) {
+        <app-sede-compare [data]="d" (pick)="setSede($event)" />
+      }
     </div>
-  </div>
+  } @else {
+    <div class="db-skeleton" aria-busy="true" aria-label="Cargando el panel">
+      <div class="db-skel db-skel--tiles"></div>
+      <div class="db-skel db-skel--wide"></div>
+      <div class="db-skel db-skel--split"></div>
+    </div>
+  }
 </div>
 
-
-
-<div class="grid-2">
-  <div class="quick-payment-card">
-    <div class="quick-payment-card__bg"></div>
-    <h3 class="quick-payment-card__title">
-      <fa-icon [icon]="['fas', 'comment-dollar']"></fa-icon> Registrar Pago Rápido
-    </h3>
-    <p class="quick-payment-card__desc">Selecciona un paciente para ir directo al formulario de pago.</p>
+<app-drawer [isOpen]="showPayment()" title="Registrar pago" [icon]="['fas', 'cash-register']" (close)="showPayment.set(false)">
+  @if (showPayment()) {
     <app-quick-payment (paymentCompleted)="onPaymentCompleted()"></app-quick-payment>
-  </div>
-
-  <div class="card card--center">
-    <h3 class="label-caps" style="margin-bottom: 0.75rem;">
-      <fa-icon [icon]="['far', 'calendar-days']" class="text-info mr-2"></fa-icon> Disponibilidad y Horarios
-    </h3>
-    <p class="text-sm" style="color: var(--color-on-surface-variant); margin-bottom: 1rem;">Consulta la carga de trabajo
-      y espacios libres en tiempo real.</p>
-    <a routerLink="/admin/sessions"><app-button variant="ghost" label="Ver Calendario Global"></app-button></a>
-  </div>
-</div>
-
-<section class="dashboard-section">
-  <h3 class="section-label">Gestión Operativa</h3>
-  <div class="grid-4">
-    <app-action-card routerLink="/admin/users"   [icon]="['fas', 'users']"     variant="primary" title="Usuarios"   description="Gestionar perfiles de terapeutas y pacientes." actionText="Acceder"></app-action-card>
-    <app-action-card routerLink="/admin/games"   [icon]="['fas', 'gamepad']"   variant="primary" title="Juegos"     description="Configurar actividades y niveles disponibles."   actionText="Configurar"></app-action-card>
-    <app-action-card routerLink="/admin/reports" [icon]="['fas', 'chart-line']" variant="info"    title="Reportes"   description="Analíticas detalladas de pacientes."            actionText="Analizar"></app-action-card>
-    <app-action-card routerLink="/admin/messages" [icon]="['fas', 'envelope']"  variant="warning" title="Mensajería" description="Comunicación interna y avisos globales."        actionText="Enviar"></app-action-card>
-  </div>
-</section>
-
-<section class="dashboard-section">
-  <h3 class="section-label">Sistema & Seguridad</h3>
-  <div class="grid-2">
-    <a routerLink="/admin/csp-reports" class="link-card">
-      <div class="link-card__icon">
-        <fa-icon [icon]="['fas', 'bug']"></fa-icon>
-      </div>
-      <div class="link-card__text">
-        <h3 class="link-card__title">CSP Reports</h3>
-        <p class="link-card__desc">Monitoreo de seguridad y violaciones de contenido.</p>
-      </div>
-      <fa-icon [icon]="['fas', 'up-right-from-square']" class="link-card__arrow"></fa-icon>
-    </a>
-
-    <a routerLink="/admin/api-tokens" class="link-card">
-      <div class="link-card__icon">
-        <fa-icon [icon]="['fas', 'key']"></fa-icon>
-      </div>
-      <div class="link-card__text">
-        <h3 class="link-card__title">API Tokens</h3>
-        <p class="link-card__desc">Gestión de credenciales para integraciones externas.</p>
-      </div>
-      <fa-icon [icon]="['fas', 'up-right-from-square']" class="link-card__arrow"></fa-icon>
-    </a>
-  </div>
-</section>
-</div>
-
-@if (showGuidanceModal) {
-<div class="modal-overlay" (click)="showGuidanceModal = false">
-  <div class="modal-panel modal-panel--lg" [@scaleIn] (click)="$event.stopPropagation()">
-    <div class="modal-header modal-header--gradient">
-      <div class="modal-header__left">
-        <div class="icon-box icon-box--gradient">
-          <fa-icon [icon]="['fas', 'user-clock']" class="text-xl"></fa-icon>
-        </div>
-        <div>
-          <h3 class="text-lg font-extrabold text-on-primary">Asignaciones Faltantes</h3>
-          <span class="modal-badge">Requiere acción administrativa</span>
-        </div>
-      </div>
-      <button (click)="showGuidanceModal = false" class="modal-close-btn">
-        <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div class="modal-list">
-        @for (p of incompletePatients; track p.paciente + p.sede) {
-        <div class="modal-list__item modal-list__item--error-hover">
-          <div class="modal-list__avatar">{{ p.paciente.charAt(0) }}</div>
-          <div>
-            <p class="font-bold text-sm" style="color: var(--color-on-surface);">{{ p.paciente }}</p>
-            <p class="text-xs" style="color: var(--color-on-surface-variant); margin-top: 0.125rem;">
-              <fa-icon [icon]="['fas', 'location-dot']" class="mr-1" style="font-size: 0.75rem;"></fa-icon>{{ p.sede
-              }}
-            </p>
-          </div>
-          <span class="modal-tag modal-tag--error">Falta: {{ p.details }}</span>
-        </div>
-        }
-      </div>
-      <div class="modal-actions">
-        <app-button variant="ghost" label="Más tarde" (clicked)="showGuidanceModal = false"></app-button>
-        <a routerLink="/admin/users"><app-button variant="primary" label="Configurar ahora"></app-button></a>
-      </div>
-    </div>
-  </div>
-</div>
-}
-
-@if (showDailyModal) {
-<div class="modal-overlay" (click)="showDailyModal = false">
-  <div class="modal-panel modal-panel--xl" [@scaleIn] (click)="$event.stopPropagation()">
-    <div class="modal-header modal-header--daily">
-      <div class="modal-header__left">
-        <div class="icon-box icon-box--glass">
-          <fa-icon [icon]="['far', 'calendar-check']" class="text-xl"></fa-icon>
-        </div>
-        <div>
-          <h3 class="text-lg font-extrabold" style="color: var(--color-on-primary);">Cobros del Día</h3>
-          <p class="text-sm" style="color: var(--color-on-primary); opacity: 0.7;">Guía Operativa Diaria • {{ today |
-            date:'dd/MM/yyyy' }}</p>
-        </div>
-      </div>
-      <button (click)="showDailyModal = false" class="modal-close-btn modal-close-btn--light">
-        <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div class="modal-list">
-        @for (item of dailyPendings; track item.username || item.paciente) {
-        <div class="modal-list__item modal-list__item--primary">
-          <div class="modal-list__avatar modal-list__avatar--primary">{{ item.paciente.charAt(0) }}</div>
-          <div>
-            <p class="font-bold text-sm" style="color: var(--color-on-surface);">{{ item.paciente }}</p>
-            <p class="text-xs font-bold" style="color: var(--color-primary); margin-top: 0.125rem;">Vence Hoy • S/ {{
-              item.monto }}</p>
-          </div>
-          <div class="modal-list__actions">
-            @if (getWhatsAppLink(item.phone, item.paciente, item.monto)) {
-            <a [href]="getWhatsAppLink(item.phone, item.paciente, item.monto)" target="_blank"
-              class="icon-btn icon-btn--success" title="Notificar por WhatsApp">
-              <fa-icon [icon]="['fab', 'whatsapp']"></fa-icon>
-            </a>
-            }
-            <a [routerLink]="'/admin/payments'"
-              [queryParams]="{ search_patient: item.username || item.paciente, action: 'register' }"
-              class="icon-btn icon-btn--primary">
-              <fa-icon [icon]="['fas', 'cash-register']"></fa-icon>
-            </a>
-          </div>
-        </div>
-        } @empty {
-        <div class="modal-empty">
-          <fa-icon [icon]="['fas', 'circle-check']" class="text-3xl mb-2"></fa-icon>
-          <p class="font-bold" style="color: var(--color-on-surface-variant);">No hay cobros pendientes para hoy</p>
-        </div>
-        }
-      </div>
-      <div class="flex justify-center pt-2">
-        <app-button variant="ghost" label="Entendido" (clicked)="showDailyModal = false"></app-button>
-      </div>
-    </div>
-  </div>
-</div>
-}
-}
+  }
+</app-drawer>
