@@ -4,7 +4,8 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth.service';
-import { Alert } from '../../../../shared/components/alert/alert';
+import { ToastService } from '../../../../core/services/toast.service';
+import { SplashService } from '../../../../core/services/splash.service';
 import { PreferencesMenu } from '../../../../shared/components/preferences-menu/preferences-menu';
 import { base64urlToBuffer, serializeWebauthnCredential } from '../../../../shared/utils/webauthn';
 import { Logo } from '../../../../shared/components/logo/logo';
@@ -19,7 +20,7 @@ const HOME_BY_ROLE: Record<string, string> = {
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [Logo, FormsModule, RouterModule, FontAwesomeModule, Alert, PreferencesMenu],
+  imports: [Logo, FormsModule, RouterModule, FontAwesomeModule, PreferencesMenu],
   templateUrl: './login.html',
   styleUrl: './login.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,9 +35,6 @@ export class Login implements OnInit, OnDestroy {
   showPassword = false;
   isLoading = false;
 
-  /** Aviso positivo (p. ej. «Cerraste sesión»). Los errores van en `alertMessage`, junto al botón. */
-  notice = '';
-  alertMessage = '';
   emailError = '';
   passwordError = '';
   /** El servidor rechazó la combinación: ambos campos quedan marcados como inválidos. */
@@ -55,13 +53,14 @@ export class Login implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
+    private toast: ToastService,
+    private splash: SplashService,
   ) {}
 
   ngOnInit() {
     this.subs.add(
       this.route.queryParams.subscribe((params) => {
-        this.notice = params['logout'] === 'success' ? 'Cerraste sesión. ¡Hasta pronto!' : '';
-        this.cdr.markForCheck();
+        if (params['logout'] === 'success') this.toast.show('Cerraste sesión. ¡Hasta pronto!', 'success');
       }),
     );
     this.restoreRemembered();
@@ -102,7 +101,6 @@ export class Login implements OnInit, OnDestroy {
   // ── contraseña ─────────────────────────────────────────────────────────────
   doLogin() {
     if (this.isLoading) return;
-    this.alertMessage = '';
     this.credentialsRejected = false;
     this.emailError = this.email.trim() ? '' : 'Escribe tu correo o tu código.';
     this.passwordError = this.password ? '' : 'Escribe tu contraseña.';
@@ -113,7 +111,6 @@ export class Login implements OnInit, OnDestroy {
     }
 
     this.isLoading = true;
-    this.notice = '';
     this.cdr.markForCheck();
 
     this.subs.add(
@@ -121,7 +118,7 @@ export class Login implements OnInit, OnDestroy {
         next: (res) => this.goHome(res.user?.role),
         error: (err) => {
           this.isLoading = false;
-          this.alertMessage = this.loginErrorText(err);
+          this.toast.show(this.loginErrorText(err), 'error', 7000);
           this.credentialsRejected = err?.status === 401 || err?.status === 400;
           this.cdr.markForCheck();
           queueMicrotask(() => this.passwordInput?.nativeElement.select());
@@ -143,8 +140,11 @@ export class Login implements OnInit, OnDestroy {
     return 'El correo o código y la contraseña no coinciden. Revisa que estén bien escritos.';
   }
 
+  /** Cubre con el logo, navega y revela el panel a través de la silueta (la misma entrada de la app). */
   private goHome(role?: string) {
+    this.splash.cover();
     this.router.navigate([HOME_BY_ROLE[role ?? ''] ?? '/']).finally(() => {
+      this.splash.reveal();
       this.isLoading = false;
       this.fingerprintBusy = false;
       this.cdr.markForCheck();
@@ -199,7 +199,6 @@ export class Login implements OnInit, OnDestroy {
 
   async loginWithFingerprint() {
     const identifier = this.email.trim();
-    this.alertMessage = '';
     if (!identifier) {
       this.emailError = 'Escribe tu correo o tu código para usar la huella.';
       this.cdr.markForCheck();
@@ -229,9 +228,13 @@ export class Login implements OnInit, OnDestroy {
       this.isLoading = false;
       this.fingerprintBusy = false;
       const cancelled = err?.name === 'NotAllowedError' || err?.name === 'AbortError';
-      this.alertMessage = cancelled
-        ? 'Se canceló la lectura de la huella. Puedes intentarlo otra vez o usar tu contraseña.'
-        : 'No pudimos validar tu huella. Ingresa con tu contraseña.';
+      this.toast.show(
+        cancelled
+          ? 'Se canceló la lectura de la huella. Puedes intentarlo otra vez o usar tu contraseña.'
+          : 'No pudimos validar tu huella. Ingresa con tu contraseña.',
+        'error',
+        7000,
+      );
       this.cdr.markForCheck();
       if (!cancelled) this.passwordInput?.nativeElement.focus();
     }

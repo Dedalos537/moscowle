@@ -8,53 +8,30 @@
   <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg">
 </head>
 <body>
+  <script>
+    // Tema guardado antes de que cargue Angular: el splash estático usa los mismos colores que el de la app.
+    try { if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark'); } catch (e) {}
+  </script>
   <app-root>
     <style>
       .init-splash {
         position: fixed; inset: 0; z-index: 99999;
-        display: flex; align-items: center; justify-content: center;
-        background: #F8F6F0;
-        font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+        display: grid; place-items: center;
+        background: #75a83a;
       }
-      .init-splash__inner { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
-      .init-splash__logo { animation: pulse-logo 1.5s ease-in-out infinite; }
-      .init-splash__title {
-        font-size: 1.5rem; font-weight: 800; color: #0A6E5E; margin: 0; text-align: center;
+      .dark .init-splash { background: #1e2d12; }
+      .init-splash__logo {
+        width: 7rem; aspect-ratio: 1154 / 1106; background: #121a0a;
+        -webkit-mask: url(assets/img/logo.svg) center / contain no-repeat;
+        mask: url(assets/img/logo.svg) center / contain no-repeat;
+        animation: init-breathe 1.6s ease-in-out infinite;
       }
-      .init-splash__subtitle {
-        font-size: 0.875rem; font-weight: 600; color: #6B7280;
-        text-transform: uppercase; letter-spacing: 0.05em; margin: -0.5rem 0 1rem 0; text-align: center;
-      }
-      .init-splash__bar {
-        width: 200px; height: 4px; border-radius: 2px;
-        background: #E5E7EB; overflow: hidden;
-      }
-      .init-splash__bar-fill {
-        height: 100%; border-radius: 2px; background: #0A6E5E;
-        animation: load-bar 1.8s ease-in-out forwards;
-      }
-      @keyframes pulse-logo {
-        0%, 100% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.05); opacity: 0.85; }
-      }
-      @keyframes load-bar {
-        0% { width: 0%; }
-        40% { width: 55%; }
-        80% { width: 78%; }
-        100% { width: 85%; }
-      }
+      .dark .init-splash__logo { background: #a5d087; }
+      @keyframes init-breathe { 50% { transform: scale(0.96); } }
+      @media (prefers-reduced-motion: reduce) { .init-splash__logo { animation: none; } }
     </style>
-    <div class="init-splash" id="initSplash">
-      <div class="init-splash__inner">
-        <div class="init-splash__logo">
-          <img src="assets/img/logo.svg" alt="Centro Juan Pablo II" width="80" height="80" style="object-fit:contain;">
-        </div>
-        <p class="init-splash__title">Juan Pablo II</p>
-        <p class="init-splash__subtitle">Centro de Terapias</p>
-        <div class="init-splash__bar">
-          <div class="init-splash__bar-fill"></div>
-        </div>
-      </div>
+    <div class="init-splash" id="initSplash" role="status" aria-label="Cargando Centro Juan Pablo II">
+      <span class="init-splash__logo" aria-hidden="true"></span>
     </div>
   </app-root>
   <script>

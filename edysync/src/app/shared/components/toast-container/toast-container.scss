@@ -1,14 +1,77 @@
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(1rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+// Avisos fijos arriba: en el celular, de lado a lado (el teclado no los tapa); en PC, arriba a la derecha.
+.tc {
+  position: fixed;
+  top: max(0.75rem, env(safe-area-inset-top));
+  left: 0.75rem;
+  right: 0.75rem;
+  z-index: 10000;
+  display: grid;
+  gap: 0.5rem;
+  pointer-events: none;
+
+  @media (min-width: 640px) {
+    left: auto;
+    top: 1.25rem;
+    right: 1.25rem;
+    width: min(24rem, calc(100vw - 2.5rem));
   }
 }
 
-.animate-slide-up {
-  animation: slideUp 0.25s ease-out;
+.tc-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 3.25rem;
+  padding: 0.25rem 0.25rem 0.25rem 1rem;
+  border: 1px solid;
+  border-radius: 0.875rem;
+  box-shadow: 0 10px 28px -12px rgb(0 0 0 / 0.35);
+  pointer-events: auto;
+  animation: tc-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tc-icon {
+  flex: none;
+  font-size: 1.125rem;
+}
+
+.tc-text {
+  flex: 1;
+  padding: 0.5rem 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.tc-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  border-radius: 0.625rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 150ms ease, background-color 150ms ease;
+
+  &:hover {
+    opacity: 1;
+    background: color-mix(in srgb, currentColor 10%, transparent);
+  }
+}
+
+@keyframes tc-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.75rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tc-toast {
+    animation: none;
+  }
 }

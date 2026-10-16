@@ -1,12 +1,6 @@
-<div class="splash" [class.splash--hidden]="isReady()">
-  <div class="splash__inner">
-    <div class="splash__logo">
-      <app-logo style="object-fit:contain;;width:80px;height:80px;" role="img" aria-label="Centro Juan Pablo II"></app-logo>
-    </div>
-    <p class="splash__title">Juan Pablo II</p>
-    <p class="splash__subtitle">Centro de Terapias</p>
-    <div class="splash__bar">
-      <div class="splash__bar-fill" [class.splash__bar-fill--done]="isReady()"></div>
-    </div>
+@if (phase() !== 'done') {
+  <div class="splash" [class.splash--reveal]="phase() === 'reveal'" [style.--sil]="silhouette" [style.--logo]="logo"
+       (animationend)="onAnimationEnd($event)" role="status" [attr.aria-label]="phase() === 'cover' ? 'Cargando Centro Juan Pablo II' : null">
+    <span class="splash__logo" aria-hidden="true"></span>
   </div>
-</div>
+}

@@ -72,11 +72,6 @@
   text-wrap: balance;
 }
 
-.lg-notice {
-  display: block;
-  margin-bottom: 1.25rem;
-}
-
 // ── formulario ──────────────────────────────────────────────────────────────
 .lg-form {
   display: grid;
@@ -119,6 +114,12 @@
   font: inherit;
   font-size: 1rem; // 16px: evita el zoom automático de iOS al enfocar
   caret-color: var(--color-primary-text);
+
+  // Ejemplo en un tono más bajo que el texto escrito, pero legible (≥4.5:1 en ambos temas).
+  &::placeholder {
+    color: color-mix(in srgb, var(--color-on-surface-variant) 80%, var(--color-surface-container-lowest));
+    opacity: 1;
+  }
   transition: border-color 150ms ease, box-shadow 150ms ease;
 
   &:hover {
@@ -407,6 +408,17 @@
 
 ::selection {
   background: color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+// Pantallas bajas (teléfonos pequeños, PC con zoom): todo entra sin desplazar.
+@media (max-height: 700px) {
+  .lg { padding-top: 4.25rem; padding-bottom: 0.75rem; }
+  .lg-card { padding-top: 1.25rem; padding-bottom: 0.75rem; }
+  .lg-head { margin-bottom: 1rem; }
+  .lg-logo { width: 2.75rem; height: 2.75rem; margin-bottom: 0.5rem; }
+  .lg-title { font-size: 1.5rem; }
+  .lg-form { gap: 0.875rem; }
+  .lg-foot { margin-top: 0.75rem; padding-top: 0.25rem; }
 }
 
 @keyframes lg-in {
