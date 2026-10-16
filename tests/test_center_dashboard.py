@@ -3,6 +3,7 @@
 import uuid
 from datetime import date, datetime
 
+import pytest
 from flask_jwt_extended import create_access_token
 
 from app.extensions import db
@@ -22,6 +23,9 @@ def _sede():
     return s
 
 
+_MADE: list = []
+
+
 def _user(role, sede=None, **kw):
     tag = uuid.uuid4().hex[:8]
     u = User(username=f'{role[:3]}{tag}', email=f'{tag}@cd.test', password='x', role=role, **kw)
@@ -29,6 +33,7 @@ def _user(role, sede=None, **kw):
         u.sede_id = sede.id
     db.session.add(u)
     db.session.commit()
+    _MADE.append(u)
     return u
 
 
@@ -38,6 +43,30 @@ def _appt(t, p, when, status='completed', attendance='present'):
             therapist_id=t.id, patient_id=p.id, title='Terapia', start_time=when, status=status, attendance=attendance
         )
     )
+
+
+@pytest.fixture(autouse=True)
+def clean(app):
+    """La base es compartida entre tests: se borra todo lo creado aquí (cuotas impagas, sesiones, pagos)
+    para no alterar las cifras de otros tests (p. ej. la deuda vencida del scorecard de sedes)."""
+    _MADE.clear()
+    yield
+    db.session.rollback()
+    ids = [u.id for u in _MADE]
+    if ids:
+        cids = [c for (c,) in db.session.query(Contract.id).filter(Contract.patient_id.in_(ids))]
+        if cids:
+            Installment.query.filter(Installment.contract_id.in_(cids)).delete(synchronize_session=False)
+            Contract.query.filter(Contract.id.in_(cids)).delete(synchronize_session=False)
+        Appointment.query.filter(db.or_(Appointment.patient_id.in_(ids), Appointment.therapist_id.in_(ids))).delete(
+            synchronize_session=False
+        )
+        Payment.query.filter(Payment.patient_id.in_(ids)).delete(synchronize_session=False)
+        UserStatusLog.query.filter(UserStatusLog.user_id.in_(ids)).delete(synchronize_session=False)
+        for u in User.query.filter(User.id.in_(ids)):
+            u.is_active = False
+            u.sede_id = None
+        db.session.commit()
 
 
 def _risk(data, patient):
