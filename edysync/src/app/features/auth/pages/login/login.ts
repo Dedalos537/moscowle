@@ -1,56 +1,53 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, NgZone, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth.service';
-import { FloatingUiService } from '../../../../core/services/floating-ui.service';
 import { Alert } from '../../../../shared/components/alert/alert';
 import { PreferencesMenu } from '../../../../shared/components/preferences-menu/preferences-menu';
 import { base64urlToBuffer, serializeWebauthnCredential } from '../../../../shared/utils/webauthn';
 import { Logo } from '../../../../shared/components/logo/logo';
 
+const HOME_BY_ROLE: Record<string, string> = {
+  admin: '/admin/dashboard',
+  supervisor: '/admin/dashboard',
+  terapista: '/therapist/dashboard',
+  jugador: '/patient/dashboard',
+};
+
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [Logo, CommonModule, FormsModule, RouterModule, FontAwesomeModule, Alert, PreferencesMenu],
+  imports: [Logo, FormsModule, RouterModule, FontAwesomeModule, Alert, PreferencesMenu],
   templateUrl: './login.html',
   styleUrl: './login.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Login implements OnInit, OnDestroy {
-  floating = inject(FloatingUiService);
+  @ViewChild('emailInput') emailInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('passwordInput') passwordInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('helpDialog') helpDialog?: ElementRef<HTMLDialogElement>;
 
   email = '';
   password = '';
   showPassword = false;
   isLoading = false;
-  loading = false;
-  error: string | null = null;
 
+  /** Aviso positivo (p. ej. «Cerraste sesión»). Los errores van en `alertMessage`, junto al botón. */
+  notice = '';
   alertMessage = '';
-  alertType: 'success' | 'error' | 'warning' | 'info' = 'info';
   emailError = '';
   passwordError = '';
+  /** El servidor rechazó la combinación: ambos campos quedan marcados como inválidos. */
+  credentialsRejected = false;
 
-  showHelp = false;
+  /** Solo se ofrece la huella cuando este equipo ya tiene una registrada para esa cuenta. */
+  fingerprintReady = false;
+  fingerprintBusy = false;
 
-  wfModalOpen = false;
-  wfChecking = false;
-  wfAutoTrigger = false;
-
-  guideStep = 0; // 0=none, 1=email, 2=password, 3=button, 4=done
-  guidePos = { top: 0, left: 0, arrowLeft: 50 };
-  guideText = '';
-  guideVisible = false;
-
-  private guideTimer: any;
-  private resizeHandler: (() => void) | null = null;
-  private _lastFormValid = false;
-  private wfIdentifierKey = 'moscowle_webauthn_identity';
-  private lastCheckedEmail = '';
-
+  private readonly identityKey = 'moscowle_webauthn_identity';
+  private checkedIdentity = '';
   private subs = new Subscription();
 
   constructor(
@@ -58,353 +55,201 @@ export class Login implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private ngZone: NgZone,
   ) {}
 
   ngOnInit() {
-    this.subs.add(this.route.queryParams.subscribe(params => {
-      if (params['logout'] === 'success') {
-        this.alertType = 'success';
-        this.alertMessage = 'Has cerrado sesión correctamente.';
+    this.subs.add(
+      this.route.queryParams.subscribe((params) => {
+        this.notice = params['logout'] === 'success' ? 'Cerraste sesión. ¡Hasta pronto!' : '';
         this.cdr.markForCheck();
-      }
-    }));
-    this.scheduleGuide();
+      }),
+    );
     this.restoreRemembered();
   }
 
   ngOnDestroy() {
     this.subs.unsubscribe();
-    clearTimeout(this.guideTimer);
-    if (this.resizeHandler) {
-      window.removeEventListener('resize', this.resizeHandler);
+  }
+
+  onEmailChange() {
+    this.emailError = '';
+    this.credentialsRejected = false;
+    // Otra cuenta: la huella se vuelve a comprobar al salir del campo.
+    if (this.email.trim() !== this.checkedIdentity) {
+      this.fingerprintReady = false;
+      this.checkedIdentity = '';
     }
-  }
-
-  private scheduleGuide() {
-    clearTimeout(this.guideTimer);
-    this.guideTimer = setTimeout(() => {
-      this.ngZone.run(() => {
-        this.startGuide();
-      });
-    }, 10000);
-  }
-
-  private startGuide() {
-    if (this.guideStep > 0 || this.showHelp) return;
-    const logo = document.querySelector('.login-logo');
-    if (logo) {
-      const r = logo.getBoundingClientRect();
-      this.guidePos = { top: r.top - 8, left: r.right + 16, arrowLeft: 16 };
-    }
-    this.guideText = 'Ingresa tu correo electrónico o código de acceso (ej: PCJP1)';
-    this.guideStep = 1;
-    this.guideVisible = true;
-    this.cdr.markForCheck();
-
-    setTimeout(() => this.ngZone.run(() => this.positionGuide('email')), 350);
-    this.resizeHandler = () => {
-      if (this.guideStep === 1) this.positionGuide('email');
-      else if (this.guideStep === 2) this.positionGuide('password');
-      else if (this.guideStep === 3) this.positionGuide('login-btn');
-    };
-    window.addEventListener('resize', this.resizeHandler);
-  }
-
-  private positionGuide(targetId: string) {
-    const el = document.getElementById(targetId);
-    const card = document.querySelector('.login-card');
-    if (!el || !card) return;
-    const er = el.getBoundingClientRect();
-    const cr = card.getBoundingClientRect();
-
-    if (targetId === 'email') {
-      this.guidePos = {
-        top: er.top - 4,
-        left: cr.right + 16,
-        arrowLeft: 20,
-      };
-    } else if (targetId === 'password') {
-      this.guidePos = {
-        top: er.top - 4,
-        left: cr.right + 16,
-        arrowLeft: 20,
-      };
-    } else if (targetId === 'login-btn') {
-      const btn = document.querySelector('.login-submit') as HTMLElement;
-      if (btn) {
-        const br = btn.getBoundingClientRect();
-        this.guidePos = {
-          top: br.top - 8,
-          left: cr.right + 16,
-          arrowLeft: 20,
-        };
-      }
-    }
-    this.cdr.markForCheck();
-  }
-
-  onEmailInput() {
-    if (this.guideStep === 1 && this.email.trim().length > 2) {
-      this.guideStep = 2;
-      this.guideText = 'Ahora ingresa la contraseña que te enviamos';
-      this.cdr.markForCheck();
-      setTimeout(() => this.ngZone.run(() => this.positionGuide('password')), 350);
-    }
-  }
-
-  onPasswordInput() {
-    if (this.guideStep === 2 && this.password.length > 0) {
-      this.guideStep = 3;
-      this.guideText = 'Perfecto! Presiona INICIAR SESIÓN para acceder';
-      this.cdr.markForCheck();
-      setTimeout(() => this.ngZone.run(() => this.positionGuide('login-btn')), 350);
-    }
-  }
-
-  onPasswordFocus() {
-    if (!this.authSupported() || this.wfModalOpen) return;
-    const email = this.email.trim();
-    if (email.length < 3 || email === this.lastCheckedEmail) return;
-    this.wfChecking = true;
-    this.cdr.markForCheck();
-    this.authService.webauthnLoginOptions(email).subscribe({
-      next: (res) => {
-        this.wfChecking = false;
-        this.lastCheckedEmail = email;
-        if (res?.success && res.options && email === this.email.trim()) {
-          this.wfModalOpen = true;
-          this.cdr.markForCheck();
-        }
-      },
-      error: () => {
-        this.wfChecking = false;
-        this.lastCheckedEmail = email;
-      },
-    });
-  }
-
-  private restoreRemembered() {
-    if (!this.authSupported()) return;
-    let identifier = '';
-    try {
-      const raw = localStorage.getItem(this.wfIdentifierKey);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        identifier = typeof parsed?.identifier === 'string' ? parsed.identifier.trim() : '';
-      }
-    } catch {
-      identifier = '';
-    }
-    if (!identifier) return;
-    this.email = identifier;
-    this.cdr.markForCheck();
-    this.preAuthorize(identifier, true);
-  }
-
-  private preAuthorize(identifier: string, openModalOnOk: boolean) {
-    const email = identifier.trim();
-    if (!email || this.wfChecking) return;
-    this.wfChecking = true;
-    this.authService.webauthnLoginOptions(email).subscribe({
-      next: (res) => {
-        this.wfChecking = false;
-        this.lastCheckedEmail = email;
-        if (res?.success && res.options) {
-          if (openModalOnOk) {
-            this.wfModalOpen = true;
-            this.wfAutoTrigger = true;
-            this.cdr.markForCheck();
-            setTimeout(() => {
-              if (this.wfAutoTrigger && this.wfModalOpen) {
-                const btn = document.getElementById('webauthn-modal-btn');
-                if (btn) { btn.click(); return; }
-                this.loginWithFingerprint();
-              }
-            }, 400);
-          }
-        } else {
-          this.clearRemembered();
-        }
-      },
-      error: (err) => {
-        this.wfChecking = false;
-        this.lastCheckedEmail = email;
-        if (err?.status === 404) {
-          this.clearRemembered();
-          if (this.wfModalOpen) {
-            this.wfModalOpen = false;
-            this.cdr.markForCheck();
-          }
-        }
-      },
-    });
-  }
-
-  closeWfModal() {
-    this.wfModalOpen = false;
-    this.cdr.markForCheck();
-    const el = document.getElementById('password') as HTMLInputElement | null;
-    if (el) el.focus();
-  }
-
-  private persistIdentity() {
-    try {
-      localStorage.setItem(this.wfIdentifierKey, JSON.stringify({ identifier: this.email.trim(), at: Date.now() }));
-    } catch {
-      // almacenamiento no disponible
-    }
-  }
-
-  private clearRemembered() {
-    try {
-      localStorage.removeItem(this.wfIdentifierKey);
-    } catch {
-      // almacenamiento no disponible
-    }
-  }
-
-  dismissGuide() {
-    this.guideStep = 4;
-    this.guideVisible = false;
-    if (this.resizeHandler) {
-      window.removeEventListener('resize', this.resizeHandler);
-      this.resizeHandler = null;
-    }
-    this.cdr.markForCheck();
-  }
-
-  toggleHelp() {
-    this.showHelp = !this.showHelp;
-    if (this.showHelp) {
-      this.dismissGuide();
-    }
-  }
-
-  get isFormValid(): boolean {
-    const valid = this.email.trim().length >= 3 && this.password.length > 0;
-    if (valid !== this._lastFormValid) {
-      this._lastFormValid = valid;
-      this.cdr.markForCheck();
-    }
-    return valid;
   }
 
   togglePassword() {
     this.showPassword = !this.showPassword;
   }
 
-  async doLogin() {
-    this.emailError = '';
-    this.passwordError = '';
-    if (!this.email.trim()) {
-      this.emailError = 'El correo o código es obligatorio';
-    }
-    if (!this.password) {
-      this.passwordError = 'La contraseña es obligatoria';
-    }
-    if (!this.isFormValid) return;
-
-    this.isLoading = true;
-    this.loading = true;
-    this.error = null;
-    this.alertMessage = '';
-    this.cdr.markForCheck();
-
-    this.subs.add(this.authService.login(this.email, this.password).subscribe({
-      next: (res) => {
-        this.error = null;
-        this.alertMessage = '';
-        const route = res.user?.role === 'admin' ? '/admin/dashboard'
-                    : res.user?.role === 'supervisor' ? '/admin/dashboard'
-                    : res.user?.role === 'terapista' ? '/therapist/dashboard'
-                    : res.user?.role === 'jugador' ? '/patient/dashboard'
-                    : '/';
-        this.router.navigate([route]).finally(() => {
-          this.isLoading = false;
-          this.loading = false;
-          this.cdr.markForCheck();
-        });
-      },
-      error: (err) => {
-        this.isLoading = false;
-        this.loading = false;
-        this.error = err.error?.message || 'Credenciales incorrectas o error en el servidor.';
-        this.alertType = 'error';
-        this.alertMessage = this.error ?? '';
-        this.cdr.markForCheck();
-      }
-    }));
+  // ── ayuda ──────────────────────────────────────────────────────────────────
+  openHelp() {
+    this.helpDialog?.nativeElement.showModal();
   }
 
-  authSupported(): boolean {
+  closeHelp() {
+    this.helpDialog?.nativeElement.close();
+  }
+
+  /** Tocar el fondo (fuera del contenido) cierra la ayuda. */
+  onDialogClick(event: MouseEvent) {
+    if (event.target === this.helpDialog?.nativeElement) this.closeHelp();
+  }
+
+  // ── contraseña ─────────────────────────────────────────────────────────────
+  doLogin() {
+    if (this.isLoading) return;
+    this.alertMessage = '';
+    this.credentialsRejected = false;
+    this.emailError = this.email.trim() ? '' : 'Escribe tu correo o tu código.';
+    this.passwordError = this.password ? '' : 'Escribe tu contraseña.';
+    if (this.emailError || this.passwordError) {
+      this.cdr.markForCheck();
+      queueMicrotask(() => (this.emailError ? this.emailInput : this.passwordInput)?.nativeElement.focus());
+      return;
+    }
+
+    this.isLoading = true;
+    this.notice = '';
+    this.cdr.markForCheck();
+
+    this.subs.add(
+      this.authService.login(this.email.trim(), this.password).subscribe({
+        next: (res) => this.goHome(res.user?.role),
+        error: (err) => {
+          this.isLoading = false;
+          this.alertMessage = this.loginErrorText(err);
+          this.credentialsRejected = err?.status === 401 || err?.status === 400;
+          this.cdr.markForCheck();
+          queueMicrotask(() => this.passwordInput?.nativeElement.select());
+        },
+      }),
+    );
+  }
+
+  /** El mensaje dice qué pasó y qué hacer, no un «error en el servidor» genérico. */
+  private loginErrorText(err: any): string {
+    const status = err?.status ?? 0;
+    if (status === 0 || status >= 500) {
+      return 'No pudimos conectar con el centro. Revisa tu internet e inténtalo otra vez.';
+    }
+    if (status === 429) {
+      return 'Hubo demasiados intentos seguidos. Espera unos minutos antes de volver a intentar.';
+    }
+    if (status === 403 && err?.error?.message) return err.error.message;
+    return 'El correo o código y la contraseña no coinciden. Revisa que estén bien escritos.';
+  }
+
+  private goHome(role?: string) {
+    this.router.navigate([HOME_BY_ROLE[role ?? ''] ?? '/']).finally(() => {
+      this.isLoading = false;
+      this.fingerprintBusy = false;
+      this.cdr.markForCheck();
+    });
+  }
+
+  // ── huella ─────────────────────────────────────────────────────────────────
+  private authSupported(): boolean {
     return typeof window !== 'undefined' && !!window.PublicKeyCredential;
   }
 
+  /** Si en este equipo ya se ingresó con huella, se precarga la cuenta y se ofrece el botón (sin abrirlo solo). */
+  private restoreRemembered() {
+    if (!this.authSupported()) return;
+    let identifier = '';
+    try {
+      const parsed = JSON.parse(localStorage.getItem(this.identityKey) || 'null');
+      identifier = typeof parsed?.identifier === 'string' ? parsed.identifier.trim() : '';
+    } catch {
+      identifier = '';
+    }
+    if (!identifier) return;
+    this.email = identifier;
+    this.cdr.markForCheck();
+    this.checkFingerprint(identifier, true);
+  }
+
+  /** Al salir del campo, se averigua en silencio si esa cuenta tiene huella en este equipo. */
+  onEmailBlur() {
+    const identifier = this.email.trim();
+    if (this.authSupported() && identifier.length >= 3) this.checkFingerprint(identifier, false);
+  }
+
+  private checkFingerprint(identifier: string, remembered: boolean) {
+    if (!identifier || identifier === this.checkedIdentity) return;
+    this.checkedIdentity = identifier;
+    this.subs.add(
+      this.authService.webauthnLoginOptions(identifier).subscribe({
+        next: (res) => {
+          this.fingerprintReady = !!(res?.success && res.options) && identifier === this.email.trim();
+          if (!this.fingerprintReady && remembered) this.forgetIdentity();
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.fingerprintReady = false;
+          if (remembered) this.forgetIdentity();
+          this.cdr.markForCheck();
+        },
+      }),
+    );
+  }
+
   async loginWithFingerprint() {
-    this.emailError = '';
-    this.error = null;
+    const identifier = this.email.trim();
     this.alertMessage = '';
-    if (!this.email.trim()) {
-      this.emailError = 'Escribe tu correo o código antes de usar la huella';
+    if (!identifier) {
+      this.emailError = 'Escribe tu correo o tu código para usar la huella.';
       this.cdr.markForCheck();
+      this.emailInput?.nativeElement.focus();
       return;
     }
     this.isLoading = true;
-    this.loading = true;
+    this.fingerprintBusy = true;
     this.cdr.markForCheck();
 
     try {
-      const res = await firstValueFrom(this.authService.webauthnLoginOptions(this.email.trim()));
-      if (!res?.success || !res.options) {
-        throw { error: { message: res?.error || 'No se pudo iniciar el ingreso con huella.' } };
-      }
+      const res = await firstValueFrom(this.authService.webauthnLoginOptions(identifier));
+      if (!res?.success || !res.options) throw { error: { message: res?.error } };
       const options = res.options;
       options.challenge = base64urlToBuffer(options.challenge);
-      if (options.userHandle) {
-        options.userHandle = base64urlToBuffer(options.userHandle);
-      }
+      if (options.userHandle) options.userHandle = base64urlToBuffer(options.userHandle);
       if (options.allowCredentials?.length) {
-        options.allowCredentials = options.allowCredentials.map((c: { id: string; type: string }) => ({
-          ...c,
-          id: base64urlToBuffer(c.id),
-        }));
+        options.allowCredentials = options.allowCredentials.map((c: { id: string; type: string }) => ({ ...c, id: base64urlToBuffer(c.id) }));
       }
       const credential = await navigator.credentials.get({ publicKey: options });
-      if (!credential) {
-        throw { error: { message: 'Autenticación cancelada por el usuario.' } };
-      }
-      const serialized = serializeWebauthnCredential(credential as PublicKeyCredential);
-      const verify = await firstValueFrom(this.authService.webauthnLoginVerify(this.email.trim(), serialized));
-      if (!verify?.success) {
-        throw { error: { message: verify?.error || 'La huella no fue válida.' } };
-      }
-      const route = verify.user?.role === 'admin' ? '/admin/dashboard'
-                  : verify.user?.role === 'supervisor' ? '/admin/dashboard'
-                  : verify.user?.role === 'terapista' ? '/therapist/dashboard'
-                  : verify.user?.role === 'jugador' ? '/patient/dashboard'
-                  : '/';
-      this.persistIdentity();
-      this.wfModalOpen = false;
-      this.router.navigate([route]).finally(() => {
-        this.isLoading = false;
-        this.loading = false;
-        this.cdr.markForCheck();
-      });
+      if (!credential) throw { name: 'NotAllowedError' };
+      const verify = await firstValueFrom(this.authService.webauthnLoginVerify(identifier, serializeWebauthnCredential(credential as PublicKeyCredential)));
+      if (!verify?.success) throw { error: { message: verify?.error } };
+      this.rememberIdentity(identifier);
+      this.goHome(verify.user?.role);
     } catch (err: any) {
       this.isLoading = false;
-      this.loading = false;
-      this.wfModalOpen = false;
-      const errText = String(err?.message || err?.error?.message || err?.name || '');
-      const cancelled = err?.name === 'NotAllowedError'
-        || errText.includes('NotAllowedError')
-        || errText.includes('cancelado')
-        || errText.includes('cancelled')
-        || errText.includes('no permitida');
-      this.error = cancelled ? 'La autenticación por huella fue cancelada. Usa tu contraseña.' : (err?.error?.message || 'No se pudo iniciar sesión con huella. Intenta con tu contraseña.');
-      this.alertType = 'error';
-      this.alertMessage = this.error ?? '';
+      this.fingerprintBusy = false;
+      const cancelled = err?.name === 'NotAllowedError' || err?.name === 'AbortError';
+      this.alertMessage = cancelled
+        ? 'Se canceló la lectura de la huella. Puedes intentarlo otra vez o usar tu contraseña.'
+        : 'No pudimos validar tu huella. Ingresa con tu contraseña.';
       this.cdr.markForCheck();
+      if (!cancelled) this.passwordInput?.nativeElement.focus();
+    }
+  }
+
+  private rememberIdentity(identifier: string) {
+    try {
+      localStorage.setItem(this.identityKey, JSON.stringify({ identifier, at: Date.now() }));
+    } catch {
+      // almacenamiento no disponible
+    }
+  }
+
+  private forgetIdentity() {
+    try {
+      localStorage.removeItem(this.identityKey);
+    } catch {
+      // almacenamiento no disponible
     }
   }
 }
