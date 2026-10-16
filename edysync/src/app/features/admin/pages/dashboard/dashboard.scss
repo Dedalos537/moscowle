@@ -241,7 +241,7 @@
 }
 
 // ── distribución ────────────────────────────────────────────────────────────
-.db-split { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1fr); @media (min-width: 1200px) { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); } }
+.db-split { display: grid; gap: 1.25rem; align-items: start; grid-template-columns: minmax(0, 1fr); @media (min-width: 1200px) { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); } }
 
 .db-error {
   display: grid;
