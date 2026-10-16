@@ -20,6 +20,8 @@ function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[2]) : null;
 }
 
+
+const AUTH_ENDPOINTS = ['/api/auth/refresh', '/api/login', '/api/auth/webauthn/login', '/api/auth/reset-password'];
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
 
@@ -47,7 +49,9 @@ export class AuthInterceptor implements HttpInterceptor {
 
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
-        if (error.status === 401 && !request.url.includes('/api/auth/refresh')) {
+        // Un 401 del propio login (o de huella/recuperación) es «datos incorrectos», no un token vencido:
+        // renovar la sesión y reenviar duplicaba cada intento fallido.
+        if (error.status === 401 && !AUTH_ENDPOINTS.some((u) => request.url.includes(u))) {
           return this.handle401(request, next);
         }
         return throwError(() => error);
