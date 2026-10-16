@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -7,6 +7,8 @@ import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { GlobalSettingsService } from '../../../../core/services/global-settings.service';
+import { PeopleService } from '../../../../core/services/people.service';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
 import { TherapistStats, PatientStats } from '../../../../core/models/expense';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { firstValueFrom } from 'rxjs';
@@ -45,11 +47,46 @@ interface FinancialSummary {
   styleUrl: './reports.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Select, Modal],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Select, Modal, PersonLabelPipe],
 })
 export class Reports implements OnInit, OnDestroy {
   private settings = inject(GlobalSettingsService);
   hideCharts = this.settings.hideCharts;
+  readonly people = inject(PeopleService);
+  /** Búsqueda por nombre, código o correo que filtra todas las tablas de personas del reporte. */
+  readonly personQuery = signal('');
+
+  match<T>(list: readonly T[] | null | undefined, nameKey: string, idKey?: string, emailKey?: string): T[] {
+    const rows = (list ?? []) as T[];
+    const q = this.personQuery();
+    if (!q.trim()) return rows;
+    return rows.filter((r: any) => this.people.matches(q, { name: r?.[nameKey], id: idKey ? r?.[idKey] : null, email: emailKey ? r?.[emailKey] : null }));
+  }
+
+  matchAny<T>(list: readonly T[] | null | undefined, ...nameKeys: string[]): T[] {
+    const rows = (list ?? []) as T[];
+    const q = this.personQuery();
+    if (!q.trim()) return rows;
+    return rows.filter((r: any) => nameKeys.some((k) => this.people.matches(q, { name: r?.[k] })));
+  }
+
+  /** Terapeuta con sus pacientes: queda si coincide el terapeuta o alguno de sus pacientes. */
+  groups<T>(list: readonly T[] | null | undefined): T[] {
+    const rows = (list ?? []) as T[];
+    if (!this.personQuery().trim()) return rows;
+    return rows.filter((e: any) => this.therapistHit(e) || this.members(e).length > 0);
+  }
+
+  members(entry: any): any[] {
+    const patients: any[] = entry?.patients ?? [];
+    const q = this.personQuery();
+    if (!q.trim() || this.therapistHit(entry)) return patients;
+    return patients.filter((p) => this.people.matches(q, { name: p?.patient_name, id: p?.patient_id }));
+  }
+
+  private therapistHit(e: any): boolean {
+    return this.people.matches(this.personQuery(), { name: e?.therapist_name, id: e?.therapist_id });
+  }
 
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
 

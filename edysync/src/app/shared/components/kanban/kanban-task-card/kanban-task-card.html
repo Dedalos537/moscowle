@@ -40,8 +40,8 @@
   <div class="kanban-card__facts">
     @if (task().assigned_to_name) {
       <span class="kanban-card__fact" title="Asignada a">
-        <span class="kanban-card__avatar" aria-hidden="true">{{ task().assigned_to_name!.charAt(0).toUpperCase() }}</span>
-        {{ task().assigned_to_name }}
+        <span class="kanban-card__avatar" aria-hidden="true">{{ people.initials({ id: task().assigned_to_id, name: task().assigned_to_name }).charAt(0) }}</span>
+        {{ task().assigned_to_name | personLabel: task().assigned_to_id }}
       </span>
     } @else {
       <span class="kanban-card__fact kanban-card__fact--muted">Sin asignar</span>

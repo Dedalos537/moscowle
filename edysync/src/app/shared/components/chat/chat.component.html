@@ -32,7 +32,7 @@
     <div class="chat-sidebar__search">
       <div class="chat-search-box">
         <fa-icon [icon]="['fas', 'magnifying-glass']" class="text-on-surface-variant/50"></fa-icon>
-        <input [(ngModel)]="searchQuery" placeholder="Buscar chats..."
+        <input [(ngModel)]="searchQuery" placeholder="Buscar por nombre, código o correo…"
           aria-label="Buscar chats">
         @if (searchQuery) {
           <button (click)="searchQuery = ''" class="chat-search-box__clear" aria-label="Limpiar búsqueda">
@@ -68,12 +68,12 @@
                   class="chat-contact-row"
                   [class.chat-contact-row--active]="selectedContact?.id === contact.id">
                   <div class="chat-avatar chat-avatar--sm">
-                    <span>{{ contact.username.charAt(0).toUpperCase() }}</span>
+                    <span>{{ people.initials({ id: contact.id, name: contact.username }).charAt(0) }}</span>
                     @if (isOnline(contact.id)) {
                       <i class="chat-avatar__dot"></i>
                     }
                   </div>
-                  <span class="chat-contact-row__name">{{ contact.username }}</span>
+                  <span class="chat-contact-row__name">{{ contact.username | personLabel: contact.id }}</span>
                 </button>
               }
             }
@@ -102,14 +102,14 @@
             class="chat-row"
             [class.chat-row--active]="selectedChatId === chat.id">
             <div class="chat-avatar chat-avatar--md">
-              <span>{{ (chat.other_user?.username || '?').charAt(0).toUpperCase() }}</span>
+              <span>{{ people.initials({ id: chat.other_user?.id, name: chat.other_user?.username }).charAt(0) }}</span>
               @if (chat.other_user && isOnline(chat.other_user.id)) {
                 <i class="chat-avatar__dot"></i>
               }
             </div>
             <div class="chat-row__body">
               <div class="chat-row__top">
-                <span class="chat-row__name">{{ chat.other_user?.username || 'Usuario' }}</span>
+                <span class="chat-row__name">{{ chat.other_user ? (chat.other_user.username | personLabel: chat.other_user.id) : 'Usuario' }}</span>
                 @if (chat.last_message?.created_at) {
                   <span class="chat-row__time" [class.chat-row__time--active]="chat.unread_count > 0">
                     {{ listTime(chat.last_message!.created_at) }}
@@ -156,14 +156,14 @@
           <fa-icon [icon]="['fas', 'arrow-left']"></fa-icon>
         </button>
         <div class="chat-avatar chat-avatar--sm chat-pane__avatar">
-          <span>{{ selectedContact.username.charAt(0).toUpperCase() }}</span>
+          <span>{{ people.initials({ id: selectedContact.id, name: selectedContact.username }).charAt(0) }}</span>
           @if (isOnline(selectedContact.id)) {
             <i class="chat-avatar__dot"></i>
           }
         </div>
         <div class="chat-pane__id">
           <div class="chat-pane__name">
-            <span>{{ selectedContact.username }}</span>
+            <span>{{ selectedContact.username | personLabel: selectedContact.id }}</span>
             @if (selectedContact.role) {
               <em class="chat-pane__role">{{ roleLabels[displayRole(selectedContact.role)] || displayRole(selectedContact.role) }}</em>
             }

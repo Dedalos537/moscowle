@@ -20,6 +20,8 @@ import { Input } from '../../../../../shared/components/input/input';
 import { Drawer } from '../../../../../shared/components/drawer/drawer';
 import { Modal } from '../../../../../shared/components/modal/modal';
 import { StatKey, UsersStatsCards } from '../components/users-stats-cards/users-stats-cards';
+import { PeopleService } from '../../../../../core/services/people.service';
+import { PersonLabelPipe } from '../../../../../shared/pipes/person-label.pipe';
 
 /** Valor del filtro de terapeuta que significa "pacientes sin ningun terapeuta asignado". */
 const NO_THERAPIST = -1;
@@ -82,7 +84,7 @@ interface StatusLogRow {
 @Component({
   selector: 'app-users-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Spinner, Alert, Button, Select, Input, Drawer, Modal, UsersStatsCards],
+  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Spinner, Alert, Button, Select, Input, Drawer, Modal, UsersStatsCards, PersonLabelPipe],
   templateUrl: './users-list.html',
   styleUrl: './users-list.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
@@ -264,6 +266,7 @@ export class UsersList implements OnInit, OnDestroy {
   }
 
   private http = inject(HttpClient);
+  readonly people = inject(PeopleService);
 
   constructor(
     private adminService: AdminService,
@@ -437,7 +440,7 @@ export class UsersList implements OnInit, OnDestroy {
 
     if (this.searchQuery) {
       const q = this.searchQuery.toLowerCase();
-      result = result.filter((u) => u.username?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) || u.login_code?.toLowerCase().includes(q));
+      result = result.filter((u) => this.people.matches(q, { id: u.id, name: u.username, code: u.login_code, email: u.email }));
     }
 
     if (this.selectedSedeId) {
@@ -1510,9 +1513,9 @@ export class UsersList implements OnInit, OnDestroy {
   }
 
   get groupFilteredPatients(): { id: number; username: string }[] {
-    const q = (this.groupSearchQuery || '').trim().toLowerCase();
+    const q = (this.groupSearchQuery || '').trim();
     const base = this.patientOptionsForGroup;
     if (!q) return base;
-    return base.filter(p => p.username.toLowerCase().includes(q));
+    return base.filter(p => this.people.matches(q, { id: p.id, name: p.username }));
   }
 }

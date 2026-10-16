@@ -93,8 +93,8 @@
             <caption class="sr-only">Directorio de usuarios: nombre, código, rol, sede, estado y acciones</caption>
             <thead>
               <tr>
-                <th scope="col">Usuario</th>
-                <th scope="col">Código</th>
+                <th scope="col">{{ people.mode() === 'code' ? 'Código' : 'Usuario' }}</th>
+                @if (people.mode() !== 'code') { <th scope="col">Código</th> }
                 <th scope="col">Rol</th>
                 <th scope="col">Sede</th>
                 <th scope="col">Estado</th>
@@ -110,11 +110,15 @@
                 >
                   <td>
                     <div class="user-cell">
-                      <span class="avatar" aria-hidden="true">{{ getInitials(u.username) }}</span>
-                      <span class="user-cell__name">{{ u.username }}</span>
+                      <span class="avatar" aria-hidden="true">{{ people.initials({ id: u.id, name: u.username, code: u.login_code }) }}</span>
+                      @if (people.mode() === 'code') {
+                        <span class="code-chip">{{ u.login_code || 'Sin código' }}</span>
+                      } @else {
+                        <span class="user-cell__name">{{ u.username }}</span>
+                      }
                     </div>
                   </td>
-                  <td><span class="code-chip">{{ u.login_code || '—' }}</span></td>
+                  @if (people.mode() !== 'code') { <td><span class="code-chip">{{ u.login_code || '—' }}</span></td> }
                   <td><span [class]="getRoleBadgeClass(u.role)">{{ getRoleBadge(u.role) }}</span></td>
                   <td class="muted">
                     @if (u.role === 'jugador' || u.role === 'terapista') { {{ getSedeName(u) }} } @else { <span aria-label="No aplica">—</span> }
@@ -124,7 +128,7 @@
                       type="button"
                       class="status-button"
                       [class]="getStatusClass(u.account_status)"
-                      [attr.aria-label]="'Cambiar estado de ' + u.username + '. Estado actual: ' + getStatusLabel(u.account_status)"
+                      [attr.aria-label]="'Cambiar estado de ' + (u.username | personLabel: u.id : u.login_code) + '. Estado actual: ' + getStatusLabel(u.account_status)"
                       (click)="openStatusModal(u)"
                     >
                       {{ getStatusLabel(u.account_status) }}
@@ -134,14 +138,14 @@
                   <td>
                     <div class="row-actions">
                       @if (u.role === 'jugador') {
-                        <button type="button" class="icon-button" [attr.aria-label]="'Ver detalle de ' + u.username" title="Ver detalle del paciente" (click)="viewPatientDetail(u)">
+                        <button type="button" class="icon-button" [attr.aria-label]="'Ver detalle de ' + (u.username | personLabel: u.id : u.login_code)" title="Ver detalle del paciente" (click)="viewPatientDetail(u)">
                           <fa-icon [icon]="['fas', 'eye']"></fa-icon>
                         </button>
                       }
-                      <button type="button" class="icon-button" [attr.aria-label]="'Editar a ' + u.username" title="Editar" (click)="openEditDrawer(u)">
+                      <button type="button" class="icon-button" [attr.aria-label]="'Editar a ' + (u.username | personLabel: u.id : u.login_code)" title="Editar" (click)="openEditDrawer(u)">
                         <fa-icon [icon]="['fas', 'pen']"></fa-icon>
                       </button>
-                      <button type="button" class="icon-button" [attr.aria-label]="'Restablecer la contraseña de ' + u.username" title="Restablecer contraseña" (click)="openResetDrawer(u)">
+                      <button type="button" class="icon-button" [attr.aria-label]="'Restablecer la contraseña de ' + (u.username | personLabel: u.id : u.login_code)" title="Restablecer contraseña" (click)="openResetDrawer(u)">
                         <fa-icon [icon]="['fas', 'key']"></fa-icon>
                       </button>
                     </div>
@@ -161,9 +165,9 @@
               [class.users-row--inactive]="!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired'"
             >
               <div class="user-card__top">
-                <span class="avatar" aria-hidden="true">{{ getInitials(u.username) }}</span>
+                <span class="avatar" aria-hidden="true">{{ people.initials({ id: u.id, name: u.username, code: u.login_code }) }}</span>
                 <div class="user-card__id">
-                  <p class="user-card__name">{{ u.username }}</p>
+                  @if (people.mode() !== 'code') { <p class="user-card__name">{{ u.username }}</p> }
                   <p class="user-card__code">{{ u.login_code || 'Sin código' }}</p>
                 </div>
               </div>
@@ -175,7 +179,7 @@
                   type="button"
                   class="status-button"
                   [class]="getStatusClass(u.account_status)"
-                  [attr.aria-label]="'Cambiar estado de ' + u.username + '. Estado actual: ' + getStatusLabel(u.account_status)"
+                  [attr.aria-label]="'Cambiar estado de ' + (u.username | personLabel: u.id : u.login_code) + '. Estado actual: ' + getStatusLabel(u.account_status)"
                   (click)="openStatusModal(u)"
                 >
                   {{ getStatusLabel(u.account_status) }}
@@ -187,7 +191,7 @@
                 <div class="user-card__assign">
                   <p class="field-label"><fa-icon [icon]="['fas', 'stethoscope']"></fa-icon> Terapeutas asignados</p>
                   <div class="user-card__assign-row">
-                    <app-select [multiple]="true" [(ngModel)]="u.therapist_ids" [options]="therapistOptionsAll" [ariaLabel]="'Terapeutas asignados a ' + u.username" class="user-card__select"></app-select>
+                    <app-select [multiple]="true" [(ngModel)]="u.therapist_ids" [options]="therapistOptionsAll" [ariaLabel]="'Terapeutas asignados a ' + (u.username | personLabel: u.id : u.login_code)" class="user-card__select"></app-select>
                     <app-button variant="secondary" label="Guardar" [icon]="['fas', 'check']" (clicked)="assignTherapist(u)"></app-button>
                   </div>
                 </div>
@@ -734,7 +738,7 @@
   @if (statusModalUser) {
     <div class="space-y-4">
       <div class="rounded-xl bg-surface-container-high/50 border border-border/20 p-3 sm:p-4">
-        <p class="text-sm font-bold text-on-surface truncate">{{ statusModalUser.username }}</p>
+        <p class="text-sm font-bold text-on-surface truncate">{{ statusModalUser.username | personLabel: statusModalUser.id : statusModalUser.login_code }}</p>
         <p class="text-xs text-on-surface-variant font-mono mt-0.5">{{ statusModalUser.login_code || statusModalUser.email || '—' }}</p>
       </div>
 
@@ -745,7 +749,7 @@
 
       <div class="rounded-xl bg-primary-container/10 border border-primary/20 p-3 text-xs text-on-surface">
         <fa-icon [icon]="['fas', 'circle-info']" class="text-primary-text mr-1"></fa-icon>
-        Se va a cambiar el estado de <strong>{{ statusModalUser.username }}</strong> de
+        Se va a cambiar el estado de <strong>{{ statusModalUser.username | personLabel: statusModalUser.id : statusModalUser.login_code }}</strong> de
         <strong>{{ getStatusLabel(statusModalUser.account_status) }}</strong> a
         <strong>{{ getStatusLabel(statusModalStatus) }}</strong>.
       </div>
@@ -930,7 +934,7 @@
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Pacientes del Grupo</label>
       <div class="relative mb-2">
         <fa-icon [icon]="['fas', 'magnifying-glass']" class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-on-surface-variant"></fa-icon>
-        <input type="text" [(ngModel)]="groupSearchQuery" placeholder="Buscar paciente..."
+        <input type="text" [(ngModel)]="groupSearchQuery" placeholder="Buscar por nombre, código o correo…"
           class="input-field text-sm w-full pl-9">
       </div>
       <div class="max-h-48 overflow-y-auto border border-border/20 rounded-xl p-2 space-y-1">
@@ -950,7 +954,7 @@
               [class.bg-primary-container/10]="groupForm.member_ids?.includes(p.id)">
               <input type="checkbox" [checked]="groupForm.member_ids?.includes(p.id)"
                 (change)="toggleGroupMember(p.id)" class="rounded text-primary-text focus:ring-primary" />
-              <span class="text-sm text-on-surface">{{ p.username }}</span>
+              <span class="text-sm text-on-surface">{{ p.username | personLabel: p.id }}</span>
             </label>
           }
         }

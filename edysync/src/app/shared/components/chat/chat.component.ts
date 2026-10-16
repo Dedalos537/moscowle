@@ -22,13 +22,15 @@ import { AuthService } from '../../../core/services/auth.service';
 import { Subscription } from 'rxjs';
 import { Spinner } from '../spinner/spinner';
 import { AuthMediaPipe } from '../../pipes/auth-media-pipe';
+import { PersonLabelPipe } from '../../pipes/person-label.pipe';
+import { PeopleService } from '../../../core/services/people.service';
 import { ProtectedMedia } from '../../../core/services/protected-media';
 import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [FormsModule, DatePipe, AsyncPipe, FontAwesomeModule, Spinner, AuthMediaPipe],
+  imports: [FormsModule, DatePipe, AsyncPipe, FontAwesomeModule, Spinner, AuthMediaPipe, PersonLabelPipe],
   templateUrl: './chat.component.html',
   styleUrl: './chat.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -97,6 +99,7 @@ export class ChatComponent implements OnInit, OnDestroy {
   selectedFilePreviewUrl: string | null = null;
   private media = inject(ProtectedMedia);
   private toast = inject(ToastService);
+  readonly people = inject(PeopleService);
   lightboxUrl: string | null = null;
   lightboxTitle = '';
   aiPreview: { open: boolean; msg: MessageData | null; loading: boolean; data: any; error: string | null } = {
@@ -250,8 +253,8 @@ export class ChatComponent implements OnInit, OnDestroy {
   get filteredContacts(): ContactUser[] {
     let list = [...this.contacts];
     if (this.searchQuery.trim()) {
-      const q = this.searchQuery.toLowerCase();
-      list = list.filter((c) => c.username.toLowerCase().includes(q));
+      const q = this.searchQuery;
+      list = list.filter((c) => this.people.matches(q, { id: c.id, name: c.username, email: c.email }));
     }
     return list;
   }
@@ -279,8 +282,8 @@ export class ChatComponent implements OnInit, OnDestroy {
       return tb.localeCompare(ta);
     });
     if (!this.searchQuery.trim()) return list;
-    const q = this.searchQuery.toLowerCase();
-    return list.filter((c) => c.other_user?.username.toLowerCase().includes(q));
+    const q = this.searchQuery;
+    return list.filter((c) => !!c.other_user && this.people.matches(q, { id: c.other_user.id, name: c.other_user.username, email: c.other_user.email }));
   }
 
   selectContact(contact: ContactUser) {

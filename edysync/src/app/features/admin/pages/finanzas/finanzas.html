@@ -214,7 +214,7 @@
             [class.text-primary]="alert.type === 'due_today'"></fa-icon>
         </div>
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-semibold text-on-surface truncate">{{ alert.patient_name }} — {{ alert.contract_name }}</p>
+          <p class="text-sm font-semibold text-on-surface truncate">{{ alert.patient_name | personLabel }} — {{ alert.contract_name }}</p>
           <p class="text-xs text-on-surface-variant">
             Cuota #{{ alert.installment_number }} • S/ {{ alert.amount.toFixed(2) }} •
             <span [class.text-error]="alert.type === 'overdue'"
@@ -266,7 +266,7 @@
         </div>
         <div class="flex-1 min-w-0">
           <p class="text-sm font-semibold text-on-surface truncate">
-            {{ t.patient_name || 'Paciente' }}
+            {{ t.patient_name | personLabel }}
           </p>
           <p class="text-[11px] text-on-surface-variant">
             {{ t.date | date:'dd/MM/yyyy' }} · {{ getMethodLabel(t.method) }}
@@ -444,7 +444,7 @@
           <fa-icon [icon]="['fas', 'magnifying-glass']"
             class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]"></fa-icon>
           <input (input)="searchQuery = $any($event.target).value" [value]="searchQuery" type="text"
-            placeholder="Buscar paciente..." class="input-field !pl-10" />
+            placeholder="Buscar por nombre, código o correo…" class="input-field !pl-10" />
         </div>
 
         <app-select (valueChange)="selectedSedeId = $event" [options]="sedeFilterOptions"
@@ -501,16 +501,16 @@
               <td class="px-4 py-3.5">
                 <div class="flex items-center gap-3">
                   <div class="w-9 h-9 rounded-full bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-xs shrink-0">
-                    {{ getInitials(p.username) }}
+                    {{ people.initials({ id: p.id, name: p.username }) }}
                   </div>
                   <div class="min-w-0">
-                    <p class="text-sm font-bold text-on-surface truncate">{{ p.username }}</p>
+                    <p class="text-sm font-bold text-on-surface truncate">{{ p.username | personLabel: p.id }}</p>
                     <p class="text-xs text-on-surface-variant truncate">{{ p.email || '—' }}</p>
                   </div>
                 </div>
               </td>
               <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.sede_name || '—' }}</td>
-              <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.therapist_name || '—' }}</td>
+              <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.therapist_name | personLabel }}</td>
               <td class="px-4 py-3.5">
                 <span class="text-sm font-semibold text-on-surface">{{ p.plan_name || '—' }}</span>
                 @if (p.plan_frequency) {
@@ -781,10 +781,10 @@
             <div class="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
               <div
                 class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-xs sm:text-sm shrink-0">
-                {{ getInitials(p.username) }}
+                {{ people.initials({ id: p.id, name: p.username }) }}
               </div>
               <div class="min-w-0 flex-1">
-                <p class="font-semibold text-on-surface text-sm sm:text-base truncate">{{ p.username }}</p>
+                <p class="font-semibold text-on-surface text-sm sm:text-base truncate">{{ p.username | personLabel: p.id }}</p>
                 <p class="text-[10px] sm:text-xs text-on-surface-variant truncate">{{ p.email || '—' }}</p>
               </div>
             </div>
@@ -806,7 +806,7 @@
                 {{ p.sede_name || 'Sin sede' }}
               </span>
               <span class="text-on-surface-variant/30">|</span>
-              <span class="text-[10px] sm:text-xs text-on-surface-variant">{{ p.therapist_name || 'Sin terapeuta' }}</span>
+              <span class="text-[10px] sm:text-xs text-on-surface-variant">{{ p.therapist_name ? (p.therapist_name | personLabel) : 'Sin terapeuta' }}</span>
             </div>
           </div>
 
@@ -1015,7 +1015,7 @@
           @for (p of filteredHistory; track p.id) {
           <tr class="hover:bg-surface-container-low/50 transition-colors">
             <td class="px-4 py-3.5 text-sm font-semibold text-on-surface">
-              {{ p.patient_name || '—' }}
+              {{ p.patient_name | personLabel }}
             </td>
             <td class="px-4 py-3.5 text-right">
               <span class="text-sm font-bold text-on-surface">S/ {{ (p.amount - (p.discount || 0)).toFixed(2) }}</span>
@@ -1145,7 +1145,7 @@
           @for (t of yapeTransactions; track t.id) {
           <tr class="hover:bg-surface-container-low/50 transition-colors">
             <td class="px-4 py-3.5 text-sm font-semibold text-on-surface">
-              {{ t.patient_name || '—' }}
+              {{ t.patient_name | personLabel }}
             </td>
             <td class="px-4 py-3.5 text-right text-sm font-bold text-on-surface">
               S/ {{ (t.amount - (t.discount || 0)).toFixed(2) }}
@@ -1227,7 +1227,7 @@
           @for (t of therapistFinancials; track t.therapist.id) {
           <tr class="hover:bg-surface-container-high/50">
             <td class="px-6 py-4 font-medium text-on-surface">
-              {{ t.therapist.username }}
+              {{ t.therapist.username | personLabel }}
             </td>
             <td class="px-6 py-4 text-sm text-on-surface-variant">
               @if (t.contract_hours > 0) { S/ {{ t.rate.toFixed(2) }}/hr
@@ -1315,7 +1315,7 @@
             </td>
             <td class="px-6 py-4 text-sm text-on-surface">
               {{ e.description }} @if (e.therapist) {
-              <span class="text-on-surface-variant/60 text-xs block">Destino: {{ e.therapist.username }}</span>
+              <span class="text-on-surface-variant/60 text-xs block">Destino: {{ e.therapist.username | personLabel }}</span>
               }
               <div class="mt-1 flex items-center gap-2">
                 @if (e.method) {
@@ -1413,7 +1413,7 @@
       <select [(ngModel)]="createContractForm.patient_id" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary text-sm">
         <option [ngValue]="null">Seleccionar paciente</option>
         @for (p of patientsList; track p.id) {
-        <option [ngValue]="p.id">{{ p.username }}</option>
+        <option [ngValue]="p.id">{{ p.username | personLabel: p.id }}</option>
         }
       </select>
     </div>
@@ -1510,7 +1510,7 @@
         Cuota #{{ payInstallmentForm.installment_number }} • Vence: {{ payInstallmentForm.due_date | date:'dd/MM/yyyy' }}
       </p>
       @if (payInstallmentForm.contract_name) {
-      <p class="text-[10px] text-primary/70 mt-1">{{ payInstallmentForm.contract_name }} — {{ payInstallmentForm.patient_name }}</p>
+      <p class="text-[10px] text-primary/70 mt-1">{{ payInstallmentForm.contract_name }} — {{ payInstallmentForm.patient_name | personLabel }}</p>
       }
     </div>
     <div>
@@ -1580,7 +1580,7 @@
   <div class="space-y-4">
     <div class="bg-error/10 border border-error/20 rounded-lg p-3">
       <p class="text-xs font-bold text-error">{{ cancelContractForm.contract_name }}</p>
-      <p class="text-sm text-on-surface">Paciente: {{ cancelContractForm.patient_name }}</p>
+      <p class="text-sm text-on-surface">Paciente: {{ cancelContractForm.patient_name | personLabel }}</p>
     </div>
     <div>
       <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Motivo *</label>

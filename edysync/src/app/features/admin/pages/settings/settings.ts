@@ -5,7 +5,7 @@ import type { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { forkJoin, Subscription } from 'rxjs';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ThemeService, type ThemeSchedule } from '../../../../core/services/theme.service';
-import { GlobalSettingsService, COLOR_PRESETS, type FontSize } from '../../../../core/services/global-settings.service';
+import { GlobalSettingsService, COLOR_PRESETS, type FontSize, type PersonDisplay } from '../../../../core/services/global-settings.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
@@ -127,6 +127,7 @@ export class Settings implements OnInit, OnDestroy {
   get primaryColor() { return this.settings.primaryColor; }
   get hideCharts() { return this.settings.hideCharts; }
   get sidebarDisplay() { return this.settings.sidebarDisplay; }
+  get personDisplay() { return this.settings.personDisplay; }
   get notifPrefs() { return this.notifService.preferences() ?? this.notifService.defaultPrefs; }
 
 
@@ -203,6 +204,10 @@ export class Settings implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
+
+  setPersonDisplay(mode: PersonDisplay): void {
+    this.settings.setPersonDisplay(mode);
+  }
 
   setSidebarDisplay(mode: 'icons' | 'labels'): void {
     this.settings.setSidebarDisplay(mode);

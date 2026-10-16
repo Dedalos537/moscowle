@@ -14,13 +14,15 @@ import { KanbanService, KanbanTask } from '../../../../core/services/kanban.serv
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { COLUMN_LABELS, KanbanViewer, PRIORITY_META, ROLE_LABELS, canManageTask, formatShortDate, therapyLabel } from '../kanban-labels';
+import { PersonLabelPipe } from '../../../pipes/person-label.pipe';
+import { PeopleService } from '../../../../core/services/people.service';
 
 type Urgency = 'normal' | 'warning' | 'expired';
 
 @Component({
   selector: 'app-kanban-task-card',
   standalone: true,
-  imports: [],
+  imports: [PersonLabelPipe],
   templateUrl: './kanban-task-card.html',
   styleUrl: './kanban-task-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,6 +48,7 @@ export class KanbanTaskCardComponent implements OnInit, OnDestroy {
   private confirmService = inject(ConfirmService);
   private toast = inject(ToastService);
   private cdr = inject(ChangeDetectorRef);
+  readonly people = inject(PeopleService);
   private timerInterval: ReturnType<typeof setInterval> | null = null;
 
   private allColumns: KanbanTask['column'][] = ['todo', 'in-progress', 'review', 'done'];
