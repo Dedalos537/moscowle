@@ -5,13 +5,14 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { Modal } from '../../modal/modal';
 import { Button } from '../../button/button';
 import { COLUMN_LABELS, KanbanViewer, PRIORITY_META, ROLE_LABELS, canManageTask, formatBytes, formatShortDate, therapyLabel } from '../kanban-labels';
+import { PersonLabelPipe } from '../../../pipes/person-label.pipe';
 
 const MAX_BYTES = 20 * 1024 * 1024;
 
 @Component({
   selector: 'app-kanban-detail-modal',
   standalone: true,
-  imports: [Modal, Button],
+  imports: [Modal, Button, PersonLabelPipe],
   templateUrl: './kanban-detail-modal.html',
   styleUrl: './kanban-detail-modal.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

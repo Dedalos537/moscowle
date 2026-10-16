@@ -6,6 +6,8 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   inject,
+  signal,
+  computed,
 } from '@angular/core';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { KanbanTaskCardComponent } from '../kanban-task-card/kanban-task-card';
@@ -15,6 +17,8 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { KanbanViewer, canManageTask } from '../kanban-labels';
 import { KanbanService, KanbanTask, KanbanAssignee, KanbanFilters } from '../../../../core/services/kanban.service';
+import { PeopleService, normalize } from '../../../../core/services/people.service';
+import { PersonLabelPipe } from '../../../pipes/person-label.pipe';
 
 export interface KanbanColumn {
   id: string;
@@ -31,6 +35,7 @@ export interface KanbanColumn {
     KanbanTaskCardComponent,
     KanbanCreateModalComponent,
     KanbanDetailModalComponent,
+    PersonLabelPipe,
   ],
   templateUrl: './kanban-board.html',
   styleUrl: './kanban-board.scss',
@@ -73,6 +78,23 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
   private auth = inject(AuthService);
   private toast = inject(ToastService);
+  private people = inject(PeopleService);
+
+  /** Búsqueda por nombre, código o correo de quien tiene o creó la tarea (o por su título). */
+  readonly personQuery = signal('');
+  readonly searching = computed(() => this.personQuery().trim().length > 0);
+
+  /** Con búsqueda activa se ven solo las coincidencias y se pausa el arrastre (los índices no cuadrarían). */
+  visibleTasks(col: KanbanColumn): KanbanTask[] {
+    const q = this.personQuery();
+    if (!q.trim()) return col.tasks;
+    return col.tasks.filter(
+      (t) =>
+        this.people.matches(q, { id: t.assigned_to_id, name: t.assigned_to_name }) ||
+        this.people.matches(q, { id: t.created_by_id, name: t.created_by_name }) ||
+        normalize(t.title).includes(normalize(q)),
+    );
+  }
   private authSub: { unsubscribe(): void } | null = null;
   private pollingInterval: ReturnType<typeof setInterval> | null = null;
 

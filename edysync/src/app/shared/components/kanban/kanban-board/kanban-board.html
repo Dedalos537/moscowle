@@ -23,6 +23,11 @@
   </header>
 
   <div class="kb-filters" role="group" aria-label="Filtros del tablero">
+    <label class="kb-search">
+      <span class="sr-only">Buscar tareas por persona</span>
+      <input type="search" placeholder="Buscar por nombre, código o correo…" [value]="personQuery()"
+             (input)="personQuery.set($any($event.target).value)" />
+    </label>
     @if (isAdminView) {
       <div class="kb-scope" role="group" aria-label="Alcance del tablero">
         <button type="button" class="kb-scope__btn" [class.is-active]="filters.scope === 'all'"
@@ -39,7 +44,7 @@
                 (change)="onFilterChange('assigned_to', $any($event.target).value)">
           <option value="">Todos los usuarios</option>
           <option value="unassigned">Sin asignar</option>
-          @for (u of filteredAssignees; track u.id) { <option [value]="u.id">{{ u.username }}</option> }
+          @for (u of filteredAssignees; track u.id) { <option [value]="u.id">{{ u.username | personLabel: u.id }}</option> }
         </select>
       }
     }
@@ -82,7 +87,7 @@
             <span class="kanban-column__dot" aria-hidden="true"></span>
             {{ col.title }}
           </h3>
-          <span class="kanban-column__count" [class.is-empty]="col.tasks.length === 0" [attr.aria-label]="col.tasks.length + ' tareas'">{{ col.tasks.length }}</span>
+          <span class="kanban-column__count" [class.is-empty]="visibleTasks(col).length === 0" [attr.aria-label]="visibleTasks(col).length + ' tareas'">{{ visibleTasks(col).length }}</span>
         </div>
 
         <div
@@ -90,7 +95,7 @@
           [cdkDropListData]="col.tasks"
           [id]="col.id"
           [cdkDropListConnectedTo]="getConnectedLists(col.id)"
-          [cdkDropListDisabled]="!canWrite"
+          [cdkDropListDisabled]="!canWrite || searching()"
           (cdkDropListDropped)="onDrop($event)"
           class="kanban-column__body"
         >
@@ -98,7 +103,7 @@
             <div class="kb-skeleton" aria-hidden="true"></div>
             <div class="kb-skeleton kb-skeleton--short" aria-hidden="true"></div>
           }
-          @for (task of col.tasks; track task.id) {
+          @for (task of visibleTasks(col); track task.id) {
             <app-kanban-task-card
               cdkDrag
               [cdkDragDisabled]="!canWrite"

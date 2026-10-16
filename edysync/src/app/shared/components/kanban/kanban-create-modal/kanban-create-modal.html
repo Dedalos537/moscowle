@@ -41,7 +41,7 @@
                 [attr.aria-label]="isEdit ? 'Asignada a' : 'Usuario asignado'" [attr.id]="isEdit ? 'kb-audience' : null">
           <option [ngValue]="null">{{ assigneeEmptyLabel }}</option>
           @for (user of users; track user.id) {
-            <option [ngValue]="user.id">{{ user.username }} · {{ roleLabel(user.role) }}</option>
+            <option [ngValue]="user.id">{{ user.username | personLabel: user.id }} · {{ roleLabel(user.role) }}</option>
           }
         </select>
       } @else if (audience) {

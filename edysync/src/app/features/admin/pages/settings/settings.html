@@ -112,6 +112,25 @@
 
       <div class="setting-divider"></div>
 
+      <!-- Cómo se muestran las personas -->
+      <div class="setting-item">
+        <div class="setting-item__left">
+          <div class="setting-item__icon setting-item__icon--primary">
+            <fa-icon [icon]="['fas', 'user-secret']"></fa-icon>
+          </div>
+          <div class="setting-item__text">
+            <span class="setting-item__label">Mostrar personas</span>
+            <span class="setting-item__desc">{{ personDisplay() === 'code' ? 'Solo el código, sin nombres' : 'Nombre y código' }} · en usuarios, finanzas, reportes, mensajes y kanban. Siempre puedes buscar por nombre, código o correo.</span>
+          </div>
+        </div>
+        <div class="seg" role="group" aria-label="Mostrar personas">
+          <button type="button" class="seg__btn" [class.is-active]="personDisplay() === 'name_code'" [attr.aria-pressed]="personDisplay() === 'name_code'" (click)="setPersonDisplay('name_code')">Nombre y código</button>
+          <button type="button" class="seg__btn" [class.is-active]="personDisplay() === 'code'" [attr.aria-pressed]="personDisplay() === 'code'" (click)="setPersonDisplay('code')">Solo código</button>
+        </div>
+      </div>
+
+      <div class="setting-divider"></div>
+
       <!-- Tamaño de fuente -->
       <div class="setting-item">
         <div class="setting-item__left">

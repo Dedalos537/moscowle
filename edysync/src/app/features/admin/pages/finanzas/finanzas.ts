@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -26,6 +26,8 @@ import {
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { PeopleService } from '../../../../core/services/people.service';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
 import { Alert } from '../../../../shared/components/alert/alert';
 import { AlertService } from '../../../../core/services/alert.service';
 import { ToastService } from '../../../../core/services/toast.service';
@@ -72,13 +74,14 @@ Chart.register(
 @Component({
   selector: 'app-finanzas',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal, SummaryCard, Table, TableCell, MonthRangePicker, Alert],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal, SummaryCard, Table, TableCell, MonthRangePicker, Alert, PersonLabelPipe],
   templateUrl: './finanzas.html',
   styleUrl: './finanzas.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Finanzas implements OnInit, OnDestroy {
+  readonly people = inject(PeopleService);
   readonly Math = Math;
   readonly getCategoryLabel = getCategoryLabel;
   readonly getMethodBadgeClass = getMethodBadgeClass;
@@ -1360,7 +1363,7 @@ export class Finanzas implements OnInit, OnDestroy {
     if (this.patientStatusFilter !== 'all') {
       result = result.filter(p => getPatientStatus(p) === this.patientStatusFilter);
     }
-    if (this.searchQuery) { const q = this.searchQuery.toLowerCase(); result = result.filter((p) => p.username.toLowerCase().includes(q) || p.email.toLowerCase().includes(q)); }
+    if (this.searchQuery) { const q = this.searchQuery; result = result.filter((p) => this.people.matches(q, { id: p.id, name: p.username, email: p.email })); }
     if (this.selectedSedeId) { const sn = this.sedes.find((s) => s.id === this.selectedSedeId)?.name || ''; result = result.filter((p) => p.sede_name === sn); }
     if (this.selectedTherapistId) { const tn = this.therapistsList.find((t) => t.id === this.selectedTherapistId)?.username || ''; result = result.filter((p) => p.therapist_name === tn); }
     if (this.selectedStatus) result = result.filter((p) => getPatientStatus(p) === this.selectedStatus);

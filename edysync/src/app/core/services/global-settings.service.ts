@@ -5,6 +5,8 @@ import { AuthService } from './auth.service';
 
 export type FontSize = 'small' | 'medium' | 'large';
 export type SidebarDisplay = 'icons' | 'labels';
+/** Cómo se muestran las personas en usuarios, finanzas, reportes, mensajes y kanban. */
+export type PersonDisplay = 'name_code' | 'code';
 
 export interface ColorPreset {
   name: string;
@@ -42,6 +44,7 @@ export class GlobalSettingsService {
   sidebarPinned = signal<boolean>(this.loadLocal('edysync_sidebar_pinned') === 'true');
   cursorHalo = signal<boolean>(this.loadLocal('edysync_cursor_halo') !== 'false');
   sidebarDisplay = signal<SidebarDisplay>((this.loadLocal('edysync_sidebar_display') as SidebarDisplay) || 'labels');
+  personDisplay = signal<PersonDisplay>(this.loadLocal('edysync_person_display') === 'code' ? 'code' : 'name_code');
 
   /** Public: re-fetch preferences from API (e.g. after login / auth detection). */
   refreshFromAPI(): void {
@@ -100,6 +103,12 @@ export class GlobalSettingsService {
     this.sidebarDisplay.set(mode);
     this.saveLocal('edysync_sidebar_display', mode);
     this.saveToAPI({ sidebar_display: mode });
+  }
+
+  setPersonDisplay(mode: PersonDisplay): void {
+    this.personDisplay.set(mode);
+    this.saveLocal('edysync_person_display', mode);
+    this.saveToAPI({ person_display: mode });
   }
 
   private applyFontSize(size: FontSize): void {
@@ -245,7 +254,7 @@ export class GlobalSettingsService {
   }
 
   private loadFromAPI(): void {
-    this.http.get<{ font_size: FontSize; primary_color: string; hide_charts: boolean; sidebar_display: SidebarDisplay }>('/api/user/preferences').subscribe({
+    this.http.get<{ font_size: FontSize; primary_color: string; hide_charts: boolean; sidebar_display: SidebarDisplay; person_display?: PersonDisplay }>('/api/user/preferences').subscribe({
       next: (data) => {
         this.zone.run(() => {
           if (data.font_size && data.font_size !== this.fontSize()) {
@@ -266,13 +275,17 @@ export class GlobalSettingsService {
             this.sidebarDisplay.set(data.sidebar_display);
             this.saveLocal('edysync_sidebar_display', data.sidebar_display);
           }
+          if ((data.person_display === 'code' || data.person_display === 'name_code') && data.person_display !== this.personDisplay()) {
+            this.personDisplay.set(data.person_display);
+            this.saveLocal('edysync_person_display', data.person_display);
+          }
         });
       },
       error: () => {},
     });
   }
 
-  private saveToAPI(data: Partial<{ font_size: FontSize; primary_color: string; hide_charts: boolean; sidebar_display: SidebarDisplay }>): void {
+  private saveToAPI(data: Partial<{ font_size: FontSize; primary_color: string; hide_charts: boolean; sidebar_display: SidebarDisplay; person_display: PersonDisplay }>): void {
     this.http.put('/api/user/preferences', data).subscribe({ error: () => {} });
   }
 

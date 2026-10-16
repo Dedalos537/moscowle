@@ -1,5 +1,10 @@
 <ng-template #headerActions>
   <div class="rp-actions" role="group" aria-label="Acciones de reportes">
+    <label class="rp-search">
+      <fa-icon [icon]="['fas', 'magnifying-glass']" aria-hidden="true"></fa-icon>
+      <input type="search" placeholder="Buscar por nombre, código o correo…" aria-label="Buscar personas en los reportes"
+             [ngModel]="personQuery()" (ngModelChange)="personQuery.set($event)" />
+    </label>
     <button type="button" class="rp-btn" (click)="exportCSV()" [disabled]="exporting" title="Descargar los pagos en CSV">
       <fa-icon [icon]="['fas', 'file-arrow-down']" aria-hidden="true"></fa-icon><span>{{ exporting ? 'Exportando…' : 'Exportar pagos' }}</span>
     </button>
@@ -92,9 +97,9 @@
               <tr><th scope="col">Nombre</th><th scope="col" class="rp-num">Sesiones</th><th scope="col">Precisión</th></tr>
             </thead>
             <tbody>
-              @for (t of therapists; track t.id) {
+              @for (t of match(therapists, 'name', 'id', 'email'); track t.id) {
                 <tr>
-                  <td><span class="rp-name">{{ t.name }}</span><span class="rp-mail">{{ t.email }}</span></td>
+                  <td><span class="rp-name">{{ t.name | personLabel: t.id }}</span>@if (people.mode() !== 'code') { <span class="rp-mail">{{ t.email }}</span> }</td>
                   <td class="rp-num">{{ num(t.sessions) }}</td>
                   <td>
                     <span class="rp-bar" [attr.data-level]="level(t.avg_accuracy)">
@@ -122,9 +127,9 @@
               <tr><th scope="col">Nombre</th><th scope="col" class="rp-num">Juegos</th><th scope="col">Precisión</th></tr>
             </thead>
             <tbody>
-              @for (p of patients; track p.id) {
+              @for (p of match(patients, 'name', 'id', 'email'); track p.id) {
                 <tr>
-                  <td><span class="rp-name">{{ p.name }}</span><span class="rp-mail">{{ p.email }}</span></td>
+                  <td><span class="rp-name">{{ p.name | personLabel: p.id }}</span>@if (people.mode() !== 'code') { <span class="rp-mail">{{ p.email }}</span> }</td>
                   <td class="rp-num">{{ num(p.plays) }}</td>
                   <td>
                     <span class="rp-bar" [attr.data-level]="level(p.avg_accuracy)">
@@ -184,9 +189,9 @@
             Top Terapistas
           </h3>
           <div class="space-y-2">
-            @for (t of auditStats?.by_therapist || []; track $index) {
+            @for (t of match(auditStats?.by_therapist, 'name'); track $index) {
               <div class="flex justify-between items-center text-sm p-2 hover:bg-surface-container rounded-lg transition-colors">
-                <span class="font-medium text-on-surface">{{ t.name }}</span>
+                <span class="font-medium text-on-surface">{{ t.name | personLabel }}</span>
                 <span class="rp-chip" [attr.data-level]="level(t.avg_score)">{{ pct(t.avg_score) }}</span>
               </div>
             } @empty {
@@ -264,13 +269,13 @@
             </div>
           } @else if (therapistWeeklyPatients.length > 0) {
             <div class="space-y-2">
-              @for (t of therapistWeeklyPatients; track t.therapist_id) {
+              @for (t of groups(therapistWeeklyPatients); track t.therapist_id) {
                 <div class="rounded-xl border border-border/30 overflow-hidden">
                   <button class="w-full flex items-center justify-between px-4 py-3 bg-surface-container-lowest hover:bg-surface-container-low transition-colors text-left"
                           (click)="toggleTherapist('w-' + t.therapist_id)">
                     <div class="flex items-center gap-3">
                       <fa-icon [icon]="['fas', 'user']" class="text-primary text-sm"></fa-icon>
-                      <span class="text-sm font-bold text-on-surface">{{ t.therapist_name }}</span>
+                      <span class="text-sm font-bold text-on-surface">{{ t.therapist_name | personLabel: t.therapist_id }}</span>
                       <span class="text-xs text-on-surface-variant">{{ (t.patients || []).length }} pacientes</span>
                       <span class="text-xs text-on-surface-variant">{{ t.total_sessions || 0 }} sesiones</span>
                     </div>
@@ -301,9 +306,9 @@
                           </tr>
                         </thead>
                         <tbody>
-                          @for (p of t.patients || []; track p.patient_id || $index) {
+                          @for (p of members(t); track p.patient_id || $index) {
                             <tr class="border-t border-border/10 hover:bg-surface-container-low transition-colors">
-                              <td class="px-4 py-2.5 text-sm text-on-surface">{{ p.patient_name || '—' }}</td>
+                              <td class="px-4 py-2.5 text-sm text-on-surface">{{ p.patient_name | personLabel: p.patient_id }}</td>
                               <td class="px-4 py-2.5 text-sm text-center font-medium text-on-surface">{{ p.sessions_count || 0 }}</td>
                               <td class="px-4 py-2.5 text-center">
                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
@@ -371,13 +376,13 @@
             </div>
           } @else if (monthlyTherapistPatients.length > 0) {
             <div class="space-y-2">
-              @for (entry of monthlyTherapistPatients; track $index) {
+              @for (entry of groups(monthlyTherapistPatients); track $index) {
                 <div class="rounded-xl border border-border/30 overflow-hidden">
                   <button class="w-full flex items-center justify-between px-4 py-3 bg-surface-container-lowest hover:bg-surface-container-low transition-colors text-left"
                           (click)="toggleTherapist('m-' + $index)">
                     <div class="flex items-center gap-3">
                       <fa-icon [icon]="['fas', 'user']" class="text-info text-sm"></fa-icon>
-                      <span class="text-sm font-bold text-on-surface">{{ $any(entry).therapist_name || 'Terapeuta' }}</span>
+                      <span class="text-sm font-bold text-on-surface">{{ $any(entry).therapist_name | personLabel: $any(entry).therapist_id }}</span>
                       <span class="text-xs text-on-surface-variant">{{ (entry.patients || []).length }} pacientes</span>
                       <span class="text-xs text-on-surface-variant">{{ entry.total_sessions || 0 }} sesiones</span>
                     </div>
@@ -407,9 +412,9 @@
                           </tr>
                         </thead>
                         <tbody>
-                          @for (p of entry.patients; track p.patient_id) {
+                          @for (p of members(entry); track p.patient_id) {
                             <tr class="border-t border-border/10 hover:bg-surface-container-low transition-colors">
-                              <td class="px-4 py-2.5 text-sm text-on-surface">{{ p.patient_name || '—' }}</td>
+                              <td class="px-4 py-2.5 text-sm text-on-surface">{{ p.patient_name | personLabel: p.patient_id }}</td>
                               <td class="px-4 py-2.5 text-sm text-center font-medium text-on-surface">{{ p.sessions_count || 0 }}</td>
                               <td class="px-4 py-2.5 text-center">
                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
@@ -462,13 +467,13 @@
             </div>
           } @else if (quarterlyTherapistPatients.length > 0) {
             <div class="space-y-2">
-              @for (entry of quarterlyTherapistPatients; track $index) {
+              @for (entry of groups(quarterlyTherapistPatients); track $index) {
                 <div class="rounded-xl border border-border/30 overflow-hidden">
                   <button class="w-full flex items-center justify-between px-4 py-3 bg-surface-container-lowest hover:bg-surface-container-low transition-colors text-left"
                           (click)="toggleTherapist('q-' + $index)">
                     <div class="flex items-center gap-3">
                       <fa-icon [icon]="['fas', 'user']" class="text-success text-sm"></fa-icon>
-                      <span class="text-sm font-bold text-on-surface">{{ $any(entry).therapist_name || 'Terapeuta' }}</span>
+                      <span class="text-sm font-bold text-on-surface">{{ $any(entry).therapist_name | personLabel: $any(entry).therapist_id }}</span>
                       <span class="text-xs text-on-surface-variant">{{ (entry.patients || []).length }} pacientes</span>
                       <span class="text-xs text-on-surface-variant">{{ entry.total_sessions || 0 }} sesiones</span>
                     </div>
@@ -498,9 +503,9 @@
                           </tr>
                         </thead>
                         <tbody>
-                          @for (p of entry.patients; track p.patient_id) {
+                          @for (p of members(entry); track p.patient_id) {
                             <tr class="border-t border-border/10 hover:bg-surface-container-low transition-colors">
-                              <td class="px-4 py-2.5 text-sm text-on-surface">{{ p.patient_name || '—' }}</td>
+                              <td class="px-4 py-2.5 text-sm text-on-surface">{{ p.patient_name | personLabel: p.patient_id }}</td>
                               <td class="px-4 py-2.5 text-sm text-center font-medium text-on-surface">{{ p.sessions_count || 0 }}</td>
                               <td class="px-4 py-2.5 text-center">
                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
@@ -567,11 +572,11 @@
                 </tr>
               </thead>
               <tbody>
-                @for (d of dailyReports; track d.id) {
+                @for (d of matchAny(dailyReports, 'therapist_name', 'patient_name'); track d.id) {
                   <tr class="border-t border-border/20 hover:bg-surface-container-low transition-colors">
                     <td class="px-3 py-2 text-xs text-on-surface">{{ d.date | date:'dd/MM' }}</td>
-                    <td class="px-3 py-2 text-xs text-on-surface-variant">{{ d.therapist_name }}</td>
-                    <td class="px-3 py-2 text-xs text-on-surface-variant">{{ d.patient_name }}</td>
+                    <td class="px-3 py-2 text-xs text-on-surface-variant">{{ d.therapist_name | personLabel }}</td>
+                    <td class="px-3 py-2 text-xs text-on-surface-variant">{{ d.patient_name | personLabel }}</td>
                     <td class="px-3 py-2 text-xs text-center font-medium text-on-surface">{{ d.sessions_count }}</td>
                     <td class="px-3 py-2 text-xs text-right">
                       <span class="rp-chip" [attr.data-level]="level(d.avg_score)">{{ pct(d.avg_score) }}</span>
@@ -604,10 +609,10 @@
           </div>
         } @else if (therapistEfficiency?.breakdown?.length > 0) {
           <div class="rp-eff-list">
-            @for (e of therapistEfficiency.breakdown; track e.therapist_id) {
+            @for (e of match(therapistEfficiency.breakdown, 'name', 'therapist_id'); track e.therapist_id) {
               <div class="rp-eff">
                 <div class="rp-eff__who">
-                  <span class="rp-name">{{ e.name }}</span>
+                  <span class="rp-name">{{ e.name | personLabel: e.therapist_id }}</span>
                   <span class="rp-mail">{{ e.completed || 0 }} de {{ e.total_sessions || 0 }} sesiones completadas · auditoría {{ pct(e.avg_accuracy) }}</span>
                 </div>
                 <span class="rp-bar" [attr.data-level]="level(e.efficiency)">
@@ -679,7 +684,7 @@
             <ol class="ai-top">
               @for (t of m.top_therapists; track t.name) {
                 <li>
-                  <span class="ai-top__name">{{ t.name }}</span>
+                  <span class="ai-top__name">{{ t.name | personLabel }}</span>
                   <span class="ai-top__track"><span class="ai-top__fill" [style.width.%]="(t.sessions / topMax) * 100"></span></span>
                   <span class="ai-top__value">{{ num(t.sessions) }}</span>
                 </li>

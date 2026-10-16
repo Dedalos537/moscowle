@@ -6,6 +6,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { Modal } from '../../modal/modal';
 import { Button } from '../../button/button';
 import { ROLE_LABELS, THERAPY_LABELS } from '../kanban-labels';
+import { PersonLabelPipe } from '../../../pipes/person-label.pipe';
 
 interface SelectOption<T = string | number | null> {
   value: T;
@@ -15,7 +16,7 @@ interface SelectOption<T = string | number | null> {
 @Component({
   selector: 'app-kanban-create-modal',
   standalone: true,
-  imports: [FormsModule, Modal, Button],
+  imports: [FormsModule, Modal, Button, PersonLabelPipe],
   templateUrl: './kanban-create-modal.html',
   styleUrl: './kanban-create-modal.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
