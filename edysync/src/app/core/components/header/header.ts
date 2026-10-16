@@ -15,6 +15,7 @@ import { NotificationService } from '../../services/notification.service';
 import { CATEGORY_ICONS, CATEGORY_COLORS, CATEGORY_LABELS, NotificationGroup } from '../../models/notification';
 import { PreferencesMenu } from '../../../shared/components/preferences-menu/preferences-menu';
 import { Avatar } from '../../../shared/components/avatar/avatar';
+import { SplashService } from '../../services/splash.service';
 
 @Component({
   selector: 'app-header',
@@ -25,6 +26,7 @@ import { Avatar } from '../../../shared/components/avatar/avatar';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Header implements OnInit, OnDestroy {
+  private splash = inject(SplashService);
   showNotifications = false;
   showUserMenu = false;
   showLogoutWarning = false;
@@ -244,18 +246,21 @@ export class Header implements OnInit, OnDestroy {
 
     this.showLogoutWarning = false;
     this.recordingService.forceStopAndLogout();
-    this.subs.add(this.authService.logout().subscribe({
-      next: () => {
-        this.router.navigate(['/auth/login'], { queryParams: { logout: 'success' } });
-      },
-      error: (err) => {
-        this.error = err.message;
-        this.cdr.markForCheck();
-        localStorage.removeItem('user');
-        localStorage.removeItem('csrf_token');
-        this.router.navigate(['/auth/login'], { queryParams: { logout: 'success' } });
-      },
-    }));
+    // La silueta se cierra sobre el panel, se cierra la sesión y el logo se abre de nuevo sobre el login.
+    const toLogin = () =>
+      this.router.navigate(['/auth/login'], { queryParams: { logout: 'success' } }).finally(() => this.splash.reveal());
+    this.splash.closeThen(() => {
+      this.subs.add(this.authService.logout().subscribe({
+        next: () => toLogin(),
+        error: (err) => {
+          this.error = err.message;
+          this.cdr.markForCheck();
+          localStorage.removeItem('user');
+          localStorage.removeItem('csrf_token');
+          toLogin();
+        },
+      }));
+    });
   }
 
   cancelLogout() {

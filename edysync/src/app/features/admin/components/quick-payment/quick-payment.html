@@ -1,39 +1,41 @@
-<div class="relative">
-  <div class="flex gap-2 w-full">
-    <div class="flex-grow relative">
-      <div class="relative">
-        <fa-icon [icon]="['fas', 'magnifying-glass']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-primary/60 text-sm"></fa-icon>
-        <input
-          [(ngModel)]="searchQuery"
-          (input)="onSearchInput($any($event.target).value)"
-          (focus)="onFocus()"
-          (blur)="onBlur()"
-          (keydown)="onKeydown($event)"
-          placeholder="Buscar paciente por nombre, email o telefono..."
-          class="w-full bg-white/20 text-on-primary placeholder-white/60 rounded-xl pl-9 pr-4 py-2.5 text-sm border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/40 transition-all"
-        >
-        @if (searchQuery && !searching) {
-          <button (click)="clearSearch()" class="absolute right-3 top-1/2 -translate-y-1/2 text-on-primary/60 hover:text-on-primary">
-            <fa-icon [icon]="['fas', 'xmark']" class="text-sm"></fa-icon>
-          </button>
-        }
-        @if (searching) {
-          <div class="absolute right-3 top-1/2 -translate-y-1/2">
-            <app-spinner size="sm" colorClass="text-on-primary"></app-spinner>
-          </div>
-        }
-      </div>
-
-      @if (showDropdown && searchResults.length > 0) {
-        <div class="absolute z-50 left-0 right-0 mt-1 bg-surface-container-high rounded-xl shadow-soft border border-border/30 overflow-hidden">
+<div class="qp">
+  <div class="qp-field">
+    <label class="qp-label" for="qp-search">Paciente</label>
+    <p id="qp-hint" class="qp-hint">Busca por nombre, código, correo o teléfono y elige a quién cobrar.</p>
+    <div class="qp-input-wrap">
+      <fa-icon [icon]="['fas', 'magnifying-glass']" class="qp-input-icon" aria-hidden="true"></fa-icon>
+      <input
+        id="qp-search"
+        [(ngModel)]="searchQuery"
+        (input)="onSearchInput($any($event.target).value)"
+        (focus)="onFocus()"
+        (blur)="onBlur()"
+        (keydown)="onKeydown($event)"
+        placeholder="Ej.: PCJP1 o Valeria Quispe"
+        aria-describedby="qp-hint"
+        autocomplete="off"
+        class="qp-input"
+      >
+      @if (searchQuery && !searching) {
+        <button type="button" (click)="clearSearch()" class="qp-clear" aria-label="Borrar búsqueda">
+          <fa-icon [icon]="['fas', 'xmark']" aria-hidden="true"></fa-icon>
+        </button>
+      }
+      @if (searching) {
+        <span class="qp-spin"><app-spinner size="sm" colorClass="text-primary"></app-spinner></span>
+      }
+    </div>
+@if (showDropdown && searchResults.length > 0) {
+        <div class="qp-results" role="listbox" aria-label="Pacientes encontrados">
           @for (patient of searchResults; track patient.id; let i = $index) {
             <button
               type="button"
               (click)="selectPatient(patient)"
               (mouseenter)="selectedIndex = i"
-              class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors"
-              [class.bg-primary-container/15]="selectedIndex === i"
-              [class.hover:bg-surface-container-low]="selectedIndex !== i"
+              role="option"
+              [attr.aria-selected]="selectedIndex === i"
+              class="qp-option"
+              [class.is-active]="selectedIndex === i"
             >
               <div class="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                 <fa-icon [icon]="['fas', 'user']" class="text-primary text-sm"></fa-icon>
@@ -49,16 +51,13 @@
       }
 
       @if (showDropdown && searchResults.length === 0 && searchQuery.length >= 2 && !searching) {
-        <div class="absolute z-50 left-0 right-0 mt-1 bg-surface-container-high rounded-xl shadow-soft border border-border/30 p-4 text-center">
-          <p class="text-sm text-on-surface-variant">No se encontraron pacientes</p>
-        </div>
+        <p class="qp-empty" role="status">No encontramos pacientes con «{{ searchQuery }}».</p>
       }
-    </div>
   </div>
 </div>
 
 @if (showPaymentForm) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" (click)="closePaymentForm()">
+  <div class="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/50" (click)="closePaymentForm()">
     <div class="bg-surface rounded-xl shadow-soft border border-border/30 w-full max-w-lg max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
       <div class="sticky top-0 bg-surface z-10 flex items-center justify-between p-5 border-b border-border/20">
         <div>

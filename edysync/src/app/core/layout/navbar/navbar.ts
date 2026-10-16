@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -7,6 +7,7 @@ import { ThemeService } from '../../services/theme.service';
 import { Observable, firstValueFrom, Subscription } from 'rxjs';
 import { ConfirmService } from '../../services/confirm.service';
 import { Button } from '../../../shared/components/button/button';
+import { SplashService } from '../../services/splash.service';
 
 @Component({
   selector: 'app-navbar',
@@ -17,6 +18,7 @@ import { Button } from '../../../shared/components/button/button';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Navbar implements OnInit, OnDestroy {
+  private splash = inject(SplashService);
   user$: Observable<any>;
   theme: string = 'light';
   showHelp = false;
@@ -52,8 +54,9 @@ export class Navbar implements OnInit, OnDestroy {
       icon: ['fas', 'right-from-bracket'],
     }));
     if (!confirmed) return;
-    this.authService.logout().subscribe(() => {
-      this.router.navigate(['/auth/login']);
+    this.splash.closeThen(() => {
+      const toLogin = () => this.router.navigate(['/auth/login']).finally(() => this.splash.reveal());
+      this.authService.logout().subscribe({ next: toLogin, error: toLogin });
     });
   }
 

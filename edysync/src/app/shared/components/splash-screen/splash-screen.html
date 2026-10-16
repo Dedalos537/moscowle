@@ -1,5 +1,5 @@
 @if (phase() !== 'done') {
-  <div class="splash" [class.splash--reveal]="phase() === 'reveal'" [style.--sil]="silhouette" [style.--logo]="logo"
+  <div class="splash" [class.splash--reveal]="phase() === 'reveal'" [class.splash--closing]="phase() === 'closing'" [style.--sil]="silhouette" [style.--logo]="logo"
        (animationend)="onAnimationEnd($event)" role="status" [attr.aria-label]="phase() === 'cover' ? 'Cargando Centro Juan Pablo II' : null">
     <span class="splash__logo" aria-hidden="true"></span>
   </div>
