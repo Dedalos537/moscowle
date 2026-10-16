@@ -30,31 +30,84 @@
       <button type="button" class="sd-ghost" (click)="openTargets()" [disabled]="!scorecard()">
         <fa-icon [icon]="['fas', 'bullseye']" aria-hidden="true"></fa-icon> Metas
       </button>
+      <button type="button" class="sd-compare" [class.is-on]="compareMode()" [attr.aria-pressed]="compareMode()"
+              [disabled]="comparable() < 2" (click)="toggleCompare()"
+              [title]="comparable() < 2 ? 'Hace falta al menos dos sedes activas para comparar' : ''">
+        <fa-icon [icon]="['fas', compareMode() ? 'list' : 'table-columns']" aria-hidden="true"></fa-icon>
+        {{ compareMode() ? 'Ver por sede' : 'Comparar sedes' }}
+      </button>
     </div>
   </div>
 
-  <!-- Tarjetas -->
+  <!-- Sedes: un desplegable por sede o la comparación de todas -->
   @if (loading()) {
-    <div class="sd-grid" aria-busy="true">
-      @for (i of [1, 2, 3]; track i) { <div class="sd-skel"></div> }
+    <div class="sd-list" aria-busy="true">
+      @for (i of [1, 2]; track i) { <div class="sd-skel sd-skel--row"></div> }
     </div>
   } @else if (loadError()) {
     <div class="sd-empty" role="alert">
       <p class="sd-empty__title">No se pudieron cargar las sedes</p>
       <app-button variant="secondary" label="Reintentar" [icon]="['fas', 'rotate-right']" (clicked)="loadSedes()"></app-button>
     </div>
+  } @else if (compareMode()) {
+    <section class="sd-compare-view" aria-label="Comparación de sedes">
+      @if (scoreError(); as err) {
+        <div class="sd-empty" role="alert">
+          <p class="sd-empty__title">{{ err }}</p>
+          <app-button variant="secondary" label="Reintentar" [icon]="['fas', 'rotate-right']" (clicked)="loadScorecard()"></app-button>
+        </div>
+      } @else if (compareData(); as sc) {
+        @if (sc.sedes.length) {
+          <div class="sd-scorecard" [class.is-refreshing]="scoreLoading()" [attr.aria-busy]="scoreLoading()">
+            <app-sede-scorecard [data]="sc" [sedeId]="null" [showChips]="false"
+              [heading]="'Comparación de ' + sc.sedes.length + ' sedes'" (sedeChange)="openFromScorecard($event)" />
+          </div>
+        } @else {
+          <div class="sd-empty">
+            <p class="sd-empty__title">Ninguna sede activa coincide con «{{ searchQuery() }}»</p>
+            <app-button variant="ghost" label="Limpiar búsqueda" (clicked)="searchQuery.set('')"></app-button>
+          </div>
+        }
+      } @else {
+        <div class="sd-skel sd-skel--wide" aria-busy="true" aria-label="Calculando la comparación"></div>
+      }
+    </section>
   } @else {
-    <div class="sd-grid">
+    <div class="sd-list">
       @for (sede of filteredSedes(); track sede.id) {
-        <app-sede-card
-          [sede]="sede"
-          [score]="scoreById().get(sede.id) ?? null"
-          [selected]="selectedId() === sede.id"
-          [loading]="scoreLoading()"
-          (select)="focusSede($event)"
-          (edit)="openEditDrawer($event)"
-          (toggle)="toggleActive($event)"
-        />
+        <section class="sd-item" [id]="'sede-' + sede.id" [class.is-open]="isOpen(sede.id)">
+          <app-sede-card
+            [sede]="sede"
+            [score]="scoreById().get(sede.id) ?? null"
+            [loading]="scoreLoading()"
+            [expanded]="isOpen(sede.id)"
+            [controls]="'sede-panel-' + sede.id"
+            (select)="toggleOpen($event.id)"
+            (edit)="openEditDrawer($event)"
+            (toggle)="toggleActive($event)"
+          />
+          @if (sede.active && isOpen(sede.id)) {
+            <div class="sd-panel" [id]="'sede-panel-' + sede.id" role="region" [attr.aria-label]="'Scorecard de ' + sede.name">
+              @if (scoreError(); as err) {
+                <div class="sd-empty" role="alert">
+                  <p class="sd-empty__title">{{ err }}</p>
+                  <app-button variant="secondary" label="Reintentar" [icon]="['fas', 'rotate-right']" (clicked)="loadScorecard()"></app-button>
+                </div>
+              } @else if (scorecard(); as sc) {
+                @if (scoreById().has(sede.id)) {
+                  <div class="sd-scorecard" [class.is-refreshing]="scoreLoading()" [attr.aria-busy]="scoreLoading()">
+                    <app-sede-scorecard [data]="sc" [sedeId]="sede.id" [showChips]="false"
+                      [heading]="'Balanced Scorecard · ' + sede.name" (sedeChange)="openFromScorecard($event)" />
+                  </div>
+                } @else {
+                  <p class="sd-panel__note">Esta sede todavía no tiene datos en el periodo elegido.</p>
+                }
+              } @else {
+                <div class="sd-skel sd-skel--wide" aria-busy="true" aria-label="Calculando el scorecard"></div>
+              }
+            </div>
+          }
+        </section>
       } @empty {
         <div class="sd-empty">
           @if (searchQuery()) {
@@ -69,24 +122,6 @@
       }
     </div>
   }
-
-  <!-- Balanced Scorecard -->
-  <div #scorecardAnchor class="sd-anchor">
-    @if (scoreError(); as err) {
-      <div class="sd-empty" role="alert">
-        <p class="sd-empty__title">{{ err }}</p>
-        <app-button variant="secondary" label="Reintentar" [icon]="['fas', 'rotate-right']" (clicked)="loadScorecard()"></app-button>
-      </div>
-    } @else if (scorecard(); as sc) {
-      @if (sc.sedes.length) {
-        <div class="sd-scorecard" [class.is-refreshing]="scoreLoading()" [attr.aria-busy]="scoreLoading()">
-          <app-sede-scorecard [data]="sc" [sedeId]="selectedId()" (sedeChange)="chooseSede($event)" />
-        </div>
-      }
-    } @else if (scoreLoading()) {
-      <div class="sd-skel sd-skel--wide" aria-busy="true" aria-label="Calculando el scorecard"></div>
-    }
-  </div>
 </div>
 
 <app-drawer [isOpen]="showCreateDrawer()" title="Nueva sede" [icon]="['fas', 'location-dot']" (close)="showCreateDrawer.set(false)" size="lg">

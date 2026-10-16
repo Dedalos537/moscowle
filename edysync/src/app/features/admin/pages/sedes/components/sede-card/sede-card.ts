@@ -3,7 +3,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Sede, SedeScore } from '../../../../../../core/models/sede';
 import { fmtValue, scoreTone } from '../../kpi-format';
 
-/** Tarjeta de una sede: cifras del periodo elegido y acciones. Tocarla la muestra en el scorecard. */
+/** Tarjeta de una sede: cifras del periodo elegido y acciones. En la página de sedes encabeza su desplegable. */
 @Component({
   selector: 'app-sede-card',
   standalone: true,
@@ -17,6 +17,10 @@ export class SedeCard {
   score = input<SedeScore | null>(null);
   selected = input(false);
   loading = input(false);
+  /** Encabezado de un desplegable: `true`/`false` muestra el chevrón y `aria-expanded`; `null` = tarjeta normal. */
+  expanded = input<boolean | null>(null);
+  /** Id del panel que abre (para `aria-controls`). */
+  controls = input<string | null>(null);
   select = output<Sede>();
   edit = output<Sede>();
   toggle = output<Sede>();

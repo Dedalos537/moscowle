@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ElementRef, computed, signal, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, computed, signal, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription, firstValueFrom } from 'rxjs';
@@ -29,7 +29,6 @@ interface TargetField {
 })
 export class Sedes implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<unknown>;
-  @ViewChild('scorecardAnchor') scorecardAnchor?: ElementRef<HTMLElement>;
 
   private headerService = inject(HeaderService);
   private adminService = inject(AdminService);
@@ -53,8 +52,11 @@ export class Sedes implements OnInit, OnDestroy {
   readonly scorecard = signal<Scorecard | null>(null);
   readonly scoreLoading = signal(true);
   readonly scoreError = signal<string | null>(null);
-  /** Sede mostrada en el scorecard; `null` = comparar todas. */
-  readonly selectedId = signal<number | null>(null);
+  /** Sedes con su desplegable abierto (pueden ser varias a la vez). */
+  readonly openIds = signal<ReadonlySet<number>>(new Set());
+  /** «Comparar sedes»: una sola tabla con todas las sedes activas lado a lado. */
+  readonly compareMode = signal(false);
+  private openedFirst = false;
 
   readonly activeCount = computed(() => this.sedes().filter((s) => s.active).length);
   readonly filteredSedes = computed(() => {
@@ -65,6 +67,15 @@ export class Sedes implements OnInit, OnDestroy {
     return list.filter((s) => s.name.toLowerCase().includes(q) || (s.address ?? '').toLowerCase().includes(q));
   });
   readonly scoreById = computed(() => new Map((this.scorecard()?.sedes ?? []).map((s) => [s.id, s])));
+  /** Sedes que entran en la comparación (las del scorecard, es decir, las activas). */
+  readonly comparable = computed(() => this.scorecard()?.sedes.length ?? this.activeCount());
+  /** El mismo scorecard, filtrado por la búsqueda: la comparación respeta los mismos filtros que la lista. */
+  readonly compareData = computed(() => {
+    const sc = this.scorecard();
+    if (!sc) return null;
+    const visible = new Set(this.filteredSedes().map((s) => s.id));
+    return { ...sc, sedes: sc.sedes.filter((s) => visible.has(s.id)) };
+  });
 
   // Crear / editar
   readonly showCreateDrawer = signal(false);
@@ -118,6 +129,7 @@ export class Sedes implements OnInit, OnDestroy {
         next: (data) => {
           this.sedes.set(data);
           this.loading.set(false);
+          this.openFirstOnce();
         },
         error: () => {
           this.loading.set(false);
@@ -135,9 +147,7 @@ export class Sedes implements OnInit, OnDestroy {
       next: (sc) => {
         this.scorecard.set(sc);
         this.scoreLoading.set(false);
-        const id = this.selectedId();
-        if (id !== null && !sc.sedes.some((s) => s.id === id)) this.selectedId.set(sc.sedes[0]?.id ?? null);
-        if (id === null && !this.compareChosen) this.selectedId.set(sc.sedes[0]?.id ?? null);
+        if (sc.sedes.length < 2) this.compareMode.set(false);
       },
       error: (e) => {
         this.scoreLoading.set(false);
@@ -146,24 +156,49 @@ export class Sedes implements OnInit, OnDestroy {
     });
   }
 
-  private compareChosen = false;
-
   setPeriod(p: ScorecardPeriod) {
     if (p === this.period()) return;
     this.period.set(p);
     this.loadScorecard();
   }
 
-  chooseSede(id: number | null) {
-    this.compareChosen = id === null;
-    this.selectedId.set(id);
+  isOpen(id: number): boolean {
+    return this.openIds().has(id);
   }
 
-  /** Tocar una tarjeta muestra esa sede en el scorecard y lleva la vista hasta él. */
-  focusSede(sede: Sede) {
-    this.chooseSede(sede.id);
+  toggleOpen(id: number) {
+    this.openIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  toggleCompare() {
+    this.compareMode.update((on) => !on);
+  }
+
+  /** Desde la comparación o el ranking de otra sede: abre esa sede en la lista y lleva la vista hasta ella. */
+  openFromScorecard(id: number | null) {
+    if (id == null) {
+      this.compareMode.set(true);
+      return;
+    }
+    this.compareMode.set(false);
+    this.openIds.update((set) => new Set(set).add(id));
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    this.scorecardAnchor?.nativeElement.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    setTimeout(() => document.getElementById('sede-' + id)?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }));
+  }
+
+  /** Al entrar, la primera sede activa ya viene abierta para que el desempeño se vea sin un clic extra. */
+  private openFirstOnce() {
+    if (this.openedFirst) return;
+    const first = this.filteredSedes().find((s) => s.active);
+    if (first) {
+      this.openedFirst = true;
+      this.openIds.set(new Set([first.id]));
+    }
   }
 
   // ── crear / editar ────────────────────────────────────────────────────────
