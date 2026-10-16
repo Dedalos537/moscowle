@@ -58,7 +58,7 @@
 }
 
 // Un desplegable por sede: la tarjeta es el encabezado y el scorecard, el contenido.
-.sd-list { display: grid; gap: 0.875rem; }
+.sd-list { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 0.875rem; }
 .sd-item { scroll-margin-top: 5rem; }
 .sd-panel {
   padding: 1rem; border: 1px solid var(--color-primary); border-top: 0; border-radius: 0 0 1rem 1rem;
