@@ -6,6 +6,7 @@ import { Subscription, interval } from 'rxjs';
 import { ActionRequest, ActionRequestService, REQUEST_KIND_LABEL, RequestStatus } from '../../../../core/services/action-request.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
 
 type Filter = RequestStatus | 'all';
 interface Field {
@@ -17,7 +18,7 @@ interface Field {
 @Component({
   selector: 'app-admin-requests',
   standalone: true,
-  imports: [FormsModule, FontAwesomeModule],
+  imports: [PersonLabelPipe, FormsModule, FontAwesomeModule],
   templateUrl: './requests.html',
   styleUrl: './requests.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -17,12 +17,12 @@
       <div class="flex items-center gap-4">
         <div class="relative">
           <div class="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-2xl font-bold shadow-soft">
-            {{ getInitials(user.username) }}
+            {{ people.initials({ id: user.id, name: user.username }) }}
           </div>
            <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white" [class.bg-success]="user.is_active" [class.bg-error]="!user.is_active"></div>
         </div>
         <div>
-          <h1 class="text-2xl font-bold text-on-surface">{{ user.username }}</h1>
+          <h1 class="text-2xl font-bold text-on-surface">{{ user.username | personLabel: user.id }}</h1>
           <p class="text-on-surface-variant text-sm">{{ user.email }}</p>
           <div class="flex items-center gap-2 mt-1">
              <span class="px-2.5 py-0.5 rounded-full text-xs font-medium" [class.bg-secondary/10]="roleColor === 'purple'" [class.text-secondary]="roleColor === 'purple'" [class.bg-info-container]="roleColor === 'blue'" [class.text-info]="roleColor === 'blue'" [class.bg-success-container]="roleColor === 'green'" [class.text-on-success-container]="roleColor === 'green'">
@@ -50,7 +50,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label class="block text-sm font-medium text-on-surface-variant mb-1">Nombre Completo</label>
-              <p class="text-on-surface font-medium">{{ user.username }}</p>
+              <p class="text-on-surface font-medium">{{ user.username | personLabel: user.id }}</p>
             </div>
             <div>
               <label class="block text-sm font-medium text-on-surface-variant mb-1">Código de Usuario</label>

@@ -39,7 +39,7 @@
                 <fa-icon [icon]="['fas', 'user']" class="text-primary text-sm"></fa-icon>
               </div>
               <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium text-on-surface break-words">{{ patient.username }}</p>
+                <p class="text-sm font-medium text-on-surface break-words">{{ patient.username | personLabel }}</p>
                 <p class="text-xs text-on-surface-variant break-words">{{ patient.email }}{{ patient.phone ? ' | ' + patient.phone : '' }}</p>
               </div>
               <fa-icon [icon]="['fas', 'chevron-right']" class="text-on-surface-variant/40 text-xs"></fa-icon>
@@ -65,7 +65,7 @@
           <h3 class="text-lg font-bold text-on-surface">Registrar Pago</h3>
           @if (selectedPatient) {
             <p class="text-xs text-on-surface-variant mt-0.5">
-              Cobrando a <strong class="text-on-surface">{{ selectedPatient.username }}</strong>
+              Cobrando a <strong class="text-on-surface">{{ selectedPatient.username | personLabel }}</strong>
             </p>
           }
         </div>

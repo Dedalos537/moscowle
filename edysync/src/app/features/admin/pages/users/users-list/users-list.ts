@@ -246,7 +246,7 @@ export class UsersList implements OnInit, OnDestroy {
   scheduleTherapistOptions: SelectOption[] = [{ value: null, label: '— Seleccionar —' }];
 
   private rebuildOptions() {
-    const therapistItems = this.therapists.map((t) => ({ value: t.id, label: t.username }));
+    const therapistItems = this.therapists.map((t) => this.people.option(t.id, t.username, t.email));
     const sedeItems = this.activeSedes.map((s) => ({ value: s.id, label: s.name }));
     this.editTherapistOptions = therapistItems;
     this.therapistOptionsAll = therapistItems;
@@ -258,7 +258,7 @@ export class UsersList implements OnInit, OnDestroy {
     this.groupTherapistOptions = [{ value: null, label: '— Seleccionar terapeuta —' }, ...therapistItems];
     this.scheduleTherapistOptions = [
       { value: null, label: '— Seleccionar —' },
-      ...this.therapists.map((t) => ({ value: t.id, label: t.username + ' (' + t.email + ')' })),
+      ...this.therapists.map((t) => this.people.option(t.id, t.username, t.email)),
     ];
     this.sedeOptions = [{ value: null, label: 'Todas las sedes' }, ...sedeItems];
     this.patientSedeOptions = [{ value: null, label: '— Sin asignar —' }, ...sedeItems];
@@ -473,7 +473,7 @@ export class UsersList implements OnInit, OnDestroy {
     if (this.selectedStatus) parts.push(statusPlural[this.selectedStatus] ?? this.selectedStatus);
     if (this.selectedSedeId) parts.push(`sede ${this.activeSedes.find((s) => s.id === this.selectedSedeId)?.name ?? ''}`.trim());
     if (this.selectedTherapistId === NO_THERAPIST) parts.push('sin terapeuta');
-    else if (this.selectedTherapistId) parts.push(`con ${this.therapists.find((t) => t.id === Number(this.selectedTherapistId))?.username ?? 'terapeuta'}`);
+    else if (this.selectedTherapistId) parts.push(`con ${this.people.label({ id: Number(this.selectedTherapistId), name: this.therapists.find((t) => t.id === Number(this.selectedTherapistId))?.username }, 'terapeuta')}`);
     if (this.searchQuery) parts.push(`«${this.searchQuery}»`);
     return parts.join(' · ');
   }
@@ -1036,7 +1036,7 @@ export class UsersList implements OnInit, OnDestroy {
   async deleteUser(user: UserRow) {
     const confirmed = await firstValueFrom(this.confirmService.confirm({
       title: 'Eliminar Usuario',
-      message: `¿Eliminar a ${user.username} permanentemente?`,
+      message: `¿Eliminar a ${this.people.label({ id: user.id, name: user.username, code: user.login_code })} permanentemente?`,
       confirmText: 'Eliminar',
       cancelText: 'Cancelar',
       variant: 'danger',

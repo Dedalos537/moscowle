@@ -9,6 +9,7 @@ import { RecordingService } from '../../../../core/services/recording.service';
 import { RouterModule } from '@angular/router';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
 
 interface TopicItem {
   name: string;
@@ -40,7 +41,7 @@ interface DashboardData {
 @Component({
   selector: 'app-therapist-dashboard',
   standalone: true,
-  imports: [CommonModule, FontAwesomeModule, RouterModule, Spinner],
+  imports: [PersonLabelPipe, CommonModule, FontAwesomeModule, RouterModule, Spinner],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

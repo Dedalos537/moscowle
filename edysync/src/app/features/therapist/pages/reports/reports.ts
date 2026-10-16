@@ -6,6 +6,7 @@ import { HeaderService } from '../../../../core/services/header.service';
 import { AiRecommendation, InsightsPatient, TherapistInsights, TherapistService } from '../../../../core/services/therapist.service';
 import { toLocalDateString } from '../../../../core/utils/date.util';
 import { Button } from '../../../../shared/components/button/button';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
 
 type Tab = 'summary' | 'patients' | 'ai';
 type Period = '4w' | '12w' | 'year';
@@ -29,7 +30,7 @@ function dayLabel(iso: string) {
 @Component({
   selector: 'app-therapist-reports',
   standalone: true,
-  imports: [FontAwesomeModule, Button],
+  imports: [PersonLabelPipe, FontAwesomeModule, Button],
   templateUrl: './reports.html',
   styleUrl: './reports.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

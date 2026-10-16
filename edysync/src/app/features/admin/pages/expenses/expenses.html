@@ -34,7 +34,7 @@
           <tbody class="divide-y divide-border/10">
             @for (t of therapistFinancials; track t.therapist.id) {
               <tr class="hover:bg-surface-container-high/50">
-                <td class="px-6 py-4 font-medium text-on-surface">{{ t.therapist.username }}</td>
+                <td class="px-6 py-4 font-medium text-on-surface">{{ t.therapist.username | personLabel }}</td>
                 <td class="px-6 py-4 text-sm text-on-surface-variant">
                   @if (t.contract_hours > 0) {
                     S/ {{ t.rate.toFixed(2) }}/hr
@@ -93,7 +93,7 @@
                 <td class="px-6 py-4 text-sm text-on-surface">
                   {{ e.description }}
                   @if (e.therapist) {
-                    <span class="text-on-surface-variant/60 text-xs block">Destino: {{ e.therapist.username }}</span>
+                    <span class="text-on-surface-variant/60 text-xs block">Destino: {{ e.therapist.username | personLabel }}</span>
                   }
                   <div class="mt-1 flex items-center gap-2">
                     @if (e.method) {

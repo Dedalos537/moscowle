@@ -15,6 +15,8 @@ import { Select, SelectOption } from '../../../../shared/components/select/selec
 import { Modal } from '../../../../shared/components/modal/modal';
 import { Sede } from '../../../../core/models/sede';
 import { timeFromISO, dateFromISO, toLocalDateString } from '../../../../core/utils/date.util';
+import { PeopleService } from '../../../../core/services/people.service';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
 
 type SessionStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 
@@ -45,9 +47,10 @@ interface CreateResult {
   templateUrl: './sessions.html',
   styleUrl: './sessions.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, FontAwesomeModule, Button, Spinner, Select, Modal, CalendarWidget, MultiDatePicker],
+  imports: [PersonLabelPipe, FormsModule, FontAwesomeModule, Button, Spinner, Select, Modal, CalendarWidget, MultiDatePicker],
 })
 export class Sessions implements OnInit, OnDestroy {
+  readonly people = inject(PeopleService);
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<unknown>;
   @ViewChild(CalendarWidget) calendarWidget?: CalendarWidget;
 
@@ -124,16 +127,16 @@ export class Sessions implements OnInit, OnDestroy {
 
   // ── opciones de selects ─────────────────────────────────────────────────
   get therapistOptions(): SelectOption[] {
-    return [{ value: null, label: 'Todos los terapeutas' }, ...this.therapists.map((t) => ({ value: t.id, label: t.username }))];
+    return [{ value: null, label: 'Todos los terapeutas' }, ...this.therapists.map((t) => this.people.option(t.id, t.username))];
   }
   get patientFilterOptions(): SelectOption[] {
-    return [{ value: null, label: 'Todos los alumnos' }, ...this.allPatients.map((p) => ({ value: p.id, label: p.username }))];
+    return [{ value: null, label: 'Todos los alumnos' }, ...this.allPatients.map((p) => this.people.option(p.id, p.username))];
   }
   get therapistCreateOptions(): SelectOption[] {
-    return [{ value: null, label: 'Seleccionar terapeuta' }, ...this.therapists.map((t) => ({ value: t.id, label: t.username }))];
+    return [{ value: null, label: 'Seleccionar terapeuta' }, ...this.therapists.map((t) => this.people.option(t.id, t.username))];
   }
   get patientCreateOptions(): SelectOption[] {
-    return [{ value: null, label: 'Seleccionar paciente' }, ...this.patients.map((p) => ({ value: p.id, label: p.username }))];
+    return [{ value: null, label: 'Seleccionar paciente' }, ...this.patients.map((p) => this.people.option(p.id, p.username))];
   }
   get sedeCreateOptions(): SelectOption[] {
     return [{ value: null, label: 'Sin sede' }, ...this.sedes.map((s) => ({ value: s.name, label: s.name }))];

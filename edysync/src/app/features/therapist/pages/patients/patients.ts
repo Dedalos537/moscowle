@@ -7,11 +7,12 @@ import { HeaderService } from '../../../../core/services/header.service';
 import { TherapistService, PatientInfo } from '../../../../core/services/therapist.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
 
 @Component({
   selector: 'app-therapist-patients',
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule, Spinner],
+  imports: [PersonLabelPipe, CommonModule, RouterModule, FontAwesomeModule, Spinner],
   templateUrl: './patients.html',
   styleUrl: './patients.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

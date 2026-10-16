@@ -145,7 +145,7 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   get therapistFilterOptions(): SelectOption[] {
-    return [{ value: null, label: 'Todos los Terapeutas' }, ...this.therapistsList.map(t => ({ value: t.id, label: t.username }))];
+    return [{ value: null, label: 'Todos los Terapeutas' }, ...this.therapistsList.map(t => this.people.option(t.id, t.username))];
   }
 
   get historyMonthOptions(): SelectOption[] {
@@ -1221,7 +1221,7 @@ export class Finanzas implements OnInit, OnDestroy {
     }
     const confirmed = await firstValueFrom(this.confirmService.confirm({
       title: 'Cancelar Contrato',
-      message: `¿Cancelar el contrato de ${this.cancelContractForm.patient_name}? Las cuotas pendientes quedarán canceladas.`,
+      message: `¿Cancelar el contrato de ${this.people.label({ name: this.cancelContractForm.patient_name })}? Las cuotas pendientes quedarán canceladas.`,
       confirmText: 'Sí, cancelar',
       cancelText: 'Mantener',
       variant: 'danger',

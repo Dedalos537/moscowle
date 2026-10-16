@@ -141,7 +141,7 @@
           </div>
           <div class="sidebar-field">
             <span class="sidebar-label">Responsable</span>
-            <span class="sidebar-value">{{ incident.responsable_name || 'Sin asignar' }}</span>
+            <span class="sidebar-value">{{ incident.responsable_name ? (incident.responsable_name | personLabel) : 'Sin asignar' }}</span>
           </div>
           @if (incident.estado !== 'CERRADO') {
             <div class="assign-row">
@@ -150,7 +150,7 @@
                 <select id="assign-to" class="input-field text-sm" [(ngModel)]="assignTo">
                   <option [ngValue]="null">Elegir persona…</option>
                   @for (p of staff; track p.id) {
-                    <option [ngValue]="p.id" [disabled]="p.id === incident.responsable_id">{{ p.name }} · {{ p.role }}</option>
+                    <option [ngValue]="p.id" [disabled]="p.id === incident.responsable_id">{{ p.name | personLabel: p.id }} · {{ p.role }}</option>
                   }
                 </select>
                 <app-button variant="primary" [label]="assigning ? 'Asignando…' : 'Asignar'" [disabled]="!assignTo || assigning" (clicked)="assign()"></app-button>
@@ -159,7 +159,7 @@
           }
           <div class="sidebar-field">
             <span class="sidebar-label">Creado por</span>
-            <span class="sidebar-value">{{ incident.user_name || '—' }}</span>
+            <span class="sidebar-value">{{ incident.user_name | personLabel }}</span>
           </div>
           <div class="sidebar-field">
             <span class="sidebar-label">Escalamiento</span>

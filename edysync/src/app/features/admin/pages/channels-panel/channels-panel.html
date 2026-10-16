@@ -80,7 +80,7 @@
       @if (auto.mode === 'pilot') {
         <div class="ch-pilot">
           @if (auto.pilot_patient) {
-            <p class="ch-note">Solo recibirá avisos el apoderado de <strong>{{ auto.pilot_patient.username }}</strong>.</p>
+            <p class="ch-note">Solo recibirá avisos el apoderado de <strong>{{ auto.pilot_patient.username | personLabel: auto.pilot_patient.id }}</strong>.</p>
           } @else {
             <p class="ch-note">Elige la familia que recibirá los avisos de prueba.</p>
           }

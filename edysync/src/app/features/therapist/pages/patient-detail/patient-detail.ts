@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { SessionLabelPipe } from '../../../../shared/pipes/session-label-pipe';
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
@@ -11,17 +11,20 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Button } from '../../../../shared/components/button/button';
 import { Modal } from '../../../../shared/components/modal/modal';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
+import { PeopleService } from '../../../../core/services/people.service';
 
 @Component({
   selector: 'app-therapist-patient-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule, Spinner, Button, Modal, SessionLabelPipe],
+  imports: [PersonLabelPipe, CommonModule, RouterModule, FontAwesomeModule, Spinner, Button, Modal, SessionLabelPipe],
   templateUrl: './patient-detail.html',
   styleUrl: './patient-detail.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TherapistPatientDetail implements OnInit, OnDestroy {
+  readonly people = inject(PeopleService);
   loading = true;
   patientId!: number;
   patient: any = null;
@@ -58,7 +61,7 @@ export class TherapistPatientDetail implements OnInit, OnDestroy {
     this.subs.add(this.http.get(`/therapist/api/patients/${this.patientId}`).subscribe({
       next: (res: any) => {
         this.headerService.setConfig({
-          title: res.patient?.username || 'Paciente',
+          title: res.patient?.username ? this.people.label({ id: res.patient.id, name: res.patient.username }) : 'Paciente',
           subtitle: 'Detalle completo del paciente',
           icon: ['fas', 'user'],
         });

@@ -172,6 +172,7 @@ def search_patients():
             db.or_(
                 User.username.ilike(search_term),
                 User.email.ilike(search_term),
+                User.login_code.ilike(search_term),
                 User.phone.ilike(search_term) if hasattr(User, 'phone') else db.false(),
             ),
             User.role == 'jugador',
@@ -182,6 +183,14 @@ def search_patients():
 
     result = []
     for p in patients:
-        result.append({'id': p.id, 'username': p.username, 'email': p.email, 'phone': getattr(p, 'phone', '')})
+        result.append(
+            {
+                'id': p.id,
+                'username': p.username,
+                'email': p.email,
+                'login_code': p.login_code,
+                'phone': getattr(p, 'phone', ''),
+            }
+        )
 
     return jsonify({'patients': result})

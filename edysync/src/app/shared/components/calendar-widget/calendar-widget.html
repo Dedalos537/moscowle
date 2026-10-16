@@ -167,16 +167,16 @@
                 @if (role() === 'admin') {
                   @if (event.therapist) {
                     <span class="meta-sep"></span>
-                    <span>{{ event.therapist }}</span>
+                    <span>{{ event.therapist | personLabel }}</span>
                   }
                   @if (event.patient) {
                     <span class="meta-sep"></span>
-                    <span>{{ event.patient }}</span>
+                    <span>{{ event.patient | personLabel }}</span>
                   }
                 }
                 @if (role() === 'therapist' && event.patient) {
                   <span class="meta-sep"></span>
-                  <span>{{ event.patient }}</span>
+                  <span>{{ event.patient | personLabel }}</span>
                 }
               </div>
             </div>

@@ -789,7 +789,7 @@
                 </div>
                 <p class="text-xs text-on-surface-variant mt-0.5">
                   @if (log.changed_by_username) {
-                    <span class="font-medium">{{ log.changed_by_username }}</span> ·
+                    <span class="font-medium">{{ log.changed_by_username | personLabel }}</span> ·
                   }
                   @if (log.justification) {
                     {{ log.justification }}
@@ -998,7 +998,7 @@
           </div>
           <div class="space-y-1 text-xs text-on-surface-variant">
             @if (g.therapist_name) {
-              <p><fa-icon [icon]="['fas', 'user-doctor']" class="mr-1"></fa-icon>{{ g.therapist_name }}</p>
+              <p><fa-icon [icon]="['fas', 'user-doctor']" class="mr-1"></fa-icon>{{ g.therapist_name | personLabel }}</p>
             }
             @if (g.sede_name) {
               <p><fa-icon [icon]="['fas', 'location-dot']" class="mr-1"></fa-icon>{{ g.sede_name }}</p>

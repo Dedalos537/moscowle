@@ -9,6 +9,7 @@ import { GlobalSettingsService, COLOR_PRESETS, type FontSize, type PersonDisplay
 import { NotificationService } from '../../../../core/services/notification.service';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
+import { PeopleService } from '../../../../core/services/people.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import type { NotificationPreferences } from '../../../../core/models/notification';
 import { AvatarUploader } from '../../../../shared/components/avatar-uploader/avatar-uploader';
@@ -128,6 +129,9 @@ export class Settings implements OnInit, OnDestroy {
   get hideCharts() { return this.settings.hideCharts; }
   get sidebarDisplay() { return this.settings.sidebarDisplay; }
   get personDisplay() { return this.settings.personDisplay; }
+  private people = inject(PeopleService);
+  readonly centerCodeOnly = this.people.centerCodeOnly;
+  setCenterCodeOnly(on: boolean): void { this.people.setCenterCodeOnly(on); }
   get notifPrefs() { return this.notifService.preferences() ?? this.notifService.defaultPrefs; }
 
 

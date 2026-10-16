@@ -5,6 +5,8 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Modal } from '../modal/modal';
 import { AdminService } from '../../../core/services/admin.service';
 import { getToolLabel, getToolIcon, getParamLabel } from '../../../core/services/mcp-tool-meta';
+import { PersonLabelPipe } from '../../pipes/person-label.pipe';
+import { PeopleService } from '../../../core/services/people.service';
 
 export interface PendingAction {
   name: string;
@@ -30,12 +32,13 @@ const ID_KEYS = ['patient_id', 'user_id', 'therapist_id'];
 @Component({
   selector: 'app-chat-confirm-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Modal],
+  imports: [PersonLabelPipe, CommonModule, FormsModule, FontAwesomeModule, Modal],
   templateUrl: './chat-confirm-dialog.html',
   styleUrl: './chat-confirm-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChatConfirmDialog {
+  readonly people = inject(PeopleService);
   confirmAction = output<PendingAction>();
   cancelAction = output<void>();
 
@@ -160,7 +163,7 @@ export class ChatConfirmDialog {
   selectPatient(p: PatientOption) {
     this.selectedPatient = p;
     this.patientResults = [];
-    this.patientQuery = `${p.username} #${p.id}`;
+    this.patientQuery = `${this.people.label({ id: p.id, name: p.username })} #${p.id}`;
     this.cdr.markForCheck();
   }
 

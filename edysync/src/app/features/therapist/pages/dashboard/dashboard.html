@@ -98,7 +98,7 @@
               <p class="text-xs text-on-surface-variant/50 mt-0.5">{{ item.location }}</p>
             }
             @if (item.patient) {
-              <p class="text-xs text-primary/80 mt-0.5">{{ item.patient }}</p>
+              <p class="text-xs text-primary/80 mt-0.5">{{ item.patient | personLabel }}</p>
             }
           </div>
         }

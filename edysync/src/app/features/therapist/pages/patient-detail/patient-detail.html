@@ -14,7 +14,7 @@
             <div class="w-20 h-20 rounded-full bg-primary-container/15 flex items-center justify-center mx-auto mb-3">
               <fa-icon [icon]="['fas', 'user']" class="text-2xl text-primary"></fa-icon>
             </div>
-            <h2 class="text-lg font-bold text-on-surface">{{ patient.username }}</h2>
+            <h2 class="text-lg font-bold text-on-surface">{{ patient.username | personLabel }}</h2>
             <p class="text-sm text-on-surface-variant">{{ patient.email }}</p>
           </div>
 
@@ -255,7 +255,7 @@
       <div class="grid grid-cols-2 gap-4">
         <div>
           <p class="text-xs text-on-surface-variant uppercase tracking-wide mb-1">Terapeuta</p>
-          <p class="text-sm text-on-surface">{{ selectedSession.therapist_name || '—' }}</p>
+          <p class="text-sm text-on-surface">{{ selectedSession.therapist_name | personLabel }}</p>
         </div>
         <div>
           <p class="text-xs text-on-surface-variant uppercase tracking-wide mb-1">Asistencia</p>

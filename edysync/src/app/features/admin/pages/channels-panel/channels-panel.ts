@@ -7,6 +7,7 @@ import { Switch } from '../../../../shared/components/switch/switch';
 import { AdminService, type AutomationSettings } from '../../../../core/services/admin.service';
 import { LiveSyncService } from '../../../../core/services/live-sync.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
 
 type Field = 'destination' | 'sms_template' | 'whatsapp_template';
 
@@ -25,7 +26,7 @@ const VARIABLES: { name: string; hint: string }[] = [
 @Component({
   selector: 'app-channels-panel',
   standalone: true,
-  imports: [FormsModule, FontAwesomeModule, QRCodeComponent, Switch],
+  imports: [PersonLabelPipe, FormsModule, FontAwesomeModule, QRCodeComponent, Switch],
   templateUrl: './channels-panel.html',
   styleUrl: './channels-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

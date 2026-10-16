@@ -5,6 +5,7 @@ import { ActionRequest, ActionRequestService, REQUEST_KIND_LABEL, RequestKind, R
 import { Modal } from '../modal/modal';
 import { Select, SelectOption } from '../select/select';
 import { MultiDatePicker } from '../multi-date-picker/multi-date-picker';
+import { PeopleService } from '../../../core/services/people.service';
 
 /**
  * Formulario de solicitud del terapeuta: los mismos campos que usa la coordinación para programar sesiones, dar de
@@ -19,6 +20,7 @@ import { MultiDatePicker } from '../multi-date-picker/multi-date-picker';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RequestFormModal {
+  readonly people = inject(PeopleService);
   private service = inject(ActionRequestService);
 
   kind = input<RequestKind | null>(null);
@@ -48,7 +50,7 @@ export class RequestFormModal {
     { value: 'evaluacion', label: 'Evaluación' },
   ];
 
-  readonly patientOptions = computed<SelectOption[]>(() => (this.options()?.patients ?? []).map((x) => ({ value: x.id, label: x.username })));
+  readonly patientOptions = computed<SelectOption[]>(() => (this.options()?.patients ?? []).map((x) => this.people.option(x.id, x.username)));
   readonly groupOptions = computed<SelectOption[]>(() =>
     (this.options()?.groups ?? []).map((x) => ({ value: x.id, label: `${x.name} · ${x.member_count} ${x.member_count === 1 ? 'paciente' : 'pacientes'}` })),
   );

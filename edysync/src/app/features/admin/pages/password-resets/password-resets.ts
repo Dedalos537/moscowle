@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subject } from 'rxjs';
@@ -8,6 +8,8 @@ import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
+import { PeopleService } from '../../../../core/services/people.service';
 
 interface PasswordResetRow {
   id: number;
@@ -29,12 +31,13 @@ interface PasswordResetRow {
 @Component({
   selector: 'app-password-resets',
   standalone: true,
-  imports: [CommonModule, FontAwesomeModule, Spinner],
+  imports: [PersonLabelPipe, CommonModule, FontAwesomeModule, Spinner],
   templateUrl: './password-resets.html',
   styleUrl: './password-resets.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PasswordResets implements OnInit, OnDestroy {
+  readonly people = inject(PeopleService);
   items: PasswordResetRow[] = [];
   loading = false;
   filter: 'awaiting_approval' | 'approved' | 'rejected' | 'all' = 'awaiting_approval';
@@ -89,7 +92,7 @@ export class PasswordResets implements OnInit, OnDestroy {
   }
 
   approve(item: PasswordResetRow) {
-    if (!confirm(`Aprobar reseteo de contraseña para ${item.target_username || item.email}?`)) return;
+    if (!confirm(`Aprobar reseteo de contraseña para ${item.target_username ? this.people.label({ name: item.target_username }) : item.email}?`)) return;
     this.adminService.approvePasswordReset(item.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: (res: any) => {
         if (res.success) {
@@ -111,7 +114,7 @@ export class PasswordResets implements OnInit, OnDestroy {
   }
 
   reject(item: PasswordResetRow) {
-    const reason = prompt(`Motivo de rechazo para ${item.target_username || item.email} (opcional):`);
+    const reason = prompt(`Motivo de rechazo para ${item.target_username ? this.people.label({ name: item.target_username }) : item.email} (opcional):`);
     if (reason === null) return;
     this.adminService.rejectPasswordReset(item.id, reason).pipe(takeUntil(this.destroy$)).subscribe({
       next: (res) => {

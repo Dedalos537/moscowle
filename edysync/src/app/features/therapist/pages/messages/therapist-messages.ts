@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ElementRef, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ElementRef, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
@@ -9,17 +9,20 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Button } from '../../../../shared/components/button/button';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
+import { PeopleService } from '../../../../core/services/people.service';
 
 @Component({
   selector: 'app-therapist-messages',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Spinner, Button],
+  imports: [PersonLabelPipe, CommonModule, FormsModule, FontAwesomeModule, Spinner, Button],
   templateUrl: './therapist-messages.html',
   styleUrl: './therapist-messages.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TherapistMessages implements OnInit, OnDestroy, AfterViewInit {
+  readonly people = inject(PeopleService);
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
   @ViewChild('chatContainer') chatContainer!: ElementRef;
   @ViewChild('fileInput') fileInput!: ElementRef;

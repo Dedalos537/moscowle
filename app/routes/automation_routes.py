@@ -68,7 +68,9 @@ def search_patients():
     q = (request.args.get('q') or '').strip()
     query = User.query.filter(User.role == 'jugador', User.is_active.is_(True))
     if q:
-        query = query.filter(db.or_(User.username.ilike(f'%{q}%'), User.email.ilike(f'%{q}%')))
+        query = query.filter(
+            db.or_(User.username.ilike(f'%{q}%'), User.email.ilike(f'%{q}%'), User.login_code.ilike(f'%{q}%'))
+        )
     rows = query.order_by(User.username.asc()).limit(20).all()
     return jsonify(
         [
