@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Logo } from '../../../../shared/components/logo/logo';
+import { ToastService } from '../../../../core/services/toast.service';
 import { PreferencesMenu } from '../../../../shared/components/preferences-menu/preferences-menu';
 
 /** Pedido de contraseña nueva: acepta el correo o el código de acceso (los pacientes ingresan con código). */
@@ -29,6 +30,7 @@ export class ResetPassword implements OnDestroy {
   constructor(
     private http: HttpClient,
     private cdr: ChangeDetectorRef,
+    private toast: ToastService,
   ) {}
 
   ngOnDestroy() {
@@ -56,12 +58,15 @@ export class ResetPassword implements OnDestroy {
         },
         error: (err) => {
           const status = err?.status ?? 0;
-          this.message =
+          const text =
             status === 429
               ? 'Ya pediste varias veces en la última hora. Espera un poco o escribe a soporte.'
               : status === 0 || status >= 500
                 ? 'No pudimos conectar con el centro. Revisa tu internet e inténtalo otra vez.'
                 : err?.error?.error || 'No pudimos enviar tu pedido. Inténtalo otra vez.';
+          // Faltan datos → junto al campo; fallos del servidor o de red → aviso (toast).
+          if (status === 400) this.message = text;
+          else this.toast.show(text, 'error', 7000);
           this.submitting = false;
           this.cdr.markForCheck();
           this.identifierInput?.nativeElement.focus();

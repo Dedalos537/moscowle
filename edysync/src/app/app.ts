@@ -5,6 +5,7 @@ import { AuthService } from './core/services/auth.service';
 import { FloatingUiService } from './core/services/floating-ui.service';
 import { PreloadService } from './core/services/preload.service';
 import { SplashScreen } from './shared/components/splash-screen/splash-screen';
+import { SplashService } from './core/services/splash.service';
 import { AlertModal } from './shared/components/alert-modal/alert-modal.component';
 import { ToastContainer } from './shared/components/toast-container/toast-container';
 import { RecordingOverlay } from './shared/components/recording-overlay/recording-overlay';
@@ -23,11 +24,11 @@ import { CursorHalo } from './shared/components/cursor-halo/cursor-halo';
   styleUrl: './app.scss'
 })
 export class App implements OnInit, OnDestroy {
-  splashReady = false;
   serverDown = false;
   retrying = false;
   private sub = new Subscription();
   private floatingUi = inject(FloatingUiService);
+  private splash = inject(SplashService);
 
   constructor(
     private recordingService: RecordingService,
@@ -43,7 +44,7 @@ export class App implements OnInit, OnDestroy {
 
     this.checkBackend().then(up => {
       this.serverDown = !up;
-      this.splashReady = true;
+      this.splash.reveal();
       this.cdr.markForCheck();
 
       if (up) {

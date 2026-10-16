@@ -8,15 +8,11 @@
       <h1 id="lg-title" class="lg-title">Inicia sesión</h1>
     </header>
 
-    @if (notice) {
-      <app-alert class="lg-notice" type="success" [message]="notice"></app-alert>
-    }
-
     <form class="lg-form" (ngSubmit)="doLogin()" novalidate [attr.aria-busy]="isLoading">
       <div class="lg-field">
         <label class="lg-label" for="email">Correo o código</label>
-        <p id="email-hint" class="lg-hint">Tu correo o tu código de acceso, por ejemplo PCJP1</p>
-        <input #emailInput id="email" name="email" type="text" class="lg-input"
+        <span id="email-hint" class="sr-only">Puedes usar tu correo o tu código de acceso, por ejemplo PCJP1.</span>
+        <input #emailInput id="email" name="email" type="text" class="lg-input" placeholder="Ej.: PCJP1 o nombre@correo.com"
           [(ngModel)]="email" (ngModelChange)="onEmailChange()" (blur)="onEmailBlur()"
           [readonly]="isLoading"
           [attr.aria-invalid]="emailError || credentialsRejected ? true : null"
@@ -36,7 +32,7 @@
           <a routerLink="/auth/reset-password" class="lg-link">¿La olvidaste?</a>
         </div>
         <div class="lg-pass">
-          <input #passwordInput id="password" name="password" class="lg-input lg-input--pass"
+          <input #passwordInput id="password" name="password" class="lg-input lg-input--pass" placeholder="Tu contraseña"
             [type]="showPassword ? 'text' : 'password'"
             [(ngModel)]="password" (ngModelChange)="passwordError = ''; credentialsRejected = false"
             [readonly]="isLoading"
@@ -55,10 +51,6 @@
           </p>
         }
       </div>
-
-      @if (alertMessage) {
-        <app-alert type="error" [message]="alertMessage"></app-alert>
-      }
 
       <button type="submit" class="lg-submit" [disabled]="isLoading">
         @if (isLoading && !fingerprintBusy) {

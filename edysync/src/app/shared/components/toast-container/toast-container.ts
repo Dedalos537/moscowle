@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -18,12 +18,16 @@ export class ToastContainer implements OnInit, OnDestroy {
   toasts: Toast[] = [];
   private sub = new Subscription();
 
-  constructor(private toastService: ToastService) {}
+  constructor(
+    private toastService: ToastService,
+    private cdr: ChangeDetectorRef,
+  ) {}
 
   ngOnInit() {
     this.sub.add(
       this.toastService.toasts$.subscribe(t => {
         this.toasts = t;
+        this.cdr.markForCheck();
       })
     );
   }
@@ -37,6 +41,10 @@ export class ToastContainer implements OnInit, OnDestroy {
   }
 
   alertClasses(type: ToastType): string {
+    return 'tc-toast ' + this.tone(type);
+  }
+
+  private tone(type: ToastType): string {
     switch (type) {
       case 'success': return 'bg-success-container text-on-success-container border-success-container';
       case 'error': return 'bg-error-container text-on-error-container border-error-container';

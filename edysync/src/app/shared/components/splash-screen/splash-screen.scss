@@ -1,77 +1,109 @@
+// Colores fijos (no dependen de los tokens): los mismos que el splash estático de index.html,
+// así el paso de «cargando» a «app lista» no tiene saltos.
+:host {
+  --splash-bg: #75a83a;
+  --splash-ink: #121a0a;
+}
+:host-context(.dark) {
+  --splash-bg: #1e2d12;
+  --splash-ink: #a5d087;
+}
+
 .splash {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--color-background);
-  transition: opacity 0.5s ease, visibility 0.5s ease;
+  display: grid;
+  place-items: center;
+  background: var(--splash-bg);
+}
 
-  &--hidden {
+// Logo dibujado con máscara: toma el color de tinta sin depender de <img>.
+.splash__logo {
+  width: 7rem;
+  aspect-ratio: 1154 / 1106;
+  background: var(--splash-ink);
+  -webkit-mask: var(--logo) center / contain no-repeat;
+  mask: var(--logo) center / contain no-repeat;
+  animation: splash-breathe 1.6s ease-in-out infinite;
+}
+
+// ── reveal ──────────────────────────────────────────────────────────────────
+// La capa de color lleva un «agujero» con la forma de la silueta (máscara compuesta por exclusión).
+// El agujero arranca del tamaño del logo, se encoge un poco y crece hasta cubrir toda la pantalla.
+.splash--reveal {
+  pointer-events: none;
+  -webkit-mask-image: var(--sil), linear-gradient(#000 0 0);
+  mask-image: var(--sil), linear-gradient(#000 0 0);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation:
+    splash-hole 900ms cubic-bezier(0.7, 0, 0.84, 0) forwards,
+    splash-out 220ms ease-out 760ms forwards;
+
+  .splash__logo {
+    animation: splash-logo-out 260ms ease-out forwards;
+  }
+}
+
+@keyframes splash-breathe {
+  50% {
+    transform: scale(0.96);
+  }
+}
+
+@keyframes splash-hole {
+  0% {
+    -webkit-mask-size: 7rem auto, 100% 100%;
+    mask-size: 7rem auto, 100% 100%;
+  }
+  22% {
+    -webkit-mask-size: 5.5rem auto, 100% 100%;
+    mask-size: 5.5rem auto, 100% 100%;
+  }
+  100% {
+    -webkit-mask-size: 6000vmax auto, 100% 100%;
+    mask-size: 6000vmax auto, 100% 100%;
+  }
+}
+
+@keyframes splash-logo-out {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+@keyframes splash-out {
+  to {
     opacity: 0;
     visibility: hidden;
-    pointer-events: none;
   }
 }
 
-.splash__inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.splash__logo {
-  animation: splashPulse 1.5s ease-in-out infinite;
-}
-
-@keyframes splashPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.05); opacity: 0.85; }
-}
-
-.splash__title {
-  font-family: Manrope, sans-serif;
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--color-primary);
-  margin: 0;
-}
-
-.splash__subtitle {
-  font-family: Manrope, sans-serif;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--color-on-surface-variant);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: -0.5rem 0 1rem 0;
-}
-
-.splash__bar {
-  width: 200px;
-  height: 4px;
-  border-radius: 2px;
-  background-color: var(--color-surface-container-high);
-  overflow: hidden;
-}
-
-.splash__bar-fill {
-  height: 100%;
-  width: 0%;
-  border-radius: 2px;
-  background-color: var(--color-primary);
-  animation: splashLoad 1.5s ease-in-out forwards;
-
-  &--done {
-    width: 100%;
+// Movimiento reducido: sin zoom ni máscara, solo un desvanecido corto.
+@media (prefers-reduced-motion: reduce) {
+  .splash__logo {
     animation: none;
   }
-}
-
-@keyframes splashLoad {
-  0% { width: 0%; }
-  50% { width: 60%; }
-  100% { width: 80%; }
+  .splash--reveal {
+    -webkit-mask-image: none;
+    mask-image: none;
+    animation: splash-out 200ms ease-out forwards;
+    .splash__logo {
+      animation: none;
+    }
+  }
 }
