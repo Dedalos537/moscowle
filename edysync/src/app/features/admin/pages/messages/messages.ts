@@ -10,6 +10,7 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
 import { Button } from '../../../../shared/components/button/button';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Input } from '../../../../shared/components/input/input';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
 
 @Component({
   selector: 'app-messages',
@@ -18,7 +19,7 @@ import { Input } from '../../../../shared/components/input/input';
   styleUrl: './messages.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input],
+  imports: [PersonLabelPipe, CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input],
 })
 export class Messages implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;

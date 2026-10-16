@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -14,17 +14,20 @@ import { Button } from '../../../../../shared/components/button/button';
 import { Select } from '../../../../../shared/components/select/select';
 import { Input } from '../../../../../shared/components/input/input';
 import { Modal } from '../../../../../shared/components/modal/modal';
+import { PersonLabelPipe } from '../../../../../shared/pipes/person-label.pipe';
+import { PeopleService } from '../../../../../core/services/people.service';
 
 @Component({
   selector: 'app-user-detail',
   standalone: true,
-  imports: [FormsModule, RouterModule, FontAwesomeModule, Spinner, Button, Select, Input, Modal],
+  imports: [PersonLabelPipe, FormsModule, RouterModule, FontAwesomeModule, Spinner, Button, Select, Input, Modal],
   templateUrl: './user-detail.html',
   styleUrl: './user-detail.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class UserDetail implements OnInit, OnDestroy {
+  readonly people = inject(PeopleService);
   userId!: number;
   user: any = null;
   stats: any = {};

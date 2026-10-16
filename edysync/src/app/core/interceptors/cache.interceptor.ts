@@ -8,6 +8,8 @@ import { DataCacheService } from '../services/cache.service';
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
 
 const EXCLUDED = [
+  // Ajuste «solo códigos» y directorio de personas: deben verse al instante tras cambiarlos.
+  '/api/people/',
   '/api/health',
   '/api/public/',
   '/api/time',

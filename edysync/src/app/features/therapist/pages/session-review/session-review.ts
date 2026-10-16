@@ -1,6 +1,6 @@
 import { CommonModule, Location } from '@angular/common';
 import { SessionLabelPipe } from '../../../../shared/pipes/session-label-pipe';
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -12,16 +12,19 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { RecordingService } from '../../../../core/services/recording.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
+import { PeopleService } from '../../../../core/services/people.service';
 
 @Component({
   selector: 'app-therapist-session-review',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, SessionLabelPipe],
+  imports: [PersonLabelPipe, CommonModule, FormsModule, RouterModule, FontAwesomeModule, SessionLabelPipe],
   templateUrl: './session-review.html',
   styleUrl: './session-review.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TherapistSessionReview implements OnInit, OnDestroy {
+  readonly people = inject(PeopleService);
 
   session: any = null;
   sessionId = 0;
@@ -187,7 +190,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
 
         this.headerService.setConfig({
           title: 'Revisión de Sesión',
-          subtitle: `${data.patient?.name || 'Paciente'} - ${data.title || 'Sesión'}`,
+          subtitle: `${data.patient?.name ? this.people.label({ name: data.patient.name }) : 'Paciente'} - ${data.title || 'Sesión'}`,
           icon: ['fas', 'clipboard-check'],
         });
 

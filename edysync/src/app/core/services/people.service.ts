@@ -19,7 +19,7 @@ export interface PersonRef {
   email?: string | null;
 }
 
-const STAFF = new Set(['admin', 'supervisor']);
+const STAFF = new Set(['admin', 'supervisor', 'terapista', 'terapeuta']);
 
 /** Minúsculas y sin tildes, para buscar «Jose» y encontrar «José». */
 export function normalize(text: string | null | undefined): string {
@@ -27,9 +27,12 @@ export function normalize(text: string | null | undefined): string {
 }
 
 /**
- * Directorio de personas (nombre, código de acceso y correo) para mostrarlas según la preferencia
- * «Mostrar personas» y buscarlas por nombre, código o correo en usuarios, finanzas, reportes, mensajes y kanban.
- * Solo se carga para administradores y supervisores; el resto ve los nombres como vienen.
+ * Directorio de personas (nombre, código de acceso y correo) para mostrarlas como «Nombre · CÓDIGO» o solo
+ * «CÓDIGO» en todo el sistema, y buscarlas por nombre, código o correo.
+ *
+ * Qué modo aplica: si un administrador activó «Solo códigos para todo el centro», todo el personal ve códigos;
+ * si no, cada quien usa su preferencia personal. Los pacientes siempre ven nombres (su terapeuta, etc.).
+ * El directorio viene de `/api/people/directory`, ya filtrado por rol en el servidor.
  */
 @Injectable({ providedIn: 'root' })
 export class PeopleService {
@@ -38,7 +41,13 @@ export class PeopleService {
   private settings = inject(GlobalSettingsService);
 
   readonly people = signal<Person[]>([]);
-  readonly mode = computed<PersonDisplay>(() => this.settings.personDisplay());
+  /** Ajuste del centro: si está activo, todo el personal ve solo códigos. */
+  readonly centerCodeOnly = signal(false);
+  private readonly role = signal('');
+  readonly mode = computed<PersonDisplay>(() => {
+    if (!STAFF.has(this.role())) return 'name_code';
+    return this.centerCodeOnly() ? 'code' : this.settings.personDisplay();
+  });
 
   private readonly byId = computed(() => new Map(this.people().map((p) => [p.id, p])));
   /** Nombres repetidos quedan como `null`: no se adivina a quién se refieren. */
@@ -57,30 +66,47 @@ export class PeopleService {
     this.auth.currentUser$.subscribe((user) => {
       const id: number | null = user?.id ?? null;
       const role: string = user?.role ?? user?.user?.role ?? '';
+      this.role.set(role);
       if (id === null) {
         this.loadedFor = null;
         this.people.set([]);
+        this.centerCodeOnly.set(false);
       } else if (id !== this.loadedFor && STAFF.has(role)) {
         this.loadedFor = id;
         this.reload();
       }
     });
+    // Si un administrador cambia el ajuste del centro, las demás pantallas lo toman al volver a la pestaña.
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', () => {
+        if (this.loadedFor !== null) this.loadCenterSetting();
+      });
+    }
   }
 
-  /** Vuelve a pedir el directorio (p. ej. tras crear un usuario o cambiar un código). */
+  /** Vuelve a pedir el directorio y el ajuste del centro (p. ej. tras crear un usuario o cambiar un código). */
   reload(): void {
-    this.http.get<{ success: boolean; users: any[] }>('/api/admin/list-users').subscribe({
-      next: (res) =>
-        this.people.set(
-          (res.users ?? []).map((u) => ({
-            id: u.id,
-            name: u.username ?? '',
-            code: u.login_code ?? '',
-            email: u.email ?? '',
-            role: u.role ?? '',
-          })),
-        ),
+    this.loadCenterSetting();
+    this.http.get<{ success: boolean; people: Person[] }>('/api/people/directory').subscribe({
+      next: (res) => this.people.set(res.people ?? []),
       error: () => {},
+    });
+  }
+
+  private loadCenterSetting(): void {
+    this.http.get<{ center_code_only: boolean }>('/api/people/settings').subscribe({
+      next: (res) => this.centerCodeOnly.set(!!res.center_code_only),
+      error: () => {},
+    });
+  }
+
+  /** Solo admin: activa o quita «solo códigos» para todo el personal del centro. */
+  setCenterCodeOnly(on: boolean): void {
+    const previous = this.centerCodeOnly();
+    this.centerCodeOnly.set(on);
+    this.http.put<{ center_code_only: boolean }>('/api/people/settings', { center_code_only: on }).subscribe({
+      next: (res) => this.centerCodeOnly.set(!!res.center_code_only),
+      error: () => this.centerCodeOnly.set(previous),
     });
   }
 
@@ -107,6 +133,13 @@ export class PeopleService {
     const text = this.mode() === 'code' ? this.label(ref, '?') : ref.name || this.find(ref)?.name || '?';
     const parts = text.replace(/[·]/g, ' ').trim().split(/\s+/).filter(Boolean);
     return ((parts[0]?.[0] ?? '?') + (parts[1]?.[0] ?? '')).toUpperCase();
+  }
+
+  /** Opción para un `<app-select>`: muestra la etiqueta según el modo y busca por nombre, código y correo. */
+  option(id: number, name: string | null | undefined, email?: string | null): { value: number; label: string; keywords: string } {
+    const person = this.find({ id, name });
+    const keywords = [name, person?.name, person?.code, email, person?.email].filter(Boolean).join(' ');
+    return { value: id, label: this.label({ id, name }), keywords };
   }
 
   /** ¿La búsqueda coincide con el nombre, el código o el correo de la persona? */

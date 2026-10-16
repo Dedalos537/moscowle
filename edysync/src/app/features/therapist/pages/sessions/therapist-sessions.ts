@@ -14,6 +14,7 @@ import { Select, SelectOption } from '../../../../shared/components/select/selec
 import { Button } from '../../../../shared/components/button/button';
 import { CalendarWidget, CalendarWidgetEvent } from '../../../../shared/components/calendar-widget/calendar-widget';
 import { toLocalDateString, timeFromISO, dateFromISO } from '../../../../core/utils/date.util';
+import { PeopleService } from '../../../../core/services/people.service';
 
 type Status = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 
@@ -84,6 +85,7 @@ function toItem(e: any): AgendaItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TherapistSessions implements OnInit, OnDestroy {
+  readonly people = inject(PeopleService);
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<unknown>;
 
   private therapistService = inject(TherapistService);
@@ -362,7 +364,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
           this.monthEvents.set(
             events.map(toItem).map((i) => ({
               id: i.id,
-              title: i.patient || i.title,
+              title: i.patient ? this.people.label({ name: i.patient }) : i.title,
               date: new Date(`${i.date}T12:00:00`),
               time: i.start,
               endTime: i.end,

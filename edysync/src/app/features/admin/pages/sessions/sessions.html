@@ -259,7 +259,7 @@
       <header class="sx-detail__head sx-rise" style="--i: 0">
         <div class="min-w-0">
           <h3 class="sx-detail__title">{{ d.title }}</h3>
-          <p class="sx-detail__who">{{ d.therapist }} · {{ d.patient }}</p>
+          <p class="sx-detail__who">{{ d.therapist | personLabel }} · {{ d.patient | personLabel }}</p>
         </div>
         <span class="badge" [class]="statusOf(d.status).badge">{{ statusOf(d.status).label }}</span>
       </header>
@@ -327,7 +327,7 @@
 <!-- ───────────── Editar ───────────── -->
 <app-modal [isOpen]="showEditModal" title="Editar sesión" size="lg" (close)="closeEditModal()">
   <form id="sx-edit-form" class="sx-form" (ngSubmit)="submitEdit()" novalidate>
-    <p class="sx-edit-who">{{ editForm.therapist }} · {{ editForm.patient }}</p>
+    <p class="sx-edit-who">{{ editForm.therapist | personLabel }} · {{ editForm.patient | personLabel }}</p>
 
     <fieldset class="sx-fieldset" [disabled]="submitting">
       <legend class="sx-legend">Sesión</legend>

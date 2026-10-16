@@ -18,6 +18,7 @@ _modules = [
     'incidents',
     'requests',
     'game_catalog',
+    'people',
 ]
 for _mod in _modules:
     try:

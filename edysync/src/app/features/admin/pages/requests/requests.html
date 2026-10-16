@@ -18,7 +18,7 @@
             <button type="button" class="ar-item" [attr.data-status]="r.status" [class.is-on]="selectedId() === r.id" (click)="select(r)" [attr.aria-current]="selectedId() === r.id ? 'true' : null">
               <span class="ar-item__top"><span class="ar-item__kind">{{ labels[r.kind] }}</span><span class="ar-item__when">{{ when(r.created_at) }}</span></span>
               <span class="ar-item__summary">{{ r.summary }}</span>
-              <span class="ar-item__who">{{ r.requester_name }} · <span class="ar-status-text">{{ status(r.status) }}</span></span>
+              <span class="ar-item__who">{{ r.requester_name | personLabel }} · <span class="ar-status-text">{{ status(r.status) }}</span></span>
             </button>
           </li>
         } @empty {
@@ -37,7 +37,7 @@
         <header class="ar-card__head">
           <button type="button" class="ar-back" (click)="selectedId.set(null)" aria-label="Volver a la lista"><fa-icon [icon]="['fas', 'arrow-left']" /></button>
           <div>
-            <p class="ar-card__eyebrow">{{ labels[r.kind] }} · {{ r.requester_name }} · {{ when(r.created_at) }}</p>
+            <p class="ar-card__eyebrow">{{ labels[r.kind] }} · {{ r.requester_name | personLabel }} · {{ when(r.created_at) }}</p>
             <h2 class="ar-card__title">{{ r.summary }}</h2>
           </div>
           <span class="ar-status" [attr.data-status]="r.status">{{ status(r.status) }}</span>
@@ -69,7 +69,7 @@
           }
         } @else {
           <p class="ar-resolved">
-            {{ r.status === 'approved' ? 'Aprobada' : 'Rechazada' }} por {{ r.reviewer_name }} · {{ when(r.resolved_at) }}
+            {{ r.status === 'approved' ? 'Aprobada' : 'Rechazada' }} por {{ r.reviewer_name | personLabel }} · {{ when(r.resolved_at) }}
             @if (r.review_note) { <br /><strong>Motivo:</strong> {{ r.review_note }} }
             @if (r.result?.['message']) { <br />{{ r.result?.['message'] }} }
           </p>

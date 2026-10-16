@@ -19,6 +19,8 @@ import { Incidents } from '../incidents/incidents';
 import { BotPanel } from '../bot-panel/bot-panel';
 import { ChannelsPanel } from '../channels-panel/channels-panel';
 import { ServerMonitor } from '../server-monitor/server-monitor';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
+import { PeopleService } from '../../../../core/services/people.service';
 
 export type TabId = 'backend' | 'logs' | 'csp' | 'tokens' | 'incidents' | 'llm' | 'notifications' | 'bot';
 
@@ -77,13 +79,14 @@ interface AIProviderForm {
 @Component({
   selector: 'app-visor-funcionamiento',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input, Alert, Modal, Incidents, BotPanel, ChannelsPanel, ServerMonitor],
+  imports: [PersonLabelPipe, CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input, Alert, Modal, Incidents, BotPanel, ChannelsPanel, ServerMonitor],
   templateUrl: './visor-funcionamiento.html',
   styleUrl: './visor-funcionamiento.scss',
   animations: [fadeInUp, scaleIn, listStagger, cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VisorFuncionamiento implements OnInit, OnChanges, OnDestroy {
+  readonly people = inject(PeopleService);
   /** Dentro de Configuración: la navegación la pone la página contenedora y aquí se oculta la barra de pestañas. */
   embedded = input(false);
   tab = input<TabId | null>(null);
@@ -304,7 +307,7 @@ export class VisorFuncionamiento implements OnInit, OnChanges, OnDestroy {
   }
 
   approveReset(item: PasswordResetRow) {
-    if (!confirm(`Aprobar reseteo de contraseña para ${item.target_username || item.email}?`)) return;
+    if (!confirm(`Aprobar reseteo de contraseña para ${item.target_username ? this.people.label({ name: item.target_username }) : item.email}?`)) return;
     this.subs.add(
       this.admin.approvePasswordReset(item.id).subscribe({
         next: (res: any) => {
@@ -322,7 +325,7 @@ export class VisorFuncionamiento implements OnInit, OnChanges, OnDestroy {
   }
 
   rejectReset(item: PasswordResetRow) {
-    const reason = prompt(`Motivo de rechazo para ${item.target_username || item.email} (opcional):`);
+    const reason = prompt(`Motivo de rechazo para ${item.target_username ? this.people.label({ name: item.target_username }) : item.email} (opcional):`);
     if (reason === null) return;
     this.subs.add(
       this.admin.rejectPasswordReset(item.id, reason).subscribe({

@@ -11,11 +11,12 @@ import { Button } from '../../../../shared/components/button/button';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Alert } from '../../../../shared/components/alert/alert';
 import { Modal } from '../../../../shared/components/modal/modal';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
 
 @Component({
   selector: 'app-incidents',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Button, Spinner, Alert, Modal],
+  imports: [PersonLabelPipe, CommonModule, FormsModule, RouterModule, FontAwesomeModule, Button, Spinner, Alert, Modal],
   templateUrl: './incidents.html',
   styleUrl: './incidents.scss',
   animations: [cardEnter, listStagger],

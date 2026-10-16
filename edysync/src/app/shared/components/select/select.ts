@@ -2,6 +2,7 @@ import { Component, input, output, forwardRef, ChangeDetectionStrategy, ChangeDe
 import { ControlValueAccessor, NG_VALUE_ACCESSOR, FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
+import { normalize } from '../../../core/services/people.service';
 
 export interface SelectOption {
   value: any;
@@ -9,6 +10,8 @@ export interface SelectOption {
   description?: string;
   icon?: IconProp;
   disabled?: boolean;
+  /** Texto extra para la búsqueda que no se muestra (p. ej. nombre, código y correo de una persona). */
+  keywords?: string;
 }
 
 @Component({
@@ -79,8 +82,8 @@ export class Select implements ControlValueAccessor, OnInit, OnDestroy {
   get filteredOptions(): SelectOption[] {
     if (!Array.isArray(this.options())) return [];
     if (!this.searchQuery) return this.options();
-    const q = this.searchQuery.toLowerCase();
-    return this.options().filter(o => o.label.toLowerCase().includes(q) || (o.description && o.description.toLowerCase().includes(q)));
+    const q = normalize(this.searchQuery);
+    return this.options().filter(o => [o.label, o.description, o.keywords].some(t => normalize(t).includes(q)));
   }
 
   private findOption(value: any): SelectOption | undefined {

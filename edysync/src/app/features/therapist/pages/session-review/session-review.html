@@ -7,7 +7,7 @@
     </button>
     <div class="sr-bar__who">
       <p class="sr-bar__eyebrow">{{ sessionWhen }}</p>
-      <h1 class="sr-bar__title">{{ session.patient?.name || session.title }}</h1>
+      <h1 class="sr-bar__title">{{ session.patient?.name ? (session.patient?.name | personLabel) : session.title }}</h1>
       @if (session.patient?.name && session.title) { <p class="sr-bar__sub">{{ session.title }}</p> }
     </div>
     <span class="sr-status" [attr.data-status]="session.status">{{ session.status | sessionLabel }}</span>

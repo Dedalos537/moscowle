@@ -1,4 +1,4 @@
-import { Component, output, ChangeDetectionStrategy, ChangeDetectorRef, OnDestroy } from '@angular/core';
+import { Component, output, ChangeDetectionStrategy, ChangeDetectorRef, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -10,6 +10,8 @@ import { Button } from '../../../../shared/components/button/button';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Select } from '../../../../shared/components/select/select';
 import { environment } from '../../../../../environments/environment';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
+import { PeopleService } from '../../../../core/services/people.service';
 
 interface PatientHit {
   id: number;
@@ -37,9 +39,10 @@ interface RegisterForm {
   templateUrl: './quick-payment.html',
   styleUrl: './quick-payment.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Select],
+  imports: [PersonLabelPipe, CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Select],
 })
 export class QuickPayment implements OnDestroy {
+  readonly people = inject(PeopleService);
   paymentCompleted = output<void>();
 
   searchQuery = '';
@@ -127,7 +130,7 @@ export class QuickPayment implements OnDestroy {
 
   selectPatient(patient: PatientHit) {
     this.selectedPatient = patient;
-    this.searchQuery = patient.username;
+    this.searchQuery = this.people.label({ id: patient.id, name: patient.username });
     this.showDropdown = false;
     this.openPaymentForm();
   }

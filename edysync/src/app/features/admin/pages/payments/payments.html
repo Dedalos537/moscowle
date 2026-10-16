@@ -272,16 +272,16 @@
                   <td class="px-4 py-3.5">
                     <div class="flex items-center gap-3">
                       <div class="w-9 h-9 rounded-full bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-xs shrink-0">
-                        {{ getInitials(p.username) }}
+                        {{ people.initials({ id: p.id, name: p.username }) }}
                       </div>
                       <div class="min-w-0">
-                        <p class="text-sm font-bold text-on-surface truncate">{{ p.username }}</p>
+                        <p class="text-sm font-bold text-on-surface truncate">{{ p.username | personLabel: p.id }}</p>
                         <p class="text-xs text-on-surface-variant truncate">{{ p.email || '—' }}</p>
                       </div>
                     </div>
                   </td>
                   <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.sede_name || '—' }}</td>
-                  <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.therapist_name || '—' }}</td>
+                  <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.therapist_name | personLabel }}</td>
                   <td class="px-4 py-3.5">
                     <span class="text-sm font-semibold text-on-surface">{{ p.plan_name || '—' }}</span>
                     @if (p.plan_frequency) {
@@ -386,10 +386,10 @@
               <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-3 min-w-0">
                   <div class="w-10 h-10 rounded-full bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-sm shrink-0">
-                    {{ getInitials(p.username) }}
+                    {{ people.initials({ id: p.id, name: p.username }) }}
                   </div>
                   <div class="min-w-0">
-                    <p class="text-sm font-bold text-on-surface truncate">{{ p.username }}</p>
+                    <p class="text-sm font-bold text-on-surface truncate">{{ p.username | personLabel: p.id }}</p>
                     <p class="text-xs text-on-surface-variant truncate">{{ p.email || '—' }}</p>
                   </div>
                 </div>
@@ -407,7 +407,7 @@
                 </div>
                 <div>
                   <span class="text-label-caps text-on-surface-variant">Terapeuta</span>
-                  <p class="text-sm font-medium text-on-surface">{{ p.therapist_name || '—' }}</p>
+                  <p class="text-sm font-medium text-on-surface">{{ p.therapist_name | personLabel }}</p>
                 </div>
                 <div>
                   <span class="text-label-caps text-on-surface-variant">Plan</span>
@@ -507,7 +507,7 @@
             <tbody class="divide-y divide-border/20">
               @for (p of filteredHistory; track p.id) {
                 <tr class="hover:bg-surface-container-low/50 transition-colors">
-                  <td class="px-4 py-3.5 text-sm font-semibold text-on-surface">{{ p.patient_name || '—' }}</td>
+                  <td class="px-4 py-3.5 text-sm font-semibold text-on-surface">{{ p.patient_name | personLabel }}</td>
                   <td class="px-4 py-3.5 text-right">
                     <span class="text-sm font-bold text-on-surface">S/ {{ (p.amount - (p.discount || 0)).toFixed(2) }}</span>
                     @if (p.discount > 0) {
@@ -586,7 +586,7 @@
         <fa-icon [icon]="['fas', 'user-check']" class="text-primary text-lg shrink-0"></fa-icon>
         <div>
           <p class="text-xs font-bold text-primary">Paciente seleccionado</p>
-          <p class="text-sm font-semibold text-on-surface">{{ getPatientName(registerForm.patient_id) }}</p>
+          <p class="text-sm font-semibold text-on-surface">{{ getPatientName(registerForm.patient_id) | personLabel: registerForm.patient_id }}</p>
         </div>
       </div>
     }
@@ -701,7 +701,7 @@
 <app-modal [isOpen]="showSettingsModal" title="Configurar Plan de Pago" (close)="closeSettingsModal()">
   <div class="space-y-4">
     <p class="text-sm text-on-surface-variant">
-      Configurando plan para <strong class="text-on-surface">{{ settingsForm.patient_name }}</strong>
+      Configurando plan para <strong class="text-on-surface">{{ settingsForm.patient_name | personLabel }}</strong>
     </p>
 
     <div>

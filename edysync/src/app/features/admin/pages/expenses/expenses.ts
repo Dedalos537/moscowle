@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -14,6 +14,8 @@ import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Input } from '../../../../shared/components/input/input';
 import { Select } from '../../../../shared/components/select/select';
 import { Modal } from '../../../../shared/components/modal/modal';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
+import { PeopleService } from '../../../../core/services/people.service';
 
 @Component({
   selector: 'app-expenses',
@@ -22,9 +24,10 @@ import { Modal } from '../../../../shared/components/modal/modal';
   styleUrl: './expenses.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input, Select, Modal],
+  imports: [PersonLabelPipe, CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input, Select, Modal],
 })
 export class Expenses implements OnInit, OnDestroy {
+  readonly people = inject(PeopleService);
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
 
   therapistFinancials: TherapistFinancial[] = [];
@@ -49,7 +52,7 @@ export class Expenses implements OnInit, OnDestroy {
   ];
 
   get therapistOptions(): SelectOption[] {
-    return this.therapists.map((t) => ({ value: t.id, label: t.username }));
+    return this.therapists.map((t) => this.people.option(t.id, t.username));
   }
 
   showModal = false;

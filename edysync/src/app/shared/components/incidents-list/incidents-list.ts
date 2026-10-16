@@ -10,6 +10,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { Modal } from '../modal/modal';
 import { Button } from '../button/button';
+import { PersonLabelPipe } from '../../pipes/person-label.pipe';
 
 type Filter = 'open' | 'done' | 'all';
 
@@ -52,7 +53,7 @@ interface TimelineEntry {
 @Component({
   selector: 'app-incidents-list',
   standalone: true,
-  imports: [FormsModule, FontAwesomeModule, Modal, Button],
+  imports: [PersonLabelPipe, FormsModule, FontAwesomeModule, Modal, Button],
   templateUrl: './incidents-list.html',
   styleUrl: './incidents-list.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

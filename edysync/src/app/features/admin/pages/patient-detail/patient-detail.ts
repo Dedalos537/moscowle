@@ -13,11 +13,12 @@ import { Modal } from '../../../../shared/components/modal/modal';
 import { Input } from '../../../../shared/components/input/input';
 import { Select } from '../../../../shared/components/select/select';
 import { FormsModule } from '@angular/forms';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
 
 @Component({
   selector: 'app-admin-patient-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule, Spinner, Button, Modal, Input, Select, FormsModule],
+  imports: [PersonLabelPipe, CommonModule, RouterModule, FontAwesomeModule, Spinner, Button, Modal, Input, Select, FormsModule],
   templateUrl: './patient-detail.html',
   styleUrl: './patient-detail.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

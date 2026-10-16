@@ -201,7 +201,7 @@
             <div class="space-y-2">
               @for (t of therapists; track t.id) {
                 <div class="flex items-center justify-between px-2 py-1 border rounded-lg">
-                  <span class="text-sm truncate max-w-[150px]">{{ t.username }}</span>
+                  <span class="text-sm truncate max-w-[150px]">{{ t.username | personLabel: t.id }}</span>
                   <button (click)="selectReceiver(t.id)" class="px-2 py-1 text-xs rounded-lg shrink-0"
                     [class.bg-primary]="selectedReceiverId === t.id" [class.text-white]="selectedReceiverId === t.id"
                     [class.bg-surface-container-highest]="selectedReceiverId !== t.id">
@@ -214,7 +214,7 @@
             <div class="space-y-2">
               @for (p of patients; track p.id) {
                 <div class="flex items-center justify-between px-2 py-1 border rounded-lg">
-                  <span class="text-sm truncate max-w-[150px]">{{ p.username }}</span>
+                  <span class="text-sm truncate max-w-[150px]">{{ p.username | personLabel: p.id }}</span>
                   <button (click)="selectReceiver(p.id)" class="px-2 py-1 text-xs rounded-lg shrink-0"
                     [class.bg-primary]="selectedReceiverId === p.id" [class.text-white]="selectedReceiverId === p.id"
                     [class.bg-surface-container-highest]="selectedReceiverId !== p.id">

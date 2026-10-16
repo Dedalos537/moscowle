@@ -23,6 +23,8 @@ import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Select } from '../../../../shared/components/select/select';
 import { Input } from '../../../../shared/components/input/input';
 import { Modal } from '../../../../shared/components/modal/modal';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
+import { PeopleService } from '../../../../core/services/people.service';
 
 Chart.register(...registerables);
 
@@ -73,9 +75,10 @@ interface Therapist {
   styleUrl: './payments.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal],
+  imports: [PersonLabelPipe, CommonModule, FormsModule, RouterModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal],
 })
 export class Payments implements OnInit, OnDestroy {
+  readonly people = inject(PeopleService);
   private settings = inject(GlobalSettingsService);
   hideCharts = this.settings.hideCharts;
 
@@ -136,7 +139,7 @@ export class Payments implements OnInit, OnDestroy {
   }
 
   get therapistFilterOptions(): SelectOption[] {
-    return [{value: null, label: 'Todos los Terapeutas'}, ...this.therapists.map(t => ({value: t.id, label: t.username}))];
+    return [{value: null, label: 'Todos los Terapeutas'}, ...this.therapists.map(t => this.people.option(t.id, t.username))];
   }
 
   statusFilterOptions: SelectOption[] = [
@@ -457,7 +460,7 @@ export class Payments implements OnInit, OnDestroy {
     let result = [...this.patients];
     if (this.searchQuery) {
       const q = this.searchQuery.toLowerCase();
-      result = result.filter((p) => p.username.toLowerCase().includes(q) || p.email.toLowerCase().includes(q));
+      result = result.filter((p) => this.people.matches(q, { id: p.id, name: p.username, email: p.email }));
     }
     if (this.selectedSedeId) {
       const sedeName = this.sedes.find((s) => s.id === this.selectedSedeId)?.name || '';
@@ -1017,7 +1020,7 @@ export class Payments implements OnInit, OnDestroy {
   }
 
   get patientSelectOptions() {
-    return this.patients.map(p => ({ value: p.id, label: `${p.username} — ${p.email || 'sin email'}` }));
+    return this.patients.map(p => this.people.option(p.id, p.username, p.email));
   }
 
   getPatientName(id: number): string {

@@ -1,5 +1,6 @@
 import { Component, input, output, OnInit, effect, NgZone, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { PersonLabelPipe } from '../../pipes/person-label.pipe';
 
 export interface CalendarWidgetEvent {
   id: number;
@@ -30,7 +31,7 @@ interface DayCell {
 @Component({
   selector: 'app-calendar-widget',
   standalone: true,
-  imports: [FontAwesomeModule],
+  imports: [PersonLabelPipe, FontAwesomeModule],
   templateUrl: './calendar-widget.html',
   styleUrl: './calendar-widget.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

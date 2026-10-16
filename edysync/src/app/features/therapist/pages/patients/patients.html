@@ -40,7 +40,7 @@
                   <div class="w-10 h-10 rounded-full bg-primary-container/15 flex items-center justify-center">
                     <fa-icon [icon]="['fas', 'user']" class="text-primary text-sm"></fa-icon>
                   </div>
-                  <span class="font-medium text-on-surface">{{ patient.username }}</span>
+                  <span class="font-medium text-on-surface">{{ patient.username | personLabel }}</span>
                 </div>
               </td>
               <td class="px-6 py-4 text-sm text-on-surface-variant">{{ patient.email }}</td>

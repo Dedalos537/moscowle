@@ -112,20 +112,39 @@
 
       <div class="setting-divider"></div>
 
-      <!-- Cómo se muestran las personas -->
+      <!-- Solo códigos para todo el centro (lo decide un administrador) -->
       <div class="setting-item">
         <div class="setting-item__left">
           <div class="setting-item__icon setting-item__icon--primary">
             <fa-icon [icon]="['fas', 'user-secret']"></fa-icon>
           </div>
           <div class="setting-item__text">
-            <span class="setting-item__label">Mostrar personas</span>
-            <span class="setting-item__desc">{{ personDisplay() === 'code' ? 'Solo el código, sin nombres' : 'Nombre y código' }} · en usuarios, finanzas, reportes, mensajes y kanban. Siempre puedes buscar por nombre, código o correo.</span>
+            <span class="setting-item__label">Solo códigos para todo el centro</span>
+            <span class="setting-item__desc">{{ centerCodeOnly() ? 'Activo: administradores, supervisores y terapeutas ven solo códigos en todas las pantallas' : 'Inactivo: cada persona elige cómo ver a los demás' }}</span>
+          </div>
+        </div>
+        <button type="button" class="toggle" role="switch" [class.toggle--on]="centerCodeOnly()" [attr.aria-checked]="centerCodeOnly()"
+                aria-label="Solo códigos para todo el centro" (click)="setCenterCodeOnly(!centerCodeOnly())">
+          <span class="toggle__thumb"></span>
+        </button>
+      </div>
+
+      <div class="setting-divider"></div>
+
+      <!-- Cómo se muestran las personas -->
+      <div class="setting-item" [class.is-locked]="centerCodeOnly()">
+        <div class="setting-item__left">
+          <div class="setting-item__icon setting-item__icon--primary">
+            <fa-icon [icon]="['fas', 'user-secret']"></fa-icon>
+          </div>
+          <div class="setting-item__text">
+            <span class="setting-item__label">Mostrar personas (solo para ti)</span>
+            <span class="setting-item__desc">{{ centerCodeOnly() ? 'Lo fija el ajuste del centro: solo códigos' : personDisplay() === 'code' ? 'Solo el código, sin nombres' : 'Nombre y código' }}. Siempre puedes buscar por nombre, código o correo.</span>
           </div>
         </div>
         <div class="seg" role="group" aria-label="Mostrar personas">
-          <button type="button" class="seg__btn" [class.is-active]="personDisplay() === 'name_code'" [attr.aria-pressed]="personDisplay() === 'name_code'" (click)="setPersonDisplay('name_code')">Nombre y código</button>
-          <button type="button" class="seg__btn" [class.is-active]="personDisplay() === 'code'" [attr.aria-pressed]="personDisplay() === 'code'" (click)="setPersonDisplay('code')">Solo código</button>
+          <button type="button" class="seg__btn" [class.is-active]="!centerCodeOnly() && personDisplay() === 'name_code'" [attr.aria-pressed]="!centerCodeOnly() && personDisplay() === 'name_code'" [disabled]="centerCodeOnly()" (click)="setPersonDisplay('name_code')">Nombre y código</button>
+          <button type="button" class="seg__btn" [class.is-active]="centerCodeOnly() || personDisplay() === 'code'" [attr.aria-pressed]="centerCodeOnly() || personDisplay() === 'code'" [disabled]="centerCodeOnly()" (click)="setPersonDisplay('code')">Solo código</button>
         </div>
       </div>
 

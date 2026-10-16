@@ -62,8 +62,8 @@
         </header>
 
         <dl class="il-facts">
-          <div><dt>Reportada</dt><dd>{{ d.user_id === myId() ? 'Por ti' : d.user_name }} · {{ when(d.fecha_creacion) }}</dd></div>
-          <div><dt>Quién la atiende</dt><dd>{{ d.responsable_name ? (d.responsable_id === myId() ? 'Tú' : d.responsable_name) : 'Coordinación aún no la asigna' }}</dd></div>
+          <div><dt>Reportada</dt><dd>{{ d.user_id === myId() ? 'Por ti' : (d.user_name | personLabel: d.user_id) }} · {{ when(d.fecha_creacion) }}</dd></div>
+          <div><dt>Quién la atiende</dt><dd>{{ d.responsable_name ? (d.responsable_id === myId() ? 'Tú' : (d.responsable_name | personLabel: d.responsable_id)) : 'Coordinación aún no la asigna' }}</dd></div>
           @if (sla(d); as s) { <div><dt>Plazo</dt><dd [class.is-late]="s.late">{{ s.text }}</dd></div> }
           @if (d.fecha_resolucion) { <div><dt>Resuelta</dt><dd>{{ when(d.fecha_resolucion) }}</dd></div> }
         </dl>

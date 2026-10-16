@@ -156,7 +156,7 @@
                   @for (p of patients(); track p.id) {
                     <tr [class.is-flag]="p.attention.length" (click)="openPatient(p.id)">
                       <th scope="row">
-                        <button type="button" class="rp-name" (click)="$event.stopPropagation(); openPatient(p.id)">{{ p.name }}</button>
+                        <button type="button" class="rp-name" (click)="$event.stopPropagation(); openPatient(p.id)">{{ p.name | personLabel: p.id }}</button>
                         <span class="rp-sub">Última sesión: {{ date(p.last_session) }}</span>
                       </th>
                       <td class="rp-num">{{ p.sessions_done }}<span class="rp-sub-inline">/{{ p.sessions_scheduled }}</span></td>

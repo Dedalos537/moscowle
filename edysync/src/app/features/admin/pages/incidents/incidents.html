@@ -133,7 +133,7 @@
                   {{ inc.estado }}
                 </span>
               </td>
-              <td class="text-sm">{{ inc.responsable_name || '—' }}</td>
+              <td class="text-sm">{{ inc.responsable_name | personLabel }}</td>
               <td>
                 @if (inc.esta_vencido) {
                   <span class="text-red-600 font-bold text-xs">VENCIDO</span>
@@ -197,7 +197,7 @@
             </div>
             <div>
               <span class="text-label-caps text-on-surface-variant">Responsable</span>
-              <p class="font-medium text-on-surface mt-0.5">{{ inc.responsable_name || '—' }}</p>
+              <p class="font-medium text-on-surface mt-0.5">{{ inc.responsable_name | personLabel }}</p>
             </div>
             <div>
               <span class="text-label-caps text-on-surface-variant">SLA</span>
