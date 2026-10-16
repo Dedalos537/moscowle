@@ -56,25 +56,25 @@ export class Reports implements OnInit, OnDestroy {
   /** Búsqueda por nombre, código o correo que filtra todas las tablas de personas del reporte. */
   readonly personQuery = signal('');
 
-  match<T>(list: readonly T[] | null | undefined, nameKey: string, idKey?: string, emailKey?: string): T[] {
-    const rows = (list ?? []) as T[];
+  match(list: readonly any[] | null | undefined, nameKey: string, idKey?: string, emailKey?: string): any[] {
+    const rows = (list ?? []) as any[];
     const q = this.personQuery();
     if (!q.trim()) return rows;
-    return rows.filter((r: any) => this.people.matches(q, { name: r?.[nameKey], id: idKey ? r?.[idKey] : null, email: emailKey ? r?.[emailKey] : null }));
+    return rows.filter((r) => this.people.matches(q, { name: r?.[nameKey], id: idKey ? r?.[idKey] : null, email: emailKey ? r?.[emailKey] : null }));
   }
 
-  matchAny<T>(list: readonly T[] | null | undefined, ...nameKeys: string[]): T[] {
-    const rows = (list ?? []) as T[];
+  matchAny(list: readonly any[] | null | undefined, ...nameKeys: string[]): any[] {
+    const rows = (list ?? []) as any[];
     const q = this.personQuery();
     if (!q.trim()) return rows;
-    return rows.filter((r: any) => nameKeys.some((k) => this.people.matches(q, { name: r?.[k] })));
+    return rows.filter((r) => nameKeys.some((k) => this.people.matches(q, { name: r?.[k] })));
   }
 
   /** Terapeuta con sus pacientes: queda si coincide el terapeuta o alguno de sus pacientes. */
-  groups<T>(list: readonly T[] | null | undefined): T[] {
-    const rows = (list ?? []) as T[];
+  groups(list: readonly any[] | null | undefined): any[] {
+    const rows = (list ?? []) as any[];
     if (!this.personQuery().trim()) return rows;
-    return rows.filter((e: any) => this.therapistHit(e) || this.members(e).length > 0);
+    return rows.filter((e) => this.therapistHit(e) || this.members(e).length > 0);
   }
 
   members(entry: any): any[] {
