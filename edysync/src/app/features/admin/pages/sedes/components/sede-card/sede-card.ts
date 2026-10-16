@@ -11,6 +11,7 @@ import { fmtValue, scoreTone } from '../../kpi-format';
   templateUrl: './sede-card.html',
   styleUrl: './sede-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.is-row]': 'expanded() !== null' },
 })
 export class SedeCard {
   sede = input.required<Sede>();

@@ -56,9 +56,12 @@
 }
 .sc-skel--sm { width: 2.5rem; height: 1rem; }
 @keyframes sc-pulse { from { opacity: 0.5; } to { opacity: 1; } }
-/* Encabezado de desplegable: una fila con nombre, puntaje, cifras y chevrón. */
+/* Encabezado de desplegable: una fila con nombre, puntaje, cifras y chevrón.
+   El host deja de estirarse (height: 100% es para la cuadrícula de tarjetas) y el diseño en fila depende
+   del ancho real de la tarjeta, no de la ventana: con la barra lateral abierta queda mucho menos espacio. */
+:host(.is-row) { height: auto; container-type: inline-size; }
 .sc-chev {
-  display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 999px; justify-self: end;
+  display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 999px;
   color: var(--color-on-surface-variant); background: var(--color-surface-container);
   transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease, color 150ms ease;
   .is-open & { transform: rotate(180deg); background: color-mix(in srgb, var(--color-primary) 14%, transparent); color: var(--color-primary); }
@@ -66,24 +69,22 @@
 .sc.is-row {
   height: auto;
   &.is-open { border-color: var(--color-primary); border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-  .sc-main { padding-right: 6.75rem; }
-  .sc-head { padding-right: 0; }
-  .sc-actions { top: 50%; transform: translateY(-50%); }
+  .sc-main { padding-right: 1.125rem; }
+  .sc-head { padding-right: 4.75rem; }
+  .sc-chev { position: absolute; right: 0.875rem; bottom: 0.875rem; }
+  .sc-figs { padding-right: 3rem; }
 }
-@media (min-width: 900px) {
+@container (min-width: 46rem) {
   .sc.is-row {
-    .sc-main { grid-template-columns: minmax(14rem, 1.1fr) minmax(9rem, auto) minmax(0, 1.6fr) auto; align-items: center; gap: 1.5rem; }
-    .sc-figs { padding-top: 0; border-top: 0; padding-left: 1.5rem; border-left: 1px solid var(--color-outline-variant); }
+    .sc-main {
+      grid-template-columns: minmax(10rem, 1fr) auto minmax(17rem, 1.4fr) 2.25rem;
+      align-items: center; gap: 1.25rem; padding: 1rem 7rem 1rem 1.125rem;
+    }
+    .sc-head { padding-right: 0; }
+    .sc-figs { padding: 0 0 0 1.25rem; border-top: 0; border-left: 1px solid var(--color-outline-variant); }
+    .sc-chev { position: static; }
     .sc-off { grid-column: 2 / -1; }
-  }
-}
-@media (max-width: 899px) {
-  .sc.is-row {
-    .sc-main { padding-right: 1.125rem; }
-    .sc-head { padding-right: 4.75rem; }
-    .sc-actions { top: 0.75rem; transform: none; }
-    .sc-chev { position: absolute; right: 0.75rem; bottom: 0.75rem; }
-    .sc-figs { padding-right: 2.75rem; }
+    .sc-actions { top: 50%; transform: translateY(-50%); }
   }
 }
 @media (prefers-reduced-motion: reduce) { .sc-skel { animation: none; } .sc, .sc-chev { transition: none; } }
