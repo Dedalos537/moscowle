@@ -138,7 +138,8 @@ export class GlobalSettingsService {
     root.setProperty('--color-primary-container', isDark
       ? this.hslToHex(h, Math.max(20, s * 0.6), Math.min(25, l * 0.4))
       : this.hslToHex(h, Math.max(15, s * 0.5), Math.min(92, l + (95 - l) * 0.7)));
-    root.setProperty('--color-on-primary', isDark ? '#1a1a1a' : '#ffffff');
+    // Texto sobre el color principal: el que llegue a AA (≥4.5:1). Blanco sobre verde claro daba 2.83:1.
+    root.setProperty('--color-on-primary', this.readableOn(hex));
     root.setProperty('--color-on-primary-container', isDark ? '#ffffff' : '#1a1a1a');
 
     // Secondary container
@@ -146,7 +147,7 @@ export class GlobalSettingsService {
     root.setProperty('--color-secondary-container', isDark
       ? this.hslToHex(sh, Math.max(20, ss * 0.5), Math.min(25, sl * 0.5))
       : this.hslToHex(sh, Math.max(15, ss * 0.4), Math.min(93, sl + (95 - sl) * 0.7)));
-    root.setProperty('--color-on-secondary', isDark ? '#1a1a1a' : '#ffffff');
+    root.setProperty('--color-on-secondary', this.readableOn(secHex));
     root.setProperty('--color-on-secondary-container', isDark ? '#ffffff' : '#1a1a1a');
 
     // Sidebar / nav active
@@ -287,6 +288,17 @@ export class GlobalSettingsService {
 
   private saveToAPI(data: Partial<{ font_size: FontSize; primary_color: string; hide_charts: boolean; sidebar_display: SidebarDisplay; person_display: PersonDisplay }>): void {
     this.http.put('/api/user/preferences', data).subscribe({ error: () => {} });
+  }
+
+  /** Texto legible sobre `hex`: tinta casi negra o blanco, el de mayor contraste (WCAG). */
+  private readableOn(hex: string): string {
+    const lum = (h: string) => {
+      const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+      return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    };
+    const l = lum(hex);
+    const dark = '#121a0a';
+    return (1.05) / (l + 0.05) >= (l + 0.05) / (lum(dark) + 0.05) ? '#ffffff' : dark;
   }
 
   // --- HSL color utilities ---

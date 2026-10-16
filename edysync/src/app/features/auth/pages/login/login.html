@@ -1,231 +1,122 @@
-<main role="main" class="flex min-h-screen items-center justify-center p-4 bg-background transition-colors duration-300">
-
+<main class="lg">
   <app-preferences-menu [fixed]="true"></app-preferences-menu>
 
-  <div class="login-card w-full max-w-md bg-surface-container-lowest rounded-xl shadow-soft p-10 relative overflow-hidden transition-colors duration-300" role="region" aria-label="Formulario de inicio de sesión">
+  <section class="lg-card" aria-labelledby="lg-title">
+    <header class="lg-head">
+      <app-logo class="lg-logo" aria-hidden="true"></app-logo>
+      <p class="lg-brand">Centro de Terapias Juan Pablo II</p>
+      <h1 id="lg-title" class="lg-title">Inicia sesión</h1>
+    </header>
 
-      @if (isLoading) {
-        <div class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-surface-container-lowest/90 backdrop-blur-sm rounded-xl">
-          <fa-icon [icon]="['fas', 'spinner']" animation="spin" class="text-5xl text-primary mb-4"></fa-icon>
-          <p class="text-sm font-bold text-on-surface">Iniciando sesion...</p>
-          <p class="text-xs text-on-surface-variant mt-1">Verificando credenciales</p>
+    @if (notice) {
+      <app-alert class="lg-notice" type="success" [message]="notice"></app-alert>
+    }
+
+    <form class="lg-form" (ngSubmit)="doLogin()" novalidate [attr.aria-busy]="isLoading">
+      <div class="lg-field">
+        <label class="lg-label" for="email">Correo o código</label>
+        <p id="email-hint" class="lg-hint">Tu correo o tu código de acceso, por ejemplo PCJP1</p>
+        <input #emailInput id="email" name="email" type="text" class="lg-input"
+          [(ngModel)]="email" (ngModelChange)="onEmailChange()" (blur)="onEmailBlur()"
+          [readonly]="isLoading"
+          [attr.aria-invalid]="emailError || credentialsRejected ? true : null"
+          [attr.aria-describedby]="emailError ? 'email-hint email-error' : 'email-hint'"
+          autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"
+          enterkeyhint="next" required />
+        @if (emailError) {
+          <p id="email-error" class="lg-error">
+            <fa-icon [icon]="['fas', 'circle-exclamation']" aria-hidden="true"></fa-icon>{{ emailError }}
+          </p>
+        }
+      </div>
+
+      <div class="lg-field">
+        <div class="lg-label-row">
+          <label class="lg-label" for="password">Contraseña</label>
+          <a routerLink="/auth/reset-password" class="lg-link">¿La olvidaste?</a>
         </div>
-      }
-
-      <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary-container to-primary-fixed-dim"></div>
-
-      <div class="text-center mb-8">
-          <div class="login-logo w-20 h-20 mx-auto mb-4">
-              <app-logo class="w-full h-full object-contain" role="img" aria-label="Centro Juan Pablo II"></app-logo>
-          </div>
-          <h1 class="text-h2 text-on-surface transition-colors">Centro de Terapias</h1>
-          <h2 class="text-h3 text-on-surface-variant transition-colors">Juan Pablo II</h2>
-          <p class="text-body-sm text-outline mt-2 transition-colors">Acceso a Plataforma Digital</p>
+        <div class="lg-pass">
+          <input #passwordInput id="password" name="password" class="lg-input lg-input--pass"
+            [type]="showPassword ? 'text' : 'password'"
+            [(ngModel)]="password" (ngModelChange)="passwordError = ''; credentialsRejected = false"
+            [readonly]="isLoading"
+            [attr.aria-invalid]="passwordError || credentialsRejected ? true : null"
+            [attr.aria-describedby]="passwordError ? 'password-error' : null"
+            autocomplete="current-password" enterkeyhint="go" required />
+          <button type="button" class="lg-eye" (click)="togglePassword()"
+            [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            [attr.aria-pressed]="showPassword">
+            <fa-icon [icon]="['fas', showPassword ? 'eye-slash' : 'eye']" aria-hidden="true"></fa-icon>
+          </button>
+        </div>
+        @if (passwordError) {
+          <p id="password-error" class="lg-error">
+            <fa-icon [icon]="['fas', 'circle-exclamation']" aria-hidden="true"></fa-icon>{{ passwordError }}
+          </p>
+        }
       </div>
 
       @if (alertMessage) {
-         <div class="mb-6">
-            <app-alert [type]="alertType" [message]="alertMessage"></app-alert>
-         </div>
+        <app-alert type="error" [message]="alertMessage"></app-alert>
       }
 
-      <form (ngSubmit)="doLogin()" class="space-y-5">
-
-          <div>
-               <label class="block text-sm font-bold text-on-surface mb-1.5 transition-colors">Correo o Código</label>
-               <div class="relative w-full">
-                   <span class="absolute left-4 top-1/2 -translate-y-1/2 text-outline pointer-events-none transition-colors">
-                       <fa-icon [icon]="['fas', 'user']" class="text-lg"></fa-icon>
-                   </span>
-                     <input type="text" id="email" name="email" [(ngModel)]="email" (input)="onEmailInput()"
-                         class="w-full pl-12 pr-4 py-3.5 bg-surface-container-low border border-border/50 rounded-xl outline-none transition-all text-on-surface placeholder-outline/50 font-medium focus:border-primary focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20"
-                         placeholder="usuario@ejemplo.com o PCJP1" required>
-               </div>
-               @if (emailError) {
-                 <span class="text-xs text-error mt-1.5 block">{{ emailError }}</span>
-               }
-           </div>
-
-           <div>
-               <label class="block text-sm font-bold text-on-surface mb-1.5 transition-colors">Contraseña</label>
-               <div class="relative w-full">
-                   <span class="absolute left-4 top-1/2 -translate-y-1/2 text-outline pointer-events-none transition-colors">
-                       <fa-icon [icon]="['fas', 'lock']" class="text-lg"></fa-icon>
-                   </span>
-                     <input type="password" [type]="showPassword ? 'text' : 'password'" id="password" name="password" [(ngModel)]="password" (input)="onPasswordInput()" (focus)="onPasswordFocus()"
-                         class="w-full pl-12 pr-12 py-3.5 bg-surface-container-low border border-border/50 rounded-lg outline-none transition-all text-on-surface placeholder-outline/50 font-medium focus:border-primary focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20"
-                         placeholder="Ingresa tu contraseña" required>
-
-                    <button type="button" (click)="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface focus:outline-none transition-colors border-none bg-transparent cursor-pointer"
-                       [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
-                       <fa-icon [icon]="['fas', showPassword ? 'eye-slash' : 'eye']"></fa-icon>
-                   </button>
-              </div>
-              @if (passwordError) {
-                <span class="text-xs text-error mt-1.5 block">{{ passwordError }}</span>
-              }
-          </div>
-
-          <div class="flex items-center justify-between pt-2">
-               <label class="flex items-center gap-2 cursor-pointer group">
-                   <input type="checkbox" class="custom-checkbox">
-                   <span class="text-body-sm text-on-surface-variant group-hover:text-on-surface transition-colors">Recordarme</span>
-               </label>
-              <a routerLink="/auth/reset-password" class="text-body-sm font-bold transition-opacity" style="color: var(--color-on-primary-container);">¿Olvidaste tu contraseña?</a>
-          </div>
-
-           <button type="submit" id="login-btn"
-              [disabled]="!isFormValid || isLoading"
-              class="login-submit w-full py-4 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2"
-               [class.bg-primary]="isFormValid && !isLoading"
-               [class.text-on-primary]="isFormValid && !isLoading"
-               [class.cursor-pointer]="isFormValid && !isLoading"
-               [class.shadow-soft]="isFormValid && !isLoading"
-               [class.shadow-primary/20]="isFormValid && !isLoading"
-               [class.btn--active]="isFormValid && !isLoading"
-               [class.bg-surface-container-high]="!isFormValid || isLoading"
-               [class.text-on-surface-variant/40]="!isFormValid || isLoading"
-               [class.cursor-not-allowed]="!isFormValid || isLoading"
-               [class.shadow-none]="!isFormValid || isLoading"
-              (click)="doLogin(); dismissGuide()">
-
-              @if (isLoading) {
-                  <fa-icon [icon]="['fas', 'spinner']" class="fa-spin"></fa-icon>
-                  Verificando...
-              } @else {
-                  <fa-icon [icon]="['fas', 'right-to-bracket']"></fa-icon>
-                  INICIAR SESION
-              }
-           </button>
-
-           @if (authSupported()) {
-             <div class="webauthn-separator mt-6 flex items-center gap-3">
-               <span class="flex-1 h-px bg-border/50"></span>
-               <span class="text-xs text-outline transition-colors">o</span>
-               <span class="flex-1 h-px bg-border/50"></span>
-             </div>
-
-             <button type="button" id="webauthn-btn"
-               [disabled]="isLoading"
-               (click)="loginWithFingerprint(); dismissGuide()"
-               class="mt-4 w-full py-3.5 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 border cursor-pointer"
-               [class.opacity-60]="isLoading">
-               <fa-icon [icon]="['fas', 'fingerprint']" class="text-xl"></fa-icon>
-               INGRESAR CON HUELLA
-             </button>
-           }
-      </form>
-
-       <div class="mt-8 pt-6 border-t border-border/50 text-center">
-           <p class="text-body-sm text-outline transition-colors">
-                ¿Necesitas ayuda? Contacta a <a href="mailto:info@centrojuanpabloii.com" class="font-bold hover:underline" style="color: var(--color-on-primary-container);">Soporte Técnico</a>
-           </p>
-       </div>
-  </div>
-
-  <button type="button" (click)="toggleHelp()"
-    class="help-btn"
-    [class.help-btn--active]="showHelp"
-    [class.floating-ui--hidden]="floating.hidden()"
-    [style.bottom.px]="floating.leftStackOffset(0)"
-    [title]="showHelp ? 'Cerrar ayuda' : 'Ayuda'"
-    [attr.aria-label]="showHelp ? 'Cerrar ayuda' : 'Ayuda'">
-    <fa-icon [icon]="['fas', showHelp ? 'times' : 'question']"></fa-icon>
-  </button>
-
-  @if (guideVisible) {
-    <div class="guide-character" [style.top.px]="guidePos.top" [style.left.px]="guidePos.left">
-      <div class="guide-avatar">
-        <app-logo role="img" aria-label="Centro Juan Pablo II"></app-logo>
-      </div>
-      <div class="guide-bubble">
-        <span class="guide-text">{{ guideText }}</span>
-        <div class="guide-arrow" [style.left.%]="guidePos.arrowLeft"></div>
-      </div>
-      <button type="button" class="guide-close" (click)="dismissGuide()">
-        <fa-icon [icon]="['fas', 'xmark']"></fa-icon>
+      <button type="submit" class="lg-submit" [disabled]="isLoading">
+        @if (isLoading && !fingerprintBusy) {
+          <fa-icon [icon]="['fas', 'spinner']" animation="spin" aria-hidden="true"></fa-icon>
+          Verificando…
+        } @else {
+          Iniciar sesión
+        }
       </button>
-    </div>
-  }
+      <span class="sr-only" role="status">{{ isLoading ? 'Verificando tus datos…' : '' }}</span>
 
-  @if (showHelp) {
-    <div class="help-overlay" (click)="toggleHelp()">
-      <div class="help-panel" (click)="$event.stopPropagation()">
-        <div class="help-character">
-          <fa-icon [icon]="['fas', 'lightbulb']" class="help-icon"></fa-icon>
-        </div>
-        <h4 class="help-title">¿Cómo iniciar sesión?</h4>
-        <p class="help-subtitle">Sigue estos pasos para acceder a la plataforma</p>
-
-        <div class="help-step">
-          <div class="help-step-num">1</div>
-          <div class="help-step-content">
-            <strong>Correo o Código</strong>
-            <p>Escribe tu correo electrónico o tu código de acceso (ej: <em>PCJP1</em>, <em>TCJP2</em>, <em>ACJP1</em>).</p>
-          </div>
-        </div>
-
-        <div class="help-step">
-          <div class="help-step-num">2</div>
-          <div class="help-step-content">
-            <strong>Contraseña</strong>
-            <p>Ingresa tu contraseña personal. Si no recuerdas tu contraseña, haz clic en <em>"¿Olvidaste tu contraseña?"</em></p>
-          </div>
-        </div>
-
-        <div class="help-step">
-          <div class="help-step-num">3</div>
-          <div class="help-step-content">
-            <strong>Iniciar Sesión</strong>
-            <p>Presiona el botón <em>"INICIAR SESIÓN"</em> y accederás a tu panel personalizado según tu rol.</p>
-          </div>
-        </div>
-
-        <div class="help-footer">
-          <fa-icon [icon]="['fas', 'envelope']"></fa-icon>
-          ¿Más dudas? Escríbenos a
-          <a href="mailto:info@centrojuanpabloii.com" class="help-email">info@centrojuanpabloii.com</a>
-        </div>
-      </div>
-    </div>
-  }
-
-  @if (wfModalOpen) {
-    <div class="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div class="w-full max-w-sm rounded-2xl bg-surface-container-lowest border border-border/50 shadow-2xl p-6 text-center">
-        <div class="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4" style="color: var(--color-primary);">
-          <fa-icon [icon]="['fas', 'fingerprint']" class="text-3xl"></fa-icon>
-        </div>
-        <h3 class="text-lg font-bold text-on-surface">¿Ingresar con huella?</h3>
-        <p class="text-sm text-on-surface-variant mt-1 mb-5">
-          Se detectó una huella registrada en este dispositivo para
-          <strong class="text-on-surface">{{ email }}</strong>.
-        </p>
-        <div class="rounded-xl bg-surface-container-low border border-border/50 px-4 py-3 flex items-center justify-between mb-5">
-          <span class="text-sm font-semibold text-on-surface">Touch ID</span>
-          <span class="flex items-center gap-2 text-outline">
-            <fa-icon [icon]="['fas', 'fingerprint']"></fa-icon>
-            <fa-icon [icon]="['fas', 'arrow-right']"></fa-icon>
-          </span>
-        </div>
-        <button type="button"
-          id="webauthn-modal-btn"
-          [disabled]="isLoading || wfChecking"
-          (click)="loginWithFingerprint(); dismissGuide()"
-          class="w-full py-3 rounded-lg font-bold text-sm bg-primary text-on-primary flex items-center justify-center gap-2 cursor-pointer transition-opacity disabled:opacity-60">
-          @if (isLoading || wfChecking) {
-            <fa-icon [icon]="['fas', 'spinner']" class="fa-spin"></fa-icon>
-            Verificando...
+      @if (fingerprintReady) {
+        <div class="lg-or" aria-hidden="true"><span>o</span></div>
+        <button type="button" class="lg-finger" [disabled]="isLoading" (click)="loginWithFingerprint()">
+          @if (fingerprintBusy) {
+            <fa-icon [icon]="['fas', 'spinner']" animation="spin" aria-hidden="true"></fa-icon>
+            Esperando tu huella…
           } @else {
-            <fa-icon [icon]="['fas', 'fingerprint']"></fa-icon>
-            INGRESAR CON HUELLA
+            <fa-icon [icon]="['fas', 'fingerprint']" aria-hidden="true"></fa-icon>
+            Ingresar con huella
           }
         </button>
-        <button type="button" (click)="closeWfModal()"
-          class="mt-2 w-full py-2 rounded-lg text-sm font-semibold text-on-surface-variant hover:text-on-surface border-none bg-transparent cursor-pointer">
-          Usar contraseña
+      }
+    </form>
+
+    <footer class="lg-foot">
+      <button type="button" class="lg-link" (click)="openHelp()">¿Cómo ingreso?</button>
+      <span aria-hidden="true">·</span>
+      <a class="lg-link" href="mailto:info@centrojuanpabloii.com">Escribir a soporte</a>
+    </footer>
+  </section>
+
+  <dialog #helpDialog class="lg-dialog" aria-labelledby="lg-help-title" (click)="onDialogClick($event)">
+    <div class="lg-dialog__body">
+      <div class="lg-dialog__head">
+        <h2 id="lg-help-title" class="lg-dialog__title">Cómo ingresar</h2>
+        <button type="button" class="lg-dialog__close" (click)="closeHelp()" aria-label="Cerrar">
+          <fa-icon [icon]="['fas', 'xmark']" aria-hidden="true"></fa-icon>
         </button>
       </div>
+      <ol class="lg-steps">
+        <li>
+          <strong>Escribe tu correo o tu código.</strong>
+          El código te lo da el centro: empieza con P si eres paciente (PCJP1), T si eres terapeuta (TCJP2), S si eres supervisor y A si eres administrador.
+        </li>
+        <li>
+          <strong>Escribe tu contraseña.</strong>
+          Si no la recuerdas, toca «¿La olvidaste?» y un administrador te dará una nueva.
+        </li>
+        <li>
+          <strong>Toca «Iniciar sesión».</strong>
+          Entrarás a tu panel. Si en este equipo ya usaste tu huella, también puedes ingresar con ella.
+        </li>
+      </ol>
+      <p class="lg-dialog__foot">
+        ¿Sigues sin poder entrar? Escribe a
+        <a class="lg-link" href="mailto:info@centrojuanpabloii.com">info&#64;centrojuanpabloii.com</a>
+      </p>
     </div>
-  }
+  </dialog>
 </main>

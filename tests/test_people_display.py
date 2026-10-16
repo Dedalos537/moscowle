@@ -48,3 +48,14 @@ def test_directory_is_scoped_by_role(app, client):
         assert row['code'] == mine.login_code
 
         assert client.get('/api/people/directory', headers=_h(mine)).get_json()['people'] == []
+
+
+def test_reset_request_accepts_login_code(app, client):
+    from app.models.password_reset import PasswordReset
+
+    with app.app_context():
+        code = 'PCJP' + uuid.uuid4().hex[:5].upper()
+        u = _user('jugador', login_code=code)
+        r = client.post('/api/auth/reset-password', json={'email': code.lower()})
+        assert r.status_code == 200 and r.get_json()['success'] is True
+        assert PasswordReset.query.filter_by(email=u.email.lower()).count() == 1

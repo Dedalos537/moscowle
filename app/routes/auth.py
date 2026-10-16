@@ -315,10 +315,16 @@ def api_auth_session_revoke():
 def api_reset_password_request():
     try:
         data = request.get_json(silent=True) or {}
-        email = (data.get('email') or '').strip().lower()
+        identifier = (data.get('email') or data.get('identifier') or '').strip().lower()
 
-        if not email:
-            return jsonify({'success': False, 'error': 'Email requerido'}), 400
+        if not identifier:
+            return jsonify({'success': False, 'error': 'Escribe tu correo o tu código'}), 400
+
+        # Se acepta el correo o el código de acceso (los pacientes ingresan con código, p. ej. PCJP1).
+        user = User.query.filter(
+            db.or_(db.func.lower(User.email) == identifier, db.func.lower(User.login_code) == identifier)
+        ).first()
+        email = (user.email or identifier).lower() if user else identifier
 
         now = datetime.utcnow()
         recent = PasswordReset.query.filter(
@@ -327,7 +333,7 @@ def api_reset_password_request():
             PasswordReset.expires_at > now,
         ).first()
         if recent:
-            return jsonify({'success': True, 'message': 'Si el email existe, un administrador revisará tu solicitud.'})
+            return jsonify({'success': True, 'message': 'Si la cuenta existe, un administrador revisará tu solicitud.'})
 
         PasswordReset.query.filter(
             PasswordReset.email == email,
@@ -336,7 +342,6 @@ def api_reset_password_request():
         ).update({'status': 'expired'})
         db.session.commit()
 
-        user = User.query.filter_by(email=email).first()
         record = PasswordReset.create_for_email(
             email,
             user_id=user.id if user else None,
@@ -386,7 +391,7 @@ def api_reset_password_request():
                     user.username or email,
                 )
 
-        return jsonify({'success': True, 'message': 'Si el email existe, un administrador revisará tu solicitud.'})
+        return jsonify({'success': True, 'message': 'Si la cuenta existe, un administrador revisará tu solicitud.'})
     except Exception as e:
         current_app.logger.error(f'/api/auth/reset-password error: {e}')
         return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
