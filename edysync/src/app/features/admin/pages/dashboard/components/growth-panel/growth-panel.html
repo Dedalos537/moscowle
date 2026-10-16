@@ -32,7 +32,7 @@
         </div>
 
         @if (bars(); as b) {
-          <div class="gp-chart" role="list" [attr.aria-label]="m.label + ', últimos 6 meses'" (mouseleave)="hover.set(null)">
+          <div class="gp-chart" (mouseleave)="hover.set(null)">
             <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" aria-hidden="true">
               <line class="gp-base" [attr.x1]="PAD.l" [attr.x2]="W - PAD.r" [attr.y1]="H - PAD.b" [attr.y2]="H - PAD.b" />
               @if (b.targetY != null) {
@@ -49,7 +49,7 @@
                 </g>
               }
             </svg>
-            <ol class="gp-points">
+            <ol class="gp-points" [attr.aria-label]="m.label + ', últimos 6 meses'">
               @for (it of b.items; track $index) {
                 <li tabindex="0" class="gp-point" [style.left.%]="(it.cx / W) * 100" [attr.aria-label]="it.full"
                   (focus)="hover.set($index)" (blur)="hover.set(null)"></li>
@@ -63,7 +63,7 @@
         }
 
         @if (flowBars(); as f) {
-          <div class="gp-chart" role="list" aria-label="Altas y bajas de pacientes, últimos 6 meses" (mouseleave)="hover.set(null)">
+          <div class="gp-chart" (mouseleave)="hover.set(null)">
             <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" aria-hidden="true">
               <line class="gp-base" [attr.x1]="PAD.l" [attr.x2]="W - PAD.r" [attr.y1]="f.mid" [attr.y2]="f.mid" />
               @for (it of f.items; track $index) {
@@ -78,7 +78,7 @@
                 </g>
               }
             </svg>
-            <ol class="gp-points">
+            <ol class="gp-points" aria-label="Altas y bajas de pacientes, últimos 6 meses">
               @for (it of f.items; track $index) {
                 <li tabindex="0" class="gp-point" [style.left.%]="(it.cx / W) * 100" [attr.aria-label]="it.full"
                   (focus)="hover.set($index)" (blur)="hover.set(null)"></li>
