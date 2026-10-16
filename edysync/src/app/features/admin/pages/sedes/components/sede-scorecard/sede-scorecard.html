@@ -1,9 +1,10 @@
-<section class="bsc" aria-labelledby="bsc-title">
+<section class="bsc" [attr.aria-labelledby]="uid + '-title'">
   <header class="bsc-head">
     <div class="bsc-head__text">
-      <h2 id="bsc-title" class="bsc-title">Balanced Scorecard</h2>
+      <h2 [id]="uid + '-title'" class="bsc-title">{{ heading() }}</h2>
       <p class="bsc-sub">{{ data().period_label }} · {{ range() }} · comparado con {{ prevRange() }}</p>
     </div>
+    @if (showChips()) {
     <div class="bsc-chips" role="group" aria-label="Sede del scorecard">
       @for (s of data().sedes; track s.id) {
         <button type="button" class="bsc-chip" [class.is-on]="sedeId() === s.id" [attr.aria-pressed]="sedeId() === s.id" (click)="sedeChange.emit(s.id)">
@@ -17,6 +18,7 @@
         </button>
       }
     </div>
+    }
   </header>
 
   @if (sede(); as s) {
@@ -46,11 +48,11 @@
     <div class="bsc-body">
       <div class="bsc-grid">
         @for (g of groups(); track g.key) {
-          <article class="bsc-persp" [attr.aria-labelledby]="'bsc-p-' + g.key">
+          <article class="bsc-persp" [attr.aria-labelledby]="uid + '-p-' + g.key">
             <header class="bsc-persp__head">
               <span class="bsc-persp__icon" aria-hidden="true"><fa-icon [icon]="icons[g.key]"></fa-icon></span>
               <div>
-                <h3 [id]="'bsc-p-' + g.key" class="bsc-persp__title">{{ g.label }}</h3>
+                <h3 [id]="uid + '-p-' + g.key" class="bsc-persp__title">{{ g.label }}</h3>
                 <p class="bsc-persp__q">{{ g.question }}</p>
               </div>
             </header>

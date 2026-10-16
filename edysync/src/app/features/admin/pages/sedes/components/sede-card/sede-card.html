@@ -1,7 +1,9 @@
-<article class="sc" [class.is-selected]="selected()" [class.is-off]="!sede().active">
+<article class="sc" [class.is-selected]="selected()" [class.is-off]="!sede().active" [class.is-row]="expanded() !== null" [class.is-open]="expanded() === true">
   <button type="button" class="sc-main" (click)="select.emit(sede())" [disabled]="!sede().active"
-    [attr.aria-pressed]="sede().active ? selected() : null"
-    [attr.aria-label]="sede().active ? 'Ver el scorecard de ' + sede().name : null">
+    [attr.aria-pressed]="expanded() === null && sede().active ? selected() : null"
+    [attr.aria-expanded]="expanded() !== null && sede().active ? expanded() : null"
+    [attr.aria-controls]="expanded() !== null ? controls() : null"
+    [attr.aria-label]="sede().active ? (expanded() === null ? 'Ver el scorecard de ' : (expanded() ? 'Cerrar ' : 'Abrir ')) + sede().name : null">
     <span class="sc-head">
       <span class="sc-icon" aria-hidden="true"><fa-icon [icon]="['fas', 'location-dot']"></fa-icon></span>
       <span class="sc-titles">
@@ -30,6 +32,9 @@
       </span>
     } @else {
       <span class="sc-off">Sede inactiva · no aparece en el scorecard ni al asignar pacientes</span>
+    }
+    @if (expanded() !== null && sede().active) {
+      <span class="sc-chev" aria-hidden="true"><fa-icon [icon]="['fas', 'chevron-down']"></fa-icon></span>
     }
   </button>
 

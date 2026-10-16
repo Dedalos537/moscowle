@@ -54,6 +54,8 @@ const ICONS: Record<PerspectiveKey, IconProp> = {
  * solo se agrupan por perspectiva y se dibujan. Seleccionar un indicador abre su detalle: cómo se calcula, los
  * últimos 6 meses frente a la meta y cómo está cada sede.
  */
+let nextUid = 0;
+
 @Component({
   selector: 'app-sede-scorecard',
   standalone: true,
@@ -66,7 +68,14 @@ export class SedeScorecard {
   data = input.required<Scorecard>();
   /** Sede mostrada; `null` = comparar todas. */
   sedeId = input<number | null>(null);
+  /** Selector de sede dentro del scorecard. La página de sedes lo oculta: allí cada sede es un desplegable. */
+  showChips = input(true);
+  /** Título del bloque (p. ej. «Comparación de sedes»). */
+  heading = input('Balanced Scorecard');
   sedeChange = output<number | null>();
+
+  /** Prefijo único: puede haber varios scorecards abiertos a la vez y sus ids no deben repetirse. */
+  readonly uid = `bsc${++nextUid}`;
 
   readonly selected = signal<string>('revenue');
   readonly hoverBar = signal<number | null>(null);
