@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response';
 import { User, CreateUserPayload } from '../models/user';
 import { Scorecard, ScorecardPeriod, Sede, SedeAnalytics } from '../models/sede';
+import { CenterDashboard } from '../models/center-dashboard';
 import { Payment, PatientPaymentStatus, DebtReport } from '../models/payment';
 import { Appointment, CalendarEvent, BatchSessionPayload } from '../models/appointment';
 import { Expense, TherapistFinancial, ContactMessage, TherapistStats, PatientStats } from '../models/expense';
@@ -113,6 +114,13 @@ export class AdminService {
 
   updateSede(id: number, data: Partial<Sede>): Observable<ApiResponse> {
     return this.http.put<ApiResponse>(`/api/admin/sedes/${id}`, data);
+  }
+
+  /** Dashboard del centro (o de una sede): hoy, crecimiento, riesgo de abandono, equipo y sedes. */
+  getCenterDashboard(period: ScorecardPeriod, sedeId: number | null): Observable<CenterDashboard> {
+    let params = new HttpParams().set('period', period);
+    if (sedeId) params = params.set('sede', sedeId);
+    return this.http.get<CenterDashboard>('/api/admin/dashboard', { params });
   }
 
   getSedeScorecard(period: ScorecardPeriod): Observable<Scorecard> {

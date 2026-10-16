@@ -231,10 +231,11 @@ class _Data:
                 User.role == 'jugador', User.sede_id.isnot(None)
             )
         }
+        # Todos los pacientes nuevos (con o sin sede): el centro completo también cuenta a los que no tienen sede.
         self.new_patients = [
             (sid, created)
             for sid, created in db.session.query(User.sede_id, User.created_at).filter(
-                User.role == 'jugador', User.sede_id.isnot(None), User.created_at >= start, User.created_at < end
+                User.role == 'jugador', User.created_at >= start, User.created_at < end
             )
         ]
         self.appointments = (
@@ -296,8 +297,7 @@ class _Data:
         self.incidents = []
         for i in incidents:
             sid = self.patient_sede.get(appt_patient.get(i.appointment_id)) or user_sede.get(i.user_id)
-            if sid:
-                self.incidents.append((sid, i))
+            self.incidents.append((sid, i))
         self.therapists = defaultdict(int)
         rows = (
             db.session.query(User.id, Sede.id)
@@ -307,6 +307,9 @@ class _Data:
         )
         for _uid, sid in rows:
             self.therapists[sid] += 1
+        self.therapists_total = (
+            db.session.query(User.id).filter(User.role == 'terapista', User.is_active.isnot(False)).count()
+        )
 
     def sede_of(self, patient_id):
         return self.patient_sede.get(patient_id)
@@ -316,35 +319,41 @@ def _in(ts, start, end):
     return ts is not None and start <= ts < end
 
 
+CENTER = 'center'  # sede_id especial: todo el centro, incluidos pacientes sin sede
+
+
 def _compute(data, sede_id, first_day, last_day, previous_active=None):
     start, end = utc_bounds(first_day, last_day)
     cutoff = min(end, data.now)
-    own = data.sede_of
+    center = sede_id == CENTER
 
-    appts = [a for a in data.appointments if own(a.patient_id) == sede_id and _in(a.start_time, start, end)]
+    def mine(patient_id):
+        return center or data.sede_of(patient_id) == sede_id
+
+    appts = [a for a in data.appointments if mine(a.patient_id) and _in(a.start_time, start, end)]
     done = [a for a in appts if a.status == 'completed']
     cancelled = [a for a in appts if a.status in ('cancelled', 'canceled')]
     past = [a for a in appts if a.start_time < cutoff and a.status not in ('cancelled', 'canceled')]
     marked = [a for a in appts if a.attendance in ('present', 'absent')]
     active = {a.patient_id for a in done}
 
-    revenue = sum(p.amount or 0 for p in data.payments if own(p.patient_id) == sede_id and _in(p.date, start, end))
-    due = [i for i in data.installments if own(i.patient_id) == sede_id and first_day <= i.due_date <= last_day]
+    revenue = sum(p.amount or 0 for p in data.payments if mine(p.patient_id) and _in(p.date, start, end))
+    due = [i for i in data.installments if mine(i.patient_id) and first_day <= i.due_date <= last_day]
     due_amount = sum(i.amount or 0 for i in due)
     # Deuda tal como estaba al cierre del periodo: lo pagado después de esa fecha todavía se debía.
     overdue = sum(
         max(0.0, (i.amount or 0) - ((i.paid_amount or 0) if i.paid_date is None or i.paid_date < end else 0))
         for i in data.installments
-        if own(i.patient_id) == sede_id and i.due_date < min(last_day, data.today)
+        if mine(i.patient_id) and i.due_date < min(last_day, data.today)
     )
 
     acc = [
         m.accurracy * 100 if m.accurracy is not None and m.accurracy <= 1 else m.accurracy
         for m in data.metrics
-        if own(m.user_id) == sede_id and _in(m.date, start, end) and m.accurracy is not None
+        if mine(m.user_id) and _in(m.date, start, end) and m.accurracy is not None
     ]
 
-    incidents = [i for sid, i in data.incidents if sid == sede_id]
+    incidents = [i for sid, i in data.incidents if center or sid == sede_id]
     resolved = [i for i in incidents if _in(i.fecha_resolucion, start, end)]
     on_time = [i for i in resolved if i.fecha_limite_sla is None or i.fecha_resolucion <= i.fecha_limite_sla]
     open_now = [
@@ -354,7 +363,7 @@ def _compute(data, sede_id, first_day, last_day, previous_active=None):
         and (i.fecha_resolucion is None or i.fecha_resolucion >= end)
         and i.estado not in CLOSED_INCIDENTS
     ]
-    therapists = data.therapists.get(sede_id, 0)
+    therapists = data.therapists_total if center else data.therapists.get(sede_id, 0)
 
     values = {
         'revenue': round(revenue, 2),
@@ -362,7 +371,7 @@ def _compute(data, sede_id, first_day, last_day, previous_active=None):
         'overdue': round(overdue, 2),
         'ticket': round(revenue / len(done), 2) if done else None,
         'active_patients': len(active),
-        'new_patients': sum(1 for sid, c in data.new_patients if sid == sede_id and _in(c, start, end)),
+        'new_patients': sum(1 for sid, c in data.new_patients if (center or sid == sede_id) and _in(c, start, end)),
         'attendance': _pct(sum(1 for a in marked if a.attendance == 'present'), len(marked)),
         'retention': _pct(len(previous_active & active), len(previous_active)) if previous_active else None,
         'sessions_done': len(done),
@@ -398,6 +407,89 @@ def _status(value, target, direction):
     return 'warn' if value <= target + slack else 'bad'
 
 
+def _unit_block(data, unit_id, current, previous, month_starts, today, targets):
+    """KPIs (valor, anterior, meta, estado y 6 meses) y puntaje de una sede o de todo el centro (`CENTER`)."""
+    (first, last), (pfirst, plast) = current, previous
+    # Para la continuidad del periodo anterior hace falta el periodo previo a ese.
+    span = (last - first).days
+    pp_last = pfirst - timedelta(days=1)
+    _, _, pp_active = _compute(data, unit_id, pp_last - timedelta(days=span), pp_last)
+    prev_values, _, prev_active = _compute(data, unit_id, pfirst, plast, pp_active)
+    values, counts, _ = _compute(data, unit_id, first, last, prev_active)
+
+    trend = {k[0]: [] for k in KPIS}
+    before = None
+    for i, ms in enumerate(month_starts):
+        me = today if i == len(month_starts) - 1 else _add_months(ms, 1) - timedelta(days=1)
+        if before is None:
+            pm = _add_months(ms, -1)
+            _, _, before = _compute(data, unit_id, pm, ms - timedelta(days=1))
+        mv, _, before = _compute(data, unit_id, ms, me, before)
+        for key, series in trend.items():
+            series.append(mv[key])
+
+    kpis = []
+    for key, persp, label, unit, direction, _default, how in KPIS:
+        kpis.append(
+            {
+                'key': key,
+                'perspective': persp,
+                'label': label,
+                'unit': unit,
+                'direction': direction,
+                'value': values[key],
+                'previous': prev_values[key],
+                'target': targets.get(key),
+                'status': _status(values[key], targets.get(key), direction),
+                'trend': trend[key],
+                'how': how,
+            }
+        )
+    scored = [k for k in kpis if k['status'] != 'none']
+    points = {'good': 1.0, 'warn': 0.5, 'bad': 0.0}
+    perspectives = []
+    for pkey, plabel, question in PERSPECTIVES:
+        group = [k for k in scored if k['perspective'] == pkey]
+        perspectives.append(
+            {
+                'key': pkey,
+                'label': plabel,
+                'question': question,
+                'score': round(100 * sum(points[k['status']] for k in group) / len(group)) if group else None,
+            }
+        )
+    return {
+        'score': round(100 * sum(points[k['status']] for k in scored) / len(scored)) if scored else None,
+        'perspectives': perspectives,
+        'kpis': kpis,
+        'counts': counts,
+    }
+
+
+def load_window(period, today=None):
+    """Datos y rangos compartidos por el scorecard de sedes y el dashboard del centro."""
+    period = period if period in PERIODS else 'month'
+    today = today or lima_today()
+    (first, last), (pfirst, plast) = period_bounds(period, today)
+    month_starts = [_add_months(date(today.year, today.month, 1), -n) for n in range(5, -1, -1)]
+    window_start = min(pfirst, _add_months(month_starts[0], -1), _add_months(pfirst, -12 if period == 'year' else -3))
+    return period, today, (first, last), (pfirst, plast), month_starts, _Data(window_start, today)
+
+
+def unit_scorecard(unit_id, period='month', today=None):
+    """Scorecard de una sola unidad: una sede o `CENTER` (todo el centro)."""
+    period, today, cur, prev, month_starts, data = load_window(period, today)
+    block = _unit_block(data, unit_id, cur, prev, month_starts, today, get_targets())
+    return {
+        'period': period,
+        'period_label': PERIODS[period],
+        'range': {'from': cur[0].isoformat(), 'to': cur[1].isoformat()},
+        'previous_range': {'from': prev[0].isoformat(), 'to': prev[1].isoformat()},
+        'months': [m.isoformat() for m in month_starts],
+        **block,
+    }
+
+
 def scorecard(period='month', today=None):
     """Scorecard de todas las sedes activas: indicadores del periodo, el anterior y 6 meses de tendencia."""
     period = period if period in PERIODS else 'month'
@@ -412,65 +504,8 @@ def scorecard(period='month', today=None):
     sedes = Sede.query.filter(db.or_(Sede.is_active.is_(True), Sede.is_active.is_(None))).order_by(Sede.name).all()
     out = []
     for sede in sedes:
-        # Para la continuidad del periodo anterior hace falta el periodo previo a ese.
-        span = (last - first).days
-        pp_last = pfirst - timedelta(days=1)
-        _, _, pp_active = _compute(data, sede.id, pp_last - timedelta(days=span), pp_last)
-        prev_values, _, prev_active = _compute(data, sede.id, pfirst, plast, pp_active)
-        values, counts, _ = _compute(data, sede.id, first, last, prev_active)
-
-        trend = {k[0]: [] for k in KPIS}
-        before = None
-        for i, ms in enumerate(month_starts):
-            me = today if i == len(month_starts) - 1 else _add_months(ms, 1) - timedelta(days=1)
-            if before is None:
-                pm = _add_months(ms, -1)
-                _, _, before = _compute(data, sede.id, pm, ms - timedelta(days=1))
-            mv, _, before = _compute(data, sede.id, ms, me, before)
-            for key, series in trend.items():
-                series.append(mv[key])
-
-        kpis = []
-        for key, persp, label, unit, direction, _default, how in KPIS:
-            kpis.append(
-                {
-                    'key': key,
-                    'perspective': persp,
-                    'label': label,
-                    'unit': unit,
-                    'direction': direction,
-                    'value': values[key],
-                    'previous': prev_values[key],
-                    'target': targets.get(key),
-                    'status': _status(values[key], targets.get(key), direction),
-                    'trend': trend[key],
-                    'how': how,
-                }
-            )
-        scored = [k for k in kpis if k['status'] != 'none']
-        points = {'good': 1.0, 'warn': 0.5, 'bad': 0.0}
-        perspectives = []
-        for pkey, plabel, question in PERSPECTIVES:
-            mine = [k for k in scored if k['perspective'] == pkey]
-            perspectives.append(
-                {
-                    'key': pkey,
-                    'label': plabel,
-                    'question': question,
-                    'score': round(100 * sum(points[k['status']] for k in mine) / len(mine)) if mine else None,
-                }
-            )
-        out.append(
-            {
-                'id': sede.id,
-                'name': sede.name,
-                'address': sede.address,
-                'score': round(100 * sum(points[k['status']] for k in scored) / len(scored)) if scored else None,
-                'perspectives': perspectives,
-                'kpis': kpis,
-                'counts': counts,
-            }
-        )
+        block = _unit_block(data, sede.id, (first, last), (pfirst, plast), month_starts, today, targets)
+        out.append({'id': sede.id, 'name': sede.name, 'address': sede.address, **block})
 
     return {
         'period': period,

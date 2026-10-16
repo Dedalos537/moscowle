@@ -1,0 +1,168 @@
+:host { display: block; }
+
+[data-s='good'] { --s: var(--color-success); --s-text: var(--color-success-text); }
+[data-s='warn'] { --s: var(--color-warning); --s-text: var(--color-warning-text); }
+[data-s='bad'] { --s: var(--color-error); --s-text: var(--color-error-text); }
+[data-s='none'] { --s: var(--color-outline); --s-text: var(--color-on-surface-variant); }
+
+.gp {
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 1.25rem;
+  background: var(--color-surface-container-lowest);
+  padding: 1.25rem;
+}
+
+.gp-head { margin-bottom: 1rem; }
+.gp-title { margin: 0; font-size: 1.125rem; font-weight: 800; color: var(--color-on-surface); }
+.gp-sub { margin: 0.125rem 0 0; font-size: 0.875rem; color: var(--color-on-surface-variant); }
+
+.gp-body {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  @media (min-width: 1024px) { grid-template-columns: minmax(15rem, 19rem) minmax(0, 1fr); }
+}
+
+// Pestañas: en móvil, carrusel horizontal; en escritorio, columna.
+.gp-tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 0.25rem;
+  scrollbar-width: thin;
+  @media (min-width: 1024px) { flex-direction: column; overflow: visible; padding: 0; }
+}
+
+.gp-tab {
+  flex: 0 0 auto;
+  min-width: 11.5rem;
+  scroll-snap-align: start;
+  display: grid;
+  gap: 0.125rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 0.875rem;
+  background: var(--color-surface-container-lowest);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease;
+
+  &:hover { background: var(--color-surface-container-low); }
+  &.is-on {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface-container-lowest));
+    box-shadow: inset 0 0 0 1px var(--color-primary);
+  }
+}
+
+.gp-tab__label { font-size: 0.8125rem; font-weight: 600; color: var(--color-on-surface-variant); }
+.gp-tab__value { font-size: 1.375rem; font-weight: 800; letter-spacing: -0.02em; color: var(--color-on-surface); font-variant-numeric: tabular-nums; }
+.gp-tab__meta { display: flex; flex-wrap: wrap; gap: 0.25rem 0.625rem; font-size: 0.75rem; }
+
+.gp-delta {
+  font-weight: 700;
+  color: var(--color-on-surface-variant);
+  &[data-tone='better'] { color: var(--color-success-text); }
+  &[data-tone='worse'] { color: var(--color-error-text); }
+}
+
+.gp-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  font-weight: 600;
+  color: var(--s-text);
+  i { width: 0.5rem; height: 0.5rem; border-radius: 999px; background: var(--s); }
+}
+
+.gp-panel {
+  min-width: 0;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: var(--color-surface-container-low);
+}
+
+.gp-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+}
+.gp-panel__title { margin: 0; font-size: 1rem; font-weight: 800; color: var(--color-on-surface); }
+.gp-panel__q { margin: 0.125rem 0 0; font-size: 0.875rem; color: var(--color-on-surface-variant); }
+
+.gp-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.75rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-primary-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  fa-icon { font-size: 0.75rem; }
+}
+
+.gp-chart { position: relative; }
+.gp-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+.gp-base { stroke: var(--color-outline-variant); stroke-width: 1; }
+.gp-target { stroke: var(--color-on-surface-variant); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.gp-hit { fill: transparent; }
+
+.gp-fill {
+  fill: color-mix(in srgb, var(--color-primary) 45%, var(--color-surface-container-low));
+  transition: fill 150ms ease;
+}
+.gp-bar.is-current .gp-fill,
+.gp-bar.is-hover .gp-fill { fill: var(--color-primary); }
+
+.gp-new { fill: var(--color-primary); }
+.gp-left { fill: color-mix(in srgb, var(--color-error) 70%, var(--color-surface-container-low)); }
+.gp-flow:not(.is-current):not(.is-hover) path { opacity: 0.6; }
+
+.gp-val { font-size: 13px; font-weight: 800; fill: var(--color-on-surface); font-variant-numeric: tabular-nums; }
+.gp-axis { font-size: 12px; font-weight: 600; fill: var(--color-on-surface-variant); }
+
+// Puntos enfocables sobre cada mes (el SVG es decorativo para lectores de pantalla).
+.gp-points { position: absolute; inset: 0; margin: 0; padding: 0; list-style: none; pointer-events: none; }
+.gp-point {
+  position: absolute;
+  top: 0.5rem;
+  bottom: 1.75rem;
+  width: 2.75rem;
+  translate: -50% 0;
+  border-radius: 0.5rem;
+  &:focus-visible { outline: 2px solid var(--color-primary-text); outline-offset: 0; }
+}
+
+.gp-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--color-on-surface-variant);
+}
+
+.gp-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-weight: 600;
+  i { width: 0.875rem; height: 0.625rem; border-radius: 0.1875rem; }
+}
+.gp-key--target i { height: 0; border-top: 2px dashed var(--color-on-surface-variant); border-radius: 0; }
+.gp-key--new i { background: var(--color-primary); }
+.gp-key--left i { background: color-mix(in srgb, var(--color-error) 70%, var(--color-surface-container-low)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .gp-tab, .gp-fill { transition: none; }
+}

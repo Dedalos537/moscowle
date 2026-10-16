@@ -1,300 +1,154 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { fadeInUp, scaleIn, listStagger, cardEnter } from '../../../../core/animations';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { GlobalSettingsService } from '../../../../core/services/global-settings.service';
-import { Sede } from '../../../../core/models/sede';
-import { Spinner } from '../../../../shared/components/spinner/spinner';
-import { Button } from '../../../../shared/components/button/button';
+import { DataCacheService } from '../../../../core/services/cache.service';
+import { PeopleService } from '../../../../core/services/people.service';
+import { CenterDashboard, DuePayment } from '../../../../core/models/center-dashboard';
+import { ScorecardPeriod, Sede } from '../../../../core/models/sede';
+import { Drawer } from '../../../../shared/components/drawer/drawer';
 import { QuickPayment } from '../../components/quick-payment/quick-payment';
-import { SummaryCard } from '../../../../shared/components/summary-card/summary-card';
-import { ActionCard } from '../../../../shared/components/action-card/action-card';
+import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
+import { SessionLabelPipe } from '../../../../shared/pipes/session-label-pipe';
+import { rangeLabel, scoreTone } from '../sedes/kpi-format';
+import { GrowthPanel } from './components/growth-panel/growth-panel';
+import { RiskPanel } from './components/risk-panel/risk-panel';
+import { TeamPanel } from './components/team-panel/team-panel';
+import { SedeCompare } from './components/sede-compare/sede-compare';
 
-interface SedeStat {
-  id: number;
-  name: string;
-  count: number;
-}
+type TodayKey = 'sessions' | 'payments' | 'approvals' | 'incidents';
 
-interface FinancialData {
-  income_real: number;
-  income_expected: number;
-  overdue_amount: number;
-  overdue_users_count: number;
-}
-
-interface IncompletePatient {
-  paciente: string;
-  email?: string;
-  sede: string;
-  details: string;
-  monto?: number;
-}
-
-interface DailyPending {
-  paciente: string;
-  sede: string;
-  monto: number;
-  phone?: string;
-  username?: string;
-}
-
+/**
+ * Panel de administración organizado alrededor de tres preguntas: qué hay que hacer hoy, si el centro crece y
+ * quién está en riesgo de dejar el servicio. Una sola petición trae todo (rápido con datos móviles).
+ */
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule, Spinner, Button, QuickPayment, SummaryCard, ActionCard],
+  imports: [
+    DatePipe,
+    FormsModule,
+    RouterLink,
+    FontAwesomeModule,
+    Drawer,
+    QuickPayment,
+    PersonLabelPipe,
+    SessionLabelPipe,
+    GrowthPanel,
+    RiskPanel,
+    TeamPanel,
+    SedeCompare,
+  ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
-  animations: [fadeInUp, scaleIn, listStagger, cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Dashboard implements OnInit, OnDestroy {
+  @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<unknown>;
+
+  private admin = inject(AdminService);
+  private header = inject(HeaderService);
+  private cache = inject(DataCacheService);
   private settings = inject(GlobalSettingsService);
-  hideCharts = this.settings.hideCharts;
+  readonly people = inject(PeopleService);
 
-  @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
+  readonly hideCharts = this.settings.hideCharts;
+  readonly periods: { key: ScorecardPeriod; label: string }[] = [
+    { key: 'month', label: 'Mes' },
+    { key: 'quarter', label: 'Trimestre' },
+    { key: 'year', label: 'Año' },
+  ];
 
-  summary = { therapists: 0, patients: 0, sessions_total: '-' as string | number, avg_accuracy: '-' as string | number };
-  avgAuditCompliance: number | null = null;
-  auditsCount = 0;
-  therapistCount = 0;
-  patientCount = 0;
-  sedes: Sede[] = [];
-  sedesStats: SedeStat[] = [];
-  financials: FinancialData | null = null;
-  incompletePatients: IncompletePatient[] = [];
-  dailyPendings: DailyPending[] = [];
-  loading = true;
-  error: string | null = null;
-  today = new Date();
-  showGuidanceModal = false;
-  showDailyModal = false;
+  readonly period = signal<ScorecardPeriod>('month');
+  readonly sedeId = signal<number | null>(null);
+  readonly sedes = signal<Sede[]>([]);
+  readonly data = signal<CenterDashboard | null>(null);
+  readonly loading = signal(true);
+  readonly error = signal<string | null>(null);
+  readonly openToday = signal<TodayKey | null>(null);
+  readonly showQuality = signal(false);
+  readonly showPayment = signal(false);
 
-  private subscriptions = new Subscription();
+  readonly range = computed(() => {
+    const d = this.data();
+    return d ? `${rangeLabel(d.range)} · comparado con ${rangeLabel(d.previous_range)}` : '';
+  });
+  readonly scoreTone = computed(() => scoreTone(this.data()?.score));
+  readonly sedeName = computed(() => this.sedes().find((s) => s.id === this.sedeId())?.name ?? null);
+  readonly approvals = computed(() => {
+    const p = this.data()?.today.pending;
+    return p ? p.requests + p.password_resets : 0;
+  });
 
-  constructor(
-    private adminService: AdminService,
-    private headerService: HeaderService,
-    private cdr: ChangeDetectorRef,
-  ) {}
+  private sub?: Subscription;
+  private subs = new Subscription();
 
   ngOnInit() {
-    this.headerService.setConfig({
+    this.header.setConfig({
       title: 'Panel de Administración',
-      subtitle: 'Control integral de terapeutas y pacientes',
-      icon: ['fas', 'shield-halved'],
+      subtitle: 'Cómo va el centro y qué hacer hoy',
+      icon: ['fas', 'gauge-high'],
       actionTemplate: this.headerActions,
     });
-    this.loadData();
+    this.subs.add(this.admin.getSedes().subscribe({ next: (list) => this.sedes.set(list.filter((s) => s.active)), error: () => {} }));
+    this.load();
   }
 
   ngOnDestroy() {
-    this.headerService.reset();
-    this.subscriptions.unsubscribe();
+    this.header.reset();
+    this.sub?.unsubscribe();
+    this.subs.unsubscribe();
   }
 
-  loadData() {
-    this.loading = true;
-    this.error = null;
-    this.loadUserCounts();
-    this.loadSedes();
-    this.loadSedesStats();
-    this.loadDebtData();
-    // Independiente del reporte de deudores: si ese falla, el flujo de caja igual se muestra.
-    this.setFinancialSummary();
+  load(fresh = false) {
+    if (fresh) this.cache.invalidateContaining('/api/admin/dashboard');
+    this.sub?.unsubscribe();
+    this.loading.set(true);
+    this.error.set(null);
+    this.sub = this.admin.getCenterDashboard(this.period(), this.sedeId()).subscribe({
+      next: (d) => {
+        this.data.set(d);
+        this.loading.set(false);
+      },
+      error: (e) => {
+        this.loading.set(false);
+        this.error.set(e?.status === 0 ? 'No pudimos conectar con el servidor. Revisa tu internet.' : e?.error?.message || 'No se pudo cargar el panel.');
+      },
+    });
   }
 
-  private setFinancialSummary() {
-    this.subscriptions.add(
-      this.adminService.getFinancialSummary().subscribe({
-        next: (res) => {
-          // Cifras del backend (mora = cuotas de contrato vencidas + plan de quien no tiene contrato). Antes la
-          // mora y lo esperado se sumaban aquí con TODOS los pacientes del reporte, incluidos los que están al día.
-          if (res.success && res.data) {
-            this.financials = {
-              income_real: Number(res.data.income_real) || 0,
-              income_expected: Number(res.data.income_expected) || 0,
-              overdue_amount: Number(res.data.overdue_amount) || 0,
-              overdue_users_count: Number(res.data.overdue_users_count) || 0,
-            };
-          }
-          this.cdr.markForCheck();
-        },
-        error: () => this.cdr.markForCheck(),
-      }),
-    );
+  setPeriod(p: ScorecardPeriod) {
+    if (p === this.period()) return;
+    this.period.set(p);
+    this.load();
   }
 
-  private loadUserCounts() {
-    this.subscriptions.add(
-      this.adminService.getOverview().subscribe({
-        next: (res) => {
-          if (res.success && res.users) {
-            this.therapistCount = res.users.filter((u) => u.role === 'terapista').length;
-            this.patientCount = res.users.filter((u) => u.role === 'jugador').length;
-            this.summary = { therapists: this.therapistCount, patients: this.patientCount, sessions_total: '-', avg_accuracy: '-' };
-          }
-          this.loading = false;
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.loading = false;
-          this.error = err.error?.message || err.message || 'Error al cargar usuarios';
-          this.cdr.markForCheck();
-        },
-      }),
-    );
-    this.subscriptions.add(
-      this.adminService.getAdminOverview().subscribe({
-        next: (res) => {
-          if (res.success && res.data) {
-            this.avgAuditCompliance = res.data.avg_audit_compliance;
-            this.auditsCount = Number(res.data.audits_count) || 0;
-            this.summary.sessions_total = res.data.sessions_total;
-          }
-          this.cdr.markForCheck();
-        },
-        error: () => this.cdr.markForCheck(),
-      }),
-    );
+  setSede(id: number | null) {
+    this.sedeId.set(id || null);
+    this.openToday.set(null);
+    this.load();
   }
 
-  private loadSedes() {
-    this.subscriptions.add(
-      this.adminService.getSedes().subscribe({
-        next: (list) => {
-          this.sedes = list;
-          this.cdr.markForCheck();
-        },
-        error: () => this.cdr.markForCheck(),
-      }),
-    );
-  }
-
-  private loadSedesStats() {
-    this.subscriptions.add(
-      this.adminService.getSedesStats().subscribe({
-        next: (res) => {
-          if (res.success && res.data) {
-            this.sedesStats = res.data;
-          }
-          this.cdr.markForCheck();
-        },
-        error: () => this.cdr.markForCheck(),
-      }),
-    );
-  }
-
-  private loadDebtData() {
-    this.subscriptions.add(
-      this.adminService.getDebtReport('all').subscribe({
-        next: (res) => {
-          if (!res.success || !res.data) return;
-          const porSede: Record<string, any> = res.data.por_sede || {};
-          const todayDay = this.today.getDate();
-
-          const incomplete: IncompletePatient[] = [];
-          const daily: DailyPending[] = [];
-
-          Object.values(porSede).forEach((group: any) => {
-            const sedeName = group.sede_name || '';
-            const deudores: any[] = group.deudores || [];
-
-            deudores.forEach((d: any) => {
-              const amount = d.monto || 0;
-
-              const isPriceInc = !d.monto || d.monto <= 0;
-              const isPlanInc = !d.modality || d.modality.includes('Sin Modalidad');
-              const isDateInc = !d.fecha_vencimiento || d.fecha_vencimiento === 'N/A';
-
-              if (isPriceInc || isPlanInc || isDateInc) {
-                incomplete.push({
-                  paciente: d.paciente || d.email || 'Alumno',
-                  email: d.email,
-                  sede: sedeName,
-                  details: [isPriceInc ? 'Monto' : null, isPlanInc ? 'Modalidad' : null, isDateInc ? 'Fecha' : null].filter(Boolean).join(', '),
-                });
-              }
-
-              if (d.payment_day == todayDay && !isPriceInc) {
-                daily.push({ paciente: d.paciente, sede: sedeName, monto: amount, phone: d.phone, username: d.username });
-              }
-            });
-
-          });
-
-          this.incompletePatients = incomplete;
-          this.dailyPendings = daily;
-
-          if (incomplete.length > 5) {
-            setTimeout(() => (this.showGuidanceModal = true), 2000);
-          }
-          if (daily.length > 0 && incomplete.length <= 5) {
-            setTimeout(() => (this.showDailyModal = true), 2000);
-          }
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.error = err.error?.message || err.message || 'Error al cargar deudas';
-          this.loading = false;
-          this.cdr.markForCheck();
-        },
-      }),
-    );
-  }
-
-  private loadFinancialSummary() {
-    this.subscriptions.add(
-      this.adminService.getFinancialSummary().subscribe({
-        next: (res) => {
-          // Cifras del backend (mora = cuotas de contrato vencidas + plan de quien no tiene contrato). Antes la
-          // mora y lo esperado se sumaban aquí con TODOS los pacientes del reporte, incluidos los que están al día.
-          if (res.success && res.data) {
-            this.financials = {
-              income_real: Number(res.data.income_real) || 0,
-              income_expected: Number(res.data.income_expected) || 0,
-              overdue_amount: Number(res.data.overdue_amount) || 0,
-              overdue_users_count: Number(res.data.overdue_users_count) || 0,
-            };
-          }
-          this.cdr.markForCheck();
-        },
-        error: () => this.cdr.markForCheck(),
-      }),
-    );
+  toggleToday(key: TodayKey) {
+    this.openToday.set(this.openToday() === key ? null : key);
   }
 
   onPaymentCompleted() {
-    this.loadData();
+    this.showPayment.set(false);
+    this.load(true);
   }
 
-  get pendingAmount(): number {
-    return Math.max(0, (this.financials?.income_expected ?? 0) - (this.financials?.income_real ?? 0));
-  }
-
-  get activeSedesCount(): number {
-    return this.sedes.filter((s) => s.active).length;
-  }
-
-  getWhatsAppLink(phone: string | undefined, name: string, amount: number): string | null {
-    if (!phone) return null;
-    const clean = phone.replace(/\D/g, '');
-    const msg = encodeURIComponent(`Hola ${name}, te saludamos de Moscowle. Recordarte que el pago de tu mensualidad (S/ ${amount}) vence hoy. ¡Gracias!`);
-    return `https://wa.me/51${clean}?text=${msg}`;
-  }
-
-  /** Altura en px sobre la mayor de las tres barras: ninguna pasa de 200 px aunque lo realizado supere lo esperado. */
-  barHeight(value: number): number {
-    const f = this.financials;
-    const max = Math.max(f?.income_real || 0, this.pendingAmount, f?.income_expected || 0, 1);
-    return value > 0 ? Math.max((value / max) * 200, 4) : 0;
-  }
-
-  trackById(_index: number, item: any): number {
-    return item.id;
+  whatsapp(p: DuePayment): string | null {
+    if (!p.phone) return null;
+    const digits = p.phone.replace(/\D/g, '');
+    const phone = digits.length === 9 ? '51' + digits : digits;
+    const name = p.patient.name.split(' ')[0] || '';
+    const text = `Hola ${name}, te saludamos del Centro Juan Pablo II. Te recordamos que hoy vence tu cuota de S/ ${p.amount.toFixed(2)}. ¡Gracias!`;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
   }
 }

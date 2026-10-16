@@ -537,6 +537,22 @@ def admin_sedes_scorecard():
         return jsonify({'success': False, 'message': f'No se pudo calcular el scorecard: {e}'}), 500
 
 
+@api_bp.route('/admin/dashboard', methods=['GET'])
+@login_required
+def admin_center_dashboard():
+    """Dashboard del centro (o de una sede): hoy, crecimiento, riesgo de abandono, equipo y sedes."""
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
+    from app.services.center_dashboard import dashboard
+
+    sede = request.args.get('sede', type=int)
+    try:
+        return jsonify({'success': True, **dashboard(request.args.get('period', 'month'), sede or None)})
+    except Exception as e:
+        current_app.logger.exception('Error en el dashboard del centro')
+        return jsonify({'success': False, 'message': f'No se pudo calcular el dashboard: {e}'}), 500
+
+
 @api_bp.route('/admin/sedes/scorecard/targets', methods=['PUT'])
 @login_required
 def admin_sedes_scorecard_targets():

@@ -1,0 +1,96 @@
+<section class="gp" aria-labelledby="gp-title">
+  <header class="gp-head">
+    <h2 id="gp-title" class="gp-title">Crecimiento</h2>
+    <p class="gp-sub">Elige un indicador para ver sus últimos 6 meses.</p>
+  </header>
+
+  <div class="gp-body">
+    <div class="gp-tabs" role="tablist" aria-label="Indicadores de crecimiento" aria-orientation="vertical">
+      @for (m of metrics(); track m.key; let i = $index) {
+        <button type="button" role="tab" class="gp-tab" [id]="'gp-tab-' + m.key"
+          [class.is-on]="selected() === m.key" [attr.aria-selected]="selected() === m.key"
+          [attr.tabindex]="selected() === m.key ? 0 : -1" aria-controls="gp-panel"
+          (click)="select(m.key)" (keydown)="onTabKey($event, i)">
+          <span class="gp-tab__label">{{ m.label }}</span>
+          <span class="gp-tab__value">{{ m.value }}</span>
+          <span class="gp-tab__meta">
+            <span class="gp-delta" [attr.data-tone]="m.delta.tone">{{ m.delta.text }}</span>
+            @if (m.statusText) { <span class="gp-status" [attr.data-s]="m.status"><i aria-hidden="true"></i>{{ m.statusText }}</span> }
+          </span>
+        </button>
+      }
+    </div>
+
+    <div id="gp-panel" class="gp-panel" role="tabpanel" [attr.aria-labelledby]="'gp-tab-' + selected()">
+      @if (current(); as m) {
+        <div class="gp-panel__head">
+          <div>
+            <h3 class="gp-panel__title">{{ m.label }}</h3>
+            <p class="gp-panel__q">{{ m.question }}</p>
+          </div>
+          <a class="gp-link" [routerLink]="m.link.to">{{ m.link.label }}<fa-icon [icon]="['fas', 'arrow-right']" aria-hidden="true"></fa-icon></a>
+        </div>
+
+        @if (bars(); as b) {
+          <div class="gp-chart" role="list" [attr.aria-label]="m.label + ', últimos 6 meses'" (mouseleave)="hover.set(null)">
+            <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" aria-hidden="true">
+              <line class="gp-base" [attr.x1]="PAD.l" [attr.x2]="W - PAD.r" [attr.y1]="H - PAD.b" [attr.y2]="H - PAD.b" />
+              @if (b.targetY != null) {
+                <line class="gp-target" [attr.x1]="PAD.l" [attr.x2]="W - PAD.r" [attr.y1]="b.targetY" [attr.y2]="b.targetY" />
+              }
+              @for (it of b.items; track $index) {
+                <g class="gp-bar" [class.is-current]="it.current" [class.is-hover]="hover() === $index" (mouseenter)="hover.set($index)">
+                  <rect class="gp-hit" [attr.x]="it.x - 8" [attr.y]="PAD.t" [attr.width]="it.w + 16" [attr.height]="H - PAD.t - PAD.b" />
+                  @if (!it.empty) { <path class="gp-fill" [attr.d]="it.path" /> }
+                  @if (it.current || hover() === $index) {
+                    <text class="gp-val" [attr.x]="it.cx" [attr.y]="(it.empty ? H - PAD.b : it.y) - 8" text-anchor="middle">{{ it.empty ? 'Sin datos' : it.value }}</text>
+                  }
+                  <text class="gp-axis" [attr.x]="it.cx" [attr.y]="H - 10" text-anchor="middle">{{ it.month }}</text>
+                </g>
+              }
+            </svg>
+            <ol class="gp-points">
+              @for (it of b.items; track $index) {
+                <li tabindex="0" class="gp-point" [style.left.%]="(it.cx / W) * 100" [attr.aria-label]="it.full"
+                  (focus)="hover.set($index)" (blur)="hover.set(null)"></li>
+              }
+            </ol>
+          </div>
+          <p class="gp-foot">
+            @if (b.targetText) { <span class="gp-key gp-key--target"><i aria-hidden="true"></i>{{ b.targetText }}</span> }
+            @if (kpi(); as k) { <span>{{ k.how }}</span> }
+          </p>
+        }
+
+        @if (flowBars(); as f) {
+          <div class="gp-chart" role="list" aria-label="Altas y bajas de pacientes, últimos 6 meses" (mouseleave)="hover.set(null)">
+            <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" aria-hidden="true">
+              <line class="gp-base" [attr.x1]="PAD.l" [attr.x2]="W - PAD.r" [attr.y1]="f.mid" [attr.y2]="f.mid" />
+              @for (it of f.items; track $index) {
+                <g class="gp-flow" [class.is-current]="it.current" [class.is-hover]="hover() === $index" (mouseenter)="hover.set($index)">
+                  <rect class="gp-hit" [attr.x]="it.cx - 34" [attr.y]="PAD.t" width="68" [attr.height]="H - PAD.t - PAD.b" />
+                  @if (it.newPath) { <path class="gp-new" [attr.d]="it.newPath" /> }
+                  @if (it.leftPath) { <path class="gp-left" [attr.d]="it.leftPath" /> }
+                  @if (it.current || hover() === $index) {
+                    <text class="gp-val" [attr.x]="it.cx" [attr.y]="PAD.t - 10" text-anchor="middle">{{ it.m.net > 0 ? '+' : '' }}{{ it.m.net }} neto</text>
+                  }
+                  <text class="gp-axis" [attr.x]="it.cx" [attr.y]="H - 10" text-anchor="middle">{{ it.month }}</text>
+                </g>
+              }
+            </svg>
+            <ol class="gp-points">
+              @for (it of f.items; track $index) {
+                <li tabindex="0" class="gp-point" [style.left.%]="(it.cx / W) * 100" [attr.aria-label]="it.full"
+                  (focus)="hover.set($index)" (blur)="hover.set(null)"></li>
+              }
+            </ol>
+          </div>
+          <p class="gp-foot">
+            <span class="gp-key gp-key--new"><i aria-hidden="true"></i>Altas (pacientes nuevos)</span>
+            <span class="gp-key gp-key--left"><i aria-hidden="true"></i>Bajas (retirados o inactivos)</span>
+          </p>
+        }
+      }
+    </div>
+  </div>
+</section>
