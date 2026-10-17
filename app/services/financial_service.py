@@ -2,10 +2,8 @@ import calendar
 import logging
 from datetime import datetime, timedelta
 
-from sqlalchemy import func
-
 from app.extensions import db
-from app.models import Appointment, Expense, User
+from app.models import Expense, User
 from app.repositories.patient_repository import PatientRepository
 from app.services.automation.financial_analysis import PatientFinancialStatus
 
@@ -261,6 +259,13 @@ class FinancialService:
                 receipt_image_path=data.get('receipt_image_path'),
                 created_by_id=created_by_id,
             )
+            # Pago a terapeuta: se aplica al periodo que se liquida (AAAA-MM), no al mes en que se paga.
+            if exp.category == 'therapist_payment' and exp.therapist_id and data.get('period'):
+                from app.services import payroll
+
+                therapist = db.session.get(User, int(exp.therapist_id))
+                if therapist:
+                    exp.payroll_period_id = payroll.sync(therapist, str(data['period'])).id
             db.session.add(exp)
             db.session.commit()
             return True, exp
@@ -268,51 +273,30 @@ class FinancialService:
             return False, str(e)
 
     def get_therapist_financials(self, month=None, year=None):
-        if not month:
-            month = datetime.now().month
-        if not year:
-            year = datetime.now().year
-        therapists = User.query.filter_by(role='terapista').filter_by(is_active=True).all()
+        """Liquidación por terapeuta de un mes: una sola fuente (`payroll`), con lo pagado contra ese periodo."""
+        from app.services import payroll
+
+        today = datetime.now()
+        period = f'{year or today.year:04d}-{month or today.month:02d}'
         results = []
-        start_date = datetime(year, month, 1)
-        if month == 12:
-            end_date = datetime(year + 1, 1, 1)
-        else:
-            end_date = datetime(year, month + 1, 1)
-        for t in therapists:
-            rate = 0
-            if t.salary_base and t.contract_hours and t.contract_hours > 0:
-                rate = t.salary_base / t.contract_hours
-            worked_minutes = (
-                db.session.query(func.sum(Appointment.duration_minutes))
-                .filter(Appointment.therapist_id == t.id)
-                .filter(Appointment.status == 'completed')
-                .filter(Appointment.start_time >= start_date)
-                .filter(Appointment.start_time < end_date)
-                .scalar()
-                or 0
-            )
-            worked_hours = worked_minutes / 60
-            projected_pay = rate * worked_hours
-            paid_amount = (
-                db.session.query(func.sum(Expense.amount))
-                .filter(Expense.therapist_id == t.id)
-                .filter(Expense.category == 'therapist_payment')
-                .filter(Expense.is_active.is_(True))
-                .filter(Expense.date >= start_date)
-                .filter(Expense.date < end_date)
-                .scalar()
-                or 0
-            )
+        for t in User.query.filter_by(role='terapista').filter_by(is_active=True).all():
+            row = payroll.sync(t, period)
+            info = payroll.serialize(row, t)
             results.append(
                 {
                     'therapist': t,
-                    'rate': rate,
+                    'rate': row.rate,
                     'contract_hours': t.contract_hours,
-                    'worked_hours': worked_hours,
-                    'projected_pay': projected_pay,
-                    'paid': paid_amount,
-                    'balance': round(projected_pay - paid_amount, 2),
+                    'worked_hours': row.hours,
+                    'projected_pay': row.amount_due,
+                    'paid': info['paid'],
+                    'balance': info['balance'],
+                    'period': period,
+                    'period_id': row.id,
+                    'due_date': info['due_date'],
+                    'status': info['status'],
+                    'sessions_without_duration': row.sessions_without_duration,
                 }
             )
+        db.session.commit()
         return results

@@ -743,3 +743,15 @@ def billing_create_plan():
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e), 'code': e.code}), 400
     return jsonify({'success': True, 'contract_id': c.id, **billing.schedule(c.patient_id)})
+
+
+@admin_bp.route('/api/billing/incoming', methods=['GET'])
+@login_required
+def billing_incoming():
+    """Lo que entra: cuotas vencidas y por vencer (próximas semanas), con totales por semana."""
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    from app.services import billing
+
+    weeks = max(1, min(12, request.args.get('weeks', 4, type=int)))
+    return jsonify({'success': True, **billing.incoming(weeks=weeks, sede_id=request.args.get('sede', type=int))})

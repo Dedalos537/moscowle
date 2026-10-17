@@ -51,9 +51,76 @@ def api_therapist_financials():
                 'projected_pay': float(f['projected_pay'] or 0),
                 'paid': float(f['paid'] or 0),
                 'balance': float(f['balance'] or 0),
+                'period': f.get('period'),
+                'period_id': f.get('period_id'),
+                'due_date': f.get('due_date'),
+                'status': f.get('status'),
+                'sessions_without_duration': f.get('sessions_without_duration', 0),
             }
         )
     return jsonify({'success': True, 'data': result})
+
+
+# ── Nómina de terapeutas por periodo (PRP 008) ──────────────────────────────────
+
+
+@admin_bp.route('/api/payroll', methods=['GET'])
+@login_required
+def api_payroll():
+    """Periodos de nómina recientes (lo que sale): monto, pagado, saldo, vencimiento y estado."""
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    from app.services import payroll
+
+    months = max(1, min(12, request.args.get('months', 4, type=int)))
+    rows = payroll.recent_periods(months, therapist_id=request.args.get('therapist_id', type=int))
+    return jsonify({'success': True, 'periods': rows, 'settings': {k: payroll.setting(k) for k in payroll.DEFAULTS}})
+
+
+@admin_bp.route('/api/payroll/pay', methods=['POST'])
+@login_required
+def api_payroll_pay():
+    """Paga (total o parcial) el periodo de un terapeuta."""
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    from app.services import payroll
+
+    data = request.get_json(silent=True) or {}
+    when = None
+    if data.get('date'):
+        try:
+            when = datetime.strptime(str(data['date']), '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Fecha no válida'}), 400
+    try:
+        exp, period = payroll.pay(
+            data.get('therapist_id'),
+            str(data.get('period') or ''),
+            data.get('amount'),
+            data.get('method'),
+            date_=when,
+            notes=data.get('notes') or None,
+            user_id=current_user.id,
+        )
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400
+    return jsonify({'success': True, 'expense_id': exp.id, 'period': period})
+
+
+@admin_bp.route('/api/payroll/settings', methods=['PUT'])
+@login_required
+def api_payroll_settings():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Solo un administrador puede cambiarlo'}), 403
+    from app.services import payroll
+
+    try:
+        values = payroll.save_settings(request.get_json(silent=True) or {}, current_user.id)
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400
+    return jsonify({'success': True, 'settings': values})
 
 
 @admin_bp.route('/api/expenses')

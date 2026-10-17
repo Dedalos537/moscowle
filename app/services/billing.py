@@ -489,3 +489,59 @@ def backfill_allocations():
             p.kind = 'installment'
     db.session.commit()
     return len(rows)
+
+
+# ── lo que entra (cronograma de cobros) ──────────────────────────────────────
+
+
+def incoming(today=None, weeks=4, sede_id=None):
+    """Cuotas vencidas y por vencer en las próximas `weeks` semanas, con totales por semana."""
+    today = today or date.today()
+    horizon = today + timedelta(weeks=weeks)
+    q = (
+        db.session.query(Installment, Contract, User)
+        .join(Contract, Contract.id == Installment.contract_id)
+        .join(User, User.id == Contract.patient_id)
+        .filter(
+            Contract.status == 'active',
+            Contract.is_active.isnot(False),
+            Installment.is_active.isnot(False),
+            Installment.status.in_(OPEN),
+            Installment.due_date <= horizon,
+        )
+        .order_by(Installment.due_date, User.username)
+    )
+    if sede_id:
+        q = q.filter(User.sede_id == sede_id)
+    items, weeks_total = [], defaultdict(float)
+    overdue_total = 0.0
+    monday = today - timedelta(days=today.weekday())
+    for inst, contract, u in q:
+        left = round(_remaining(inst), 2)
+        if left <= EPS:
+            continue
+        overdue = inst.due_date < today
+        if overdue:
+            overdue_total += left
+        else:
+            wk = (inst.due_date - monday).days // 7
+            weeks_total[wk] += left
+        items.append(
+            {
+                'installment_id': inst.id,
+                'number': inst.number,
+                'due_date': inst.due_date.isoformat(),
+                'remaining': left,
+                'overdue': overdue,
+                'contract': {'id': contract.id, 'name': contract.name},
+                'patient': {'id': u.id, 'name': u.username or u.email, 'code': u.login_code or ''},
+            }
+        )
+    return {
+        'overdue_total': round(overdue_total, 2),
+        'weeks': [
+            {'start': (monday + timedelta(weeks=i)).isoformat(), 'total': round(weeks_total.get(i, 0.0), 2)}
+            for i in range(weeks + 1)
+        ],
+        'items': items[:200],
+    }
