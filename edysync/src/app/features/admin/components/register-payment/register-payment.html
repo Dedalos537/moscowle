@@ -74,9 +74,14 @@
               <input class="rp-input" name="reference" [(ngModel)]="pay.reference" placeholder="Ej.: 123456" autocomplete="off" />
             </label>
           </div>
-          <label class="rp-field"><span class="rp-label">Comprobante (opcional)</span>
-            <input class="rp-file" type="file" accept="image/*,application/pdf" (change)="onReceipt($event)" />
-          </label>
+          <div class="rp-field">
+            <span class="rp-label" id="rp-receipt-label">Comprobante (opcional)</span>
+            <label class="rp-attach">
+              <fa-icon [icon]="['fas', 'paperclip']" aria-hidden="true"></fa-icon>
+              <span>{{ receiptName() || 'Adjuntar foto o PDF' }}</span>
+              <input class="sr-only" type="file" accept="image/*,application/pdf" aria-labelledby="rp-receipt-label" (change)="onReceipt($event)" />
+            </label>
+          </div>
 
           @if (preview().parts.length || preview().credit) {
             <div class="rp-preview" role="status">

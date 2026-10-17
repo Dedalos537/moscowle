@@ -5,6 +5,8 @@ const FLOATING_SELECTOR =
 
 const OVERLAY_SELECTORS = [
   '.modal-overlay',
+  // Paneles laterales: el botón flotante del asistente tapaba sus botones (p. ej. «Aplicar importación»).
+  '.drawer-overlay',
   '.confirm-backdrop',
   '.help-backdrop',
   '.help-overlay',
