@@ -6,6 +6,7 @@ import { ApiResponse } from '../models/api-response';
 import { User, CreateUserPayload } from '../models/user';
 import { Scorecard, ScorecardPeriod, Sede, SedeAnalytics } from '../models/sede';
 import { CenterDashboard } from '../models/center-dashboard';
+import { BillingImportRecord, BillingImportResult, PatientSchedule } from '../models/billing';
 import { Payment, PatientPaymentStatus, DebtReport } from '../models/payment';
 import { Appointment, CalendarEvent, BatchSessionPayload } from '../models/appointment';
 import { Expense, TherapistFinancial, ContactMessage, TherapistStats, PatientStats } from '../models/expense';
@@ -139,6 +140,30 @@ export class AdminService {
     let params = new HttpParams();
     if (month) params = params.set('month', month);
     return this.http.get<{ success: boolean; data: DebtReport }>('/api/admin/deudores', { params });
+  }
+
+  // ── Libro de cobranza (PRP 008) ──
+  patientSchedule(patientId: number): Observable<PatientSchedule> {
+    return this.http.get<PatientSchedule>(`/admin/api/billing/patients/${patientId}/schedule`);
+  }
+
+  createPaymentPlan(body: { patient_id: number; amount: number; payment_day: number; first_due: string; installments: number | null; billing_type: 'Mensual' | 'Quincenal'; name?: string }): Observable<PatientSchedule & { contract_id: number }> {
+    return this.http.post<PatientSchedule & { contract_id: number }>('/admin/api/billing/plans', body);
+  }
+
+  exportBillingExcel(): Observable<Blob> {
+    return this.http.get('/admin/api/billing/export.xlsx', { responseType: 'blob' });
+  }
+
+  importBillingExcel(file: File, apply: boolean): Observable<BillingImportResult> {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('apply', apply ? '1' : '0');
+    return this.http.post<BillingImportResult>('/admin/api/billing/import', fd);
+  }
+
+  billingImports(): Observable<{ success: boolean; imports: BillingImportRecord[] }> {
+    return this.http.get<{ success: boolean; imports: BillingImportRecord[] }>('/admin/api/billing/imports');
   }
 
   registerPayment(formData: FormData): Observable<ApiResponse> {

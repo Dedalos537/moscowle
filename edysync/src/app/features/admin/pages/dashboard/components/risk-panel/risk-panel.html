@@ -60,9 +60,9 @@
                   </a>
                 }
                 @if (r.overdue) {
-                  <a class="rk-btn" routerLink="/admin/payments" [queryParams]="{ search_patient: r.patient.name, action: 'register' }">
+                  <button type="button" class="rk-btn" (click)="charge.emit(r.patient)">
                     <fa-icon [icon]="['fas', 'cash-register']" aria-hidden="true"></fa-icon>Registrar pago
-                  </a>
+                  </button>
                 }
                 <a class="rk-btn" routerLink="/admin/sessions">
                   <fa-icon [icon]="['fas', 'calendar-plus']" aria-hidden="true"></fa-icon>Agendar sesión

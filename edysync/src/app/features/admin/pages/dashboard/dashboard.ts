@@ -12,7 +12,7 @@ import { PeopleService } from '../../../../core/services/people.service';
 import { CenterDashboard, DuePayment } from '../../../../core/models/center-dashboard';
 import { ScorecardPeriod, Sede } from '../../../../core/models/sede';
 import { Drawer } from '../../../../shared/components/drawer/drawer';
-import { QuickPayment } from '../../components/quick-payment/quick-payment';
+import { RegisterPayment } from '../../components/register-payment/register-payment';
 import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
 import { SessionLabelPipe } from '../../../../shared/pipes/session-label-pipe';
 import { rangeLabel, scoreTone } from '../sedes/kpi-format';
@@ -36,7 +36,7 @@ type TodayKey = 'sessions' | 'payments' | 'approvals' | 'incidents';
     RouterLink,
     FontAwesomeModule,
     Drawer,
-    QuickPayment,
+    RegisterPayment,
     PersonLabelPipe,
     SessionLabelPipe,
     GrowthPanel,
@@ -73,6 +73,8 @@ export class Dashboard implements OnInit, OnDestroy {
   readonly openToday = signal<TodayKey | null>(null);
   readonly showQuality = signal(false);
   readonly showPayment = signal(false);
+  /** Paciente con el que se abre «Registrar pago» (desde Cobrar en Hoy o en Continuidad). */
+  readonly payPatient = signal<{ id: number; name: string; code?: string } | null>(null);
 
   readonly range = computed(() => {
     const d = this.data();
@@ -138,8 +140,13 @@ export class Dashboard implements OnInit, OnDestroy {
     this.openToday.set(this.openToday() === key ? null : key);
   }
 
+  openPayment(patient: { id: number; name: string; code?: string } | null = null) {
+    this.payPatient.set(patient);
+    this.showPayment.set(true);
+  }
+
+  /** El panel queda abierto (muestra el cronograma actualizado); el tablero se refresca detrás. */
   onPaymentCompleted() {
-    this.showPayment.set(false);
     this.load(true);
   }
 

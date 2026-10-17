@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -29,6 +29,8 @@ const KINDS: { kind: RiskKind; label: string; icon: IconProp }[] = [
 })
 export class RiskPanel {
   data = input.required<CenterDashboard>();
+  /** «Registrar pago» abre el panel de cobro del dashboard con este paciente ya elegido. */
+  charge = output<{ id: number; name: string; code?: string }>();
   readonly people = inject(PeopleService);
 
   readonly kinds = KINDS;

@@ -1,0 +1,172 @@
+<div class="rp">
+  @if (!picked()) {
+    <div class="rp-field">
+      <label class="rp-label" for="rp-search">Paciente</label>
+      <p id="rp-search-hint" class="rp-hint">Busca por nombre, código, correo o teléfono.</p>
+      <div class="rp-input-wrap">
+        <fa-icon [icon]="['fas', 'magnifying-glass']" class="rp-input-icon" aria-hidden="true"></fa-icon>
+        <input id="rp-search" class="rp-input rp-input--icon" [ngModel]="query()" (ngModelChange)="onQuery($event)"
+          placeholder="Ej.: PCJP1 o Valeria Quispe" aria-describedby="rp-search-hint" autocomplete="off" />
+      </div>
+      @if (hits().length) {
+        <ul class="rp-hits" aria-label="Pacientes encontrados">
+          @for (h of hits(); track h.id) {
+            <li><button type="button" class="rp-hit" (click)="choose(h)">
+              <span class="rp-hit__name">{{ h.username | personLabel: h.id : h.login_code }}</span>
+              <span class="rp-hit__meta">{{ h.email }}</span>
+              <fa-icon [icon]="['fas', 'chevron-right']" aria-hidden="true"></fa-icon>
+            </button></li>
+          }
+        </ul>
+      } @else if (query().length >= 2 && !searching()) {
+        <p class="rp-empty" role="status">No encontramos pacientes con «{{ query() }}».</p>
+      }
+    </div>
+  } @else {
+    <div class="rp-who">
+      <span class="rp-who__name">{{ picked()!.name | personLabel: picked()!.id : picked()!.code }}</span>
+      <button type="button" class="rp-link" (click)="reset()">Cambiar paciente</button>
+    </div>
+
+    @if (loading()) {
+      <div class="rp-skel" aria-busy="true" aria-label="Cargando cronograma"></div>
+    } @else if (schedule(); as s) {
+      @if (hasContract()) {
+        <!-- Cronograma resumido -->
+        <section class="rp-card" aria-label="Cronograma de cuotas">
+          <div class="rp-stats">
+            <div><span>Vencido</span><strong [class.is-bad]="overdue() > 0">S/ {{ overdue().toFixed(2) }}</strong></div>
+            <div><span>Vence hoy</span><strong>S/ {{ dueToday().toFixed(2) }}</strong></div>
+            <div><span>Saldo a favor</span><strong>S/ {{ s.credit.toFixed(2) }}</strong></div>
+          </div>
+          @if (open().length) {
+            <ul class="rp-inst">
+              @for (i of open().slice(0, 6); track i.id) {
+                <li [class.is-overdue]="i.overdue">
+                  <span>Cuota {{ i.number }}</span>
+                  <span>{{ i.due_date | date: 'dd/MM/yyyy' }}</span>
+                  <strong>S/ {{ i.remaining.toFixed(2) }}</strong>
+                  <span class="rp-tag">{{ i.overdue ? 'Vencida' : i.status === 'partial' ? 'Parcial' : 'Por vencer' }}</span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="rp-ok">No tiene cuotas pendientes. Un pago ahora quedará como saldo a favor para su próxima cuota.</p>
+          }
+        </section>
+
+        <form class="rp-form" (ngSubmit)="submitPayment('installment')" novalidate>
+          <div class="rp-row">
+            <label class="rp-field"><span class="rp-label">Monto (S/)</span>
+              <input class="rp-input" type="number" min="0" step="0.01" inputmode="decimal" name="amount" [ngModel]="pay.amount" (ngModelChange)="setAmount($event)" required />
+            </label>
+            <label class="rp-field"><span class="rp-label">Fecha del pago</span>
+              <input class="rp-input" type="date" name="date" [(ngModel)]="pay.date" required />
+            </label>
+          </div>
+          <div class="rp-row">
+            <label class="rp-field"><span class="rp-label">Método</span>
+              <select class="rp-input" name="method" [(ngModel)]="pay.method">
+                @for (m of methods; track m) { <option [value]="m">{{ m }}</option> }
+              </select>
+            </label>
+            <label class="rp-field"><span class="rp-label">N° de operación</span>
+              <input class="rp-input" name="reference" [(ngModel)]="pay.reference" placeholder="Ej.: 123456" autocomplete="off" />
+            </label>
+          </div>
+          <label class="rp-field"><span class="rp-label">Comprobante (opcional)</span>
+            <input class="rp-file" type="file" accept="image/*,application/pdf" (change)="onReceipt($event)" />
+          </label>
+
+          @if (preview().parts.length || preview().credit) {
+            <div class="rp-preview" role="status">
+              <p class="rp-preview__title">Este pago cubrirá:</p>
+              <ul>
+                @for (x of preview().parts; track x.inst.id) {
+                  <li>Cuota {{ x.inst.number }} ({{ x.inst.due_date | date: 'dd/MM' }}): S/ {{ x.take.toFixed(2) }} {{ x.full ? '· queda pagada' : '· pago parcial' }}</li>
+                }
+                @if (preview().credit) { <li>S/ {{ preview().credit.toFixed(2) }} quedan a favor para la próxima cuota</li> }
+              </ul>
+            </div>
+          }
+          @if (error()) { <p class="rp-error" role="alert">{{ error() }}</p> }
+          <button type="submit" class="rp-submit" [disabled]="saving()">{{ saving() ? 'Registrando…' : 'Registrar pago' }}</button>
+          <button type="button" class="rp-link rp-link--center" (click)="mode.set('one_off')">¿No es una cuota? Registrar pago suelto</button>
+        </form>
+        @if (mode() === 'one_off') {
+          <ng-container *ngTemplateOutlet="oneOffTpl" />
+        }
+      } @else {
+        <div class="rp-callout" role="note">
+          <strong>Este paciente no tiene contrato.</strong>
+          Para que su pago cuente en la cobranza, primero crea su plan de pago. Si es un cobro aparte (evaluación, material…), regístralo como pago suelto.
+        </div>
+        @if (s.other_payments.length) {
+          <p class="rp-hint">Tiene {{ s.other_payments.length }} {{ s.other_payments.length === 1 ? 'pago registrado' : 'pagos registrados' }} fuera de contrato; al crear el plan puedes ordenarlos con el Excel de Finanzas.</p>
+        }
+        <div class="rp-seg" role="tablist" aria-label="Qué registrar">
+          <button type="button" role="tab" [attr.aria-selected]="mode() === 'plan'" [class.is-on]="mode() === 'plan'" (click)="mode.set('plan')">Crear plan de pago</button>
+          <button type="button" role="tab" [attr.aria-selected]="mode() === 'one_off'" [class.is-on]="mode() === 'one_off'" (click)="mode.set('one_off')">Pago suelto</button>
+        </div>
+        @if (mode() === 'plan') {
+          <form class="rp-form" (ngSubmit)="submitPlan()" novalidate>
+            <div class="rp-row">
+              <label class="rp-field"><span class="rp-label">Monto de cada cuota (S/)</span>
+                <input class="rp-input" type="number" min="0" step="0.01" inputmode="decimal" name="pamount" [(ngModel)]="plan.amount" required />
+              </label>
+              <label class="rp-field"><span class="rp-label">Frecuencia</span>
+                <select class="rp-input" name="freq" [(ngModel)]="plan.billing_type">
+                  <option value="Mensual">Mensual</option>
+                  <option value="Quincenal">Quincenal</option>
+                </select>
+              </label>
+            </div>
+            <div class="rp-row">
+              <label class="rp-field"><span class="rp-label">Primera cuota</span>
+                <input class="rp-input" type="date" name="first" [(ngModel)]="plan.first_due" required />
+              </label>
+              <label class="rp-field"><span class="rp-label">Día de pago</span>
+                <input class="rp-input" type="number" min="1" max="31" name="day" [(ngModel)]="plan.payment_day" />
+              </label>
+            </div>
+            <label class="rp-field"><span class="rp-label">N° de cuotas</span>
+              <input class="rp-input" type="number" min="1" max="60" name="n" [(ngModel)]="plan.installments" placeholder="Vacío = renovable (una cuota por mes)" />
+            </label>
+            @if (error()) { <p class="rp-error" role="alert">{{ error() }}</p> }
+            <button type="submit" class="rp-submit" [disabled]="saving()">{{ saving() ? 'Creando…' : 'Crear plan y continuar' }}</button>
+          </form>
+        } @else {
+          <ng-container *ngTemplateOutlet="oneOffTpl" />
+        }
+      }
+    }
+  }
+</div>
+
+<ng-template #oneOffTpl>
+  <form class="rp-form rp-form--boxed" (ngSubmit)="submitPayment('one_off')" novalidate aria-label="Pago suelto">
+    <p class="rp-hint">Un pago suelto cuenta como ingreso, pero no como cuota del plan.</p>
+    <div class="rp-row">
+      <label class="rp-field"><span class="rp-label">¿De qué es?</span>
+        <select class="rp-input" name="cat" [(ngModel)]="oneOff.category">
+          @for (c of categories; track c.value) { <option [value]="c.value">{{ c.label }}</option> }
+        </select>
+      </label>
+      <label class="rp-field"><span class="rp-label">Monto (S/)</span>
+        <input class="rp-input" type="number" min="0" step="0.01" inputmode="decimal" name="oamount" [(ngModel)]="oneOff.amount" required />
+      </label>
+    </div>
+    <div class="rp-row">
+      <label class="rp-field"><span class="rp-label">Método</span>
+        <select class="rp-input" name="omethod" [(ngModel)]="oneOff.method">
+          @for (m of methods; track m) { <option [value]="m">{{ m }}</option> }
+        </select>
+      </label>
+      <label class="rp-field"><span class="rp-label">Fecha</span>
+        <input class="rp-input" type="date" name="odate" [(ngModel)]="oneOff.date" />
+      </label>
+    </div>
+    @if (error() && !hasContract()) { <p class="rp-error" role="alert">{{ error() }}</p> }
+    <button type="submit" class="rp-submit" [disabled]="saving()">{{ saving() ? 'Registrando…' : 'Registrar pago suelto' }}</button>
+  </form>
+</ng-template>

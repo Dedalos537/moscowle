@@ -27,6 +27,7 @@ import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { PeopleService } from '../../../../core/services/people.service';
+import { BillingExcel } from '../../components/billing-excel/billing-excel';
 import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
 import { Alert } from '../../../../shared/components/alert/alert';
 import { AlertService } from '../../../../core/services/alert.service';
@@ -74,7 +75,7 @@ Chart.register(
 @Component({
   selector: 'app-finanzas',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal, SummaryCard, Table, TableCell, MonthRangePicker, Alert, PersonLabelPipe],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal, SummaryCard, Table, TableCell, MonthRangePicker, Alert, PersonLabelPipe, BillingExcel],
   templateUrl: './finanzas.html',
   styleUrl: './finanzas.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
@@ -103,6 +104,13 @@ export class Finanzas implements OnInit, OnDestroy {
 
   switchTab(tab: 'resumen' | 'pagos' | 'yape' | 'gastos') {
     this.activeTab = tab;
+  }
+
+  /** Tras importar el Excel de cobranza: contratos, cuotas, pagos y resumen cambian juntos. */
+  onBillingImported() {
+    this.loadSummaryData();
+    this.loadPaymentsData();
+    this.loadContracts();
   }
 
   /** Deuda VENCIDA a hoy según el reporte de deudores (activos con plan). No depende del periodo: es lo que se debe ahora. */

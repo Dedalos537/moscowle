@@ -349,19 +349,7 @@
 </div>
 } @if (activeTab === 'pagos') {
 <div class="finanzas-body animate-fade-in" [@fadeInUp]>
-  @if (patientsWithoutContractCount > 0) {
-  <div class="flex items-start gap-4 p-4 bg-warning-container border border-warning-container rounded-xl">
-    <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-warning text-2xl shrink-0"></fa-icon>
-    <div class="flex-1 min-w-0">
-      <p class="text-sm font-bold text-warning">
-        {{ patientsWithoutContractCount }} pacientes sin contrato activo
-      </p>
-      <p class="text-xs text-warning mt-0.5">
-        Crea un contrato para cada paciente y empieza a cobrar por cuotas.
-      </p>
-    </div>
-  </div>
-  }
+  <app-billing-excel [withoutContract]="patientsWithoutContractCount" (imported)="onBillingImported()" />
 
   <div class="flex gap-1 bg-surface-container-high rounded-xl p-1 w-fit">
     <button class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200"
