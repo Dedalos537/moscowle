@@ -172,8 +172,11 @@ export class RegisterPayment implements OnDestroy {
     this.amountSignal.set(Number(v) || 0);
   }
 
+  readonly receiptName = signal('');
+
   onReceipt(ev: Event) {
     this.receipt = (ev.target as HTMLInputElement).files?.[0] ?? null;
+    this.receiptName.set(this.receipt?.name ?? '');
   }
 
   submitPayment(kind: 'installment' | 'one_off') {
@@ -202,6 +205,7 @@ export class RegisterPayment implements OnDestroy {
           this.saving.set(false);
           this.toast.show(res?.message || 'Pago registrado', 'success');
           this.receipt = null;
+          this.receiptName.set('');
           this.done.emit();
           this.load();
         },
