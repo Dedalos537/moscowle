@@ -1,11 +1,13 @@
 import logging
 import os
 import uuid
+from datetime import datetime
 
 from flask import current_app, jsonify, request
 from werkzeug.utils import secure_filename
 
-from app.auth_compat import login_required
+from app.auth_compat import current_user, login_required
+from app.extensions import db
 from app.routes.admin import admin_bp
 from app.services.contract_service import ContractService
 from app.utils.decorators import admin_required
@@ -638,3 +640,106 @@ def migrate_existing_patients():
     except Exception as e:
         logger.exception('Error migrating existing patients')
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ── Libro de cobranza (PRP 008): Excel, planes y cronograma ─────────────────────
+
+
+@admin_bp.route('/api/billing/export.xlsx', methods=['GET'])
+@login_required
+def billing_export():
+    """Excel con los pagos fuera de contratos y contratos propuestos, para analizar e importar."""
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    from io import BytesIO
+
+    from flask import send_file
+
+    from app.services.billing_excel import export_workbook
+
+    name = f'cobranza-pagos-fuera-de-contratos-{datetime.utcnow():%Y%m%d}.xlsx'
+    return send_file(
+        BytesIO(export_workbook()),
+        as_attachment=True,
+        download_name=name,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+
+
+@admin_bp.route('/api/billing/import', methods=['POST'])
+@login_required
+def billing_import():
+    """Sube el Excel: `apply=0` simula (vista previa), `apply=1` aplica todo o nada. Solo admin."""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Solo un administrador puede importar pagos'}), 403
+    from app.services import billing
+    from app.services.billing_excel import import_workbook
+
+    f = request.files.get('file')
+    if not f or not f.filename:
+        return jsonify({'success': False, 'message': 'Sube el archivo .xlsx exportado'}), 400
+    data = f.read()
+    if len(data) > 15 * 1024 * 1024:
+        return jsonify({'success': False, 'message': 'El archivo pesa más de 15 MB'}), 400
+    try:
+        result = import_workbook(
+            data, file_name=f.filename, apply=request.form.get('apply') == '1', user_id=current_user.id
+        )
+    except billing.BillingError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+    return jsonify({'success': True, **result})
+
+
+@admin_bp.route('/api/billing/imports', methods=['GET'])
+@login_required
+def billing_imports():
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    from app.services.billing_excel import recent_imports
+
+    return jsonify({'success': True, 'imports': recent_imports()})
+
+
+@admin_bp.route('/api/billing/patients/<int:patient_id>/schedule', methods=['GET'])
+@login_required
+def billing_schedule(patient_id):
+    """Cronograma del paciente: cuotas con lo aplicado, saldo a favor y pagos fuera de cuotas."""
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    from app.services import billing
+
+    return jsonify({'success': True, **billing.schedule(patient_id)})
+
+
+@admin_bp.route('/api/billing/plans', methods=['POST'])
+@login_required
+def billing_create_plan():
+    """Crea el plan de pago (contrato con cronograma) de un paciente sin contrato."""
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    from app.services import billing
+
+    data = request.get_json(silent=True) or {}
+    try:
+        first_due = datetime.strptime(str(data.get('first_due') or ''), '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'success': False, 'message': 'Indica la fecha de la primera cuota'}), 400
+    if billing.active_contracts(int(data.get('patient_id') or 0)):
+        return jsonify({'success': False, 'message': 'Este paciente ya tiene un contrato activo'}), 400
+    try:
+        n = data.get('installments')
+        c = billing.create_plan(
+            data.get('patient_id'),
+            data.get('amount'),
+            data.get('payment_day') or first_due.day,
+            first_due,
+            installments=int(n) if n not in (None, '') else None,
+            billing_type=data.get('billing_type') or 'Mensual',
+            name=data.get('name') or None,
+            notes=data.get('notes') or None,
+            user_id=current_user.id,
+        )
+    except billing.BillingError as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e), 'code': e.code}), 400
+    return jsonify({'success': True, 'contract_id': c.id, **billing.schedule(c.patient_id)})

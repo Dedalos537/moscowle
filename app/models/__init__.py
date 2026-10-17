@@ -39,5 +39,8 @@ from app.models.message_template import MessageTemplate as MessageTemplate
 from app.models.campaign import Campaign as Campaign
 from app.models.campaign import CampaignSend as CampaignSend
 from app.models.action_request import ActionRequest as ActionRequest
+from app.models.billing import BillingImport as BillingImport
+from app.models.billing import PaymentAllocation as PaymentAllocation
+from app.models.billing import PayrollPeriod as PayrollPeriod
 from app.models.landing import LandingContentVersion as LandingContentVersion
 from app.models.landing import LandingLead as LandingLead
