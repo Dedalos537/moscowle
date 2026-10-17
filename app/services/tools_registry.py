@@ -716,16 +716,26 @@ def handle_payment_history(patient_id, **kwargs):
 def handle_register_payment(patient_id, amount, method, payment_date, reference='', **kwargs):
     patient = User.query.get(patient_id) if patient_id else None
     if not patient and kwargs.get('patient_name'):
-        from sqlalchemy import or_
-
-        name = str(kwargs['patient_name']).strip().lower()
-        patient = User.query.filter(
-            or_(
-                User.username.ilike(f'%{name}%'),
-                User.name.ilike(f'%{name}%'),
-            )
-        ).first()
-    if not patient:
+        # Solo se cobra a un paciente identificado sin ambigüedad: antes se tomaba el primero que coincidiera
+        # con el nombre y se le podía cobrar a otra persona.
+        name = str(kwargs['patient_name']).strip()
+        matches = (
+            User.query.filter(User.role == 'jugador', User.username.ilike(f'%{name}%'))
+            .order_by(User.username)
+            .limit(6)
+            .all()
+        )
+        exact = [u for u in matches if (u.username or '').strip().lower() == name.lower()]
+        if len(exact) == 1:
+            patient = exact[0]
+        elif len(matches) == 1:
+            patient = matches[0]
+        elif matches:
+            return {
+                'error': 'Hay varios pacientes con ese nombre: indica cuál (por su ID o código).',
+                'candidates': [{'id': u.id, 'name': u.username, 'code': u.login_code} for u in matches],
+            }
+    if not patient or patient.role != 'jugador':
         return {'error': 'Paciente no encontrado. Usa search_patients para encontrar el ID.'}
     try:
         try:
@@ -744,9 +754,13 @@ def handle_register_payment(patient_id, amount, method, payment_date, reference=
             receipt_path=kwargs.get('receipt_url'),
         )
         if success:
+            from app.services import billing
+
+            applied = sum(1 for _ in billing.PaymentAllocation.query.filter_by(payment_id=result.id))
             return {
                 'success': True,
-                'message': f'Pago de S/. {amount:.2f} registrado para {patient.username}',
+                'message': f'Pago de S/. {float(amount):.2f} registrado para {patient.username}'
+                + (f' (cubre {applied} cuota{"s" if applied != 1 else ""})' if applied else ''),
                 'patient': patient.username,
                 'amount': amount,
                 'method': method,

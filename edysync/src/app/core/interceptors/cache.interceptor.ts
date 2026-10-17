@@ -10,6 +10,9 @@ const DEFAULT_TTL_MS = 5 * 60 * 1000;
 const EXCLUDED = [
   // Ajuste «solo códigos» y directorio de personas: deben verse al instante tras cambiarlos.
   '/api/people/',
+  // Cobranza y nómina: tras cobrar o pagar, el cronograma tiene que verse al instante.
+  '/admin/api/billing/',
+  '/admin/api/payroll',
   '/api/health',
   '/api/public/',
   '/api/time',

@@ -20,6 +20,8 @@ import { GrowthPanel } from './components/growth-panel/growth-panel';
 import { RiskPanel } from './components/risk-panel/risk-panel';
 import { TeamPanel } from './components/team-panel/team-panel';
 import { SedeCompare } from './components/sede-compare/sede-compare';
+import { SchedulePanel } from './components/schedule-panel/schedule-panel';
+import { PayTherapist } from '../../components/pay-therapist/pay-therapist';
 
 type TodayKey = 'sessions' | 'payments' | 'approvals' | 'incidents';
 
@@ -43,6 +45,8 @@ type TodayKey = 'sessions' | 'payments' | 'approvals' | 'incidents';
     RiskPanel,
     TeamPanel,
     SedeCompare,
+    SchedulePanel,
+    PayTherapist,
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
@@ -75,6 +79,10 @@ export class Dashboard implements OnInit, OnDestroy {
   readonly showPayment = signal(false);
   /** Paciente con el que se abre «Registrar pago» (desde Cobrar en Hoy o en Continuidad). */
   readonly payPatient = signal<{ id: number; name: string; code?: string } | null>(null);
+  /** Pagar a terapeuta (desde Equipo o el cronograma). */
+  readonly payTherapist = signal<{ therapist: { id: number; name: string }; period: string | null } | null>(null);
+  /** Sube con cada recarga: el cronograma se refresca tras cobrar o pagar. */
+  readonly version = signal(0);
 
   readonly range = computed(() => {
     const d = this.data();
@@ -116,6 +124,7 @@ export class Dashboard implements OnInit, OnDestroy {
       next: (d) => {
         this.data.set(d);
         this.loading.set(false);
+        this.version.update((v) => v + 1);
       },
       error: (e) => {
         this.loading.set(false);
@@ -143,6 +152,10 @@ export class Dashboard implements OnInit, OnDestroy {
   openPayment(patient: { id: number; name: string; code?: string } | null = null) {
     this.payPatient.set(patient);
     this.showPayment.set(true);
+  }
+
+  openTherapistPay(therapist: { id: number; name: string }, period: string | null = null) {
+    this.payTherapist.set({ therapist, period });
   }
 
   /** El panel queda abierto (muestra el cronograma actualizado); el tablero se refresca detrás. */

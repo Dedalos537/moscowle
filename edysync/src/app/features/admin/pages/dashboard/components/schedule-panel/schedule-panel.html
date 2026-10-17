@@ -1,0 +1,88 @@
+<section class="sp" aria-labelledby="sp-title">
+  <button type="button" class="sp-head" [attr.aria-expanded]="open()" aria-controls="sp-body" (click)="toggle()">
+    <span class="sp-head__text">
+      <span id="sp-title" class="sp-title">Cronograma de pagos</span>
+      <span class="sp-sub">Lo que deben pagar los pacientes y lo que se debe pagar a los terapeutas.</span>
+    </span>
+    @if (open() && incoming()) {
+      <span class="sp-flow" aria-label="Flujo proyectado a 4 semanas">
+        <span><small>Entra</small>S/ {{ inNext().toFixed(0) }}</span>
+        <span><small>Sale</small>S/ {{ outTotal().toFixed(0) }}</span>
+      </span>
+    }
+    <fa-icon class="sp-chev" [icon]="['fas', 'chevron-down']" aria-hidden="true"></fa-icon>
+  </button>
+
+  @if (open()) {
+    <div id="sp-body" class="sp-body">
+      <div class="sp-tabs" role="tablist" aria-label="Cronograma">
+        <button type="button" role="tab" [attr.aria-selected]="tab() === 'in'" [class.is-on]="tab() === 'in'" (click)="tab.set('in')">Lo que entra</button>
+        <button type="button" role="tab" [attr.aria-selected]="tab() === 'out'" [class.is-on]="tab() === 'out'" (click)="tab.set('out')">Lo que sale ({{ pendingPayroll().length }})</button>
+      </div>
+
+      @if (loading() && !incoming()) {
+        <div class="sp-skel" aria-busy="true" aria-label="Cargando cronograma"></div>
+      } @else if (tab() === 'in') {
+        @if (incoming(); as inc) {
+          <ol class="sp-weeks" aria-label="Por cobrar por semana">
+            <li class="is-overdue">
+              <span class="sp-weeks__label">Vencido</span>
+              <span class="sp-weeks__bar" aria-hidden="true"><span [style.width.%]="(inc.overdue_total / maxWeek()) * 100"></span></span>
+              <strong>S/ {{ inc.overdue_total.toFixed(2) }}</strong>
+            </li>
+            @for (w of inc.weeks; track w.start; let i = $index) {
+              <li>
+                <span class="sp-weeks__label">{{ weekLabel(w.start, i) }}</span>
+                <span class="sp-weeks__bar" aria-hidden="true"><span [style.width.%]="(w.total / maxWeek()) * 100"></span></span>
+                <strong>S/ {{ w.total.toFixed(2) }}</strong>
+              </li>
+            }
+          </ol>
+          @if (inc.items.length) {
+            <ul class="sp-list">
+              @for (it of visibleIn(); track it.installment_id) {
+                <li [class.is-overdue]="it.overdue">
+                  <span class="sp-list__who">
+                    <strong>{{ it.patient.name | personLabel: it.patient.id : it.patient.code }}</strong>
+                    <span>Cuota {{ it.number }} · {{ it.overdue ? 'venció' : 'vence' }} {{ it.due_date | date: 'dd/MM' }}</span>
+                  </span>
+                  <span class="sp-list__amt">S/ {{ it.remaining.toFixed(2) }}</span>
+                  <button type="button" class="sp-btn sp-btn--primary" (click)="charge.emit(it.patient)">Cobrar</button>
+                </li>
+              }
+            </ul>
+            @if (inc.items.length > 10) {
+              <button type="button" class="sp-more" (click)="showAll.set(!showAll())">{{ showAll() ? 'Ver menos' : 'Ver las ' + inc.items.length + ' cuotas' }}</button>
+            }
+          } @else {
+            <p class="sp-empty">No hay cuotas vencidas ni por vencer en las próximas 4 semanas.</p>
+          }
+        }
+      } @else {
+        @if (payroll().length) {
+          <ul class="sp-list">
+            @for (p of payroll(); track p.id) {
+              <li [class.is-overdue]="p.status === 'overdue'">
+                <span class="sp-list__who">
+                  <strong>{{ p.therapist?.name ?? '' | personLabel: p.therapist?.id }}</strong>
+                  <span class="sp-cap">{{ label(p.period) }} · {{ p.hours }} h · vence {{ p.due_date | date: 'dd/MM' }}</span>
+                </span>
+                <span class="sp-list__amt">
+                  S/ {{ p.balance.toFixed(2) }}
+                  <small>de S/ {{ p.amount_due.toFixed(2) }}</small>
+                </span>
+                @if (p.balance > 0.005) {
+                  <button type="button" class="sp-btn sp-btn--primary" (click)="p.therapist && pay.emit({ therapist: p.therapist, period: p.period })">Pagar</button>
+                } @else {
+                  <span class="sp-pill">Pagado</span>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="sp-empty">No hay pagos a terapeutas pendientes en los últimos 3 meses.</p>
+        }
+      }
+    </div>
+  }
+</section>

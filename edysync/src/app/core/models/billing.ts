@@ -54,3 +54,36 @@ export interface BillingImportRecord {
   summary: Record<string, number>;
   allocations: number;
 }
+
+/** Nómina por periodo (lo que sale). */
+export interface PayrollPeriodRow {
+  id: number;
+  therapist: { id: number; name: string } | null;
+  period: string; // AAAA-MM
+  hours: number;
+  sessions: number;
+  sessions_without_duration: number;
+  rate: number;
+  amount_due: number;
+  paid: number;
+  balance: number;
+  due_date: string;
+  closed: boolean;
+  status: 'pending' | 'partial' | 'paid' | 'overdue' | 'none';
+}
+
+/** Cuotas vencidas y por vencer (lo que entra). */
+export interface IncomingSchedule {
+  success: boolean;
+  overdue_total: number;
+  weeks: { start: string; total: number }[];
+  items: {
+    installment_id: number;
+    number: number;
+    due_date: string;
+    remaining: number;
+    overdue: boolean;
+    contract: { id: number; name: string };
+    patient: { id: number; name: string; code: string };
+  }[];
+}

@@ -152,8 +152,10 @@
 
       <div class="db-split">
         <app-risk-panel [data]="d" (charge)="openPayment($event)" />
-        <app-team-panel [data]="d" />
+        <app-team-panel [data]="d" (pay)="openTherapistPay($event)" />
       </div>
+
+      <app-schedule-panel [sedeId]="sedeId()" [version]="version()" (charge)="openPayment($event)" (pay)="openTherapistPay($event.therapist, $event.period)" />
 
       @if (d.sedes.length > 1) {
         <app-sede-compare [data]="d" (pick)="setSede($event)" />
@@ -171,5 +173,11 @@
 <app-drawer [isOpen]="showPayment()" title="Registrar pago" [icon]="['fas', 'cash-register']" (close)="showPayment.set(false)">
   @if (showPayment()) {
     <app-register-payment [patient]="payPatient()" (done)="onPaymentCompleted()" />
+  }
+</app-drawer>
+
+<app-drawer [isOpen]="!!payTherapist()" title="Pagar a terapeuta" [icon]="['fas', 'hand-holding-dollar']" (close)="payTherapist.set(null)">
+  @if (payTherapist(); as pt) {
+    <app-pay-therapist [therapist]="pt.therapist" [period]="pt.period" (done)="load(true)" />
   }
 </app-drawer>

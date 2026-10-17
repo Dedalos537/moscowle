@@ -6,7 +6,7 @@ import { ApiResponse } from '../models/api-response';
 import { User, CreateUserPayload } from '../models/user';
 import { Scorecard, ScorecardPeriod, Sede, SedeAnalytics } from '../models/sede';
 import { CenterDashboard } from '../models/center-dashboard';
-import { BillingImportRecord, BillingImportResult, PatientSchedule } from '../models/billing';
+import { BillingImportRecord, BillingImportResult, IncomingSchedule, PatientSchedule, PayrollPeriodRow } from '../models/billing';
 import { Payment, PatientPaymentStatus, DebtReport } from '../models/payment';
 import { Appointment, CalendarEvent, BatchSessionPayload } from '../models/appointment';
 import { Expense, TherapistFinancial, ContactMessage, TherapistStats, PatientStats } from '../models/expense';
@@ -160,6 +160,22 @@ export class AdminService {
     fd.append('file', file);
     fd.append('apply', apply ? '1' : '0');
     return this.http.post<BillingImportResult>('/admin/api/billing/import', fd);
+  }
+
+  payroll(months = 4, therapistId?: number): Observable<{ success: boolean; periods: PayrollPeriodRow[]; settings: Record<string, number> }> {
+    let params = new HttpParams().set('months', months);
+    if (therapistId) params = params.set('therapist_id', therapistId);
+    return this.http.get<{ success: boolean; periods: PayrollPeriodRow[]; settings: Record<string, number> }>('/admin/api/payroll', { params });
+  }
+
+  payTherapist(body: { therapist_id: number; period: string; amount: number; method: string; date?: string; notes?: string }): Observable<{ success: boolean; period: PayrollPeriodRow }> {
+    return this.http.post<{ success: boolean; period: PayrollPeriodRow }>('/admin/api/payroll/pay', body);
+  }
+
+  billingIncoming(sedeId: number | null, weeks = 4): Observable<IncomingSchedule> {
+    let params = new HttpParams().set('weeks', weeks);
+    if (sedeId) params = params.set('sede', sedeId);
+    return this.http.get<IncomingSchedule>('/admin/api/billing/incoming', { params });
   }
 
   billingImports(): Observable<{ success: boolean; imports: BillingImportRecord[] }> {

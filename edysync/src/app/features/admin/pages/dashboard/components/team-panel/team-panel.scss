@@ -73,6 +73,13 @@
   fa-icon { font-size: 0.75rem; }
 }
 
+.tm-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+.tm-pay {
+  display: inline-flex; align-items: center; gap: 0.4375rem; min-height: 2.75rem; padding: 0 0.875rem; border: 0; border-radius: 0.75rem;
+  background: var(--color-primary); color: var(--color-on-primary); font: inherit; font-size: 0.875rem; font-weight: 700; cursor: pointer;
+  &:hover { background: color-mix(in srgb, var(--color-primary) 86%, var(--color-on-primary)); }
+}
+
 @media (max-width: 520px) {
   .tm-row { grid-template-columns: minmax(0, 1fr) auto auto; }
   .tm-bar { grid-column: 1 / -1; grid-row: 2; }

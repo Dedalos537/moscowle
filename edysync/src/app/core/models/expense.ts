@@ -22,6 +22,11 @@ export interface CreateExpensePayload {
 }
 
 export interface TherapistFinancial {
+  /** Periodo liquidado (AAAA-MM): el pago se aplica a ese mes, no al de la fecha del pago. */
+  period?: string;
+  status?: 'pending' | 'partial' | 'paid' | 'overdue' | 'none';
+  due_date?: string;
+  sessions_without_duration?: number;
   therapist: { id: number; username: string; salary_base: number; contract_hours: number };
   rate: number;
   contract_hours: number;

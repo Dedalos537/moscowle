@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { CenterDashboard } from '../../../../../../core/models/center-dashboard';
@@ -18,6 +18,8 @@ import { PersonLabelPipe } from '../../../../../../shared/pipes/person-label.pip
 })
 export class TeamPanel {
   data = input.required<CenterDashboard>();
+  /** «Pagar a terapeuta»: abre el panel de nómina con este terapeuta. */
+  pay = output<{ id: number; name: string }>();
   readonly open = signal<number | null>(null);
 
   readonly rows = computed(() => {

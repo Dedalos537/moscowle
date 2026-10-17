@@ -227,17 +227,24 @@ def ai_chat_process():
             if not p_name or not amt:
                 return jsonify({'response': friendly, 'status': 'info'})
 
-            p = User.query.filter(User.username.ilike(f'%{p_name}%'), User.role == 'jugador').first()
-            if not p:
+            found = User.query.filter(User.username.ilike(f'%{p_name}%'), User.role == 'jugador').limit(4).all()
+            if not found:
                 return jsonify({'response': f'No encontré a {p_name}.', 'status': 'warning'})
+            if len(found) > 1:
+                names = ', '.join(u.username for u in found)
+                return jsonify(
+                    {'response': f'Hay varios pacientes que coinciden ({names}): dime cuál.', 'status': 'warning'}
+                )
+            p = found[0]
 
-            payment_service.register_payment(
+            ok, res = payment_service.register_payment(
                 patient_id=p.id,
                 amount=float(amt),
                 method='IA/Llama',
                 reference='Chatbot',
-                next_due_date_str=(datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d'),
             )
+            if not ok:
+                return jsonify({'response': f'No registré el pago: {res}', 'status': 'warning'})
 
             notif_service.create_notification(
                 current_user.id,

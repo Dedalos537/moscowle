@@ -1,0 +1,50 @@
+<div class="pt">
+  <p class="pt-who">{{ therapist().name | personLabel: therapist().id }}</p>
+  @if (loading()) {
+    <div class="pt-skel" aria-busy="true" aria-label="Cargando nómina"></div>
+  } @else {
+    @if (periods().length) {
+      <ul class="pt-periods" aria-label="Periodos">
+        @for (p of periods(); track p.period) {
+          <li>
+            <button type="button" class="pt-period" [class.is-on]="form.period === p.period" [attr.aria-pressed]="form.period === p.period" (click)="choose(p.period)">
+              <span class="pt-period__name">{{ label(p.period) }}</span>
+              <span class="pt-period__fig">Corresponde S/ {{ p.amount_due.toFixed(2) }} · pagado S/ {{ p.paid.toFixed(2) }}</span>
+              <span class="pt-pill" [attr.data-st]="p.status">{{ p.status === 'paid' ? 'Pagado' : p.status === 'overdue' ? 'Vencido' : p.status === 'partial' ? 'Parcial' : 'Pendiente' }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+      @if (selected(); as s) {
+        <p class="pt-note">
+          {{ s.hours }} h en {{ s.sessions }} {{ s.sessions === 1 ? 'sesión' : 'sesiones' }} × S/ {{ s.rate.toFixed(2) }}/h · vence {{ s.due_date | date: 'dd/MM/yyyy' }}.
+          @if (s.sessions_without_duration) { {{ s.sessions_without_duration }} sin duración registrada se contaron con la duración estándar: revísalas en la agenda. }
+        </p>
+      }
+    } @else {
+      <p class="pt-note">Este terapeuta no tiene sesiones completadas en los últimos meses, o no tiene tarifa (sueldo base y horas de contrato) configurada.</p>
+    }
+    <form class="pt-form" (ngSubmit)="submit()" novalidate>
+      <div class="pt-row">
+        <label class="pt-field"><span>Monto (S/)</span>
+          <input type="number" min="0" step="0.01" inputmode="decimal" name="amount" [(ngModel)]="form.amount" required />
+        </label>
+        <label class="pt-field"><span>Fecha del pago</span>
+          <input type="date" name="date" [(ngModel)]="form.date" />
+        </label>
+      </div>
+      <div class="pt-row">
+        <label class="pt-field"><span>Método</span>
+          <select name="method" [(ngModel)]="form.method">
+            <option>Transferencia</option><option>Yape</option><option>Plin</option><option>Efectivo</option>
+          </select>
+        </label>
+        <label class="pt-field"><span>Nota (opcional)</span>
+          <input name="notes" [(ngModel)]="form.notes" placeholder="Ej.: adelanto" />
+        </label>
+      </div>
+      @if (error()) { <p class="pt-error" role="alert">{{ error() }}</p> }
+      <button type="submit" class="pt-submit" [disabled]="saving() || !form.period">{{ saving() ? 'Registrando…' : 'Registrar pago' + (form.period ? ' de ' + label(form.period) : '') }}</button>
+    </form>
+  }
+</div>
