@@ -16,6 +16,9 @@ class Contract(db.Model, AuditMixin):
     payment_start_date = db.Column(db.Date, nullable=True)
     end_date = db.Column(db.Date, nullable=True)
     status = db.Column(db.String(20), default='active', index=True)
+    # Renovable: sin número fijo de cuotas; cada mes se genera la siguiente con el mismo monto y día de pago.
+    renewable = db.Column(db.Boolean, default=False, nullable=False)
+    payment_day = db.Column(db.Integer, nullable=True)
     notes = db.Column(db.Text, nullable=True)
 
     billing_type = db.Column(db.String(20), default='Mensual')

@@ -452,6 +452,30 @@ def dispatch_print_jobs(app):
         print_service.dispatch_due()
 
 
+def extend_renewable_contracts(app):
+    """Genera la cuota del mes siguiente de cada contrato renovable y le aplica el saldo a favor (PRP 008)."""
+    with app.app_context():
+        from app.services import billing
+
+        try:
+            created = billing.extend_renewables()
+            if created:
+                app.logger.info(f'Cuotas renovables generadas: {created}')
+        except Exception as e:
+            app.logger.warning(f'extend_renewable_contracts: {e}')
+
+
+def close_payroll_month(app):
+    """Día 1: congela la nómina del mes anterior (lo que corresponde pagar a cada terapeuta)."""
+    with app.app_context():
+        from app.services import payroll
+
+        try:
+            payroll.close_previous_month()
+        except Exception as e:
+            app.logger.warning(f'close_payroll_month: {e}')
+
+
 def record_server_snapshot(app):
     with app.app_context():
         from app.services import server_monitor
@@ -480,6 +504,12 @@ def init_scheduler(app):
     if app.config.get('TESTING'):
         return
     scheduler.add_job(func=lambda: dispatch_print_jobs(app), trigger='interval', minutes=1, id='drive_print_jobs')
+    scheduler.add_job(
+        func=lambda: extend_renewable_contracts(app), trigger='cron', hour=0, minute=20, id='billing_renewables'
+    )
+    scheduler.add_job(
+        func=lambda: close_payroll_month(app), trigger='cron', day=1, hour=0, minute=40, id='payroll_close'
+    )
     scheduler.add_job(func=lambda: cleanup_drive_uploads(app), trigger='interval', hours=6, id='drive_upload_cleanup')
     scheduler.add_job(func=lambda: record_server_snapshot(app), trigger='interval', minutes=5, id='server_snapshot')
     scheduler.add_job(

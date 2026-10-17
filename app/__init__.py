@@ -816,6 +816,48 @@ def create_app(config_class=None):
                 app.logger.warning(f'print_job quality migration (non-fatal): {e}')
                 db.session.rollback()
 
+            # Libro de cobranza y nómina (PRP 008): columnas nuevas en tablas existentes. Las tablas nuevas
+            # (payment_allocation, billing_import, payroll_period) las crea db.create_all.
+            for table, column, ddl in (
+                ('payment', 'kind', "ALTER TABLE payment ADD COLUMN kind VARCHAR(20) NULL DEFAULT 'installment'"),
+                ('payment', 'category', 'ALTER TABLE payment ADD COLUMN category VARCHAR(30) NULL'),
+                ('payment', 'import_id', 'ALTER TABLE payment ADD COLUMN import_id INTEGER NULL'),
+                ('contract', 'renewable', 'ALTER TABLE contract ADD COLUMN renewable BOOLEAN NOT NULL DEFAULT 0'),
+                ('contract', 'payment_day', 'ALTER TABLE contract ADD COLUMN payment_day INTEGER NULL'),
+                ('expense', 'payroll_period_id', 'ALTER TABLE expense ADD COLUMN payroll_period_id INTEGER NULL'),
+            ):
+                try:
+                    from sqlalchemy import text
+
+                    exists = db.session.execute(
+                        text(
+                            'SELECT COUNT(*) FROM information_schema.columns '
+                            'WHERE table_schema = DATABASE() AND table_name = :t AND column_name = :c'
+                        ),
+                        {'t': table, 'c': column},
+                    ).scalar()
+                    if not exists:
+                        db.session.execute(text(ddl))
+                        if (table, column) == ('payment', 'kind'):
+                            # Lo registrado fuera de contratos queda «sin clasificar» (se resuelve con el Excel).
+                            db.session.execute(
+                                text("UPDATE payment SET kind = 'unassigned' WHERE installment_id IS NULL")
+                            )
+                        db.session.commit()
+                        app.logger.info(f'{table}.{column} added')
+                except Exception as e:
+                    app.logger.warning(f'{table}.{column} migration (non-fatal): {e}')
+                    db.session.rollback()
+            try:
+                from app.services.billing import backfill_allocations
+
+                created = backfill_allocations()
+                if created:
+                    app.logger.info(f'payment_allocation: {created} asignaciones históricas creadas')
+            except Exception as e:
+                app.logger.warning(f'payment_allocation backfill (non-fatal): {e}')
+                db.session.rollback()
+
             try:
                 from sqlalchemy import text
 

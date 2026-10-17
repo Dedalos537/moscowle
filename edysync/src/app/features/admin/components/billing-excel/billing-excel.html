@@ -1,0 +1,77 @@
+<section class="bx" aria-labelledby="bx-title">
+  <div class="bx-text">
+    <h3 id="bx-title" class="bx-title">Pagos fuera de contratos</h3>
+    <p class="bx-desc">
+      @if (withoutContract() > 0) { {{ withoutContract() }} {{ withoutContract() === 1 ? 'paciente no tiene' : 'pacientes no tienen' }} contrato activo. }
+      Descarga el Excel para revisar sus pagos, crear sus contratos con fechas de pago fijas y decidir qué es cada pago; luego impórtalo aquí.
+    </p>
+    @if (history().length) {
+      <p class="bx-hist">Última importación: {{ history()[0].created_at | date: "d 'de' MMM, h:mm a" }} · {{ history()[0].allocations }} asignaciones</p>
+    }
+  </div>
+  <div class="bx-actions">
+    <button type="button" class="bx-btn" (click)="download()" [disabled]="downloading()">
+      <fa-icon [icon]="['fas', 'file-arrow-down']" aria-hidden="true"></fa-icon>{{ downloading() ? 'Generando…' : 'Descargar Excel' }}
+    </button>
+    <label class="bx-btn bx-btn--primary">
+      <fa-icon [icon]="['fas', 'file-arrow-up']" aria-hidden="true"></fa-icon>Importar Excel
+      <input class="sr-only" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="pick($event)" />
+    </label>
+  </div>
+</section>
+
+<app-drawer [isOpen]="!!result() || busy()" [title]="result()?.applied ? 'Importación aplicada' : 'Vista previa de la importación'" [icon]="['fas', 'file-excel']" size="56rem" (close)="close()">
+  @if (busy() && !result()) {
+    <div class="bx-skel" aria-busy="true" aria-label="Revisando el archivo"></div>
+  } @else if (result(); as r) {
+    <div class="bx-body">
+      @if (error()) {
+        <p class="bx-error" role="alert">{{ error() }}</p>
+      } @else {
+        <p class="bx-lead" role="status">
+          @if (r.applied) {
+            Listo: los cambios ya están en el sistema (lote #{{ r.import_id }}). Los indicadores del panel y de Finanzas ya los reflejan.
+          } @else if (errors()) {
+            Hay {{ errors() }} {{ errors() === 1 ? 'fila con error' : 'filas con error' }}. Corrígelas en el Excel y vuelve a subirlo: no se aplicará nada mientras haya errores.
+          } @else {
+            Así quedaría todo. Todavía no se cambió nada: revisa y confirma.
+          }
+        </p>
+        <dl class="bx-chips">
+          @for (c of chips(); track c.label) {
+            <div [class.is-warn]="c.warn"><dt>{{ c.label }}</dt><dd>{{ c.value }}</dd></div>
+          }
+        </dl>
+        @if (r.rows.length) {
+          <div class="bx-filter" role="group" aria-label="Filtrar filas">
+            <button type="button" [class.is-on]="filter() === 'all'" [attr.aria-pressed]="filter() === 'all'" (click)="filter.set('all')">Todas ({{ r.rows.length }})</button>
+            <button type="button" [class.is-on]="filter() === 'error'" [attr.aria-pressed]="filter() === 'error'" (click)="filter.set('error')">Errores ({{ errors() }})</button>
+          </div>
+          <div class="bx-table" role="region" aria-label="Detalle por fila" tabindex="0">
+            <table>
+              <thead><tr><th scope="col">Hoja</th><th scope="col">Fila</th><th scope="col">Estado</th><th scope="col">Qué pasa</th></tr></thead>
+              <tbody>
+                @for (row of rows(); track $index) {
+                  <tr [attr.data-st]="row.status">
+                    <td>{{ row.sheet }}</td>
+                    <td>{{ row.row || '—' }}</td>
+                    <td><span class="bx-pill">{{ label(row.status) }}</span></td>
+                    <td>{{ row.message }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    </div>
+  }
+  <div drawer-footer class="bx-foot">
+    <button type="button" class="bx-btn" (click)="close()">{{ result()?.applied ? 'Cerrar' : 'Cancelar' }}</button>
+    @if (result() && !result()!.applied && !error()) {
+      <button type="button" class="bx-btn bx-btn--primary" [disabled]="busy() || errors() > 0" (click)="run(true)">
+        {{ busy() ? 'Aplicando…' : 'Aplicar importación' }}
+      </button>
+    }
+  </div>
+</app-drawer>

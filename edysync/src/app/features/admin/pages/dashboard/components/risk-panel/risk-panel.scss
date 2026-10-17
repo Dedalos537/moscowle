@@ -124,6 +124,8 @@
 .rk-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
 .rk-btn {
+  font: inherit;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 0.4375rem;

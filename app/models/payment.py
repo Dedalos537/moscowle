@@ -17,6 +17,11 @@ class Payment(db.Model, AuditMixin):
     notes = db.Column(db.Text, nullable=True)
     discount = db.Column(db.Float, default=0.0)
     installment_id = db.Column(db.Integer, db.ForeignKey('installment.id'), nullable=True, index=True)
+    # installment = se aplica a cuotas (libro de cobranza) · one_off = pago suelto clasificado ·
+    # unassigned = histórico registrado fuera de contratos, pendiente de clasificar (se resuelve importando el Excel).
+    kind = db.Column(db.String(20), nullable=True, default='installment', index=True)
+    category = db.Column(db.String(30), nullable=True)  # solo pagos sueltos: evaluacion | material | inscripcion | otro
+    import_id = db.Column(db.Integer, db.ForeignKey('billing_import.id'), nullable=True, index=True)
 
 
 class Expense(db.Model, AuditMixin):
@@ -29,6 +34,7 @@ class Expense(db.Model, AuditMixin):
     therapist_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
     method = db.Column(db.String(50), nullable=True)
     receipt_image_path = db.Column(db.String(255), nullable=True)
+    payroll_period_id = db.Column(db.Integer, db.ForeignKey('payroll_period.id'), nullable=True, index=True)
     therapist = db.relationship('User', foreign_keys=[therapist_id], backref=db.backref('expenses', lazy=True))
 
 

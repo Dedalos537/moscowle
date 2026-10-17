@@ -27,6 +27,7 @@ import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { PeopleService } from '../../../../core/services/people.service';
+import { BillingExcel } from '../../components/billing-excel/billing-excel';
 import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
 import { Alert } from '../../../../shared/components/alert/alert';
 import { AlertService } from '../../../../core/services/alert.service';
@@ -74,7 +75,7 @@ Chart.register(
 @Component({
   selector: 'app-finanzas',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal, SummaryCard, Table, TableCell, MonthRangePicker, Alert, PersonLabelPipe],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal, SummaryCard, Table, TableCell, MonthRangePicker, Alert, PersonLabelPipe, BillingExcel],
   templateUrl: './finanzas.html',
   styleUrl: './finanzas.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
@@ -103,6 +104,13 @@ export class Finanzas implements OnInit, OnDestroy {
 
   switchTab(tab: 'resumen' | 'pagos' | 'yape' | 'gastos') {
     this.activeTab = tab;
+  }
+
+  /** Tras importar el Excel de cobranza: contratos, cuotas, pagos y resumen cambian juntos. */
+  onBillingImported() {
+    this.loadSummaryData();
+    this.loadPaymentsData();
+    this.loadContracts();
   }
 
   /** Deuda VENCIDA a hoy según el reporte de deudores (activos con plan). No depende del periodo: es lo que se debe ahora. */
@@ -1773,7 +1781,11 @@ export class Finanzas implements OnInit, OnDestroy {
     this.subscriptions.add(this.adminService.getExpenses().subscribe({ next: (res) => { this.recentExpenses = res.data; this.expensesLoading = false; this.genDashboardCharts(); this.cdr.detectChanges(); }, error: () => { this.expensesLoading = false; this.toastService.show('No se pudo cargar la lista de gastos.', 'error'); this.cdr.markForCheck(); } }));
   }
 
+  /** Periodo de nómina que se paga desde el modal (el del balance que se está viendo). */
+  private payrollPeriod: string | null = null;
+
   openTherapistPaymentModal(therapist: TherapistFinancial) {
+    this.payrollPeriod = therapist.period ?? null;
     this.expenseModalMode = 'therapist_payment';
     this.expenseEditingId = null;
     this.expenseForm = { category: 'therapist_payment', therapist_id: therapist.therapist.id, therapist_name: therapist.therapist.username, amount: therapist.balance > 0 ? therapist.balance : 0, method: 'transfer', date: localDateString(), description: `Pago a ${therapist.therapist.username}`, receipt: null };
@@ -1835,6 +1847,7 @@ export class Finanzas implements OnInit, OnDestroy {
     fd.append('description', this.expenseForm.description);
     fd.append('method', this.expenseForm.method);
     if (this.expenseForm.therapist_id) fd.append('therapist_id', String(this.expenseForm.therapist_id));
+    if (this.expenseForm.category === 'therapist_payment' && this.payrollPeriod) fd.append('period', this.payrollPeriod);
     if (this.expenseForm.receipt) fd.append('receipt', this.expenseForm.receipt);
 
     this.subscriptions.add(this.adminService.createExpense(fd).subscribe({

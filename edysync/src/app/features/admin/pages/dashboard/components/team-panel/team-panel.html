@@ -29,7 +29,12 @@
               @else if (t.vsAvg <= -25) { Atiende {{ -t.vsAvg }} % menos que el promedio: tiene espacio para pacientes nuevos. }
               @else { Su carga está cerca del promedio del equipo. }
             </p>
-            <a class="tm-link" routerLink="/admin/users" [queryParams]="{ therapist: t.id }">Ver sus pacientes<fa-icon [icon]="['fas', 'arrow-right']" aria-hidden="true"></fa-icon></a>
+            <div class="tm-actions">
+              <button type="button" class="tm-pay" (click)="pay.emit({ id: t.id, name: t.name })">
+                <fa-icon [icon]="['fas', 'hand-holding-dollar']" aria-hidden="true"></fa-icon>Pagar a terapeuta
+              </button>
+              <a class="tm-link" routerLink="/admin/users" [queryParams]="{ therapist: t.id }">Ver sus pacientes<fa-icon [icon]="['fas', 'arrow-right']" aria-hidden="true"></fa-icon></a>
+            </div>
           </div>
         }
       </li>

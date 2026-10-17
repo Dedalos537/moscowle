@@ -1,5 +1,5 @@
 <ng-template #headerActions>
-  <button type="button" class="db-cta" (click)="showPayment.set(true)">
+  <button type="button" class="db-cta" (click)="openPayment()">
     <fa-icon [icon]="['fas', 'cash-register']" aria-hidden="true"></fa-icon><span>Registrar pago</span>
   </button>
 </ng-template>
@@ -103,7 +103,7 @@
                           @if (whatsapp(p); as wa) {
                             <a class="db-btn" [href]="wa" target="_blank" rel="noopener"><fa-icon [icon]="['fab', 'whatsapp']" aria-hidden="true"></fa-icon>Recordar</a>
                           }
-                          <a class="db-btn db-btn--primary" routerLink="/admin/payments" [queryParams]="{ search_patient: p.patient.name, action: 'register' }"><fa-icon [icon]="['fas', 'cash-register']" aria-hidden="true"></fa-icon>Cobrar</a>
+                          <button type="button" class="db-btn db-btn--primary" (click)="openPayment(p.patient)"><fa-icon [icon]="['fas', 'cash-register']" aria-hidden="true"></fa-icon>Cobrar</button>
                         </span>
                       </li>
                     }
@@ -151,9 +151,11 @@
       }
 
       <div class="db-split">
-        <app-risk-panel [data]="d" />
-        <app-team-panel [data]="d" />
+        <app-risk-panel [data]="d" (charge)="openPayment($event)" />
+        <app-team-panel [data]="d" (pay)="openTherapistPay($event)" />
       </div>
+
+      <app-schedule-panel [sedeId]="sedeId()" [version]="version()" (charge)="openPayment($event)" (pay)="openTherapistPay($event.therapist, $event.period)" />
 
       @if (d.sedes.length > 1) {
         <app-sede-compare [data]="d" (pick)="setSede($event)" />
@@ -170,6 +172,12 @@
 
 <app-drawer [isOpen]="showPayment()" title="Registrar pago" [icon]="['fas', 'cash-register']" (close)="showPayment.set(false)">
   @if (showPayment()) {
-    <app-quick-payment (paymentCompleted)="onPaymentCompleted()"></app-quick-payment>
+    <app-register-payment [patient]="payPatient()" (done)="onPaymentCompleted()" />
+  }
+</app-drawer>
+
+<app-drawer [isOpen]="!!payTherapist()" title="Pagar a terapeuta" [icon]="['fas', 'hand-holding-dollar']" (close)="payTherapist.set(null)">
+  @if (payTherapist(); as pt) {
+    <app-pay-therapist [therapist]="pt.therapist" [period]="pt.period" (done)="load(true)" />
   }
 </app-drawer>

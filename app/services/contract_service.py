@@ -100,6 +100,11 @@ class ContractService:
             )
             db.session.add(installment)
 
+        db.session.flush()
+        # Si el paciente tenía saldo a favor (pagos de cuotas sin aplicar), cubre ya las primeras cuotas.
+        from app.services import billing
+
+        billing.apply_credit(patient_id)
         db.session.commit()
         return True, contract
 
@@ -463,41 +468,40 @@ class ContractService:
             if isinstance(payment_datetime, str):
                 payment_datetime = datetime.strptime(payment_datetime, '%Y-%m-%d')
 
-            real_amount = 0 if is_free_month else float(amount)
+            if is_free_month:
+                # Acuerdo comercial: la cuota pasa a bonificada (no se debía nada), igual que los meses bonificados
+                # del contrato. Así no cuenta como cobrada (inflaría la cobranza) ni como vencida (inflaría la deuda).
+                original = float(installment.amount or 0)
+                installment.amount = 0.0
+                installment.paid_amount = 0.0
+                installment.paid_date = payment_datetime
+                installment.payment_method = 'Acuerdo comercial'
+                note = f'Acuerdo comercial: valor original S/ {original:.2f}'
+                installment.payment_notes = f'{note}. {payment_notes}' if payment_notes else note
+                installment.is_free_month = True
+                installment.real_amount = 0
+                installment.status = 'free'
+                db.session.commit()
+                return True, None
 
-            new_payment = None
-            if real_amount > 0:
-                new_payment = Payment(
-                    patient_id=installment.contract.patient_id,
-                    amount=real_amount,
-                    method=method,
-                    reference=reference,
-                    receipt_image_path=receipt_path,
-                    discount=discount,
-                    date=payment_datetime,
-                    installment_id=installment.id,
-                    notes=payment_notes,
-                )
-                db.session.add(new_payment)
-                db.session.flush()
+            # Libro de cobranza: empieza por esta cuota y, si sobra, sigue con las siguientes; lo que no alcance
+            # a aplicarse queda como saldo a favor del paciente.
+            from app.services import billing
 
-            installment.paid_amount = (installment.paid_amount or 0) + real_amount
-            installment.paid_date = payment_datetime
-            installment.payment_method = 'Acuerdo comercial' if is_free_month else method
+            new_payment, _, _ = billing.apply_patient_payment(
+                installment.contract.patient_id,
+                float(amount),
+                method,
+                date_=payment_datetime,
+                reference=reference,
+                receipt_path=receipt_path,
+                discount=discount,
+                notes=payment_notes,
+                installment_id=installment.id,
+                source='installment',
+                commit=False,
+            )
             installment.payment_notes = payment_notes
-            installment.is_free_month = is_free_month
-            installment.real_amount = real_amount
-
-            if new_payment:
-                installment.payment_id = new_payment.id
-
-            total_paid = installment.paid_amount or 0
-
-            if total_paid >= installment.amount:
-                installment.status = 'paid'
-            elif total_paid > 0:
-                installment.status = 'partial'
-
             db.session.commit()
             return True, new_payment
 
@@ -506,27 +510,28 @@ class ContractService:
             return False, str(e)
 
     def revert_payment(self, payment):
-        """Deshace el efecto de un pago en la(s) cuota(s) que saldo, ANTES de borrarlo.
+        """Deshace el efecto de un pago en las cuotas que cubrió, ANTES de borrarlo (ver billing.revert_payment).
 
-        Sin esto el pago desaparecia pero la cuota seguia 'pagada' (o el borrado fallaba por la
-        FK installment.payment_id). No hace commit: lo hace quien borra el pago."""
-        installments = Installment.query.filter(
-            db.or_(Installment.payment_id == payment.id, Installment.id == payment.installment_id)
-        ).all()
-        for inst in installments:
-            inst.paid_amount = max(0.0, (inst.paid_amount or 0.0) - (payment.amount or 0.0))
-            if inst.payment_id == payment.id:
-                inst.payment_id = None
-            if inst.paid_amount <= 0:
-                inst.status = 'pending'
-                inst.paid_date = None
-                inst.real_amount = None
-                inst.payment_method = None
-            elif inst.paid_amount >= inst.amount:
-                inst.status = 'paid'
-            else:
-                inst.status = 'partial'
-        return installments
+        No hace commit: lo hace quien borra el pago."""
+        from app.services import billing
+
+        touched = billing.revert_payment(payment)
+        # Pagos enlazados antes del libro sin asignación registrada: se revierten por el enlace directo.
+        if not touched:
+            for inst in Installment.query.filter(
+                db.or_(Installment.payment_id == payment.id, Installment.id == payment.installment_id)
+            ).all():
+                inst.paid_amount = max(0.0, (inst.paid_amount or 0.0) - (payment.amount or 0.0))
+                if inst.payment_id == payment.id:
+                    inst.payment_id = None
+                if inst.paid_amount <= 0:
+                    inst.status, inst.paid_date, inst.real_amount, inst.payment_method = 'pending', None, None, None
+                elif inst.paid_amount >= inst.amount:
+                    inst.status = 'paid'
+                else:
+                    inst.status = 'partial'
+                touched.append(inst)
+        return touched
 
     def cancel_contract(self, contract_id, cancellation_date=None, reason=None, comment=None, disposition='none'):
         contract = Contract.query.get(contract_id)

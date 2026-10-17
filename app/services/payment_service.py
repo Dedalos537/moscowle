@@ -105,55 +105,53 @@ class PaymentService:
         amount,
         method,
         reference,
-        next_due_date_str,
+        next_due_date_str=None,
         receipt_path=None,
         discount=0.0,
         payment_date=None,
+        kind='installment',
+        category=None,
+        installment_id=None,
+        notes=None,
+        user_id=None,
     ):
-        """Registrar pago y actualizar estado"""
-        user = User.query.get(patient_id)
-        if not user:
-            return False, 'Usuario no encontrado'
+        """Registra un pago por el libro de cobranza (se aplica a cuotas o queda como pago suelto clasificado).
+
+        `next_due_date_str` ya no mueve una fecha suelta: el vencimiento sale del cronograma del contrato. Tampoco se
+        reinician las sesiones del paciente (antes cada pago ponía `sessions_attended = 0`)."""
+        from app.services import billing
 
         try:
-            payment_datetime = payment_date if payment_date else datetime.utcnow()
-
-            new_payment = Payment(
-                patient_id=patient_id,
-                amount=amount,
-                method=method,
+            payment, _applied, _left = billing.apply_patient_payment(
+                patient_id,
+                amount,
+                method,
+                date_=payment_date or datetime.utcnow(),
                 reference=reference,
-                receipt_image_path=receipt_path,
+                receipt_path=receipt_path,
                 discount=discount,
-                date=payment_datetime,
+                notes=notes,
+                kind=kind,
+                category=category,
+                installment_id=installment_id,
+                user_id=user_id,
             )
-            db.session.add(new_payment)
-
-            billing_info = self.get_billing_info(patient_id)
-            if billing_info:
-                user.sessions_total = billing_info.get('suggested_sessions', 4)
-                user.sessions_attended = 0
-
-            if next_due_date_str:
-                if isinstance(next_due_date_str, str):
-                    user.payment_due_date = datetime.strptime(next_due_date_str, '%Y-%m-%d').date()
-                else:
-                    user.payment_due_date = next_due_date_str
-
-            if not user.is_active:
-                user.is_active = True
-
-            db.session.commit()
-
-            with contextlib.suppress(Exception):
-                self.email_service.send_payment_confirmation(
-                    user.email, user.username, amount, new_payment.date, method
-                )
-
-            return True, new_payment
+        except billing.BillingError as e:
+            db.session.rollback()
+            return False, e
         except Exception as e:
             db.session.rollback()
             return False, str(e)
+
+        user = db.session.get(User, payment.patient_id)
+        if user and not user.is_active:
+            user.is_active = True
+            db.session.commit()
+        with contextlib.suppress(Exception):
+            self.email_service.send_payment_confirmation(
+                user.email, user.username, payment.amount, payment.date, method
+            )
+        return True, payment
 
     def update_payment_settings(self, patient_id, amount, due_date_str, frequency):
         """Actualizar plan de pago"""

@@ -861,8 +861,9 @@ export class Payments implements OnInit, OnDestroy {
           }
           this.cdr.markForCheck();
         },
-        error: () => {
-          this.registerStatus = 'Error de conexión al servidor';
+        error: (err) => {
+          // El servidor explica qué falta (p. ej. «no tiene contrato: créale un plan o regístralo como pago suelto»).
+          this.registerStatus = err?.status === 0 ? 'No hay conexión con el servidor' : 'Error: ' + (err?.error?.error || err?.error?.message || 'no se pudo registrar el pago');
           this.cdr.markForCheck();
         },
       }),

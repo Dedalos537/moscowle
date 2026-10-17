@@ -17,6 +17,7 @@ from app.models import (
     SessionMetrics,
     User,
 )
+from app.models.billing import PaymentAllocation
 from app.routes.admin import admin_bp, finance_service, payment_service
 from app.schemas.payment_schema import validate_payment_register
 from app.services.contract_service import ContractService
@@ -50,9 +51,76 @@ def api_therapist_financials():
                 'projected_pay': float(f['projected_pay'] or 0),
                 'paid': float(f['paid'] or 0),
                 'balance': float(f['balance'] or 0),
+                'period': f.get('period'),
+                'period_id': f.get('period_id'),
+                'due_date': f.get('due_date'),
+                'status': f.get('status'),
+                'sessions_without_duration': f.get('sessions_without_duration', 0),
             }
         )
     return jsonify({'success': True, 'data': result})
+
+
+# ── Nómina de terapeutas por periodo (PRP 008) ──────────────────────────────────
+
+
+@admin_bp.route('/api/payroll', methods=['GET'])
+@login_required
+def api_payroll():
+    """Periodos de nómina recientes (lo que sale): monto, pagado, saldo, vencimiento y estado."""
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    from app.services import payroll
+
+    months = max(1, min(12, request.args.get('months', 4, type=int)))
+    rows = payroll.recent_periods(months, therapist_id=request.args.get('therapist_id', type=int))
+    return jsonify({'success': True, 'periods': rows, 'settings': {k: payroll.setting(k) for k in payroll.DEFAULTS}})
+
+
+@admin_bp.route('/api/payroll/pay', methods=['POST'])
+@login_required
+def api_payroll_pay():
+    """Paga (total o parcial) el periodo de un terapeuta."""
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    from app.services import payroll
+
+    data = request.get_json(silent=True) or {}
+    when = None
+    if data.get('date'):
+        try:
+            when = datetime.strptime(str(data['date']), '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Fecha no válida'}), 400
+    try:
+        exp, period = payroll.pay(
+            data.get('therapist_id'),
+            str(data.get('period') or ''),
+            data.get('amount'),
+            data.get('method'),
+            date_=when,
+            notes=data.get('notes') or None,
+            user_id=current_user.id,
+        )
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400
+    return jsonify({'success': True, 'expense_id': exp.id, 'period': period})
+
+
+@admin_bp.route('/api/payroll/settings', methods=['PUT'])
+@login_required
+def api_payroll_settings():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Solo un administrador puede cambiarlo'}), 403
+    from app.services import payroll
+
+    try:
+        values = payroll.save_settings(request.get_json(silent=True) or {}, current_user.id)
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400
+    return jsonify({'success': True, 'settings': values})
 
 
 @admin_bp.route('/api/expenses')
@@ -321,8 +389,18 @@ def register_payment():
         except ValueError:
             pass
 
+    wants_json = (
+        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        or request.accept_mimetypes.accept_json
+        or 'application/json' in request.headers.get('Accept', '')
+    )
     data, errors = validate_payment_register(form)
     if errors:
+        if wants_json:
+            # Antes respondía una redirección HTML y el panel de Angular solo mostraba un error genérico.
+            labels = {'patient_id': 'paciente', 'amount': 'monto', 'method': 'método', 'discount': 'descuento'}
+            fields = ', '.join(labels.get(k, k) for k in errors)
+            return jsonify({'success': False, 'error': f'Revisa estos datos: {fields}.', 'fields': errors}), 400
         flash('Errores en el formulario de pago: ' + json.dumps(errors), 'error')
         current_app.logger.debug(f'Payment register validation errors: {errors}')
         return redirect('/app/admin/payments')
@@ -370,6 +448,8 @@ def register_payment():
                 patient.guardian_dni = guardian_dni
             db.session.commit()
 
+    kind = request.form.get('kind') or 'installment'
+    installment_id = request.form.get('installment_id', type=int)
     success, result_or_payment = payment_service.register_payment(
         patient_id,
         float(amount),
@@ -379,25 +459,43 @@ def register_payment():
         receipt_path,
         discount_val,
         payment_date=payment_date_obj,
+        kind=kind,
+        category=request.form.get('category') or None,
+        installment_id=installment_id,
+        notes=request.form.get('notes') or None,
+        user_id=current_user.id,
     )
 
-    msg_text = 'Pago registrado, todo ok' if success else str(result_or_payment)
-
-    is_ajax = False
-    if (
-        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        or hasattr(request.accept_mimetypes, 'accept_json')
-        and request.accept_mimetypes.accept_json
-        or 'application/json' in request.headers.get('Accept', '')
-    ):
-        is_ajax = True
-
+    is_ajax = wants_json
     if is_ajax:
         if success:
+            from app.services import billing
+
             receipt_url = url_for('admin.download_receipt', payment_id=result_or_payment.id)
-            return jsonify({'success': True, 'message': msg_text, 'receipt_url': receipt_url}), 200
-        else:
-            return jsonify({'success': False, 'error': msg_text}), 400
+            applied = [
+                {'installment_id': a.installment_id, 'amount': a.amount}
+                for a in PaymentAllocation.query.filter_by(payment_id=result_or_payment.id)
+            ]
+            left = round(float(result_or_payment.amount or 0) - sum(a['amount'] for a in applied), 2)
+            msg = 'Pago registrado'
+            if result_or_payment.kind == 'installment':
+                msg += f': cubre {len(applied)} {"cuota" if len(applied) == 1 else "cuotas"}'
+                if left > 0.005:
+                    msg += f' y quedan S/ {left:.2f} a favor'
+            return jsonify(
+                {
+                    'success': True,
+                    'message': msg + '.',
+                    'receipt_url': receipt_url,
+                    'payment_id': result_or_payment.id,
+                    'applied': applied,
+                    'credit': billing.credit(result_or_payment.patient_id),
+                }
+            ), 200
+        err = result_or_payment
+        return jsonify({'success': False, 'error': str(err), 'code': getattr(err, 'code', 'invalid')}), 400
+
+    msg_text = 'Pago registrado' if success else str(result_or_payment)
 
     if success:
         flash(msg_text, 'success')
