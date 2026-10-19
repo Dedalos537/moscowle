@@ -360,6 +360,7 @@ def test_a_page_can_be_removed_and_a_single_page_saved_as_jpg(drv, scanner):
 
 def test_invalid_scan_options_and_ids_are_rejected(drv, scanner):
     assert drv.post('/scan/page', {'resolution': 1200}).status_code == 400
+    assert drv.post('/scan/page', {'size': 'B2'}).status_code == 400  # no cabe en el vidrio de la L4150
     assert drv.post('/scan/0123456789abcdef/finish', {}).status_code == 404
     assert drv.get('/scan/not-an-id/page/1').status_code == 404
 

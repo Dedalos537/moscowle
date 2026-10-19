@@ -1,7 +1,13 @@
-<div class="sc-overlay" role="dialog" aria-modal="true" aria-labelledby="sc-title" (click)="onEscape()">
-  <section class="sc" (click)="$event.stopPropagation()">
+<!-- Un clic fuera ya no cierra el panel: se perdían las páginas escaneadas. -->
+<div class="sc-overlay" role="dialog" aria-modal="true" aria-labelledby="sc-title">
+  <section class="sc">
     <header class="sc__head">
-      <h2 id="sc-title">Escanear al drive</h2>
+      <div class="sc__title">
+        <h2 id="sc-title">Escanear al drive</h2>
+        <button type="button" class="sc__close" (click)="cancel()" [disabled]="saving()" aria-label="Cerrar">
+          <fa-icon [icon]="['fas', 'xmark']" aria-hidden="true"></fa-icon>
+        </button>
+      </div>
       <p class="sc__device">
         @if (status(); as s) {
           @if (s.available) {
@@ -20,6 +26,14 @@
         <p class="sc__help" role="alert">{{ s.help }}</p>
       }
     }
+
+    <label class="sc__field sc__field--size">
+      <span>Tamaño del papel</span>
+      <select [(ngModel)]="size" name="size" [disabled]="scanning()">
+        @for (sz of sizes; track sz.value) { <option [value]="sz.value">{{ sz.label }}</option> }
+      </select>
+      <small>{{ sizeHint() }}. El vidrio de la L4150 llega hasta A4/Carta.</small>
+    </label>
 
     <div class="sc__options">
       <fieldset class="sc__group">
@@ -45,7 +59,9 @@
     <div class="sc__pages" [class.is-empty]="!pages().length" aria-live="polite">
       @for (p of pages(); track p.n; let i = $index) {
         <figure class="sc__page">
-          @if (p.url) { <img [src]="p.url" [alt]="'Página ' + (i + 1)" /> } @else { <div class="sc__ph" aria-hidden="true"></div> }
+          <button type="button" class="sc__thumb" (click)="open(i)" [disabled]="!p.url" [attr.aria-label]="'Ver página ' + (i + 1) + ' en grande'">
+            @if (p.url) { <img [src]="p.url" alt="" /> } @else { <span class="sc__ph" aria-hidden="true"></span> }
+          </button>
           <figcaption>Página {{ i + 1 }}</figcaption>
           <button type="button" class="sc__remove" (click)="remove(p)" [disabled]="scanning() || saving()" [attr.aria-label]="'Quitar página ' + (i + 1)">
             <fa-icon [icon]="['fas', 'xmark']" aria-hidden="true"></fa-icon>
@@ -94,3 +110,26 @@
     </footer>
   </section>
 </div>
+
+@if (preview() !== null && pages()[preview()!]; as cur) {
+  <div class="sc-view" role="dialog" aria-modal="true" [attr.aria-label]="'Página ' + (preview()! + 1) + ' de ' + pages().length" (click)="preview.set(null)">
+    <header class="sc-view__bar" (click)="$event.stopPropagation()">
+      <span>Página {{ preview()! + 1 }} de {{ pages().length }}</span>
+      <button type="button" class="sc-view__btn" (click)="remove(cur)" [disabled]="scanning() || saving()">
+        <fa-icon [icon]="['fas', 'trash']" aria-hidden="true"></fa-icon><span>Quitar</span>
+      </button>
+      <button type="button" class="sc-view__btn" (click)="preview.set(null)" aria-label="Cerrar vista">
+        <fa-icon [icon]="['fas', 'xmark']" aria-hidden="true"></fa-icon>
+      </button>
+    </header>
+    @if (cur.url) { <img class="sc-view__img" [src]="cur.url" [alt]="'Página ' + (preview()! + 1)" (click)="$event.stopPropagation()" /> }
+    @if (pages().length > 1) {
+      <button type="button" class="sc-view__nav sc-view__nav--prev" (click)="$event.stopPropagation(); prev()" aria-label="Página anterior">
+        <fa-icon [icon]="['fas', 'chevron-left']" aria-hidden="true"></fa-icon>
+      </button>
+      <button type="button" class="sc-view__nav sc-view__nav--next" (click)="$event.stopPropagation(); next()" aria-label="Página siguiente">
+        <fa-icon [icon]="['fas', 'chevron-right']" aria-hidden="true"></fa-icon>
+      </button>
+    }
+  </div>
+}

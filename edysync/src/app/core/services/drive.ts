@@ -90,6 +90,7 @@ export interface PrintOptions {
 
 /** API del drive del administrador. Los archivos se piden como Blob para que viajen con el token. */
 export type ScanMode = 'Color' | 'Gray';
+export type ScanSize = 'A4' | 'Carta' | 'Oficio' | 'A5' | 'B5' | 'A6' | 'full';
 
 export interface ScannerStatus {
   available: boolean;
@@ -97,6 +98,7 @@ export interface ScannerStatus {
   help: string | null;
   resolutions?: number[];
   modes?: ScanMode[];
+  sizes?: ScanSize[];
 }
 
 export interface ScanDraft {
@@ -186,7 +188,7 @@ export class DriveService {
     return this.http.get<ScannerStatus>(`${this.base}/scanner`);
   }
 
-  scanPage(opts: { scan_id?: string; resolution: number; mode: ScanMode }): Observable<ScanDraft> {
+  scanPage(opts: { scan_id?: string; resolution: number; mode: ScanMode; size: ScanSize }): Observable<ScanDraft> {
     return this.http.post<ScanDraft>(`${this.base}/scan/page`, opts);
   }
 
