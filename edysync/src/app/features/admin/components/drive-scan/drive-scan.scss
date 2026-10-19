@@ -115,27 +115,36 @@ $ease: cubic-bezier(0.2, 0, 0, 1);
   &--wide { width: 100%; }
 }
 
+// Vista grande: la barra arriba y un escenario que ocupa el resto. «Ajustada» = la página entera dentro de la
+// pantalla; con zoom, el escenario hace scroll (antes la imagen se salía y no se podía ver completa).
 .sc-view {
-  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 3.5rem 4rem 1.5rem;
-  background: rgb(6 8 5 / 0.88); animation: sc-fade 140ms $ease; cursor: zoom-out;
+  position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column;
+  background: rgb(6 8 5 / 0.9); animation: sc-fade 140ms $ease;
 
   &__bar {
-    position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 0.5rem;
-    padding: 0.5rem 0.75rem; color: #f3f5ef; font-size: 0.875rem; cursor: default;
-    span:first-child { flex: 1; font-weight: 600; }
+    flex: none; display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem;
+    color: #f3f5ef; font-size: 0.875rem;
+    > span:first-child { flex: 1; font-weight: 600; }
   }
+  &__zoom { display: inline-flex; gap: 0.25rem; }
   &__btn {
-    display: inline-flex; align-items: center; gap: 0.375rem; min-height: 2.75rem; min-width: 2.75rem; padding: 0 0.75rem;
-    justify-content: center; border: 0; border-radius: 0.625rem; background: rgb(255 255 255 / 0.1); color: #f3f5ef;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem;
+    min-height: 2.75rem; min-width: 2.75rem; padding: 0 0.75rem;
+    border: 0; border-radius: 0.625rem; background: rgb(255 255 255 / 0.1); color: #f3f5ef;
     font: inherit; font-weight: 600; cursor: pointer;
+    &--label { min-width: 5.5rem; font-variant-numeric: tabular-nums; }
     &:hover:not(:disabled) { background: rgb(255 255 255 / 0.2); }
     &:disabled { opacity: 0.4; cursor: not-allowed; }
     &:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   }
-  &__img {
-    max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 0.25rem; cursor: default;
-    box-shadow: 0 12px 40px rgb(0 0 0 / 0.5); background: #fff;
+  &__stage {
+    flex: 1; min-height: 0; overflow: auto; display: flex; padding: 0.5rem 4rem 1.5rem; cursor: zoom-out;
+    overscroll-behavior: contain;
+    .sc-view__img { margin: auto; }
+    &:not(.is-zoomed) .sc-view__img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; cursor: zoom-in; }
+    &.is-zoomed { padding: 0.5rem; cursor: default; .sc-view__img { max-width: none; max-height: none; height: auto; cursor: zoom-out; } }
   }
+  &__img { display: block; border-radius: 0.25rem; box-shadow: 0 12px 40px rgb(0 0 0 / 0.5); background: #fff; }
   &__nav {
     position: absolute; top: 50%; translate: 0 -50%; display: grid; place-items: center; width: 3rem; height: 3rem;
     border: 0; border-radius: 999px; background: rgb(255 255 255 / 0.12); color: #fff; cursor: pointer;
@@ -147,7 +156,8 @@ $ease: cubic-bezier(0.2, 0, 0, 1);
 }
 
 @media (max-width: 34rem) {
-  .sc-view { padding: 3.5rem 0.5rem 4.5rem; }
+  .sc-view__stage { padding: 0.5rem 0.5rem 4.5rem; }
+  .sc-view__bar { flex-wrap: wrap; }
   .sc-view__nav { top: auto; bottom: 0.75rem; translate: none; }
   .sc { padding: 1.125rem; }
   .sc__options { grid-template-columns: 1fr; }
