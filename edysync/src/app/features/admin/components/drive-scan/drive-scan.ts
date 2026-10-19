@@ -13,7 +13,9 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { DriveEntry, DriveService, ScanMode, ScannerStatus } from '../../../../core/services/drive';
+import { firstValueFrom } from 'rxjs';
+import { ConfirmService } from '../../../../core/services/confirm.service';
+import { DriveEntry, DriveService, ScanMode, ScanSize, ScannerStatus } from '../../../../core/services/drive';
 
 interface PageView {
   n: number;
@@ -30,6 +32,7 @@ interface PageView {
 })
 export class DriveScan implements OnDestroy {
   private drive = inject(DriveService);
+  private confirm = inject(ConfirmService);
   private destroyRef = inject(DestroyRef);
 
   /** Carpeta del drive donde se guarda (ruta relativa; '' = Mi drive). */
@@ -43,7 +46,21 @@ export class DriveScan implements OnDestroy {
     { value: 300, label: 'Alta' },
   ];
 
+  /** Tamaños que caben en el vidrio de la L4150 (máx. 216 × 297 mm). */
+  readonly sizes: { value: ScanSize; label: string; hint: string }[] = [
+    { value: 'A4', label: 'A4', hint: '210 × 297 mm' },
+    { value: 'Carta', label: 'Carta', hint: '216 × 279 mm' },
+    { value: 'Oficio', label: 'Oficio', hint: 'hasta 297 mm de largo (lo que cabe en el vidrio)' },
+    { value: 'B5', label: 'B5', hint: '176 × 250 mm' },
+    { value: 'A5', label: 'A5', hint: '148 × 210 mm' },
+    { value: 'A6', label: 'A6', hint: '105 × 148 mm' },
+    { value: 'full', label: 'Todo el vidrio', hint: 'área completa del escáner' },
+  ];
+
   readonly status = signal<ScannerStatus | null>(null);
+  /** Página abierta en grande (índice en `pages`), o null. */
+  readonly preview = signal<number | null>(null);
+  private asking = false;
   readonly scanId = signal<string | null>(null);
   readonly pages = signal<PageView[]>([]);
   readonly scanning = signal(false);
@@ -52,6 +69,7 @@ export class DriveScan implements OnDestroy {
 
   resolution = 200;
   mode: ScanMode = 'Color';
+  size: ScanSize = 'A4';
   format: 'pdf' | 'jpg' = 'pdf';
   name = this.defaultName();
 
@@ -68,9 +86,39 @@ export class DriveScan implements OnDestroy {
       });
   }
 
+  /** Escape cierra primero la vista grande; el panel solo se cierra solo si no hay páginas sin guardar. */
   @HostListener('document:keydown.escape')
   onEscape() {
-    if (!this.scanning() && !this.saving()) this.cancel();
+    if (this.preview() !== null) {
+      this.preview.set(null);
+      return;
+    }
+    if (!this.pages().length && !this.scanning() && !this.saving() && !this.asking) this.closed.emit();
+  }
+
+  @HostListener('document:keydown.arrowright')
+  next() {
+    this.step(1);
+  }
+
+  @HostListener('document:keydown.arrowleft')
+  prev() {
+    this.step(-1);
+  }
+
+  private step(dir: number) {
+    const i = this.preview();
+    if (i === null) return;
+    const n = this.pages().length;
+    this.preview.set((i + dir + n) % n);
+  }
+
+  open(i: number) {
+    this.preview.set(i);
+  }
+
+  sizeHint(): string {
+    return this.sizes.find((s) => s.value === this.size)?.hint ?? '';
   }
 
   scan() {
@@ -78,7 +126,7 @@ export class DriveScan implements OnDestroy {
     this.scanning.set(true);
     this.error.set(null);
     this.drive
-      .scanPage({ scan_id: this.scanId() ?? undefined, resolution: this.resolution, mode: this.mode })
+      .scanPage({ scan_id: this.scanId() ?? undefined, resolution: this.resolution, mode: this.mode, size: this.size })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (draft) => {
@@ -116,6 +164,8 @@ export class DriveScan implements OnDestroy {
         next: () => {
           if (page.url) URL.revokeObjectURL(page.url);
           this.pages.update((list) => list.filter((p) => p.n !== page.n));
+          const i = this.preview();
+          if (i !== null) this.preview.set(this.pages().length ? Math.min(i, this.pages().length - 1) : null);
         },
         error: (err) => this.error.set(err?.error?.error || 'No se pudo quitar la página.'),
       });
@@ -142,8 +192,24 @@ export class DriveScan implements OnDestroy {
       });
   }
 
-  cancel() {
+  /** Cerrar sin guardar: si hay páginas escaneadas se pregunta antes (antes se perdían con un clic fuera). */
+  async cancel() {
+    if (this.saving() || this.asking) return;
     const id = this.scanId();
+    if (id && this.pages().length) {
+      this.asking = true;
+      const ok = await firstValueFrom(
+        this.confirm.confirm({
+          title: 'Descartar el escaneo',
+          message: `Se perderán ${this.pages().length === 1 ? 'la página escaneada' : `las ${this.pages().length} páginas escaneadas`}.`,
+          confirmText: 'Descartar',
+          cancelText: 'Seguir escaneando',
+          variant: 'danger',
+        }),
+      );
+      this.asking = false;
+      if (!ok) return;
+    }
     if (id) this.drive.discardScan(id).subscribe({ error: () => undefined });
     this.scanId.set(null);
     this.closed.emit();

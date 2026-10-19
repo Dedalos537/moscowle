@@ -271,7 +271,9 @@ def scanner_status():
 def scan_page():
     data = _body()
     return jsonify(
-        scan_service.scan_page(data.get('scan_id'), data.get('resolution') or 200, data.get('mode') or 'Color')
+        scan_service.scan_page(
+            data.get('scan_id'), data.get('resolution') or 200, data.get('mode') or 'Color', data.get('size') or 'A4'
+        )
     ), 201
 
 

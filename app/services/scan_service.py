@@ -21,6 +21,8 @@ from app.services.print_service import _gateway
 
 RESOLUTIONS = (150, 200, 300, 600)
 MODES = ('Color', 'Gray')
+# Mismo catálogo que el servicio del host (deploy/scanner/moscowle_scand.py): caben en el vidrio de la L4150.
+SIZES = ('A4', 'Carta', 'Oficio', 'A5', 'B5', 'A6', 'full')
 MAX_PAGES = 30
 DRAFT_TTL = 6 * 3600
 _ID = re.compile(r'^[a-f0-9]{16}$')
@@ -86,6 +88,7 @@ def status():
         else 'El host no encuentra el escáner: revisa que la impresora esté encendida y en la red.',
         'resolutions': list(RESOLUTIONS),
         'modes': list(MODES),
+        'sizes': list(SIZES),
     }
 
 
@@ -127,10 +130,11 @@ def cleanup(now=None):
             continue
 
 
-def scan_page(scan_id=None, resolution=200, mode='Color'):
+def scan_page(scan_id=None, resolution=200, mode='Color', size='A4'):
     """Escanea una página y la agrega al borrador (crea uno nuevo si no hay `scan_id`)."""
     resolution = int(resolution or 200)
-    if resolution not in RESOLUTIONS or mode not in MODES:
+    size = size or 'A4'
+    if resolution not in RESOLUTIONS or mode not in MODES or size not in SIZES:
         raise ScanError('Opciones de escaneo no válidas.', 400)
     if scan_id:
         d = _draft(scan_id)
@@ -142,7 +146,7 @@ def scan_page(scan_id=None, resolution=200, mode='Color'):
     pages = _pages(d)
     if len(pages) >= MAX_PAGES:
         raise ScanError(f'Máximo {MAX_PAGES} páginas por documento.', 400)
-    data, ctype = _call('POST', '/scan', {'resolution': resolution, 'mode': mode}, timeout=200)
+    data, ctype = _call('POST', '/scan', {'resolution': resolution, 'mode': mode, 'size': size}, timeout=200)
     if not data or 'image' not in ctype:
         raise ScanError('El escáner no devolvió una imagen.', 502)
     drive.ensure_space(len(data))

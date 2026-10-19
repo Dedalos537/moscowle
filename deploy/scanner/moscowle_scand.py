@@ -33,6 +33,16 @@ PRINTER = os.environ.get('PRINTER_NAME', 'Epson_L4150')
 _SAFE_PRINTER = re.compile(r'^[A-Za-z0-9_.@-]{1,127}$')
 WATCH_EVERY = int(os.environ.get('PRINTER_WATCH_SECONDS', '600'))
 MODES = ('Color', 'Gray')
+# Tamaños en mm (ancho, alto) que caben en el vidrio de la L4150 (216 × 297 mm). None = todo el vidrio.
+SIZES = {
+    'full': None,
+    'A4': (210, 297),
+    'Carta': (216, 279),
+    'Oficio': (216, 297),  # el vidrio llega a 297 mm: un oficio (330/356 mm) queda recortado al largo del vidrio
+    'A5': (148, 210),
+    'B5': (176, 250),
+    'A6': (105, 148),
+}
 
 _lock = threading.Lock()
 _cache = {'at': 0.0, 'devices': []}
@@ -57,11 +67,14 @@ def pick_device():
     return devs[0]['name'] if devs else None
 
 
-def scan(resolution, mode):
+def scan(resolution, mode, size='full'):
     dev = pick_device()
     if not dev:
         raise RuntimeError('No se encontró el escáner: revisa que la impresora esté encendida y en la red.')
     cmd = ['scanimage', '-d', dev, '--format=jpeg', '--resolution', str(resolution), '--mode', mode]
+    if SIZES.get(size):
+        w, h = SIZES[size]
+        cmd += ['-l', '0', '-t', '0', '-x', str(w), '-y', str(h)]
     res = subprocess.run(cmd, capture_output=True, timeout=180)
     if res.returncode != 0 or not res.stdout:
         _cache['at'] = 0.0  # la IP del escáner pudo cambiar: se vuelve a buscar
@@ -193,13 +206,14 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             opts = {}
         resolution = int(opts.get('resolution') or 200)
+        size = opts.get('size') or 'full'
         mode = opts.get('mode') or 'Color'
-        if resolution not in RESOLUTIONS or mode not in MODES:
+        if resolution not in RESOLUTIONS or mode not in MODES or size not in SIZES:
             return self._json(400, {'error': 'Opciones de escaneo no válidas.'})
         if not _lock.acquire(blocking=False):
             return self._json(409, {'error': 'El escáner está ocupado con otra página. Espera unos segundos.'})
         try:
-            data = scan(resolution, mode)
+            data = scan(resolution, mode, size)
         except (RuntimeError, subprocess.TimeoutExpired) as exc:
             return self._json(502, {'error': str(exc)})
         finally:
