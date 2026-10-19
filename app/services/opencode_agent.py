@@ -155,7 +155,7 @@ def _session(user, kind='chat'):
 
 
 def reset(user_id):
-    for kind in ('chat', 'dev', 'vision'):
+    for kind in ('chat:grande', 'chat:chiquito', 'dev', 'vision'):
         s = _sessions.pop((user_id, kind), None)
         if s:
             oc.delete_session(s['sid'], inst='dev' if kind == 'dev' else 'chat')
@@ -176,15 +176,26 @@ def _catalog(tools):
     return '\n'.join(lines)
 
 
-def _primer(user, tools, write_names):
+def _primer(user, tools, write_names, mode='grande'):
     from app.services.report_service import lima_today
 
+    if mode == 'chiquito':
+        # El panel pequeño es de solo lectura: el modelo debe decir cómo crear/editar, no que «no se puede».
+        mode_rule = (
+            'MODO SOLO LECTURA (panel pequeño del chat): aquí no hay herramientas de escritura. Si el usuario pide '
+            'crear, editar, registrar, cobrar o borrar algo, responde que sí se puede pero desde el asistente en '
+            'PANTALLA COMPLETA (botón de expandir arriba a la derecha del chat, modo «Completo»), y que ahí '
+            'se lo preparas para confirmar. No digas que el sistema no tiene esas herramientas.\n\n'
+        )
+    else:
+        mode_rule = 'MODO COMPLETO: puedes proponer herramientas de escritura (el usuario las confirma).\n\n'
     return (
         'Eres el asistente del Centro de Terapias Juan Pablo II (sistema Moscowle). Hablas español de Perú, '
         'claro y breve. NO trabajas con código ni archivos: no uses tus herramientas de código (bash, read, edit, '
         'etc.); para datos del centro usa SOLO las herramientas del sistema de abajo, que ejecuta Moscowle.\n\n'
         f'Fecha de hoy (Lima): {lima_today().isoformat()}. Usuario: rol {user.role}.\n'
-        'Los nombres, correos, teléfonos y DNI llegan como fichas («P1», «E1», «C1», «D1»): úsalas tal cual en '
+        + mode_rule
+        + 'Los nombres, correos, teléfonos y DNI llegan como fichas («P1», «E1», «C1», «D1»): úsalas tal cual en '
         'los argumentos y en tus respuestas; el sistema las traduce.\n\n'
         'En CADA respuesta devuelve SOLO un bloque ```json``` con el siguiente paso:\n'
         '{"kind": "tool", "tool": "<nombre>", "args": {...}, "reason": "<por qué, 1 línea>"}\n'
@@ -234,7 +245,8 @@ def _run(user, message, *, history=None, mode='grande', confirmed_tool=None):
     allowed = {t['function']['name'] for t in tools}
     writes = {n for n in allowed if TOOL_REGISTRY[n]['category'] == 'write' and n not in SAFE_WRITE_TOOLS}
 
-    s = _session(user, 'chat')
+    # Una sesión por modo: el catálogo de tools cambia entre el panel pequeño (lectura) y pantalla completa.
+    s = _session(user, f'chat:{mode}')
     vault: Vault = s['vault']
     used: list[str] = []
     tool_calls: list[dict] = []
@@ -246,7 +258,7 @@ def _run(user, message, *, history=None, mode='grande', confirmed_tool=None):
             res = oc.send(s['sid'], text)
         except OpencodeUnavailableError as exc:
             _log(user.id, 'chat', t0, error=exc, tools=used)
-            _sessions.pop((user.id, 'chat'), None)
+            _sessions.pop((user.id, f'chat:{mode}'), None)
             if tool_calls:
                 # Ya se ejecutó algo: no se cae a la cadena de respaldo (lo repetiría).
                 raise _PartialError(str(exc)) from exc
@@ -256,7 +268,7 @@ def _run(user, message, *, history=None, mode='grande', confirmed_tool=None):
 
     prefix = ''
     if not s['primed']:
-        prefix = _primer(user, tools, writes) + '\n'
+        prefix = _primer(user, tools, writes, mode) + '\n'
         recent = [h for h in (history or [])[-6:] if h.get('content')]
         if recent:
             prefix += 'Conversación reciente:\n' + '\n'.join(
