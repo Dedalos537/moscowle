@@ -120,6 +120,18 @@ export interface Installment {
   real_amount?: number;
   refunded_amount: number;
   receipt_image_path?: string;
+  /** Pagos aplicados a la cuota (parciales incluidos), con su voucher. */
+  payments?: InstallmentPayment[];
+}
+
+export interface InstallmentPayment {
+  payment_id: number;
+  amount: number;
+  payment_total: number;
+  date: string | null;
+  method: string | null;
+  reference: string | null;
+  receipt_image_path: string | null;
 }
 
 export interface ContractFilter {
