@@ -131,7 +131,8 @@ def test_login_options_unknown_identifier(client):
         '/api/auth/webauthn/login/options',
         json={'identifier': 'noexiste@wf.test'},
     )
-    assert resp.status_code == 404
+    assert resp.status_code == 200
+    assert resp.get_json()['success'] is False and resp.get_json()['available'] is False
 
 
 def test_login_options_user_without_credentials(client, webauthn_staff):
@@ -139,8 +140,8 @@ def test_login_options_user_without_credentials(client, webauthn_staff):
         '/api/auth/webauthn/login/options',
         json={'identifier': 'staff@wf.test'},
     )
-    assert resp.status_code == 404
-    assert 'huella' in resp.get_json()['error']
+    assert resp.status_code == 200
+    assert resp.get_json()['success'] is False and 'huella' in resp.get_json()['error']
 
 
 def test_login_options_with_credential(session, client, webauthn_staff):
