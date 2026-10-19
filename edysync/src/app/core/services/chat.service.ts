@@ -76,6 +76,7 @@ export class ChatService {
   botEvent$ = this._botEvent.asObservable();
 
   private _seenIds = new Set<number>();
+  private wakeListener?: () => void;
 
   constructor(private http: HttpClient) {}
 
@@ -83,8 +84,11 @@ export class ChatService {
     if (this.socket?.connected) return;
     const { io } = await import('socket.io-client');
     const getToken = () => localStorage.getItem('access_token') || '';
+    // WebSocket directo (Cloudflare lo soporta): sin la sesión de polling no hay `sid` que caduque
+    // mientras la pestaña duerme, que era lo que llenaba la consola de 400. Si falla, cae a polling.
     this.socket = io(this.SOCKET_URL, {
-      transports: ['polling', 'websocket'],
+      transports: ['websocket', 'polling'],
+      tryAllTransports: true,
       auth: { token: getToken() },
       withCredentials: true,
       autoConnect: true,
@@ -107,6 +111,17 @@ export class ChatService {
     this.socket.on('disconnect', () => {
       this._connectionStatus.next(false);
     });
+
+    // Al volver a la pestaña no se espera al backoff (hasta 8 s): se reconecta en el acto.
+    if (!this.wakeListener) {
+      this.wakeListener = () => {
+        if (document.visibilityState === 'visible' && this.socket && !this.socket.connected && this.socket.active) {
+          this.socket.auth = { token: getToken() };
+          this.socket.connect();
+        }
+      };
+      document.addEventListener('visibilitychange', this.wakeListener);
+    }
 
     this.socket.on('bot:message', (data: { conversation_id: number; channel: string }) => this._botEvent.next(data));
 
@@ -165,6 +180,10 @@ export class ChatService {
   }
 
   disconnect() {
+    if (this.wakeListener) {
+      document.removeEventListener('visibilitychange', this.wakeListener);
+      this.wakeListener = undefined;
+    }
     if (this.socket) {
       this.socket.disconnect();
       this._connectionStatus.next(false);

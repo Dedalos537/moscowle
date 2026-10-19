@@ -70,11 +70,11 @@ def webauthn_register_verify():
 def webauthn_login_options():
     data = request.get_json(silent=True) or {}
     user = webauthn_service.find_user_by_identifier(data.get('identifier'))
-    if not user or not user.is_active:
-        return jsonify({'success': False, 'error': 'Usuario no encontrado'}), 404
-    options = webauthn_service.authentication_options(user)
+    options = webauthn_service.authentication_options(user) if user and user.is_active else None
     if options is None:
-        return jsonify({'success': False, 'error': 'Este usuario no tiene huella registrada'}), 404
+        # El login lo consulta en silencio al salir del campo: es una respuesta normal, no un error (sin 404
+        # en consola), y es la misma para una cuenta inexistente que para una sin huella (no revela cuentas).
+        return jsonify({'success': False, 'available': False, 'error': 'Esta cuenta no tiene huella registrada'})
     return jsonify({'success': True, 'options': json.loads(options)})
 
 
