@@ -195,3 +195,17 @@ def test_stream_route_uses_opencode_for_admin(app, client, monkeypatch):
     events = [json.loads(line[6:]) for line in body.splitlines() if line.startswith('data: ')]
     assert {'type': 'final', 'content': '¡Hola! ¿En qué te ayudo?'} in events
     assert events[-1]['type'] == 'done' and events[-1]['provider'] == 'opencode'
+
+
+def test_list_users_reports_the_real_total_not_the_page(app):
+    """El asistente decía 50 con 61 usuarios: el total salía de una lista cortada en 50."""
+    from app.services.mcp_service import _trim_tool_result
+    from app.services.tools_registry import handle_list_users
+
+    for _ in range(3):
+        _user('jugador')
+    out = handle_list_users()
+    assert out['count'] == User.query.count()
+    assert sum(out['by_role'].values()) == out['count'] and out['active'] + out['inactive'] == out['count']
+    trimmed = _trim_tool_result(out)  # texto (puede venir truncado): el total va antes que la lista
+    assert f'"count": {out["count"]}' in trimmed and '"by_role"' in trimmed
