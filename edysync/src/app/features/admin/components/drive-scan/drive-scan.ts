@@ -60,6 +60,8 @@ export class DriveScan implements OnDestroy {
   readonly status = signal<ScannerStatus | null>(null);
   /** Página abierta en grande (índice en `pages`), o null. */
   readonly preview = signal<number | null>(null);
+  /** Zoom de la vista grande: 0 = ajustar a la pantalla; 1, 1.5, 2… = tamaño real × factor (con scroll). */
+  readonly zoom = signal(0);
   private asking = false;
   readonly scanId = signal<string | null>(null);
   readonly pages = signal<PageView[]>([]);
@@ -90,7 +92,7 @@ export class DriveScan implements OnDestroy {
   @HostListener('document:keydown.escape')
   onEscape() {
     if (this.preview() !== null) {
-      this.preview.set(null);
+      this.closePreview();
       return;
     }
     if (!this.pages().length && !this.scanning() && !this.saving() && !this.asking) this.closed.emit();
@@ -110,11 +112,32 @@ export class DriveScan implements OnDestroy {
     const i = this.preview();
     if (i === null) return;
     const n = this.pages().length;
+    this.zoom.set(0);
     this.preview.set((i + dir + n) % n);
   }
 
   open(i: number) {
+    this.zoom.set(0);
     this.preview.set(i);
+  }
+
+  closePreview() {
+    this.zoom.set(0);
+    this.preview.set(null);
+  }
+
+  /** Clic en la página: alterna entre «ajustar» y tamaño real. */
+  toggleZoom() {
+    this.zoom.set(this.zoom() ? 0 : 1);
+  }
+
+  zoomBy(delta: number) {
+    const next = Math.min(3, Math.max(0, (this.zoom() || 1) + delta));
+    this.zoom.set(next < 0.5 ? 0 : next);
+  }
+
+  zoomLabel(): string {
+    return this.zoom() ? `${Math.round(this.zoom() * 100)} %` : 'Ajustada';
   }
 
   sizeHint(): string {

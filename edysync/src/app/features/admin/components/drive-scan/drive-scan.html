@@ -112,22 +112,37 @@
 </div>
 
 @if (preview() !== null && pages()[preview()!]; as cur) {
-  <div class="sc-view" role="dialog" aria-modal="true" [attr.aria-label]="'Página ' + (preview()! + 1) + ' de ' + pages().length" (click)="preview.set(null)">
-    <header class="sc-view__bar" (click)="$event.stopPropagation()">
+  <div class="sc-view" role="dialog" aria-modal="true" [attr.aria-label]="'Página ' + (preview()! + 1) + ' de ' + pages().length">
+    <header class="sc-view__bar">
       <span>Página {{ preview()! + 1 }} de {{ pages().length }}</span>
+      <div class="sc-view__zoom" role="group" aria-label="Zoom">
+        <button type="button" class="sc-view__btn" (click)="zoomBy(-0.5)" [disabled]="!zoom()" aria-label="Alejar">
+          <fa-icon [icon]="['fas', 'magnifying-glass-minus']" aria-hidden="true"></fa-icon>
+        </button>
+        <button type="button" class="sc-view__btn sc-view__btn--label" (click)="zoom.set(0)" [attr.aria-pressed]="!zoom()" title="Ajustar a la pantalla">{{ zoomLabel() }}</button>
+        <button type="button" class="sc-view__btn" (click)="zoomBy(0.5)" [disabled]="zoom() >= 3" aria-label="Acercar">
+          <fa-icon [icon]="['fas', 'magnifying-glass-plus']" aria-hidden="true"></fa-icon>
+        </button>
+      </div>
       <button type="button" class="sc-view__btn" (click)="remove(cur)" [disabled]="scanning() || saving()">
         <fa-icon [icon]="['fas', 'trash']" aria-hidden="true"></fa-icon><span>Quitar</span>
       </button>
-      <button type="button" class="sc-view__btn" (click)="preview.set(null)" aria-label="Cerrar vista">
+      <button type="button" class="sc-view__btn" (click)="closePreview()" aria-label="Cerrar vista">
         <fa-icon [icon]="['fas', 'xmark']" aria-hidden="true"></fa-icon>
       </button>
     </header>
-    @if (cur.url) { <img class="sc-view__img" [src]="cur.url" [alt]="'Página ' + (preview()! + 1)" (click)="$event.stopPropagation()" /> }
+    <div class="sc-view__stage" [class.is-zoomed]="zoom() > 0" (click)="closePreview()">
+      @if (cur.url) {
+        <img class="sc-view__img" [src]="cur.url" [alt]="'Página ' + (preview()! + 1)"
+          [style.width]="zoom() ? (zoom() * 100) + '%' : null"
+          (click)="$event.stopPropagation(); toggleZoom()" />
+      }
+    </div>
     @if (pages().length > 1) {
-      <button type="button" class="sc-view__nav sc-view__nav--prev" (click)="$event.stopPropagation(); prev()" aria-label="Página anterior">
+      <button type="button" class="sc-view__nav sc-view__nav--prev" (click)="prev()" aria-label="Página anterior">
         <fa-icon [icon]="['fas', 'chevron-left']" aria-hidden="true"></fa-icon>
       </button>
-      <button type="button" class="sc-view__nav sc-view__nav--next" (click)="$event.stopPropagation(); next()" aria-label="Página siguiente">
+      <button type="button" class="sc-view__nav sc-view__nav--next" (click)="next()" aria-label="Página siguiente">
         <fa-icon [icon]="['fas', 'chevron-right']" aria-hidden="true"></fa-icon>
       </button>
     }
