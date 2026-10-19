@@ -269,6 +269,54 @@ def revert_payment(payment):
 # ── planes ───────────────────────────────────────────────────────────────────
 
 
+def adjust_installment(installment_id, *, amount=None, due_date=None, reason=None, user_id=None, commit=True):
+    """Ajusta monto y/o vencimiento de una cuota que no está pagada del todo. Deja nota y recalcula el total.
+
+    No toca cuotas pagadas ni baja el monto por debajo de lo ya cobrado (el libro de pagos sigue cuadrando).
+    """
+    inst = db.session.get(Installment, int(installment_id)) if installment_id else None
+    if not inst or inst.is_active is False:
+        raise BillingError('No encontré esa cuota.', 'installment')
+    if inst.status in ('paid', 'free', 'cancelled', 'refunded'):
+        raise BillingError(f'La cuota {inst.number} ya está {inst.status}: no se puede ajustar.', 'installment')
+    changes = []
+    if amount is not None:
+        new = round(float(amount), 2)
+        if new <= 0:
+            raise BillingError('El monto debe ser mayor que cero.', 'amount')
+        if new + EPS < float(inst.paid_amount or 0):
+            raise BillingError(
+                f'Ya se cobró S/ {inst.paid_amount:.2f} de esa cuota: el monto no puede ser menor.', 'amount'
+            )
+        if abs(new - float(inst.amount or 0)) > EPS:
+            changes.append(f'monto S/ {inst.amount:.2f} → S/ {new:.2f}')
+            inst.amount = new
+            if float(inst.paid_amount or 0) > EPS:
+                inst.status = 'paid' if _remaining(inst) <= EPS else 'partial'
+    if due_date:
+        new_due = due_date if isinstance(due_date, date) else date.fromisoformat(str(due_date)[:10])
+        if new_due != inst.due_date:
+            changes.append(f'vence {inst.due_date.isoformat()} → {new_due.isoformat()}')
+            inst.due_date = new_due
+    if not changes:
+        return inst, []
+    note = f'[{date.today().isoformat()}] Ajuste: {", ".join(changes)}' + (f' · {reason}' if reason else '')
+    inst.notes = f'{inst.notes}\n{note}' if inst.notes else note
+    contract = db.session.get(Contract, inst.contract_id)
+    if contract:
+        contract.total_amount = round(
+            sum(
+                float(i.amount or 0)
+                for i in Installment.query.filter_by(contract_id=contract.id)
+                if i.is_active is not False
+            ),
+            2,
+        )
+    if commit:
+        db.session.commit()
+    return inst, changes
+
+
 def _monthly(first_due, day, count):
     out = []
     for i in range(count):

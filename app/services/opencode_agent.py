@@ -164,16 +164,52 @@ def reset(user_id):
 # ── Prompt ─────────────────────────────────────────────────────────────────────
 
 
+def _param_sig(name, spec, required):
+    """`name:tipo` con enum, formato y, si es lista de objetos, sus campos (el modelo necesita ver la forma)."""
+    spec = spec or {}
+    typ = spec.get('type', 'any')
+    if typ == 'array' and isinstance(spec.get('items'), dict) and spec['items'].get('type') == 'object':
+        inner = spec['items']
+        req = set(inner.get('required') or [])
+        fields = ', '.join(_param_sig(k, v, req) for k, v in (inner.get('properties') or {}).items())
+        typ = f'[{{{fields}}}]'
+    elif typ == 'array' and isinstance(spec.get('items'), dict):
+        typ = f'[{spec["items"].get("type", "any")}]'
+    if spec.get('enum'):
+        typ += '=' + '|'.join(str(e) for e in spec['enum'])
+    desc = (spec.get('description') or '').strip()
+    hint = re.search(r'(YYYY-MM-DD(?: HH:MM)?|HH:MM|0=Lunes[^)]*)', desc)
+    if hint:
+        typ += f' ({hint.group(1)})'
+    return f'{name}{"" if name in required else "?"}:{typ}'
+
+
 def _catalog(tools):
     lines = []
     for t in tools:
         fn = t['function']
-        props = (fn.get('parameters') or {}).get('properties') or {}
-        req = set((fn.get('parameters') or {}).get('required') or [])
-        params = ', '.join(f'{k}{"" if k in req else "?"}:{(v or {}).get("type", "any")}' for k, v in props.items())
-        desc = re.split(r'(?<=[.!?])\s', (fn.get('description') or '').strip(), maxsplit=1)[0][:160]
-        lines.append(f'- {fn["name"]}({params}) — {desc}')
+        params = fn.get('parameters') or {}
+        req = set(params.get('required') or [])
+        sig = ', '.join(_param_sig(k, v, req) for k, v in (params.get('properties') or {}).items())
+        desc = re.split(r'(?<=[.!?])\s', (fn.get('description') or '').strip(), maxsplit=1)[0][:180]
+        lines.append(f'- {fn["name"]}({sig}) — {desc}')
     return '\n'.join(lines)
+
+
+_DIAS = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')
+
+
+def _today_line():
+    """Fecha y calendario de 3 semanas en cada mensaje: la sesión dura horas y el modelo calculaba mal los días."""
+    from datetime import timedelta
+
+    from app.services.report_service import lima_today
+
+    today = lima_today()
+    days = ' '.join(
+        f'{_DIAS[d.weekday()][:2]} {d.isoformat()}' for d in (today + timedelta(days=i) for i in range(1, 22))
+    )
+    return f'[Hoy: {_DIAS[today.weekday()]} {today.isoformat()} (Lima). Próximos días: {days}]'
 
 
 def _primer(user, tools, write_names, mode='grande'):
@@ -202,12 +238,20 @@ def _primer(user, tools, write_names, mode='grande'):
         '{"kind": "answer", "answer": "<respuesta final al usuario, puede usar markdown>"}\n'
         '{"kind": "clarify", "question": "<pregunta corta si falta un dato imprescindible>"}\n'
         'Reglas: nunca inventes datos del centro; si necesitas un dato, pide la herramienta. Las herramientas '
-        f'de escritura ({", ".join(sorted(write_names)) or "ninguna"}) siempre las confirma el usuario: '
-        'propónlas con los argumentos completos. Si una herramienta devuelve error, explícalo.\n\n'
+        f'de escritura ({", ".join(sorted(write_names)) or "ninguna"}) siempre las confirma el usuario con una '
+        'tarjeta que muestra el sistema: cuando tengas los datos, PROPÓN la herramienta con los argumentos '
+        'completos (kind "tool"); NUNCA pidas confirmación en texto ni digas que algo «se programará» sin '
+        'proponer la herramienta. Si falta un dato imprescindible usa "clarify". Si el usuario pide varias '
+        'acciones, propón la primera; cuando se confirme te pediré la siguiente. Para fechas usa el calendario '
+        '[Hoy: …] que llega en cada mensaje. Si una herramienta devuelve error, explícalo.\n\n'
         f'Herramientas del sistema:\n{_catalog(tools)}\n'
     )
 
 
+_TEXT_CONFIRM = re.compile(
+    r'(confirm[ae]s?\b|confirmar|¿(procedo|lo hago|deseas que (cree|registre|programe|ajuste))|se programar[áa]n?)',
+    re.I,
+)
 _JSON_BLOCK = re.compile(r'```(?:json)?\s*(\{.*?\})\s*```', re.S)
 
 
@@ -302,12 +346,15 @@ def _run(user, message, *, history=None, mode='grande', confirmed_tool=None):
             prefix
             + f'El usuario CONFIRMÓ y el sistema YA ejecutó {name}. Resultado:\n'
             + vault.mask_text(_trim_tool_result(vault.mask(result)))
-            + '\nResponde con {"kind": "answer"} contando el resultado (no vuelvas a pedir la herramienta).'
+            + '\nSi el pedido del usuario incluía OTRA acción pendiente, propón ahora la siguiente herramienta '
+            '(kind "tool"); si no queda nada, responde con {"kind": "answer"} contando el resultado. '
+            f'No vuelvas a pedir {name}.\n' + _today_line()
         )
     else:
-        step = ask(prefix + 'Usuario: ' + vault.mask_text(message))
+        step = ask(prefix + _today_line() + '\nUsuario: ' + vault.mask_text(message))
 
-    for _ in range(MAX_STEPS):
+    nudged = False
+    for _ in range(MAX_STEPS + 1):
         if not step:
             break
         if step['kind'] == 'tool':
@@ -343,6 +390,15 @@ def _run(user, message, *, history=None, mode='grande', confirmed_tool=None):
             )
             continue
         text = step.get('answer') if step['kind'] == 'answer' else step.get('question')
+        if step['kind'] == 'answer' and writes and not nudged and _TEXT_CONFIRM.search(text or ''):
+            # Pidió confirmar en texto sin proponer la herramienta: no se crearía nada. Se le corrige una vez.
+            nudged = True
+            step = ask(
+                'No pidas confirmación en texto: el sistema solo ejecuta lo que propones como herramienta y el '
+                'usuario lo confirma en una tarjeta. Si ya tienes los datos, propón la herramienta (kind "tool"); '
+                'si falta un dato, usa "clarify".'
+            )
+            continue
         yield {'type': 'final', 'content': vault.unmask(text or '').strip() or 'Listo.'}
         yield {'type': 'done', 'tool_calls': tool_calls}
         return
