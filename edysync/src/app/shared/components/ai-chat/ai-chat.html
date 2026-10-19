@@ -41,6 +41,13 @@
         </div>
       </div>
       <div class="chat-header-actions">
+        @if (devAvailable) {
+          <button class="chat-sessions-btn chat-dev-btn" (click)="toggleDevMode()"
+            [class.active]="devMode" [attr.aria-pressed]="devMode"
+            [title]="devMode ? 'Salir del modo desarrollador' : 'Modo desarrollador (revisar el servidor)'">
+            <fa-icon [icon]="['fas', 'terminal']"></fa-icon>
+          </button>
+        }
         <button class="chat-sessions-btn" (click)="toggleSessionList()"
           [class.active]="showSessionList"
           [title]="'Historial de conversaciones'">
@@ -55,6 +62,13 @@
         </button>
       </div>
     </div>
+
+    @if (devMode) {
+      <div class="chat-dev-banner" role="status">
+        <fa-icon [icon]="['fas', 'terminal']"></fa-icon>
+        <span><strong>Modo desarrollador.</strong> Revisa logs, servicios y código en solo lectura. Lo que lea del servidor va a MiMo sin seudonimizar.</span>
+      </div>
+    }
 
     @if (showSessionList) {
       <div class="chat-session-list">

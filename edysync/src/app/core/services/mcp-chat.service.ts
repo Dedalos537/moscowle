@@ -65,12 +65,32 @@ export interface McpStreamRequest {
   history: { role: string; content: string }[];
   confirmed_tool?: McpPendingConfirm;
   conversation_id?: string;
+  /** `dev`: modo desarrollador (solo admin, PRP 009). */
+  agent?: 'dev';
   signal?: AbortSignal;
+}
+
+/** Qué puede usar el usuario actual del asistente (PRP 009). */
+export interface McpCapabilities {
+  opencode: boolean;
+  dev_mode: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
 export class McpChatService {
   private apiUrl = environment.apiBaseUrl;
+
+  async capabilities(): Promise<McpCapabilities> {
+    try {
+      const resp = await fetch(`${this.apiUrl}/mcp/opencode/me`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}` },
+        credentials: 'include',
+      });
+      return resp.ok ? await resp.json() : { opencode: false, dev_mode: false };
+    } catch {
+      return { opencode: false, dev_mode: false };
+    }
+  }
 
   stream(req: McpStreamRequest): Observable<McpStreamEvent> {
     return new Observable((subscriber: Subscriber<McpStreamEvent>) => {
@@ -89,6 +109,7 @@ export class McpChatService {
           history: req.history,
           confirmed_tool: req.confirmed_tool || undefined,
           conversation_id: req.conversation_id || undefined,
+          agent: req.agent || undefined,
         }),
         signal,
       })

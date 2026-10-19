@@ -109,6 +109,9 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   error: string | null = null;
   processingAction = false;
   uploading = false;
+  /** Modo desarrollador (PRP 009): solo admin y solo si está encendido en Visor → LLM. */
+  devAvailable = false;
+  devMode = false;
   actionFeedback: { type: 'success' | 'error' | 'info'; message: string } | null = null;
   thinkingText = '';
 
@@ -266,6 +269,11 @@ export class AiChat implements AfterViewChecked, OnDestroy {
       this.persistCurrentSession();
     }
     if (this.isOpen) {
+      void this.mcpChat.capabilities().then((caps) => {
+        this.devAvailable = caps.dev_mode;
+        if (!caps.dev_mode) this.devMode = false;
+        this.cdr.markForCheck();
+      });
       this.currentPage = this.detectCurrentPage();
       this.ensureActiveSession();
       this.restoreActiveSession();
@@ -451,6 +459,12 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     this.cdr.markForCheck();
   }
 
+  toggleDevMode() {
+    if (!this.devAvailable || this.loading) return;
+    this.devMode = !this.devMode;
+    this.cdr.markForCheck();
+  }
+
   newSession() {
     if (this.loading || this.processingAction) return;
     this.resetChatState();
@@ -571,6 +585,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
         history,
         confirmed_tool: confirmed,
         conversation_id: this.activeSessionId || undefined,
+        agent: this.devMode && !confirmed ? 'dev' : undefined,
         signal: this.abortCtrl.signal,
       })
       .subscribe({
@@ -778,7 +793,19 @@ export class AiChat implements AfterViewChecked, OnDestroy {
             if (o.date) parts.push(`Fecha: ${o.date}`);
             if (o.reference) parts.push(`Ref: ${o.reference}`);
             const ocrText = parts.length > 0 ? parts.join(' - ') : 'No se pudieron leer datos';
-            this.inputMessage = `Voucher detectado: ${ocrText}. Imagen: ${data.url}. ¿Registrar este pago? Si los datos son incorrectos, indíqueme los correctos.`;
+            const warn = (data.intake?.warnings || []).length ? ` Avisos: ${data.intake.warnings.join('; ')}.` : '';
+            this.inputMessage = `Voucher detectado: ${ocrText}. Imagen: ${data.url}.${warn} ¿Registrar este pago? Si los datos son incorrectos, indíqueme los correctos.`;
+          } else if (data.intake?.doc_type === 'expense_receipt') {
+            const f = data.intake.fields || {};
+            const parts = [];
+            if (f.amount) parts.push(`Monto: S/${f.amount}`);
+            if (f.vendor) parts.push(`Proveedor: ${f.vendor}`);
+            if (f.category) parts.push(`Categoría: ${f.category}`);
+            if (f.date) parts.push(`Fecha: ${f.date}`);
+            if (f.description) parts.push(`Detalle: ${f.description}`);
+            const read = parts.length > 0 ? parts.join(' - ') : 'No se pudieron leer datos';
+            const warn = (data.intake.warnings || []).length ? ` Avisos: ${data.intake.warnings.join('; ')}.` : '';
+            this.inputMessage = `Recibo de gasto detectado: ${read}. Imagen: ${data.url}.${warn} ¿Registrar este gasto? Si algo está mal, indíqueme el dato correcto.`;
           } else {
             this.inputMessage = `Imagen subida: ${data.url}. No pude leer el comprobante. Por favor indique: paciente, monto, método y fecha.`;
           }

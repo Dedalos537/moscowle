@@ -1,0 +1,43 @@
+# PRP 009 Fase G — modo desarrollador del admin (VM-APP). Lee el repo y los logs en solo lectura.
+[Unit]
+Description=opencode serve (modo desarrollador de Moscowle, solo lectura)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=opencode-dev
+Group=opencode-dev
+SupplementaryGroups=systemd-journal adm
+WorkingDirectory=/home/diego/moscowle_ia
+Environment=HOME=/srv/opencode/dev/home
+Environment=XDG_CONFIG_HOME=/srv/opencode/dev/home/.config
+Environment=XDG_DATA_HOME=/srv/opencode/dev/home/.local/share
+Environment=XDG_CACHE_HOME=/srv/opencode/dev/home/.cache
+EnvironmentFile=/etc/opencode-moscowle-dev.env
+ExecStart=/usr/local/bin/opencode serve --hostname 127.0.0.1 --port 4097
+Restart=on-failure
+RestartSec=5
+MemoryMax=1G
+
+# Solo lectura de todo el sistema; escribe únicamente en su carpeta. El .env es 600 de diego: no lo puede leer.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/srv/opencode/dev
+InaccessiblePaths=/etc/opencode-moscowle.env
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

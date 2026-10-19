@@ -13,6 +13,7 @@ from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 
 from app.auth_compat import current_user
 from app.models import User
+from app.services import opencode_agent
 from app.services.audit_service import transcribe_audio
 from app.services.llm_client import (
     get_gemini_model,
@@ -37,6 +38,7 @@ from app.services.mcp_service import (
     tool_result_context,
 )
 from app.services.mcp_trace import TraceBuilder
+from app.services.opencode_client import OpencodeUnavailableError
 from app.services.tools_registry import (
     SAFE_WRITE_TOOLS,
     TOOL_REGISTRY,
@@ -317,6 +319,32 @@ def _next_action_chips(tool_name):
     return list(CHIPS_AFTER_TOOL.get(tool_name, []))
 
 
+def _opencode_sse(trace, ev):
+    """Traduce un evento de `opencode_agent` al SSE que ya entienden los dos chats."""
+    kind = ev['type']
+    if kind == 'thinking':
+        return trace.thinking(ev['content'], ev.get('kind', 'route'), tool=ev.get('tool'))
+    if kind == 'tool_call':
+        trace.tool_call(ev['name'], ev['args'])
+        return f'data: {json.dumps(ev, ensure_ascii=False)}\n\n'
+    if kind == 'tool_result':
+        trace.tool_result(ev['name'], ev['success'])
+        out = f'data: {json.dumps(ev, ensure_ascii=False)}\n\n'
+        chips = _next_action_chips(ev['name'])
+        if chips:
+            out += f'data: {json.dumps({"type": "chips", "chips": chips}, ensure_ascii=False)}\n\n'
+        return out
+    if kind == 'confirm':
+        return f'data: {json.dumps(ev, ensure_ascii=False)}\n\n'
+    if kind == 'final':
+        trace.add('synth', 'Respuesta lista')
+        chunk = json.dumps({'type': 'chunk', 'content': ev['content']}, ensure_ascii=False)
+        final = json.dumps({'type': 'final', 'content': ev['content']}, ensure_ascii=False)
+        return f'data: {chunk}\n\ndata: {final}\n\n'
+    payload = {**ev, 'trace': trace.as_list(), 'provider': 'opencode'}
+    return f'data: {json.dumps(payload, ensure_ascii=False, default=str)}\n\n'
+
+
 def _cors_headers():
     origin = request.headers.get('Origin', '')
     if origin in ALLOWED_ORIGINS:
@@ -436,6 +464,32 @@ def mcp_chat_stream():
         with _ctx:
             trace = TraceBuilder()
             try:
+                # PRP 009: modo desarrollador (solo admin) y, para los roles habilitados, todo pasa por opencode.
+                # Si opencode no está o se acabó la cuota, se sigue por la cadena actual.
+                if data.get('agent') == 'dev':
+                    if not opencode_agent.dev_enabled_for(user):
+                        yield _opencode_sse(trace, {'type': 'final', 'content': 'El modo desarrollador está apagado.'})
+                        yield _opencode_sse(trace, {'type': 'done', 'tool_calls': []})
+                        return
+                    try:
+                        for ev in opencode_agent.run_dev(user, message):
+                            yield _opencode_sse(trace, ev)
+                    except OpencodeUnavailableError as exc:
+                        msg = f'El modo desarrollador no está disponible ahora ({str(exc)[:120]}).'
+                        yield _opencode_sse(trace, {'type': 'final', 'content': msg})
+                        yield _opencode_sse(trace, {'type': 'done', 'tool_calls': []})
+                    return
+                if opencode_agent.enabled_for(user):
+                    try:
+                        for ev in opencode_agent.run(
+                            user, message, history=history, mode=mode, confirmed_tool=data.get('confirmed_tool')
+                        ):
+                            yield _opencode_sse(trace, ev)
+                        return
+                    except OpencodeUnavailableError as exc:
+                        logger.warning(f'opencode no disponible, sigo con la cadena actual: {exc}')
+                        yield trace.thinking('MiMo no está disponible; sigo con el modelo de respaldo...', 'guard')
+
                 # Send thinking indicator (legacy payload + structured step)
                 yield trace.thinking('Evaluando tu petición...', 'route')
 
@@ -912,8 +966,11 @@ def mcp_execute():
 
 @mcp_bp.route('/chat/clear', methods=['POST'])
 def mcp_clear():
-    """Clear chat history (frontend-side, just acknowledge)."""
+    """Clear chat history (frontend-side) y cierra la sesión de opencode del usuario."""
     cors = _cors_headers()
+    user = _get_current_user()
+    if user:
+        opencode_agent.reset(user.id)
     resp = jsonify({'success': True, 'message': 'Historial limpiado'})
     for k, v in cors.items():
         resp.headers[k] = v
@@ -965,7 +1022,26 @@ def mcp_upload():
     url = f'/uploads/mcp/{unique_name}'
 
     ocr_data = None
-    if ext in ('jpg', 'jpeg', 'png', 'webp'):
+    intake = None
+    if ext in ('jpg', 'jpeg', 'png', 'webp') and opencode_agent.enabled_for(user):
+        try:
+            intake = opencode_agent.extract_image(user, os.path.join(upload_dir, unique_name))
+            f = intake['fields']
+            if intake['doc_type'] == 'voucher':
+                ocr_data = {
+                    'amount': f.get('amount'),
+                    'method': f.get('method'),
+                    'date': f.get('date'),
+                    'reference': f.get('reference'),
+                    'patient_hint': f.get('payer'),
+                }
+        except OpencodeUnavailableError as e:
+            logger.warning(f'Lectura con MiMo no disponible, uso el OCR de respaldo: {e}')
+            intake = None
+        except Exception as e:
+            logger.warning(f'Lectura con MiMo falló: {e}')
+            intake = None
+    if intake is None and ext in ('jpg', 'jpeg', 'png', 'webp'):
         try:
             ocr_data = _ocr_voucher(os.path.join(upload_dir, unique_name), ext)
             if ocr_data:
@@ -978,8 +1054,43 @@ def mcp_upload():
     resp_data = {'success': True, 'url': url, 'filename': unique_name}
     if ocr_data:
         resp_data['ocr'] = ocr_data
+    if intake:
+        resp_data['intake'] = intake
 
     resp = jsonify(resp_data)
+    for k, v in cors.items():
+        resp.headers[k] = v
+    return resp
+
+
+@mcp_bp.route('/opencode/status', methods=['GET', 'POST'])
+def mcp_opencode_status():
+    """Estado y ajustes de opencode (PRP 009). Solo admin. POST {enabled?, dev_mode?} guarda."""
+    user = _get_current_user()
+    cors = _cors_headers()
+    if not user or user.role != 'admin':
+        resp = jsonify({'error': 'Solo administradores'})
+        resp.status_code = 403
+    else:
+        if request.method == 'POST':
+            opencode_agent.save_settings(request.get_json(silent=True) or {}, user_id=user.id)
+        resp = jsonify({'success': True, **opencode_agent.status()})
+    for k, v in cors.items():
+        resp.headers[k] = v
+    return resp
+
+
+@mcp_bp.route('/opencode/me', methods=['GET'])
+def mcp_opencode_me():
+    """Qué puede usar el usuario actual: el chat lo usa para mostrar el interruptor del modo desarrollador."""
+    user = _get_current_user()
+    cors = _cors_headers()
+    resp = jsonify(
+        {
+            'opencode': bool(user and opencode_agent.enabled_for(user)),
+            'dev_mode': bool(user and opencode_agent.dev_enabled_for(user)),
+        }
+    )
     for k, v in cors.items():
         resp.headers[k] = v
     return resp

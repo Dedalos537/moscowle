@@ -1031,6 +1031,23 @@ class MCPService:
     def process_message(
         self, message, user_role, user_id, mode='grande', history=None, confirmed_tool=None, telegram_mode=False
     ):
+        # PRP 009: para los roles habilitados todo pasa por opencode; si no está, sigue la cadena actual.
+        try:
+            from app.extensions import db
+            from app.models import User
+            from app.services import opencode_agent
+            from app.services.opencode_client import OpencodeUnavailableError
+
+            oc_user = db.session.get(User, int(user_id)) if user_id else None
+            if oc_user and opencode_agent.enabled_for(oc_user):
+                try:
+                    return opencode_agent.run_dict(
+                        oc_user, message, history=history, mode=mode, confirmed_tool=confirmed_tool
+                    )
+                except OpencodeUnavailableError as exc:
+                    logger.warning(f'opencode no disponible, sigo con la cadena actual: {exc}')
+        except Exception as exc:  # noqa: BLE001 - nunca romper el chat por el camino nuevo
+            logger.warning(f'opencode: error inesperado, sigo con la cadena actual: {exc}')
         local_mode = _is_ollama_primary()
         # Acciones de escritura -> proveedor en la nube (el router local inventaba el resultado).
         escalated = bool(local_mode and not confirmed_tool and should_escalate_to_remote(message, history))

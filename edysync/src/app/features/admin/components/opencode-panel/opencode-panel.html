@@ -1,0 +1,61 @@
+<section class="oc-panel" aria-labelledby="oc-title">
+  <header class="oc-head">
+    <div>
+      <h3 id="oc-title">Cerebro del asistente: MiMo vía opencode</h3>
+      <p>Para el admin, todo el chat pasa por MiMo-V2.6-Flash Free. Si se acaba la cuota diaria o no responde, el asistente sigue con la cadena de abajo.</p>
+    </div>
+    <button type="button" class="oc-refresh" (click)="load()" [disabled]="loading()" aria-label="Actualizar estado">
+      <fa-icon [icon]="['fas', 'rotate']" [animation]="loading() ? 'spin' : undefined"></fa-icon>
+    </button>
+  </header>
+
+  @if (error(); as msg) {
+    <p class="oc-error" role="alert">{{ msg }}</p>
+  }
+
+  @if (status(); as s) {
+    <div class="oc-rows">
+      <div class="oc-row">
+        <div class="oc-row-main">
+          <span class="oc-name">Asistente con MiMo</span>
+          <span class="oc-meta">
+            <span class="oc-dot" [attr.data-tone]="state(s.chat).tone"></span>{{ state(s.chat).label }} · {{ usage('chat') }}
+            @if (s.chat.blocked && s.chat.last_error) { · {{ s.chat.last_error }} }
+          </span>
+        </div>
+        <button type="button" class="oc-switch" role="switch" [attr.aria-checked]="s.enabled"
+          [disabled]="saving() !== null || !s.chat.configured" (click)="toggle('enabled')"
+          aria-label="Usar MiMo en el asistente">
+          <span class="oc-knob"></span>
+        </button>
+      </div>
+
+      <div class="oc-row">
+        <div class="oc-row-main">
+          <span class="oc-name">Lectura de comprobantes y recibos</span>
+          <span class="oc-meta">{{ s.enabled ? 'Activa con el asistente' : 'Apagada: se usa el OCR de respaldo' }} · {{ usage('vision') }}</span>
+        </div>
+      </div>
+
+      <div class="oc-row">
+        <div class="oc-row-main">
+          <span class="oc-name">Modo desarrollador</span>
+          <span class="oc-meta">
+            <span class="oc-dot" [attr.data-tone]="state(s.dev).tone"></span>{{ state(s.dev).label }} · {{ usage('dev') }}
+          </span>
+          <span class="oc-hint">Botón <fa-icon [icon]="['fas', 'terminal']"></fa-icon> en el chat: revisa logs, servicios y código en solo lectura. Solo para administradores.</span>
+        </div>
+        <button type="button" class="oc-switch" role="switch" [attr.aria-checked]="s.dev_mode"
+          [disabled]="saving() !== null || !s.dev.configured" (click)="toggle('dev_mode')"
+          aria-label="Activar modo desarrollador">
+          <span class="oc-knob"></span>
+        </button>
+      </div>
+    </div>
+    @if (!s.chat.configured) {
+      <p class="oc-hint">Falta instalar el servicio en VM-APP: <code>sudo bash deploy/opencode/setup_opencode.sh</code>.</p>
+    }
+  } @else if (loading()) {
+    <p class="oc-hint">Consultando opencode…</p>
+  }
+</section>
