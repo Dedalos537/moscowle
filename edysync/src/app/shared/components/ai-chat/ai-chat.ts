@@ -773,13 +773,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     formData.append('file', file);
 
     const apiUrl = this.getApiUrl();
-    fetch(`${apiUrl}/mcp/upload`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`,
-      },
-      body: formData,
-    })
+    this.mcpChat.authFetch(`${apiUrl}/mcp/upload`, { method: 'POST', body: formData })
       .then(resp => resp.json())
       .then(data => {
         this.uploading = false;
@@ -886,13 +880,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     formData.append('audio', blob, 'voice.webm');
 
     const apiUrl = this.getApiUrl();
-    fetch(`${apiUrl}/mcp/transcribe`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`,
-      },
-      body: formData,
-    })
+    this.mcpChat.authFetch(`${apiUrl}/mcp/transcribe`, { method: 'POST', body: formData })
       .then(resp => resp.json())
       .then(data => {
         if (data.success && data.text) {

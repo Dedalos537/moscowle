@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
-import { Observable, Subscriber } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { Observable, Subscriber, firstValueFrom } from 'rxjs';
+import { AuthService } from './auth.service';
 import { environment } from '../../../environments/environment';
 
 export interface McpChip {
@@ -79,13 +80,37 @@ export interface McpCapabilities {
 @Injectable({ providedIn: 'root' })
 export class McpChatService {
   private apiUrl = environment.apiBaseUrl;
+  private auth = inject(AuthService);
+  private refreshing: Promise<boolean> | null = null;
+
+  /**
+   * El chat usa fetch (para leer el SSE) y no pasa por el interceptor que renueva la sesión: si el token venció,
+   * respondía «Error: HTTP 401». Aquí se renueva una vez (compartido entre llamadas simultáneas) y se reintenta.
+   */
+  private renewSession(): Promise<boolean> {
+    this.refreshing ??= firstValueFrom(this.auth.refreshToken())
+      .then((res) => !!res?.access_token)
+      .catch(() => false)
+      .finally(() => setTimeout(() => (this.refreshing = null), 0));
+    return this.refreshing;
+  }
+
+  /** fetch con el token actual; ante un 401 renueva la sesión y reintenta una sola vez. */
+  async authFetch(url: string, init: RequestInit = {}): Promise<Response> {
+    const send = () =>
+      fetch(url, {
+        ...init,
+        credentials: 'include',
+        headers: { ...(init.headers || {}), Authorization: `Bearer ${localStorage.getItem('access_token') || ''}` },
+      });
+    const resp = await send();
+    if (resp.status !== 401 || !(await this.renewSession())) return resp;
+    return send();
+  }
 
   async capabilities(): Promise<McpCapabilities> {
     try {
-      const resp = await fetch(`${this.apiUrl}/mcp/opencode/me`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}` },
-        credentials: 'include',
-      });
+      const resp = await this.authFetch(`${this.apiUrl}/mcp/opencode/me`);
       return resp.ok ? await resp.json() : { opencode: false, dev_mode: false };
     } catch {
       return { opencode: false, dev_mode: false };
@@ -96,13 +121,9 @@ export class McpChatService {
     return new Observable((subscriber: Subscriber<McpStreamEvent>) => {
       const signal = req.signal ?? new AbortController().signal;
 
-      fetch(`${this.apiUrl}/mcp/chat/stream`, {
+      this.authFetch(`${this.apiUrl}/mcp/chat/stream`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`,
-        },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: req.message,
           mode: req.mode,
@@ -114,6 +135,7 @@ export class McpChatService {
         signal,
       })
         .then(async (resp) => {
+          if (resp.status === 401) throw new Error('Tu sesión venció. Vuelve a iniciar sesión para seguir usando el asistente.');
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
           const reader = resp.body!.getReader();
           const decoder = new TextDecoder();
