@@ -503,6 +503,20 @@ def upload_complete(uid: str) -> dict:
     return _entry(target)
 
 
+def save_bytes(parent_rel: str, name: str, data: bytes) -> dict:
+    """Guarda un archivo generado en el servidor (p. ej. un escaneo) en la carpeta indicada."""
+    parent = resolve(parent_rel)
+    if not parent.is_dir():
+        raise DriveError('La carpeta de destino no existe', 404)
+    ensure_space(len(data))
+    target = _unique(parent, clean_name(name))
+    tmp = target.with_name(f'.{target.name}.{uuid.uuid4().hex[:8]}.part')
+    tmp.write_bytes(data)
+    os.replace(tmp, target)
+    _bump_usage(len(data))
+    return _entry(target)
+
+
 def upload_abort(uid: str):
     try:
         data, meta = _upload_paths(uid)

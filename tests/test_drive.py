@@ -38,6 +38,9 @@ def drv(app, client, tmp_path):
         def put(self, url, data):
             return client.put('/api/drive' + url, headers=headers, data=data)
 
+        def delete(self, url):
+            return client.delete('/api/drive' + url, headers=headers)
+
         def upload(self, folder, name, content: bytes):
             init = self.post('/upload/init', {'path': folder, 'name': name, 'size': len(content)}).get_json()
             uid, step, offset = init['upload_id'], 3, 0
@@ -290,3 +293,72 @@ def test_unreachable_host_cups_explains_how_to_share(drv):
     ):
         status = drv.get('/printers').get_json()
     assert status['available'] is False and 'cupsctl' in status['help']
+
+
+# ── escanear al drive ────────────────────────────────────────────────────────
+def _jpeg(color):
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new('RGB', (60, 80), color).save(buf, 'JPEG')
+    return buf.getvalue()
+
+
+@pytest.fixture
+def scanner(monkeypatch):
+    import json
+
+    from app.services import scan_service
+
+    colors = iter(['red', 'green', 'blue', 'white'])
+
+    def fake_call(method, path, body=None, timeout=30):
+        if path == '/status':
+            devs = [{'name': 'airscan:w1:EPSON L4150 Series', 'label': 'WSD EPSON L4150 Series'}]
+            return json.dumps({'devices': devs}).encode(), 'application/json'
+        return _jpeg(next(colors)), 'image/jpeg'
+
+    monkeypatch.setenv('SCAN_TOKEN', 't')
+    monkeypatch.setenv('SCAN_SERVER_URL', 'http://192.168.122.1:8631')
+    monkeypatch.setattr(scan_service, '_call', fake_call)
+
+
+def test_scanner_status_lists_the_epson(drv, scanner):
+    st = drv.get('/scanner').get_json()
+    assert st['available'] and st['devices'][0]['name'].startswith('airscan:')
+
+
+def test_without_scan_service_the_drive_explains_how_to_install_it(drv, monkeypatch):
+    monkeypatch.delenv('SCAN_TOKEN', raising=False)
+    st = drv.get('/scanner').get_json()
+    assert st['available'] is False and 'host' in st['help']
+
+
+def test_scanned_pages_become_one_pdf_in_the_chosen_folder(drv, scanner):
+    drv.post('/folder', {'path': '', 'name': 'Contratos'})
+    sid = drv.post('/scan/page', {'resolution': 200, 'mode': 'Color'}).get_json()['scan_id']
+    drv.post('/scan/page', {'scan_id': sid})
+    pages = drv.post('/scan/page', {'scan_id': sid}).get_json()['pages']
+    assert [p['n'] for p in pages] == [1, 2, 3]
+    assert drv.get(f'/scan/{sid}/page/2').mimetype == 'image/jpeg'
+    entry = drv.post(f'/scan/{sid}/finish', {'path': 'Contratos', 'name': 'Contrato Jorge', 'format': 'pdf'})
+    assert entry.status_code == 201 and entry.get_json()['name'] == 'Contrato Jorge.pdf'
+    names = [e['name'] for e in drv.get('/list?path=Contratos').get_json()['entries']]
+    assert names == ['Contrato Jorge.pdf']
+    assert drv.get('/file?path=Contratos/Contrato%20Jorge.pdf').data.startswith(b'%PDF')
+    assert drv.get(f'/scan/{sid}/page/1').status_code == 404  # el borrador se borra al guardar
+
+
+def test_a_page_can_be_removed_and_a_single_page_saved_as_jpg(drv, scanner):
+    sid = drv.post('/scan/page', {}).get_json()['scan_id']
+    drv.post('/scan/page', {'scan_id': sid})
+    left = drv.delete(f'/scan/{sid}/page/1').get_json()['pages']
+    assert [p['n'] for p in left] == [2]
+    entry = drv.post(f'/scan/{sid}/finish', {'path': '', 'name': 'foto', 'format': 'jpg'}).get_json()
+    assert entry['name'] == 'foto.jpg'
+
+
+def test_invalid_scan_options_and_ids_are_rejected(drv, scanner):
+    assert drv.post('/scan/page', {'resolution': 1200}).status_code == 400
+    assert drv.post('/scan/0123456789abcdef/finish', {}).status_code == 404
+    assert drv.get('/scan/not-an-id/page/1').status_code == 404

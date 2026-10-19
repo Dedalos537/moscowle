@@ -80,6 +80,9 @@
           <button type="button" class="dv-btn" (click)="startNewFolder()" title="Carpeta nueva (Ctrl+Mayús+N)">
             <fa-icon [icon]="['fas', 'folder-plus']" aria-hidden="true"></fa-icon><span>Carpeta</span>
           </button>
+          <button type="button" class="dv-btn" (click)="scanOpen.set(true)" title="Escanear con la impresora a esta carpeta">
+            <fa-icon [icon]="['fas', 'file-import']" aria-hidden="true"></fa-icon><span>Escanear</span>
+          </button>
           <button type="button" class="dv-btn dv-btn--primary" (click)="pickFiles()">
             <fa-icon [icon]="['fas', 'arrow-up-from-bracket']" aria-hidden="true"></fa-icon><span>Subir</span>
           </button>
@@ -403,6 +406,11 @@
       <button type="button" class="dv-quick__nav dv-quick__nav--next" (click)="stepPreview(1)" aria-label="Archivo siguiente"><fa-icon [icon]="['fas', 'chevron-right']"></fa-icon></button>
     </div>
   </div>
+}
+
+<!-- ───────── Escanear ───────── -->
+@if (scanOpen()) {
+  <app-drive-scan [folder]="path()" (saved)="onScanned($event)" (closed)="scanOpen.set(false)" />
 }
 
 <!-- ───────── Imprimir ───────── -->

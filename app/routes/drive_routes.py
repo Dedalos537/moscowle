@@ -7,7 +7,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app.extensions import db
 from app.models import PrintJob, User
-from app.services import drive_preview, print_service
+from app.services import drive_preview, print_service, scan_service
 from app.services import drive_service as drive
 
 drive_bp = Blueprint('drive', __name__, url_prefix='/api/drive')
@@ -250,3 +250,46 @@ def cancel_print(job_id):
     if not job:
         return jsonify({'error': 'Trabajo no encontrado'}), 404
     return jsonify(print_service.cancel(job).to_dict())
+
+
+# ── escáner ──────────────────────────────────────────────────────────────────
+@drive_bp.route('/scanner', methods=['GET'])
+@admin_only
+def scanner_status():
+    return jsonify(scan_service.status())
+
+
+@drive_bp.route('/scan/page', methods=['POST'])
+@admin_only
+def scan_page():
+    data = _body()
+    return jsonify(
+        scan_service.scan_page(data.get('scan_id'), data.get('resolution') or 200, data.get('mode') or 'Color')
+    ), 201
+
+
+@drive_bp.route('/scan/<scan_id>/page/<int:n>', methods=['GET'])
+@admin_only
+def scan_page_image(scan_id, n):
+    return send_file(scan_service.page_path(scan_id, n), mimetype='image/jpeg', max_age=0)
+
+
+@drive_bp.route('/scan/<scan_id>/page/<int:n>', methods=['DELETE'])
+@admin_only
+def scan_page_delete(scan_id, n):
+    return jsonify(scan_service.remove_page(scan_id, n))
+
+
+@drive_bp.route('/scan/<scan_id>/finish', methods=['POST'])
+@admin_only
+def scan_finish(scan_id):
+    data = _body()
+    entry = scan_service.finish(scan_id, data.get('path', ''), data.get('name', ''), data.get('format', 'pdf'))
+    return jsonify(entry), 201
+
+
+@drive_bp.route('/scan/<scan_id>', methods=['DELETE'])
+@admin_only
+def scan_discard(scan_id):
+    scan_service.discard(scan_id)
+    return jsonify({'ok': True})

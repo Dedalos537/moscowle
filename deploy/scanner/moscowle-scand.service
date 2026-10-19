@@ -1,0 +1,28 @@
+# Escaneo del host para Moscowle: solo escucha en virbr0 (192.168.122.1:8631) y exige token.
+[Unit]
+Description=Moscowle: servicio de escaneo (Epson L4150 vía SANE/airscan)
+After=network-online.target libvirtd.service
+Wants=network-online.target
+
+[Service]
+User=moscowle-scan
+Group=moscowle-scan
+SupplementaryGroups=scanner lp
+EnvironmentFile=/etc/moscowle-scand.env
+ExecStart=/usr/bin/python3 /opt/moscowle-scand/moscowle_scand.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target
