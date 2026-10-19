@@ -30,6 +30,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { DriveScan } from '../../components/drive-scan/drive-scan';
 
 type Place = 'files' | 'recent' | 'starred' | 'trash' | 'prints';
 type SortKey = 'name' | 'size' | 'modified';
@@ -78,7 +79,7 @@ const PRINTABLE: DriveKind[] = ['pdf', 'image', 'text', 'word', 'slides', 'sheet
 @Component({
   selector: 'app-drive',
   standalone: true,
-  imports: [FormsModule, FontAwesomeModule],
+  imports: [FormsModule, FontAwesomeModule, DriveScan],
   templateUrl: './drive.html',
   styleUrl: './drive.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -140,6 +141,8 @@ export class Drive implements OnInit, OnDestroy {
 
   // Impresión
   readonly printEntry = signal<DriveEntry | null>(null);
+  /** Escanear con el Epson L4150 del host directo a la carpeta actual. */
+  readonly scanOpen = signal(false);
   readonly printers = signal<PrinterStatus | null>(null);
   readonly printJobs = signal<PrintJob[]>([]);
   readonly printing = signal(false);
@@ -351,6 +354,12 @@ export class Drive implements OnInit, OnDestroy {
   }
 
   // ── operaciones ────────────────────────────────────────────────────────────
+  onScanned(entry: DriveEntry) {
+    this.scanOpen.set(false);
+    this.toast.show(`«${entry.name}» se guardó en el drive.`, 'success');
+    this.load();
+  }
+
   startNewFolder() {
     this.closeMenu();
     if (this.place() !== 'files') this.go('files', this.path());

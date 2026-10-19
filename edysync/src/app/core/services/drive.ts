@@ -89,6 +89,21 @@ export interface PrintOptions {
 }
 
 /** API del drive del administrador. Los archivos se piden como Blob para que viajen con el token. */
+export type ScanMode = 'Color' | 'Gray';
+
+export interface ScannerStatus {
+  available: boolean;
+  devices: { name: string; label: string }[];
+  help: string | null;
+  resolutions?: number[];
+  modes?: ScanMode[];
+}
+
+export interface ScanDraft {
+  scan_id: string;
+  pages: { n: number; size: number }[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class DriveService {
   private http = inject(HttpClient);
@@ -164,6 +179,31 @@ export class DriveService {
     let params = new HttpParams().set('path', path);
     if (kind === 'file') params = params.set('inline', '1');
     return this.http.get(`${this.base}/${url}`, { params, responseType: 'blob' });
+  }
+
+  // ── escáner (Epson L4150 del host) ──
+  scanner(): Observable<ScannerStatus> {
+    return this.http.get<ScannerStatus>(`${this.base}/scanner`);
+  }
+
+  scanPage(opts: { scan_id?: string; resolution: number; mode: ScanMode }): Observable<ScanDraft> {
+    return this.http.post<ScanDraft>(`${this.base}/scan/page`, opts);
+  }
+
+  scanPageImage(scanId: string, n: number): Observable<Blob> {
+    return this.http.get(`${this.base}/scan/${scanId}/page/${n}`, { responseType: 'blob' });
+  }
+
+  removeScanPage(scanId: string, n: number): Observable<ScanDraft> {
+    return this.http.delete<ScanDraft>(`${this.base}/scan/${scanId}/page/${n}`);
+  }
+
+  finishScan(scanId: string, body: { path: string; name: string; format: 'pdf' | 'jpg' }): Observable<DriveEntry> {
+    return this.http.post<DriveEntry>(`${this.base}/scan/${scanId}/finish`, body);
+  }
+
+  discardScan(scanId: string): Observable<{ ok: boolean }> {
+    return this.http.delete<{ ok: boolean }>(`${this.base}/scan/${scanId}`);
   }
 
   printers(): Observable<PrinterStatus> {
