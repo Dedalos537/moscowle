@@ -209,3 +209,15 @@ def test_list_users_reports_the_real_total_not_the_page(app):
     assert sum(out['by_role'].values()) == out['count'] and out['active'] + out['inactive'] == out['count']
     trimmed = _trim_tool_result(out)  # texto (puede venir truncado): el total va antes que la lista
     assert f'"count": {out["count"]}' in trimmed and '"by_role"' in trimmed
+
+
+def test_small_panel_is_read_only_and_points_to_full_screen(app, monkeypatch):
+    """En el panel pequeño no hay tools de escritura; al pasar a pantalla completa MiMo recibe el catálogo completo."""
+    admin = _user('admin')
+    _enable()
+    sent = _script(monkeypatch, [{'kind': 'answer', 'answer': 'a'}, {'kind': 'answer', 'answer': 'b'}])
+    list(opencode_agent.run(admin, 'crea un usuario', mode='chiquito'))
+    list(opencode_agent.run(admin, 'crea un usuario', mode='grande'))
+    small, full = sent
+    assert 'PANTALLA COMPLETA' in small and '- create_user(' not in small
+    assert 'MODO COMPLETO' in full and '- create_user(' in full  # sesión nueva, catálogo con escritura
