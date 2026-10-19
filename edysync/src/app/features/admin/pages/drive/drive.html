@@ -91,6 +91,10 @@
           <button type="button" class="dv-btn dv-btn--danger" (click)="purge()">Vaciar papelera</button>
         }
         @if (place() === 'prints') {
+          <button type="button" class="dv-btn" (click)="repairPrinter()" [disabled]="repairing()"
+            title="Busca la impresora en la red y la vuelve a conectar si cambió de IP">
+            <fa-icon [icon]="['fas', 'wifi']" aria-hidden="true"></fa-icon><span>{{ repairing() ? 'Buscando…' : 'Reconectar impresora' }}</span>
+          </button>
           <button type="button" class="dv-btn" (click)="load()"><fa-icon [icon]="['fas', 'rotate']" aria-hidden="true"></fa-icon><span>Actualizar</span></button>
         }
         <input #fileInput type="file" multiple hidden (change)="onFilesPicked($event)" />

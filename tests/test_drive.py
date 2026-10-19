@@ -362,3 +362,29 @@ def test_invalid_scan_options_and_ids_are_rejected(drv, scanner):
     assert drv.post('/scan/page', {'resolution': 1200}).status_code == 400
     assert drv.post('/scan/0123456789abcdef/finish', {}).status_code == 404
     assert drv.get('/scan/not-an-id/page/1').status_code == 404
+
+
+def test_reconnect_printer_asks_the_host_service_and_reports_the_new_ip(drv, monkeypatch):
+    import json
+
+    from app.services import scan_service
+
+    sent = []
+
+    def fake_call(method, path, body=None, timeout=30):
+        sent.append((method, path))
+        payload = {
+            'name': 'Epson_L4150',
+            'uri': 'socket://192.168.1.233:9100',
+            'ip': '192.168.1.233',
+            'reachable': True,
+            'changed': True,
+            'message': 'Impresora reconectada en 192.168.1.233.',
+        }
+        return json.dumps(payload).encode(), 'application/json'
+
+    monkeypatch.setenv('SCAN_TOKEN', 't')
+    monkeypatch.setattr(scan_service, '_call', fake_call)
+    r = drv.post('/printers/repair')
+    assert r.status_code == 200 and r.get_json()['ip'] == '192.168.1.233'
+    assert sent == [('POST', '/printer/repair')]  # acción fija: no viaja ningún comando

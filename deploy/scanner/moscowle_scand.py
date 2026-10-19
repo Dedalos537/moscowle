@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Servicio de escaneo del host para Moscowle (solo biblioteca estándar).
+"""Servicio del host para Moscowle: escaneo y reconexión de la impresora (solo biblioteca estándar).
 
 El backend vive en VM-APP y el escáner (Epson L4150, por WSD/eSCL con sane-airscan) lo ve el host. Este servicio
 escucha SOLO en la red interna de libvirt (192.168.122.1) y exige un token: VM-APP le pide una página y recibe un
@@ -7,12 +7,18 @@ JPEG. Igual que CUPS para imprimir, pero para escanear.
 
   GET  /status            → {"devices": [...], "device": "..."}
   POST /scan {resolution, mode} → image/jpeg   (resolution: 150|200|300|600; mode: Color|Gray)
+  GET  /printer           → {"name", "uri", "ip", "reachable"}
+  POST /printer/repair    → busca la IP actual de la Epson en la red y repunta CUPS (lpadmin), nada más.
+
+La impresora cambia de IP por DHCP y CUPS la seguía buscando en la vieja. Un vigilante revisa cada 10 min que
+responda en su puerto 9100 y, si no, la repunta solo. Es una acción fija: no ejecuta comandos que lleguen de fuera.
 """
 
 import hmac
 import json
 import os
 import re
+import socket
 import subprocess
 import threading
 import time
@@ -23,6 +29,9 @@ PORT = int(os.environ.get('SCAND_PORT', '8631'))
 TOKEN = os.environ.get('SCAND_TOKEN', '')
 FIXED_DEVICE = os.environ.get('SCAN_DEVICE', '').strip()
 RESOLUTIONS = (150, 200, 300, 600)
+PRINTER = os.environ.get('PRINTER_NAME', 'Epson_L4150')
+_SAFE_PRINTER = re.compile(r'^[A-Za-z0-9_.@-]{1,127}$')
+WATCH_EVERY = int(os.environ.get('PRINTER_WATCH_SECONDS', '600'))
 MODES = ('Color', 'Gray')
 
 _lock = threading.Lock()
@@ -61,6 +70,88 @@ def scan(resolution, mode):
     return res.stdout
 
 
+# ── impresora: repuntar CUPS cuando la Epson cambia de IP ────────────────────
+_IP_RE = re.compile(r'(?:ip=|net:)(\d{1,3}(?:\.\d{1,3}){3})')
+_printer_lock = threading.Lock()
+
+
+def _reachable(ip, port=9100, timeout=3):
+    try:
+        with socket.create_connection((ip, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+def printer_uri():
+    try:
+        out = subprocess.run(['lpstat', '-v', PRINTER], capture_output=True, text=True, timeout=15).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    m = re.search(r':\s*(\S+)\s*$', out.strip())
+    return m.group(1) if m else None
+
+
+def _ip_of(uri):
+    m = re.search(r'//(\d{1,3}(?:\.\d{1,3}){3})', uri or '')
+    return m.group(1) if m else None
+
+
+def discover_ip():
+    """IP actual de la Epson según el descubrimiento de SANE (epsonds/airscan la anuncian)."""
+    for dev in devices(force=True):
+        m = _IP_RE.search(dev['name'] + ' ' + dev['label'])
+        if m and 'epson' in (dev['name'] + dev['label']).lower():
+            return m.group(1)
+    return None
+
+
+def printer_info():
+    uri = printer_uri()
+    ip = _ip_of(uri)
+    return {'name': PRINTER, 'uri': uri, 'ip': ip, 'reachable': bool(ip and _reachable(ip))}
+
+
+def repair_printer():
+    if not _SAFE_PRINTER.match(PRINTER):
+        raise RuntimeError('Nombre de impresora no válido.')
+    with _printer_lock:
+        before = printer_info()
+        if before['reachable']:
+            return {
+                **before,
+                'changed': False,
+                'message': 'La impresora ya responde en su IP: no hacía falta cambiar nada.',
+            }
+        ip = discover_ip()
+        if not ip:
+            raise RuntimeError('No encontré la Epson en la red: revisa que esté encendida y conectada al WiFi.')
+        if not _reachable(ip):
+            raise RuntimeError(f'La Epson aparece en {ip} pero no acepta trabajos en el puerto 9100.')
+        uri = f'socket://{ip}:9100'
+        for cmd in (['lpadmin', '-p', PRINTER, '-v', uri], ['cupsenable', PRINTER], ['cupsaccept', PRINTER]):
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            if res.returncode != 0:
+                raise RuntimeError(f'CUPS no aceptó el cambio ({(res.stderr or res.stdout).strip()[:160]}).')
+        print(f'impresora {PRINTER}: {before["uri"]} → {uri}', flush=True)
+        return {
+            **printer_info(),
+            'changed': True,
+            'old_uri': before['uri'],
+            'message': f'Impresora reconectada en {ip}.',
+        }
+
+
+def _watch_printer():
+    while True:
+        time.sleep(WATCH_EVERY)
+        try:
+            if not printer_info()['reachable']:
+                repair_printer()
+        except Exception as exc:  # noqa: BLE001 - el vigilante nunca se cae
+            print(f'vigilante de impresora: {exc}', flush=True)
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = 'moscowle-scand/1'
 
@@ -82,11 +173,18 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == '/status':
             devs = devices(force='refresh' in self.headers.get('X-Scan-Refresh', ''))
             return self._json(200, {'devices': devs, 'device': FIXED_DEVICE or (devs[0]['name'] if devs else None)})
+        if self.path == '/printer':
+            return self._json(200, printer_info())
         return self._json(404, {'error': 'ruta'})
 
     def do_POST(self):  # noqa: N802
         if not self._authorized():
             return self._json(401, {'error': 'token'})
+        if self.path == '/printer/repair':
+            try:
+                return self._json(200, repair_printer())
+            except (RuntimeError, subprocess.TimeoutExpired) as exc:
+                return self._json(502, {'error': str(exc)})
         if self.path != '/scan':
             return self._json(404, {'error': 'ruta'})
         length = min(int(self.headers.get('Content-Length') or 0), 4096)
@@ -119,4 +217,6 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == '__main__':
     if not TOKEN:
         raise SystemExit('Falta SCAND_TOKEN')
+    if WATCH_EVERY > 0:
+        threading.Thread(target=_watch_printer, daemon=True).start()
     ThreadingHTTPServer((BIND, PORT), Handler).serve_forever()

@@ -143,6 +143,7 @@ export class Drive implements OnInit, OnDestroy {
   readonly printEntry = signal<DriveEntry | null>(null);
   /** Escanear con el Epson L4150 del host directo a la carpeta actual. */
   readonly scanOpen = signal(false);
+  readonly repairing = signal(false);
   readonly printers = signal<PrinterStatus | null>(null);
   readonly printJobs = signal<PrintJob[]>([]);
   readonly printing = signal(false);
@@ -354,6 +355,19 @@ export class Drive implements OnInit, OnDestroy {
   }
 
   // ── operaciones ────────────────────────────────────────────────────────────
+  /** La Epson cambia de IP por DHCP: el servicio del host la busca y repunta CUPS (también lo hace solo cada 10 min). */
+  repairPrinter() {
+    if (this.repairing()) return;
+    this.repairing.set(true);
+    this.api.repairPrinter().pipe(finalize(() => this.repairing.set(false))).subscribe({
+      next: (r) => {
+        this.toast.show(r.message, r.changed ? 'success' : 'info');
+        this.load();
+      },
+      error: (e) => this.toast.show(e?.error?.error || 'No se pudo reconectar la impresora.', 'error'),
+    });
+  }
+
   onScanned(entry: DriveEntry) {
     this.scanOpen.set(false);
     this.toast.show(`«${entry.name}» se guardó en el drive.`, 'success');
