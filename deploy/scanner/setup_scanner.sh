@@ -11,6 +11,7 @@ VM_KEY=/home/diego/.ssh/id_ed25519_vm
 apt-get install -y -qq sane-utils sane-airscan >/dev/null
 id moscowle-scan >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin moscowle-scan
 getent group scanner >/dev/null && usermod -aG scanner moscowle-scan || true
+getent group lpadmin >/dev/null && usermod -aG lpadmin moscowle-scan || true
 
 install -d -m 0755 /opt/moscowle-scand
 curl -fsSL "$RAW/moscowle_scand.py" -o /opt/moscowle-scand/moscowle_scand.py
@@ -47,4 +48,5 @@ if [ -f "$VM_KEY" ]; then
 else
   echo "No encontré $VM_KEY: agrega a mano en VM-APP (.env): SCAN_SERVER_URL=http://192.168.122.1:8631 y SCAN_TOKEN (en /etc/moscowle-scand.env)."
 fi
-echo "Listo. En el Drive aparece el botón «Escanear»."
+echo "Impresora: $(curl -s -H "X-Scan-Token: $TOKEN" http://192.168.122.1:8631/printer)"
+echo "Listo. En el Drive: «Escanear» y, en Impresiones, «Reconectar impresora» (también se repunta sola cada 10 min)."

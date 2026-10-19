@@ -228,6 +228,13 @@ def printers():
     return jsonify(print_service.status())
 
 
+@drive_bp.route('/printers/repair', methods=['POST'])
+@admin_only
+def printers_repair():
+    """Reconectar impresora: el servicio del host busca la IP nueva de la Epson y actualiza CUPS."""
+    return jsonify(scan_service.repair_printer())
+
+
 @drive_bp.route('/print', methods=['POST'])
 @admin_only
 def print_file():

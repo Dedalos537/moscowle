@@ -1,13 +1,14 @@
 # Escaneo del host para Moscowle: solo escucha en virbr0 (192.168.122.1:8631) y exige token.
 [Unit]
-Description=Moscowle: servicio de escaneo (Epson L4150 vía SANE/airscan)
+Description=Moscowle: escaneo y reconexión de la impresora (Epson L4150)
 After=network-online.target libvirtd.service
 Wants=network-online.target
 
 [Service]
 User=moscowle-scan
 Group=moscowle-scan
-SupplementaryGroups=scanner lp
+# lpadmin: puede repuntar la impresora en CUPS (sin sudo ni root).
+SupplementaryGroups=scanner lp lpadmin
 EnvironmentFile=/etc/moscowle-scand.env
 ExecStart=/usr/bin/python3 /opt/moscowle-scand/moscowle_scand.py
 Restart=on-failure

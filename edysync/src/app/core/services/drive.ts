@@ -206,6 +206,10 @@ export class DriveService {
     return this.http.delete<{ ok: boolean }>(`${this.base}/scan/${scanId}`);
   }
 
+  repairPrinter(): Observable<{ changed: boolean; ip: string | null; message: string }> {
+    return this.http.post<{ changed: boolean; ip: string | null; message: string }>(`${this.base}/printers/repair`, {});
+  }
+
   printers(): Observable<PrinterStatus> {
     return this.http.get<PrinterStatus>(`${this.base}/printers`);
   }

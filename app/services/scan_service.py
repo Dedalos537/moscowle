@@ -89,6 +89,12 @@ def status():
     }
 
 
+def repair_printer():
+    """Pide al servicio del host que busque la IP actual de la Epson y repunte CUPS (acción fija, sin comandos libres)."""
+    raw, _ = _call('POST', '/printer/repair', {}, timeout=120)
+    return json.loads(raw or b'{}')
+
+
 # ── borradores (páginas escaneadas que aún no se guardan) ────────────────────
 def _drafts() -> Path:
     d = drive.root() / '.uploads' / 'scans'
