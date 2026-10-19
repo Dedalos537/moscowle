@@ -149,9 +149,15 @@ export class CacheInterceptor implements HttpInterceptor {
       this.cache.invalidateContaining('/api/auth/webauthn');
     }
 
-    if (noQuery.includes('/api/admin/')) {
+    // Cualquier cambio del área admin (pagar una cuota, registrar un pago, editar un contrato…) toca datos que
+    // otras listas muestran: antes solo se limpiaba «/admin/api/installments» y Finanzas seguía mostrando el
+    // contrato y los pagos viejos hasta 5 min (parecía que el pago no se había registrado).
+    if (noQuery.includes('/api/admin/') || noQuery.includes('/admin/')) {
       this.cache.invalidateContaining('/api/admin');
       this.cache.invalidateContaining('/admin/api');
+      this.cache.invalidateContaining('/admin/payments');
+      this.cache.invalidateContaining('/api/patients');
+      this.cache.invalidateContaining('/dashboard');
     }
 
     const root = this.resourceRoot(noQuery);

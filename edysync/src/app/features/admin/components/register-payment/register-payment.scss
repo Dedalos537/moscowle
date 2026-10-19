@@ -32,6 +32,8 @@
   &:focus-within { outline: 2px solid var(--color-primary-text); outline-offset: 2px; }
 }
 
+.rp-read { margin: 0.375rem 0 0; font-size: 0.8125rem; color: var(--color-on-surface-variant); fa-icon { color: var(--color-primary-text); margin-inline-end: 0.25rem; } }
+
 .rp-hits { display: grid; margin: 0; padding: 0; list-style: none; border: 1px solid var(--color-outline-variant); border-radius: 0.875rem; overflow: hidden; }
 .rp-hit {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'name icon' 'meta icon'; align-items: center; column-gap: 0.75rem;

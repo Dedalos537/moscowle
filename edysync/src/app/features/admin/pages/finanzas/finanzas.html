@@ -640,12 +640,14 @@
                         <div class="flex items-center gap-3 p-3 rounded-xl border transition-all"
                           [ngClass]="{
                             'bg-success/5 border-success/30': inst.status === 'paid',
+                            'bg-warning/5 border-warning/40': inst.status === 'partial',
                             'bg-error/5 border-error/30': inst.status === 'pending' && inst.due_date < today,
                             'bg-surface-container-high/30 border-border/20': inst.status === 'pending' && inst.due_date >= today
                           }">
                           <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                             [ngClass]="{
                               'bg-success/15 text-success': inst.status === 'paid',
+                              'bg-warning/15 text-warning': inst.status === 'partial',
                               'bg-error/15 text-error': inst.status === 'pending' && inst.due_date < today,
                               'bg-surface-container-high text-on-surface-variant': inst.status === 'pending' && inst.due_date >= today
                             }">
@@ -654,6 +656,23 @@
                           <div class="flex-1 min-w-0">
                             <p class="text-xs font-semibold text-on-surface truncate">{{ inst.description || 'Cuota #' + inst.number }}</p>
                             <p class="text-[10px] text-on-surface-variant">Vence: {{ inst.due_date | date:'dd/MM/yyyy' }}</p>
+                            @if (inst.payments?.length) {
+                            <ul class="mt-1 space-y-0.5" aria-label="Pagos de esta cuota">
+                              @for (pg of inst.payments; track pg.payment_id) {
+                              <li class="text-[10px] text-on-surface-variant flex flex-wrap items-center gap-x-1.5">
+                                <fa-icon [icon]="['fas', 'circle-check']" class="text-success"></fa-icon>
+                                <span class="font-semibold text-on-surface">S/ {{ pg.amount.toFixed(2) }}</span>
+                                <span>· {{ shortDate(pg.date) }}</span>
+                                @if (pg.method) { <span>· {{ pg.method }}</span> }
+                                @if (pg.reference) { <span>· Op. {{ pg.reference }}</span> }
+                                @if (pg.receipt_image_path) {
+                                <button type="button" class="text-primary font-semibold underline underline-offset-2 hover:text-primary-hover"
+                                  (click)="previewImage(receiptUrl(pg.receipt_image_path), 'Voucher de pago'); $event.stopPropagation()">Ver voucher</button>
+                                }
+                              </li>
+                              }
+                            </ul>
+                            }
                           </div>
                           <div class="text-right shrink-0">
                             <p class="text-xs font-bold text-on-surface">S/ {{ inst.amount.toFixed(2) }}</p>
@@ -664,6 +683,7 @@
                           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0"
                             [ngClass]="{
                               'bg-success/15 text-success': inst.status === 'paid',
+                              'bg-warning/15 text-warning': inst.status === 'partial',
                               'bg-error/15 text-error': inst.status === 'pending' && inst.due_date < today,
                               'bg-surface-container-high text-on-surface-variant': inst.status === 'pending' && inst.due_date >= today
                             }">
@@ -1547,7 +1567,7 @@
       </div>
       }
       @if (payReceiptError) {
-      <p class="text-[10px] text-error mt-1">{{ payReceiptError }}</p>
+      <p class="text-[10px] text-warning font-semibold mt-1" role="status">{{ payReceiptError }}</p>
       }
     </div>
     <div>

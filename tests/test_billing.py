@@ -200,3 +200,44 @@ def test_excel_round_trip_preview_apply_and_idempotent(app):
     again = import_workbook(data, file_name='t.xlsx', apply=True)
     assert again['applied'] and again['summary'].get('contracts_created', 0) == 0
     assert again['summary'].get('already_applied', 0) == 2 and Contract.query.filter_by(patient_id=p.id).count() == 1
+
+
+def test_voucher_is_read_only_with_mimo_and_fills_the_form(app, client, monkeypatch):
+    """El voucher se lee SOLO con MiMo; si no está, se avisa (no se prueba otro modelo)."""
+    from app.services import opencode_agent
+    from app.services.opencode_client import OpencodeUnavailableError
+
+    headers = _admin_headers()
+    fields = {'amount': 350, 'date': '2026-10-19', 'method': 'Yape', 'reference': '00123', 'payer': 'Ana'}
+    monkeypatch.setattr(
+        opencode_agent,
+        'extract_image',
+        lambda user, path: {'doc_type': 'voucher', 'confidence': 0.9, 'fields': fields, 'warnings': []},
+    )
+    photo = (io.BytesIO(b'\xff\xd8fake-jpeg'), 'voucher.jpg')
+    r = client.post('/admin/analyze-receipt', data={'receipt': photo}, headers=headers)
+    body = r.get_json()
+    assert body['source'] == 'mimo' and body['amount'] == 350 and body['method'] == 'yape'
+    assert body['date'] == '2026-10-19' and body['reference'] == '00123'
+
+    def down(user, path):
+        raise OpencodeUnavailableError('quota')
+
+    monkeypatch.setattr(opencode_agent, 'extract_image', down)
+    photo = (io.BytesIO(b'\xff\xd8fake-jpeg'), 'voucher.jpg')
+    body = client.post('/admin/analyze-receipt', data={'receipt': photo}, headers=headers).get_json()
+    assert 'MiMo no está disponible' in body['warning'] and body.get('amount') is None
+
+
+def test_contract_detail_lists_each_payment_of_an_installment_with_its_voucher(app):
+    p = _user()
+    c = _plan(p, date.today(), n=1, amount=500)
+    inst = c.installments[0]
+    billing.apply_patient_payment(p.id, 350, 'Yape', receipt_path='vouchers/a.jpg', reference='OP1')
+    billing.apply_patient_payment(p.id, 100, 'Efectivo')
+    detail = ContractService().get_contract_detail(c.id)
+    row = next(i for i in detail['installments'] if i['id'] == inst.id)
+    assert row['status'] == 'partial' and row['paid_amount'] == pytest.approx(450)
+    assert [x['amount'] for x in row['payments']] == [350, 100]
+    assert row['payments'][0]['receipt_image_path'] == 'vouchers/a.jpg' and row['payments'][0]['reference'] == 'OP1'
+    assert row['receipt_image_path'] == 'vouchers/a.jpg'  # antes un pago parcial no mostraba su voucher

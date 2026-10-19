@@ -1066,24 +1066,37 @@ export class Finanzas implements OnInit, OnDestroy {
       this.subscriptions.add(
         this.adminService.analyzeReceipt(file, this.expandedPatientId ?? undefined).subscribe({
           next: (res: any) => {
+            // Lectura con MiMo: rellena lo que leyó; lo que no, queda para completar a mano.
             this.payAnalyzingReceipt = false;
-            if (res && (res.amount || res.reference || res.method || res.next_due_date)) {
-              if (res.amount) this.payInstallmentForm.amount = parseFloat(res.amount);
-              if (res.reference) this.payInstallmentForm.reference = res.reference;
-              if (res.method) this.payInstallmentForm.method = res.method;
-              if (res.next_due_date && !this.payInstallmentForm.payment_date) {
-                this.payInstallmentForm.payment_date = res.next_due_date;
-              }
+            if (res?.amount) this.payInstallmentForm.amount = parseFloat(res.amount);
+            if (res?.reference) this.payInstallmentForm.reference = res.reference;
+            if (res?.method) this.payInstallmentForm.method = res.method;
+            if (res?.date) this.payInstallmentForm.payment_date = res.date;
+            const notes = [res?.warning, ...(res?.warnings || [])].filter(Boolean);
+            this.payReceiptError = notes.join(' ');
+            if (res?.source === 'mimo' && !notes.length) {
+              this.toastService.show('Voucher leído con MiMo: revisa los datos antes de registrar.', 'success', 3500);
             }
             this.cdr.markForCheck();
           },
           error: () => {
             this.payAnalyzingReceipt = false;
+            this.payReceiptError = 'No se pudo leer el voucher. Completa los datos a mano.';
             this.cdr.markForCheck();
           },
         }),
       );
     }
+  }
+
+  /** «2026-10-19 10:30» → «19/10/2026». */
+  shortDate(value: string | null | undefined): string {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value || '');
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+  }
+
+  receiptUrl(path: string): string {
+    return path.startsWith('http') || path.startsWith('/') ? path : '/uploads/' + path;
   }
 
   removePayReceipt() {

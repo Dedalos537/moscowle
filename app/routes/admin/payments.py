@@ -679,76 +679,61 @@ def api_edit_payment(payment_id):
 @admin_bp.route('/analyze-receipt', methods=['POST'])
 @login_required
 def analyze_receipt():
-    """Analizar voucher de pago con IA"""
+    """Lee el voucher SOLO con MiMo (opencode). Antes pasaba por el modelo local (lento e impreciso).
+
+    Si MiMo no está disponible no se prueba otro modelo: se avisa y el pago se completa a mano.
+    """
     if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
+    file = request.files.get('receipt')
+    if not file or not file.filename:
+        return jsonify({'error': 'Adjunta la foto del voucher.'}), 400
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ('.jpg', '.jpeg', '.png', '.webp'):
+        return jsonify({'warning': 'Solo se leen fotos (JPG, PNG o WEBP); completa los datos a mano.'})
 
-    if 'receipt' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
+    import tempfile
 
-    file = request.files['receipt']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+    from app.services import opencode_agent
+    from app.services.opencode_client import OpencodeUnavailableError
 
-    patient_id = request.form.get('patient_id', type=int)
-
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+        file.save(tmp.name)
+        tmp_path = tmp.name
     try:
-        import tempfile
-
-        from app.services.llm_automation_service import analyze_receipt_image
-
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp:
-            file.save(tmp.name)
-            tmp_path = tmp.name
-
-        try:
-            print(f'DEBUG: Analyzing receipt: {tmp_path}')
-            data = analyze_receipt_image(tmp_path)
-
-            if 'transaction_id' in data and 'reference' not in data:
-                data['reference'] = data['transaction_id']
-            if 'sender_name' in data and 'method' not in data:
-                data['method'] = 'yape/plin'
-
-            if patient_id:
-                try:
-                    from app.services.payment_service import PaymentService
-
-                    billing = PaymentService().get_billing_info(patient_id)
-                    if billing and billing.get('suggested_date'):
-                        data['next_due_date'] = billing['suggested_date']
-                except Exception as billing_err:
-                    print(f'WARN: Could not calculate next_due_date: {billing_err}')
-
+        intake = opencode_agent.extract_image(current_user, tmp_path)
+    except OpencodeUnavailableError:
+        return jsonify({'warning': 'MiMo no está disponible ahora (cuota o servicio). Completa los datos a mano.'})
+    except Exception:
+        current_app.logger.exception('Lectura de voucher con MiMo falló')
+        return jsonify({'warning': 'No se pudo leer el voucher. Completa los datos a mano.'})
+    finally:
+        if os.path.exists(tmp_path):
             os.unlink(tmp_path)
-            return jsonify(data)
 
-        except Exception as llm_err:
-            print(f'ERROR with Ollama OCR: {llm_err}')
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
-
-            data = {
-                'amount': None,
-                'date': datetime.now().strftime('%Y-%m-%d'),
-                'reference': None,
-                'method': 'transferencia',
-                'warning': 'Error al analizar el voucher. Ingresa los datos manualmente.',
-            }
-            if patient_id:
-                try:
-                    from app.services.payment_service import PaymentService
-
-                    billing = PaymentService().get_billing_info(patient_id)
-                    if billing and billing.get('suggested_date'):
-                        data['next_due_date'] = billing['suggested_date']
-                except Exception:
-                    pass
-            return jsonify(data)
-
-    except Exception as e:
-        print(f'ERROR in analyze_receipt: {str(e)}')
-        return jsonify({'error': str(e)}), 200
+    f = intake.get('fields') or {}
+    method_label = (f.get('method') or '').strip()
+    codes = {'yape': 'yape', 'plin': 'plin', 'transferencia': 'transfer', 'efectivo': 'cash', 'tarjeta': 'card'}
+    warnings = list(intake.get('warnings') or [])
+    if intake.get('doc_type') != 'voucher':
+        warnings.insert(0, 'La imagen no parece un comprobante de pago: revisa los datos.')
+    try:
+        amount = float(f['amount']) if f.get('amount') not in (None, '') else None
+    except (TypeError, ValueError):
+        amount = None
+    return jsonify(
+        {
+            'source': 'mimo',
+            'amount': amount,
+            'date': f.get('date'),
+            'reference': f.get('reference'),
+            'method': codes.get(method_label.lower()),
+            'method_label': method_label or None,
+            'payer': f.get('payer'),
+            'confidence': intake.get('confidence'),
+            'warnings': warnings,
+        }
+    )
 
 
 @admin_bp.route('/payments/<int:payment_id>/download', methods=['GET', 'POST'])
