@@ -372,6 +372,31 @@ class ContractService:
             return None
         return payment.receipt_image_path
 
+    @staticmethod
+    def _installment_payments(inst):
+        """Pagos aplicados a la cuota (libro de PRP 008), con su comprobante: parciales incluidos."""
+        from app.models.billing import PaymentAllocation
+
+        rows = (
+            db.session.query(PaymentAllocation, Payment)
+            .join(Payment, Payment.id == PaymentAllocation.payment_id)
+            .filter(PaymentAllocation.installment_id == inst.id, Payment.is_active.isnot(False))
+            .order_by(Payment.date.asc(), Payment.id.asc())
+            .all()
+        )
+        return [
+            {
+                'payment_id': pay.id,
+                'amount': round(float(alloc.amount or 0), 2),
+                'payment_total': round(float(pay.amount or 0), 2),
+                'date': pay.date.strftime('%Y-%m-%d %H:%M') if pay.date else None,
+                'method': pay.method,
+                'reference': pay.reference,
+                'receipt_image_path': pay.receipt_image_path,
+            }
+            for alloc, pay in rows
+        ]
+
     def get_contract_detail(self, contract_id):
         try:
             contract = Contract.query.get(contract_id)
@@ -399,8 +424,14 @@ class ContractService:
                         'real_amount': getattr(inst, 'real_amount', None),
                         'refunded_amount': getattr(inst, 'refunded_amount', None) or 0,
                         'receipt_image_path': self._installment_receipt_path(inst),
+                        'payments': self._installment_payments(inst),
                     }
                 )
+            # El comprobante visible es el del último pago con imagen (un pago parcial antes no lo mostraba).
+            for row in installments:
+                with_img = [p for p in row['payments'] if p['receipt_image_path']]
+                if with_img:
+                    row['receipt_image_path'] = with_img[-1]['receipt_image_path']
 
             patient = User.query.get(contract.patient_id) if contract.patient_id else None
 

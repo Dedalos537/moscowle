@@ -81,6 +81,11 @@
               <span>{{ receiptName() || 'Adjuntar foto o PDF' }}</span>
               <input class="sr-only" type="file" accept="image/*,application/pdf" aria-labelledby="rp-receipt-label" (change)="onReceipt($event)" />
             </label>
+            @if (reading()) {
+              <p class="rp-read" role="status"><fa-icon [icon]="['fas', 'spinner']" animation="spin" aria-hidden="true"></fa-icon> Leyendo el voucher con MiMo…</p>
+            } @else if (readNote()) {
+              <p class="rp-read" role="status">{{ readNote() }}</p>
+            }
           </div>
 
           @if (preview().parts.length || preview().credit) {

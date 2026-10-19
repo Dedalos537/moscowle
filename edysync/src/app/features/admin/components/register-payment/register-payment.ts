@@ -174,9 +174,36 @@ export class RegisterPayment implements OnDestroy {
 
   readonly receiptName = signal('');
 
+  /** Lectura del voucher con MiMo (solo MiMo: sin cadena de modelos). */
+  readonly reading = signal(false);
+  readonly readNote = signal('');
+
   onReceipt(ev: Event) {
     this.receipt = (ev.target as HTMLInputElement).files?.[0] ?? null;
     this.receiptName.set(this.receipt?.name ?? '');
+    this.readNote.set('');
+    if (!this.receipt || !this.receipt.type.startsWith('image/')) return;
+    this.reading.set(true);
+    this.admin.analyzeReceipt(this.receipt, this.picked()?.id).subscribe({
+      next: (res: any) => {
+        this.reading.set(false);
+        const label = res?.method_label as string | undefined;
+        const method = label && this.methods.find((m) => m.toLowerCase() === label.toLowerCase());
+        for (const f of [this.pay, this.oneOff]) {
+          if (res?.amount) f.amount = Number(res.amount);
+          if (res?.date) f.date = res.date;
+          if (res?.reference) f.reference = res.reference;
+          if (method) f.method = method;
+        }
+        if (res?.amount) this.amountSignal.set(Number(res.amount));
+        const notes = [res?.warning, ...(res?.warnings || [])].filter(Boolean);
+        this.readNote.set(notes.length ? notes.join(' ') : res?.source === 'mimo' ? 'Leído con MiMo: revisa los datos antes de registrar.' : '');
+      },
+      error: () => {
+        this.reading.set(false);
+        this.readNote.set('No se pudo leer el voucher. Completa los datos a mano.');
+      },
+    });
   }
 
   submitPayment(kind: 'installment' | 'one_off') {

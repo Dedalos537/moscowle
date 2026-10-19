@@ -59,6 +59,15 @@ export class AuthInterceptor implements HttpInterceptor {
     );
   }
 
+  /**
+   * El reintento tras renovar la sesión debe llevar el token NUEVO: antes se reenviaba la petición original con
+   * el token vencido, volvía a dar 401 (consola llena de 401) y el pago parecía no hacer nada.
+   */
+  private withFreshToken(request: HttpRequest<unknown>): HttpRequest<unknown> {
+    const token = localStorage.getItem('access_token');
+    return token ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : request;
+  }
+
   private handle401(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     if (!isRefreshing) {
       isRefreshing = true;
@@ -71,7 +80,7 @@ export class AuthInterceptor implements HttpInterceptor {
           }
           pendingRequests.forEach(p => p.resolve(true));
           pendingRequests = [];
-          return next.handle(request);
+          return next.handle(this.withFreshToken(request));
         }),
         catchError((refreshError) => {
           isRefreshing = false;
@@ -88,7 +97,7 @@ export class AuthInterceptor implements HttpInterceptor {
       pendingRequests.push({
         resolve: (success: boolean) => {
           if (success) {
-            next.handle(request).subscribe({
+            next.handle(this.withFreshToken(request)).subscribe({
               next: e => observer.next(e),
               error: e => observer.error(e),
               complete: () => observer.complete(),
