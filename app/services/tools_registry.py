@@ -190,6 +190,7 @@ CORE_TOOL_NAMES = [
     'register_payment',
     'cancel_payment',
     'edit_payment',
+    'update_installment',
     'get_debtors',
     'send_payment_reminder',
     'compare_periods',
@@ -816,6 +817,53 @@ def handle_cancel_payment(payment_id, **kwargs):
         return {'error': data.get('error', 'Error al eliminar pago')}
     except Exception as e:
         return {'error': str(e)}
+
+
+@tool(
+    name='update_installment',
+    description=(
+        'Ajusta el monto y/o la fecha de vencimiento de una cuota de contrato que aún no está pagada '
+        '(p. ej. primer mes prorrateado). Usa get_contract_detail para ver el id de cada cuota. '
+        'No sirve para pagos: para un pago usa register_payment.'
+    ),
+    parameters={
+        'type': 'object',
+        'properties': {
+            'installment_id': {'type': 'integer', 'description': 'ID de la cuota (de get_contract_detail)'},
+            'amount': {'type': 'number', 'description': 'Nuevo monto en soles (opcional)'},
+            'due_date': {'type': 'string', 'description': 'Nuevo vencimiento YYYY-MM-DD (opcional)'},
+            'reason': {'type': 'string', 'description': 'Motivo del ajuste (queda en la nota de la cuota)'},
+        },
+        'required': ['installment_id'],
+    },
+    category='write',
+    roles=ROLES_ADMIN,
+)
+def handle_update_installment(installment_id, amount=None, due_date=None, reason=None, _user_id=None, **kwargs):
+    from app.services import billing
+
+    if amount is None and not due_date:
+        return {'error': 'Indica el nuevo monto o la nueva fecha de la cuota.'}
+    try:
+        inst, changes = billing.adjust_installment(
+            installment_id, amount=amount, due_date=due_date, reason=reason, user_id=_user_id
+        )
+    except billing.BillingError as exc:
+        return {'error': str(exc)}
+    except ValueError:
+        return {'error': 'Fecha inválida: usa YYYY-MM-DD.'}
+    return {
+        'success': True,
+        'installment': {
+            'id': inst.id,
+            'contract_id': inst.contract_id,
+            'number': inst.number,
+            'amount': inst.amount,
+            'due_date': inst.due_date.isoformat(),
+            'status': inst.status,
+        },
+        'changes': changes or ['Sin cambios: ya tenía esos valores.'],
+    }
 
 
 @tool(

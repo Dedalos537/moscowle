@@ -221,3 +221,85 @@ def test_small_panel_is_read_only_and_points_to_full_screen(app, monkeypatch):
     small, full = sent
     assert 'PANTALLA COMPLETA' in small and '- create_user(' not in small
     assert 'MODO COMPLETO' in full and '- create_user(' in full  # sesión nueva, catálogo con escritura
+
+
+def test_catalog_shows_the_fields_inside_a_list_of_sessions():
+    """MiMo no sabía armar batch_create_sessions: el catálogo no mostraba los campos de cada sesión."""
+    from app.services.tools_registry import get_tools_for_mode
+
+    cat = opencode_agent._catalog(get_tools_for_mode('grande', 'admin'))
+    line = next(ln for ln in cat.splitlines() if ln.startswith('- batch_create_sessions('))
+    assert 'patient_id:integer' in line and 'day:string (YYYY-MM-DD)' in line and 'time:string (HH:MM)' in line
+
+
+def test_every_message_carries_today_with_weekday_and_calendar(app, monkeypatch):
+    from datetime import date
+
+    from app.services import report_service
+
+    admin = _user('admin')
+    _enable()
+    monkeypatch.setattr(report_service, 'lima_today', lambda: date(2026, 10, 19))
+    sent = _script(monkeypatch, [{'kind': 'answer', 'answer': 'ok'}])
+    list(opencode_agent.run(admin, 'agenda lunes, miércoles y viernes'))
+    assert '[Hoy: lunes 2026-10-19 (Lima).' in sent[0] and 'mi 2026-10-21' in sent[0] and 'vi 2026-10-23' in sent[0]
+
+
+def test_asking_to_confirm_in_text_is_corrected_into_a_tool_proposal(app, monkeypatch):
+    """«Por favor, confirma las sesiones» sin proponer la tool no creaba nada."""
+    from app.services import tools_registry
+
+    admin = _user('admin')
+    _enable()
+    ran = []
+    monkeypatch.setattr(tools_registry, 'execute_tool', lambda *a, **k: ran.append(a[0]) or {'ok': True})
+    sessions = [{'patient_id': 80, 'day': '2026-10-21', 'time': '11:00'}]
+    _script(
+        monkeypatch,
+        [
+            {'kind': 'answer', 'answer': 'Sesión del miércoles 21/10 a las 11:00. Por favor, confirma las sesiones.'},
+            {'kind': 'tool', 'tool': 'batch_create_sessions', 'args': {'sessions': sessions}},
+        ],
+    )
+    events = list(opencode_agent.run(admin, 'crea las sesiones'))
+    assert ran == [] and events[-1]['pending_confirm']['name'] == 'batch_create_sessions'
+
+
+def test_after_confirming_one_action_the_next_one_is_proposed(app, monkeypatch):
+    """«Ajusta la cuota y crea las sesiones»: tras confirmar la primera, se propone la segunda."""
+    from app.services import tools_registry
+
+    admin = _user('admin')
+    _enable()
+    ran = []
+    monkeypatch.setattr(tools_registry, 'execute_tool', lambda *a, **k: ran.append(a[0]) or {'success': True})
+    sessions = [{'patient_id': 80, 'day': '2026-10-21', 'time': '11:00'}]
+    sent = _script(monkeypatch, [{'kind': 'tool', 'tool': 'batch_create_sessions', 'args': {'sessions': sessions}}])
+    events = list(
+        opencode_agent.run(
+            admin, 'sí', confirmed_tool={'name': 'update_installment', 'args': {'installment_id': 1, 'amount': 225}}
+        )
+    )
+    assert ran == ['update_installment'] and 'OTRA acción pendiente' in sent[0]
+    assert events[-1]['pending_confirm']['name'] == 'batch_create_sessions'
+
+
+def test_adjust_installment_changes_unpaid_installment_and_keeps_paid_ones(app):
+    from datetime import date
+
+    from app.models import Contract, Installment
+    from app.services import billing
+
+    patient = _user('jugador')
+    c = billing.create_plan(patient.id, 550, 19, date(2026, 10, 19), installments=3)
+    first = sorted(c.installments, key=lambda i: i.number)[0]
+    inst, changes = billing.adjust_installment(first.id, amount=225, reason='Mes prorrateado: 6 sesiones')
+    assert inst.amount == 225 and 'S/ 550.00 → S/ 225.00' in changes[0] and 'prorrateado' in inst.notes
+    assert db.session.get(Contract, c.id).total_amount == pytest.approx(225 + 550 * 2)
+    inst.status = 'paid'
+    db.session.commit()
+    with pytest.raises(billing.BillingError):
+        billing.adjust_installment(first.id, amount=300)
+    Installment.query.filter_by(contract_id=c.id).delete()
+    Contract.query.filter_by(id=c.id).delete()
+    db.session.commit()
