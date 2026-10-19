@@ -976,6 +976,30 @@
   color: var(--color-on-surface);
 }
 
+.chat-dev-btn.active {
+  background: color-mix(in srgb, var(--color-warning, #b26a00) 18%, transparent);
+  color: var(--color-warning, #b26a00);
+}
+
+.chat-dev-banner {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 8px 12px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--color-on-surface);
+  background: color-mix(in srgb, var(--color-warning, #b26a00) 12%, var(--color-surface-container));
+  border: 1px solid color-mix(in srgb, var(--color-warning, #b26a00) 35%, transparent);
+
+  fa-icon {
+    margin-top: 2px;
+    color: var(--color-warning, #b26a00);
+  }
+}
+
 .chat-session-list {
   flex: 1;
   display: flex;

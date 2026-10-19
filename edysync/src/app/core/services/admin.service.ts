@@ -496,6 +496,15 @@ export class AdminService {
     return this.http.post<{ success: boolean }>(`/admin/api/tokens/deactivate/${tokenId}`, {});
   }
 
+  /** PRP 009: estado de opencode (MiMo) y sus interruptores. */
+  opencodeStatus(): Observable<OpencodeStatus> {
+    return this.http.get<OpencodeStatus>('/mcp/opencode/status');
+  }
+
+  saveOpencode(data: { enabled?: boolean; dev_mode?: boolean }): Observable<OpencodeStatus> {
+    return this.http.post<OpencodeStatus>('/mcp/opencode/status', data);
+  }
+
   getLLMConfig(): Observable<any> {
     return this.http.get('/api/health/llm/config');
   }
@@ -1017,4 +1026,22 @@ export interface WebsiteFaqStatus {
   total?: number;
   at?: string;
   error?: string | null;
+}
+
+export interface OpencodeInstance {
+  configured: boolean;
+  online: boolean;
+  blocked: boolean;
+  blocked_for: number;
+  last_error: string;
+  model: string;
+}
+
+export interface OpencodeStatus {
+  enabled: boolean;
+  dev_mode: boolean;
+  roles: string[];
+  chat: OpencodeInstance;
+  dev: OpencodeInstance;
+  usage_today: Record<string, { calls: number; tokens_in: number; tokens_out: number; errors: number }>;
 }

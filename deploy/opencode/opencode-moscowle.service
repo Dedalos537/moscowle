@@ -1,0 +1,43 @@
+# PRP 009 — opencode como cerebro del asistente (VM-APP). Solo escucha en 127.0.0.1.
+[Unit]
+Description=opencode serve (cerebro del asistente de Moscowle)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=opencode
+Group=opencode
+WorkingDirectory=/srv/opencode/chat/sandbox
+Environment=HOME=/srv/opencode/chat/home
+Environment=XDG_CONFIG_HOME=/srv/opencode/chat/home/.config
+Environment=XDG_DATA_HOME=/srv/opencode/chat/home/.local/share
+Environment=XDG_CACHE_HOME=/srv/opencode/chat/home/.cache
+EnvironmentFile=/etc/opencode-moscowle.env
+ExecStart=/usr/local/bin/opencode serve --hostname 127.0.0.1 --port 4096
+Restart=on-failure
+RestartSec=5
+MemoryMax=1G
+
+# Endurecimiento: no ve el repo, la base, /home ni el .env; solo escribe en su carpeta.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/opencode/chat
+InaccessiblePaths=/var/www /etc/opencode-moscowle-dev.env
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

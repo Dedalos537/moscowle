@@ -20,6 +20,7 @@ import { BotPanel } from '../bot-panel/bot-panel';
 import { ChannelsPanel } from '../channels-panel/channels-panel';
 import { ServerMonitor } from '../server-monitor/server-monitor';
 import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
+import { OpencodePanel } from '../../components/opencode-panel/opencode-panel';
 import { PeopleService } from '../../../../core/services/people.service';
 
 export type TabId = 'backend' | 'logs' | 'csp' | 'tokens' | 'incidents' | 'llm' | 'notifications' | 'bot';
@@ -79,7 +80,7 @@ interface AIProviderForm {
 @Component({
   selector: 'app-visor-funcionamiento',
   standalone: true,
-  imports: [PersonLabelPipe, CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input, Alert, Modal, Incidents, BotPanel, ChannelsPanel, ServerMonitor],
+  imports: [PersonLabelPipe, OpencodePanel, CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input, Alert, Modal, Incidents, BotPanel, ChannelsPanel, ServerMonitor],
   templateUrl: './visor-funcionamiento.html',
   styleUrl: './visor-funcionamiento.scss',
   animations: [fadeInUp, scaleIn, listStagger, cardEnter],

@@ -453,6 +453,8 @@
         <app-alert type="success" [message]="llmSuccess" class="mb-4"></app-alert>
       }
 
+      <app-opencode-panel></app-opencode-panel>
+
       @if (llmProviders) {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           @for (key of ['ollama', 'glm', 'groq', 'gemini']; track key) {
