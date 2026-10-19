@@ -362,14 +362,17 @@ def _trim_tool_result(result, max_chars=MAX_TOOL_RESULT_CHARS):
         elif 'users' in result and isinstance(result['users'], list):
             users = result['users']
             read_ok, read_list = _readable_name_list(users)
+            total = result.get('count', len(users))
+            shown = min(50, len(users))
             result = {
                 'success': result.get('success', True),
-                'count': result.get('count', len(users)),
+                'count': total,
+                **{k: result[k] for k in ('active', 'inactive', 'by_role', 'by_status') if k in result},
                 'users': users[:50],
                 'readable_list': read_list,
                 'note': (
-                    f'Showing {min(50, len(users))} of {len(users)} users'
-                    if len(users) > 50
+                    f'La lista muestra {shown} de {total} usuarios: el total es "count".'
+                    if total > shown
                     else ('Copia "readable_list" y "users" TAL CUAL en tu respuesta.' if read_ok else None)
                 ),
             }

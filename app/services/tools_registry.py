@@ -404,10 +404,27 @@ def handle_list_users(role=None, **kwargs):
     q = User.query
     if role:
         q = q.filter_by(role=role)
+    # `count` es el TOTAL real (antes era len() de una lista cortada en 50: decía 50 con 61 usuarios).
+    total = q.count()
+    by_role = dict(q.with_entities(User.role, db.func.count(User.id)).group_by(User.role).all())
+    by_status = dict(
+        q.with_entities(db.func.coalesce(User.account_status, 'active'), db.func.count(User.id))
+        .group_by(db.func.coalesce(User.account_status, 'active'))
+        .all()
+    )
+    active = q.filter(User.is_active.isnot(False)).count()
     users = q.order_by(User.username).limit(50).all()
     return {
         'success': True,
-        'count': len(users),
+        'count': total,
+        'active': active,
+        'inactive': total - active,
+        'by_role': by_role,
+        'by_status': by_status,
+        'shown': len(users),
+        'note': (
+            f'La lista muestra {len(users)} de {total}; usa "count" para el total.' if total > len(users) else None
+        ),
         'users': [
             {'id': u.id, 'username': u.username, 'email': u.email, 'role': u.role, 'is_active': u.is_active}
             for u in users
