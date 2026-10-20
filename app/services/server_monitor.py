@@ -1,15 +1,23 @@
 """Estado del servidor para el panel del administrador. SOLO LECTURA.
 
-Lee métricas de `/proc` y del sistema de archivos, y el estado de una lista FIJA de servicios con
-`systemctl is-active` (sin argumentos que vengan del usuario). No ejecuta acciones sobre el sistema: para
-administrar el servidor está Cockpit, que tiene su propio inicio de sesión.
+Lee métricas de `/proc` y del sistema de archivos, y el estado de una lista FIJA de servicios. No ejecuta
+acciones sobre el sistema: para administrar el servidor está Cockpit, que tiene su propio inicio de sesión.
+
+Topología (PRP 006): el backend corre en VM-APP; nginx, CUPS, cloudflared, Ollama y el servicio del escáner viven
+en el HOST (192.168.122.1) y MySQL en VM-DB. Antes se preguntaba a `systemctl` de VM-APP por todos y salían
+«Detenido» aunque funcionaran. Ahora cada servicio se comprueba donde está, por la red y con tiempos cortos.
 """
 
 import logging
 import os
 import shutil
+import socket
 import subprocess
+import threading
 import time
+import urllib.error
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 
 from flask import current_app
@@ -18,15 +26,6 @@ from app.extensions import db
 
 logger = logging.getLogger(__name__)
 
-# Servicios que la app necesita (nombre de la unidad systemd → etiqueta legible).
-SERVICES = {
-    'moscowle': 'Backend (Flask)',
-    'nginx': 'Servidor web (nginx)',
-    'cups': 'Impresión (CUPS)',
-    'mysql': 'Base de datos (MySQL)',
-    'cloudflared': 'Túnel Cloudflare',
-    'ollama': 'IA local (Ollama)',
-}
 RETENTION_DAYS = 7
 
 
@@ -118,21 +117,170 @@ def app_process():
     return {'pid': os.getpid(), 'rss': rss, 'threads': threads}
 
 
-def services():
+def _host():
+    """El host visto desde VM-APP (puerta de enlace de libvirt); si no se puede leer, la IP LAN del host."""
+    from app.services.print_service import _gateway
+
+    return os.environ.get('MONITOR_HOST') or _gateway() or '192.168.1.249'
+
+
+def _tcp(host, port, timeout=2.0):
+    with socket.create_connection((host, int(port)), timeout=timeout):
+        return True
+
+
+def _http(url, timeout=4.0):
+    req = urllib.request.Request(url, headers={'User-Agent': 'moscowle-monitor'})  # noqa: S310 - URLs fijas
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 - URLs fijas internas
+            return resp.status
+    except urllib.error.HTTPError as exc:
+        return exc.code
+
+
+def _systemd(unit):
     systemctl = shutil.which('systemctl')
-    result = []
-    for unit, label in SERVICES.items():
-        state = 'unknown'
-        if systemctl:
+    if not systemctl:
+        return None
+    proc = subprocess.run(  # noqa: S603 - binario resuelto con which y unidad de una lista fija
+        [systemctl, 'is-active', unit], capture_output=True, text=True, timeout=5, check=False
+    )
+    return (proc.stdout or '').strip() or 'unknown'
+
+
+def _check_backend():
+    state = _systemd('moscowle')
+    # Si systemd no responde, este mismo proceso es la prueba de que el backend está arriba.
+    return ('active' if state in (None, 'unknown') else state), f'PID {os.getpid()}'
+
+
+def _check_nginx():
+    host = _host()
+    for target in (host, os.environ.get('HOST_LAN_IP', '192.168.1.249')):
+        try:
+            code = _http(f'http://{target}/app/', timeout=3)
+            return ('active' if code < 500 else 'failed'), f'{target}:80 → HTTP {code}'
+        except Exception as exc:  # noqa: BLE001 - se prueba la siguiente dirección del host
+            logger.debug('nginx no responde en %s: %s', target, exc)
+    return 'inactive', f'{host}:80 sin respuesta'
+
+
+def _check_cups():
+    host = _host()
+    try:
+        _tcp(host, 631)
+        return 'active', f'{host}:631'
+    except Exception:
+        return 'inactive', f'{host}:631 sin respuesta'
+
+
+def _check_mysql():
+    from sqlalchemy.engine import make_url
+
+    try:
+        url = make_url(current_app.config.get('SQLALCHEMY_DATABASE_URI') or '')
+        where = f'{url.host or "local"}:{url.port or 3306}' if url.drivername.startswith('mysql') else url.drivername
+    except Exception:
+        where = 'base de datos'
+    try:
+        db.session.execute(db.text('SELECT 1'))
+        return 'active', where
+    except Exception as exc:
+        db.session.rollback()
+        return 'failed', f'{where}: {str(exc)[:80]}'
+
+
+def _check_tunnel():
+    """De ida y vuelta por Cloudflare: si responde el dominio público, el túnel del host funciona."""
+    base = (current_app.config.get('PUBLIC_API_URL') or 'https://api-centrojuanpabloii.online').rstrip('/')
+    try:
+        code = _http(base + '/api/time', timeout=6)
+        return ('active' if code < 500 else 'failed'), f'{base.split("//")[-1]} → HTTP {code}'
+    except Exception as exc:
+        return 'inactive', f'Sin respuesta pública ({type(exc).__name__})'
+
+
+def _check_ollama():
+    from app.services.llm_client import _ollama_host
+
+    url = _ollama_host()
+    try:
+        code = _http(url + '/api/tags', timeout=4)
+        return ('active' if code == 200 else 'failed'), url.split('//')[-1]
+    except Exception:
+        return 'inactive', f'{url.split("//")[-1]} sin respuesta'
+
+
+def _check_opencode(inst):
+    from app.services import opencode_client as oc
+
+    if not oc.configured(inst):
+        return 'off', 'No instalado'
+    if oc.blocked(inst):
+        return 'degraded', 'En pausa (cuota o fallo); vuelve solo'
+    return ('active', oc.base_url(inst).split('//')[-1]) if oc.ping(inst) else ('inactive', 'Sin respuesta')
+
+
+def _check_scand():
+    from app.services import scan_service
+
+    if not scan_service.configured():
+        return 'off', 'No instalado'
+    server = scan_service._server().split('//')[-1]
+    host, _, port = server.partition(':')
+    try:
+        _tcp(host, port or 8631)
+        return 'active', server
+    except Exception:
+        return 'inactive', f'{server} sin respuesta'
+
+
+# (clave, etiqueta, dónde vive, comprobación). Lista FIJA: nada viene del usuario.
+SERVICES = (
+    ('moscowle', 'Backend (Flask)', 'VM-APP', _check_backend),
+    ('nginx', 'Servidor web (nginx)', 'Host', _check_nginx),
+    ('cups', 'Impresión (CUPS)', 'Host', _check_cups),
+    ('mysql', 'Base de datos (MySQL)', 'VM-DB', _check_mysql),
+    ('cloudflared', 'Túnel Cloudflare', 'Host', _check_tunnel),
+    ('ollama', 'IA local (Ollama)', 'Host', _check_ollama),
+    ('opencode', 'Asistente MiMo (opencode)', 'VM-APP', lambda: _check_opencode('chat')),
+    ('opencode-dev', 'Modo desarrollador (opencode)', 'VM-APP', lambda: _check_opencode('dev')),
+    ('moscowle-scand', 'Escáner e impresora (servicio)', 'Host', _check_scand),
+)
+_CACHE_SECONDS = 30
+_cache: dict = {'at': 0.0, 'rows': None}
+_cache_lock = threading.Lock()
+
+
+def services(force=False):
+    """Estado de cada servicio comprobado donde vive (en paralelo, con caché de 30 s: el panel pide cada 10 s)."""
+    with _cache_lock:
+        if not force and _cache['rows'] is not None and time.time() - _cache['at'] < _CACHE_SECONDS:
+            return _cache['rows']
+    app = current_app._get_current_object()
+
+    def run(item):
+        unit, label, where, check = item
+        t0 = time.time()
+        with app.app_context():
             try:
-                proc = subprocess.run(  # noqa: S603 - binario resuelto con which y unidad de una lista fija
-                    [systemctl, 'is-active', unit], capture_output=True, text=True, timeout=5, check=False
-                )
-                state = (proc.stdout or '').strip() or 'unknown'
-            except Exception:
-                state = 'unknown'
-        result.append({'unit': unit, 'label': label, 'state': state})
-    return result
+                state, detail = check()
+            except Exception as exc:  # noqa: BLE001 - un servicio que falla no rompe el panel
+                state, detail = 'unknown', str(exc)[:80]
+        return {
+            'unit': unit,
+            'label': label,
+            'where': where,
+            'state': state,
+            'detail': detail,
+            'ms': int((time.time() - t0) * 1000),
+        }
+
+    with ThreadPoolExecutor(max_workers=len(SERVICES)) as pool:
+        rows = list(pool.map(run, SERVICES))
+    with _cache_lock:
+        _cache.update(at=time.time(), rows=rows)
+    return rows
 
 
 def app_checks():
@@ -195,7 +343,7 @@ def record():
 
     data = snapshot_now()
     mem, disk = data['memory'] or {}, (data['disks'] or [{}])[0]
-    down = [s['unit'] for s in data['services'] if s['state'] not in ('active', 'unknown')]
+    down = [s['unit'] for s in data['services'] if s['state'] not in ('active', 'unknown', 'off', 'degraded')]
     db.session.add(
         ServerSnapshot(
             cpu_pct=data['cpu']['pct'],
