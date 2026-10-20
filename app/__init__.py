@@ -664,6 +664,13 @@ def create_app(config_class=None):
     except Exception as e:
         app.logger.warning(f'Rate limiter initialization failed: {e}')
 
+    try:
+        from app.services import app_metrics
+
+        app_metrics.init_app(app)  # PRP 010: latencia y códigos por ruta para Prometheus
+    except Exception as e:
+        app.logger.warning(f'App metrics initialization failed: {e}')
+
     register_auth_loader(app)
     register_error_handlers(app)
     register_request_handlers(app)

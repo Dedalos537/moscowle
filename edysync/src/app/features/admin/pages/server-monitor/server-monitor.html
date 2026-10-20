@@ -7,13 +7,22 @@
         @else if (!error()) { Leyendo el servidor… }
       </p>
     </div>
-    @if (status()?.cockpit_url; as url) {
-      <a class="sm-cockpit" [href]="url" target="_blank" rel="noopener noreferrer">
-        <fa-icon [icon]="['fas', 'terminal']" aria-hidden="true"></fa-icon>
-        Abrir Cockpit
-        <fa-icon [icon]="['fas', 'arrow-up-right-from-square']" class="sm-cockpit__ext" aria-hidden="true"></fa-icon>
-      </a>
-    }
+    <div class="sm-links">
+      @if (status()?.grafana_url; as url) {
+        <a class="sm-cockpit" [href]="url" target="_blank" rel="noopener noreferrer" title="Tableros y alertas (solo desde la red del centro)">
+          <fa-icon [icon]="['fas', 'chart-line']" aria-hidden="true"></fa-icon>
+          Abrir Grafana
+          <fa-icon [icon]="['fas', 'arrow-up-right-from-square']" class="sm-cockpit__ext" aria-hidden="true"></fa-icon>
+        </a>
+      }
+      @if (status()?.cockpit_url; as url) {
+        <a class="sm-cockpit" [href]="url" target="_blank" rel="noopener noreferrer">
+          <fa-icon [icon]="['fas', 'terminal']" aria-hidden="true"></fa-icon>
+          Abrir Cockpit
+          <fa-icon [icon]="['fas', 'arrow-up-right-from-square']" class="sm-cockpit__ext" aria-hidden="true"></fa-icon>
+        </a>
+      }
+    </div>
   </header>
 
   @if (error()) {
@@ -89,10 +98,10 @@
   <!-- Historial guardado en la base de datos -->
   <div class="sm-block sm-chart">
     <div class="sm-chart__head">
-      <h3 class="sm-h">CPU y memoria · últimas {{ hours() }} h</h3>
+      <h3 class="sm-h">CPU y memoria · {{ hoursLabel(hours()) }}</h3>
       <div class="sm-seg" role="group" aria-label="Periodo">
-        @for (h of [6, 24, 168]; track h) {
-          <button type="button" [class.is-on]="hours() === h" [attr.aria-pressed]="hours() === h" (click)="setHours(h)">{{ h === 168 ? '7 días' : h + ' h' }}</button>
+        @for (h of ranges(); track h) {
+          <button type="button" [class.is-on]="hours() === h" [attr.aria-pressed]="hours() === h" (click)="setHours(h)">{{ h === 720 ? '30 días' : h === 168 ? '7 días' : h + ' h' }}</button>
         }
       </div>
     </div>

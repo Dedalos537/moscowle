@@ -1,0 +1,17 @@
+# PRP 010 — Los avisos van a Moscowle, que los manda a los admins (notificación + Telegram del centro).
+route:
+  receiver: moscowle
+  group_by: [alertname, service, instance]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: moscowle
+    webhook_configs:
+      - url: http://192.168.122.10:5000/api/server-monitor/alerts
+        send_resolved: true
+        http_config:
+          authorization:
+            type: Bearer
+            credentials_file: /etc/prometheus/alert_webhook.token

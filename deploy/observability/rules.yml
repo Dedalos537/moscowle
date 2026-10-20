@@ -1,0 +1,75 @@
+# PRP 010 — Alertas. Todas con `for:` para no avisar por un parpadeo (WiFi de la impresora, reinicio de deploy).
+groups:
+  - name: moscowle
+    rules:
+      - alert: ServicioCriticoCaido
+        expr: probe_success{service=~"tunel|backend|mysql"} == 0
+        for: 3m
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.service }} no responde"
+          description: "La sonda a {{ $labels.instance }} falla hace 3 min. Revisa el estado del servidor o Cockpit."
+
+      - alert: ServicioCaido
+        expr: probe_success{service!~"tunel|backend|mysql"} == 0
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.service }} no responde"
+          description: "La sonda a {{ $labels.instance }} falla hace 15 min."
+
+      - alert: MaquinaSinMetricas
+        expr: up{job=~"node|mysqld|moscowle"} == 0
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "Sin métricas de {{ $labels.instance }} ({{ $labels.job }})"
+          description: "Prometheus no puede leer {{ $labels.job }} en {{ $labels.instance }} hace 5 min: la máquina o el exportador está caído."
+
+      - alert: MemoriaAlta
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 90
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "Memoria al {{ $value | humanize }} % en {{ $labels.instance }}"
+          description: "Más del 90 % de RAM usada durante 10 min."
+
+      - alert: DiscoCasiLleno
+        expr: (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}) * 100 > 85
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "Disco al {{ $value | humanize }} % en {{ $labels.instance }} ({{ $labels.mountpoint }})"
+          description: "Libera espacio antes de que falle la base de datos o el drive."
+
+      - alert: MiMoEnPausa
+        expr: moscowle_mimo_paused{instance_name="chat"} == 1
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "MiMo en pausa"
+          description: "El asistente usa el modelo de respaldo (cuota gratis agotada o fallo). Vuelve solo."
+
+      - alert: ErroresDelBackend
+        expr: sum(increase(moscowle_http_requests_total{code=~"5.."}[10m])) > 20
+        for: 0m
+        labels: {severity: warning}
+        annotations:
+          summary: "Muchos errores 5xx en el backend"
+          description: "{{ $value | humanize }} errores 5xx en 10 min. Revisa Registros."
+
+      - alert: LimiteDePeticiones
+        expr: sum(increase(moscowle_http_requests_total{code="429"}[10m])) > 30
+        for: 0m
+        labels: {severity: warning}
+        annotations:
+          summary: "Usuarios bloqueados por límite de peticiones"
+          description: "{{ $value | humanize }} respuestas 429 en 10 min."
+
+      - alert: MySQLCaido
+        expr: mysql_up == 0
+        for: 3m
+        labels: {severity: critical}
+        annotations:
+          summary: "MySQL no responde"
+          description: "mysqld_exporter no puede conectarse a MySQL en VM-DB."

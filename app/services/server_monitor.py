@@ -334,6 +334,8 @@ def snapshot_now():
         'services': services(),
         'checks': app_checks(),
         'cockpit_url': current_app.config.get('COCKPIT_URL') or None,
+        'grafana_url': os.environ.get('GRAFANA_URL') or None,
+        'history_max_hours': 24 * 30 if prometheus_available() else 24 * RETENTION_DAYS,
     }
 
 
@@ -359,8 +361,14 @@ def record():
 
 
 def history(hours=24):
+    """Historial para las gráficas: de Prometheus si está (hasta 30 días); si no, de la tabla local (7 días)."""
     from app.models.server_snapshot import ServerSnapshot
 
+    if prometheus_available():
+        try:
+            return prometheus_history(max(1, min(int(hours), 24 * 30)))
+        except Exception as exc:  # noqa: BLE001 - si Prometheus no responde, se usa la tabla local
+            logger.warning('Prometheus no respondió, uso el historial local: %s', exc)
     hours = max(1, min(int(hours), 24 * RETENTION_DAYS))
     rows = (
         ServerSnapshot.query.filter(ServerSnapshot.taken_at >= _now() - timedelta(hours=hours))
@@ -369,3 +377,103 @@ def history(hours=24):
         .all()
     )
     return [r.to_dict() for r in rows]
+
+
+# ── Prometheus (PRP 010) ─────────────────────────────────────────────────────
+SEVERITY_ES = {'critical': 'Crítico', 'warning': 'Atención', 'info': 'Aviso'}
+
+
+def notify_alerts(alerts):
+    """Avisos de Alertmanager → notificación a cada admin (y Telegram según sus preferencias)."""
+    from app.models import User
+    from app.services.notification_service import NotificationService
+
+    admins = [u.id for u in User.query.filter(User.role == 'admin', User.is_active.isnot(False))]
+    svc = NotificationService()
+    sent = 0
+    for alert in alerts[:20]:
+        labels = alert.get('labels') or {}
+        ann = alert.get('annotations') or {}
+        resolved = alert.get('status') == 'resolved'
+        severity = labels.get('severity', 'warning')
+        title = ('✅ Resuelto: ' if resolved else '🚨 ') + (ann.get('summary') or labels.get('alertname') or 'Alerta')
+        body = ann.get('description') or ''
+        for uid in admins:
+            svc.notify_user(
+                uid,
+                body or title,
+                title=title,
+                notif_type='success' if resolved else ('error' if severity == 'critical' else 'warning'),
+                link='/admin/settings?section=backend',
+                category='system',
+                priority='high' if resolved else ('urgent' if severity == 'critical' else 'high'),
+                metadata_json={'alertname': labels.get('alertname'), 'severity': severity, 'resolved': resolved},
+            )
+            sent += 1
+    return sent
+
+
+def _prom_url():
+    return (os.environ.get('PROMETHEUS_URL') or '').rstrip('/')
+
+
+def prometheus_available():
+    return bool(_prom_url())
+
+
+def _prom_range(query, start, end, step):
+    import json
+    from urllib.parse import urlencode
+
+    url = f'{_prom_url()}/api/v1/query_range?' + urlencode(
+        {'query': query, 'start': f'{start:.0f}', 'end': f'{end:.0f}', 'step': f'{step}s'}
+    )
+    req = urllib.request.Request(url, headers={'User-Agent': 'moscowle-monitor'})  # noqa: S310 - URL interna fija
+    with urllib.request.urlopen(req, timeout=8) as resp:  # noqa: S310
+        data = json.loads(resp.read())
+    return data.get('data', {}).get('result', [])
+
+
+PROM_QUERIES = {
+    'cpu_pct': '100 - avg(rate(node_cpu_seconds_total{mode="idle",instance="vm-app"}[5m])) * 100',
+    'mem_pct': '(1 - node_memory_MemAvailable_bytes{instance="vm-app"} / node_memory_MemTotal_bytes{instance="vm-app"}) * 100',
+    'disk_pct': '(1 - node_filesystem_avail_bytes{instance="vm-app",mountpoint="/"} '
+    '/ node_filesystem_size_bytes{instance="vm-app",mountpoint="/"}) * 100',
+    'load1': 'node_load1{instance="vm-app"}',
+    'app_rss_mb': 'moscowle_process_resident_memory_bytes / 1048576',
+}
+
+
+def prometheus_history(hours):
+    """Mismo formato que `ServerSnapshot.to_dict()`, pero desde Prometheus (hasta 30 días)."""
+    end = time.time()
+    start = end - hours * 3600
+    step = max(60, int(hours * 3600 / 600))  # ~600 puntos por serie
+    points: dict = {}
+    for key, query in PROM_QUERIES.items():
+        for series in _prom_range(query, start, end, step)[:1]:
+            for ts, val in series.get('values', []):
+                row = points.setdefault(int(float(ts)), {'services_down': []})
+                try:
+                    row[key] = round(float(val), 1)
+                except ValueError:
+                    row[key] = None
+    for series in _prom_range('probe_success == 0', start, end, step):
+        name = (series.get('metric') or {}).get('service') or (series.get('metric') or {}).get('instance', '?')
+        for ts, _ in series.get('values', []):
+            points.setdefault(int(float(ts)), {'services_down': []})['services_down'].append(name)
+    out = []
+    for ts in sorted(points):
+        row = points[ts]
+        out.append(
+            {
+                'taken_at': datetime.fromtimestamp(ts, UTC).replace(tzinfo=None).isoformat() + 'Z',
+                'cpu_pct': row.get('cpu_pct'),
+                'load1': row.get('load1'),
+                'mem_pct': row.get('mem_pct'),
+                'disk_pct': row.get('disk_pct'),
+                'app_rss_mb': row.get('app_rss_mb'),
+                'services_down': sorted(set(row['services_down'])),
+            }
+        )
+    return out
