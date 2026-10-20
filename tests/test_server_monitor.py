@@ -131,7 +131,7 @@ def test_alert_webhook_notifies_every_admin(client, app, monkeypatch):
 
 
 def test_history_comes_from_prometheus_when_available(app, monkeypatch):
-    monkeypatch.setenv('PROMETHEUS_URL', 'http://192.168.122.1:9090')
+    monkeypatch.setenv('PROMETHEUS_URL', 'http://192.168.122.1:9095')
 
     def fake_range(query, start, end, step):
         if 'probe_success' in query:

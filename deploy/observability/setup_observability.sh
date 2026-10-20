@@ -44,8 +44,9 @@ for f in moscowle_metrics.token alert_webhook.token; do
 done
 
 # 4) Direcciones internas y retención (todo por /etc/default de cada paquete).
+#    Prometheus usa 9095: el 9090 es de Cockpit en este host (escucha en todas las interfaces).
 cat > /etc/default/prometheus <<'EOF'
-ARGS="--web.listen-address=192.168.122.1:9090 --storage.tsdb.retention.time=30d --storage.tsdb.retention.size=2GB"
+ARGS="--web.listen-address=192.168.122.1:9095 --storage.tsdb.retention.time=30d --storage.tsdb.retention.size=2GB"
 EOF
 cat > /etc/default/prometheus-alertmanager <<'EOF'
 ARGS="--web.listen-address=127.0.0.1:9093 --cluster.listen-address="
@@ -103,7 +104,7 @@ chown -R grafana:grafana /var/lib/grafana/dashboards
 if command -v ufw >/dev/null && ufw status | grep -q active; then
   LAN_NET=$(echo "$LAN_IP" | awk -F. '{print $1"."$2"."$3".0/24"}')
   ufw allow from "$LAN_NET" to any port 3000 proto tcp comment 'Grafana LAN' >/dev/null
-  ufw allow in on virbr0 from "$VM_APP" to any port 9090 proto tcp comment 'Prometheus para Moscowle' >/dev/null
+  ufw allow in on virbr0 from "$VM_APP" to any port 9095 proto tcp comment 'Prometheus para Moscowle' >/dev/null
 fi
 
 # 8) Arrancar.
@@ -120,11 +121,11 @@ ALERTS=$(cat /etc/prometheus/alert_webhook.token)
 if [ -f "$VM_KEY" ]; then
   sudo -u diego ssh -i "$VM_KEY" -o StrictHostKeyChecking=accept-new "diego@$VM_APP" \
     "cd /home/diego/moscowle_ia && sed -i '/^METRICS_TOKEN=/d; /^ALERT_WEBHOOK_TOKEN=/d; /^PROMETHEUS_URL=/d; /^GRAFANA_URL=/d' .env && \
-     printf 'METRICS_TOKEN=%s\nALERT_WEBHOOK_TOKEN=%s\nPROMETHEUS_URL=http://192.168.122.1:9090\nGRAFANA_URL=http://%s:3000\n' '$METRICS' '$ALERTS' '$LAN_IP' >> .env && \
+     printf 'METRICS_TOKEN=%s\nALERT_WEBHOOK_TOKEN=%s\nPROMETHEUS_URL=http://192.168.122.1:9095\nGRAFANA_URL=http://%s:3000\n' '$METRICS' '$ALERTS' '$LAN_IP' >> .env && \
      chmod 600 .env && sudo systemctl restart moscowle && echo 'VM-APP: .env actualizado y backend reiniciado'"
 else
   echo "No encontré $VM_KEY: agrega a mano en VM-APP (.env) METRICS_TOKEN, ALERT_WEBHOOK_TOKEN (en /etc/prometheus/*.token),"
-  echo "PROMETHEUS_URL=http://192.168.122.1:9090 y GRAFANA_URL=http://$LAN_IP:3000"
+  echo "PROMETHEUS_URL=http://192.168.122.1:9095 y GRAFANA_URL=http://$LAN_IP:3000"
 fi
 
 # 10) Comprobaciones.
@@ -134,7 +135,7 @@ for s in prometheus prometheus-alertmanager prometheus-node-exporter prometheus-
   printf '  %-32s %s\n' "$s" "$(systemctl is-active "$s")"
 done
 echo "== Objetivos de Prometheus (up=1 bien):"
-curl -s "http://192.168.122.1:9090/api/v1/query?query=up" | python3 -c '
+curl -s "http://192.168.122.1:9095/api/v1/query?query=up" | python3 -c '
 import json,sys
 for r in json.load(sys.stdin)["data"]["result"]:
     m=r["metric"]; print("   ", m.get("job"), m.get("instance"), "→", r["value"][1])' || true

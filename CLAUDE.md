@@ -12,8 +12,8 @@ Moscowle IA is a comprehensive management system for a therapy center, integrate
 - **Deployment**: Ubuntu Server via Cloudflare Tunnel.
 
 ## Infrastructure & Deployment
-- **Topology**: host `192.168.1.249` + **VM-APP** `192.168.122.10` (gunicorn + bridge WhatsApp) + **VM-DB** `192.168.122.20` (MySQL). El host conserva `cloudflared`, `nginx` (frontend LAN), `socat` (forwarder) y Ollama. Ver `PRPs/006--division-servicios-qemu.md`.
-- **Primary Target**: Ubuntu Server (`192.168.1.249`) — la IP por DHCP cambió de `.41`.
+- **Topology**: host `192.168.1.6` + **VM-APP** `192.168.122.10` (gunicorn + bridge WhatsApp) + **VM-DB** `192.168.122.20` (MySQL). El host conserva `cloudflared`, `nginx` (frontend LAN), `socat` (forwarder) y Ollama. Ver `PRPs/006--division-servicios-qemu.md`.
+- **Primary Target**: Ubuntu Server (`192.168.1.6`) — IP por DHCP: cambió de `.41` a `.249` y el 2026-10-20 a `.6`. Reservarla en el router.
 - **Deployment Flow**: `git push origin main` $\rightarrow$ `deploy-ubuntu.yml` $\rightarrow$ webhook $\rightarrow$ `scripts/server_deploy.sh` (se ejecuta dentro de VM-APP) $\rightarrow$ `systemctl restart moscowle`.
 - **Tunnel**: `api-centrojuanpabloii.online` $\rightarrow$ cloudflared (host) $\rightarrow$ `socat 127.0.0.1:5000` $\rightarrow$ VM-APP `:5000`.
 - **Frontends**: LAN `/app/` (nginx del host) y `https://moscowle.centrojuanpabloii.com` (cPanel) apuntan al mismo backend a través del túnel.
