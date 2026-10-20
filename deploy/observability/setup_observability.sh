@@ -70,7 +70,7 @@ printf '[Unit]\nAfter=libvirtd.service network-online.target\nWants=network-onli
 limit prometheus-alertmanager 64M 48M
 limit prometheus-node-exporter 64M 48M
 limit prometheus-blackbox-exporter 64M 48M
-limit grafana-server 300M 250M
+limit grafana-server 512M 400M  # su primer arranque migra la base y pasa de 300 MB
 
 # 6) Grafana: solo en la LAN, sin registro ni anónimos; datasource y tablero desde archivos.
 LAN_IP=$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
@@ -119,7 +119,8 @@ sleep 5
 METRICS=$(cat /etc/prometheus/moscowle_metrics.token)
 ALERTS=$(cat /etc/prometheus/alert_webhook.token)
 if [ -f "$VM_KEY" ]; then
-  sudo -u diego ssh -i "$VM_KEY" -o StrictHostKeyChecking=accept-new "diego@$VM_APP" \
+  # -n: sin esto, ssh se «come» el resto de este script (llega por la misma entrada con curl | bash).
+  sudo -u diego ssh -n -i "$VM_KEY" -o StrictHostKeyChecking=accept-new "diego@$VM_APP" \
     "cd /home/diego/moscowle_ia && sed -i '/^METRICS_TOKEN=/d; /^ALERT_WEBHOOK_TOKEN=/d; /^PROMETHEUS_URL=/d; /^GRAFANA_URL=/d' .env && \
      printf 'METRICS_TOKEN=%s\nALERT_WEBHOOK_TOKEN=%s\nPROMETHEUS_URL=http://192.168.122.1:9095\nGRAFANA_URL=http://%s:3000\n' '$METRICS' '$ALERTS' '$LAN_IP' >> .env && \
      chmod 600 .env && sudo systemctl restart moscowle && echo 'VM-APP: .env actualizado y backend reiniciado'"
@@ -130,7 +131,7 @@ fi
 
 # 10) Comprobaciones.
 sleep 8
-echo "== Servicios:"
+echo "== Servicios (si alguno no está «active»: journalctl -u NOMBRE -n 30):"
 for s in prometheus prometheus-alertmanager prometheus-node-exporter prometheus-blackbox-exporter grafana-server; do
   printf '  %-32s %s\n' "$s" "$(systemctl is-active "$s")"
 done
@@ -139,6 +140,7 @@ curl -s "http://192.168.122.1:9095/api/v1/query?query=up" | python3 -c '
 import json,sys
 for r in json.load(sys.stdin)["data"]["result"]:
     m=r["metric"]; print("   ", m.get("job"), m.get("instance"), "→", r["value"][1])' || true
+printf '== Grafana %s:3000 → HTTP %s\n' "$LAN_IP" "$(curl -s -o /dev/null -w '%{http_code}' "http://$LAN_IP:3000/api/health" || true)"
 echo "== Memoria libre después: $(free -m | awk '/Mem:/{print $7}') MB"
 echo
 echo "Listo. Grafana: http://$LAN_IP:3000 (usuario admin; contraseña: sudo cat /etc/grafana/admin.pass)"
