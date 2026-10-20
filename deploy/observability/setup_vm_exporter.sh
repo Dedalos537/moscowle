@@ -30,7 +30,10 @@ if command -v ufw >/dev/null && ufw status | grep -q active; then
 fi
 
 # VM-DB: exportador de MySQL con un usuario de solo lectura (contraseña generada, nunca se imprime).
-if systemctl list-unit-files | grep -qE '^(mysql|mariadb)\.service'; then
+# Sin tubería con grep -q: con «set -o pipefail», grep corta la lectura, systemctl recibe SIGPIPE y la condición
+# daba falso aunque MySQL estuviera instalado (por eso no se instalaba el exportador en VM-DB).
+UNITS=$(systemctl list-unit-files --type=service --no-legend 2>/dev/null || true)
+if [[ "$UNITS" =~ (^|$'\n')(mysql|mariadb)\.service ]] || command -v mysqld >/dev/null 2>&1; then
   apt-get install -y -qq prometheus-mysqld-exporter >/dev/null
   CNF=/etc/prometheus/mysqld-exporter.cnf
   install -d -m 0755 /etc/prometheus
