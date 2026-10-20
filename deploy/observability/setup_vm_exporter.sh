@@ -45,8 +45,7 @@ ALTER USER 'exporter'@'localhost' IDENTIFIED BY '$PASS';
 GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'exporter'@'localhost';
 FLUSH PRIVILEGES;
 SQL
-    umask 077
-    printf '[client]\nuser=exporter\npassword=%s\nhost=localhost\n' "$PASS" > "$CNF"
+    (umask 077; printf '[client]\nuser=exporter\npassword=%s\nhost=localhost\n' "$PASS" > "$CNF")
   fi
   chown root:prometheus "$CNF"; chmod 640 "$CNF"
   cat > /etc/default/prometheus-mysqld-exporter <<EOF

@@ -4,6 +4,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/Dedalos537/moscowle/main/deploy/observability/setup_observability.sh | sudo bash
 # Después, en VM-APP y en VM-DB: setup_vm_exporter.sh (ver el final de este script).
 set -euo pipefail
+umask 022  # archivos de configuración legibles por los servicios; las claves se crean aparte con umask 077
 RAW=https://raw.githubusercontent.com/Dedalos537/moscowle/main/deploy/observability
 VM_APP=192.168.122.10
 VM_KEY=/home/diego/.ssh/id_ed25519_vm
@@ -39,7 +40,7 @@ fetch blackbox.yml /etc/prometheus/blackbox.yml
 # 3) Claves compartidas con Moscowle (se generan una vez; nunca se imprimen).
 gen() { head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 40; }
 for f in moscowle_metrics.token alert_webhook.token; do
-  [ -s "/etc/prometheus/$f" ] || { umask 077; gen > "/etc/prometheus/$f"; }
+  [ -s "/etc/prometheus/$f" ] || (umask 077; gen > "/etc/prometheus/$f")
   chown root:prometheus "/etc/prometheus/$f"; chmod 640 "/etc/prometheus/$f"
 done
 
@@ -74,7 +75,7 @@ limit grafana-server 512M 400M  # su primer arranque migra la base y pasa de 300
 
 # 6) Grafana: solo en la LAN, sin registro ni anónimos; datasource y tablero desde archivos.
 LAN_IP=$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
-[ -s /etc/grafana/admin.pass ] || { umask 077; gen > /etc/grafana/admin.pass; }
+[ -s /etc/grafana/admin.pass ] || (umask 077; gen > /etc/grafana/admin.pass)
 chown root:grafana /etc/grafana/admin.pass; chmod 640 /etc/grafana/admin.pass
 install -d "/etc/systemd/system/grafana-server.service.d"
 cat > /etc/systemd/system/grafana-server.service.d/moscowle.conf <<EOF
@@ -99,6 +100,9 @@ if curl -fsSL -m 60 https://grafana.com/api/dashboards/1860/revisions/latest/dow
   rm -f /tmp/node-full.json
 fi
 chown -R grafana:grafana /var/lib/grafana/dashboards
+# Grafana corre como su usuario: debe poder leer su aprovisionamiento (antes quedaba 600 root y no arrancaba).
+chown root:grafana /etc/grafana/provisioning/datasources/moscowle.yml /etc/grafana/provisioning/dashboards/moscowle.yml
+chmod 644 /etc/grafana/provisioning/datasources/moscowle.yml /etc/grafana/provisioning/dashboards/moscowle.yml
 
 # 7) Firewall: Grafana solo desde la LAN; Prometheus solo desde VM-APP (para las gráficas del panel).
 if command -v ufw >/dev/null && ufw status | grep -q active; then
