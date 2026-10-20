@@ -266,6 +266,47 @@ KINDS = {
 - `notify_user(..., kind=None)` infiere el `kind` de `event_type` o `category` mientras se migran las llamadas. El evento de socket y la API agregan `kind`, `presentation`, `payload` y `action`.
 - **Columnas nuevas:** `notification.kind` y `notification_group.kind`. Más adelante, en `user_notification_preference`, `presentation_overrides` (JSON por categoría).
 
+
+## Auditoría de correos: qué llega y a quién (2026-10-21)
+
+| # | Correo | Lo dispara | Destinatario | Rol | Formato hoy | Estado |
+|---|---|---|---|---|---|---|
+| 1 | Bienvenida (con contraseña) | crear paciente (admin, terapeuta, asistente IA) | correo del paciente | paciente | texto | ⚠️ manda la **contraseña en claro**; si el paciente no tiene correo va a `noemail_…@local` |
+| 2 | Contraseña cambiada (con la nueva) | cambio por el usuario, por un admin o por recuperación | el usuario | todos | texto | ⚠️ contraseña en claro |
+| 3 | Aviso a admin de restablecimiento | un usuario pide recuperar su contraseña | admins | admin | texto | ok |
+| 4 | Contraseña actualizada por admin | `admin_service.reset_password` | el usuario | todos | — | ❌ **nunca sale**: llama a `EmailService.send_email`, que no existe |
+| 5 | Sesión programada o cancelada | crear, mover o cancelar una sesión | paciente **y** terapeuta | paciente, terapeuta | texto | ⚠️ 1 correo por sesión: crear 6 sesiones = 12 correos; al paciente sin correo va a `noemail_…@local`; ignora al apoderado |
+| 6 | Recordatorio de sesión | job `session_reminder_service` | apoderado o paciente (`resolve_email`) | paciente | texto | ok (usa el apoderado) |
+| 7 | Confirmación de pago | `payment_service.register_payment` | correo del paciente | paciente | texto | ⚠️ ignora al apoderado; va a `noemail_…@local` si no hay correo |
+| 8 | Recordatorio de pago (automático) | `payment_service` | correo del paciente | paciente | texto | ⚠️ ignora al apoderado |
+| 9 | Recordatorio de deuda (automático) | job `debt_reminder_service` | apoderado o paciente | paciente | texto | ok |
+| 10 | Recordatorio de deuda (manual, botón) | `POST /api/payments/…/remind` | correo del paciente | paciente | — | ❌ **nunca sale** (`EmailService.send_email` no existe), aunque la pantalla dice «enviado» |
+| 11 | Renovación de contrato | `automation/renewal_service` | tutor | paciente | — | ❌ **nunca sale** (mismo error) |
+| 12 | Nuevo mensaje del chat | enviar mensaje (3 rutas) | receptor | todos | texto | ok, con espera de 30 min |
+| 13 | Reporte de pagos | job diario `tasks.py` | admins | admin | HTML a mano | ok |
+| 14 | Resumen diario (BSC) | job diario | admins | admin | HTML a mano (~200 líneas) | ok, pero frágil en Outlook y modo oscuro |
+| 15 | Reportes semanal y mensual | `automated_reports_service` | admins (`REPORT_ROLES`) | admin | HTML | ok |
+| 16 | Incidencias (nueva, escalada, SLA, resuelta, asignada) | `incident_notification_service` | admins + responsable | admin, terapeuta | texto | ok; varios por incidencia |
+| 17 | Alerta de crisis | `crisis_monitor` | correo configurado | admin | texto plano sin cabeceras (`mail.send` directo) | ⚠️ sin remitente con nombre ni las cabeceras de `_make_message` |
+| 18 | Respuesta del bot por correo | `bot_conversation_service` | el contacto (lead) | externo | texto | ok |
+| 19 | Prueba de canal | `automation_routes` | paciente elegido | — | texto | ok |
+
+**Por rol:**
+
+- **Paciente / apoderado** (1, 2, 5, 6, 7, 8, 9, 10, 11, 12): es quien más recibe y donde peor está. Hay texto plano, contraseñas en claro, y los correos 5, 7 y 8 no usan al apoderado y van a direcciones `@local` que no existen. Además, 10 y 11 no salen.
+- **Terapeuta** (2, 5, 12, 16): un correo por cada sesión creada (ruido).
+- **Admin** (3, 13, 14, 15, 16, 17): resúmenes en HTML hecho a mano, cada uno con su propio diseño.
+
+**Arreglos que van primero, antes del rediseño:**
+
+1. **Los que nunca salen (4, 10 y 11):** que usen `mailer.send` (o `send_notification_email` mientras tanto). Además, la pantalla no debe decir «enviado» si el correo falló.
+2. **Una sola regla para saber a quién se le escribe:** apoderado si tiene correo, si no el paciente. Nunca a `noemail_…@local` ni `temp_…`: si no hay correo real, el aviso queda solo en la app y en WhatsApp.
+3. **Sin contraseñas en claro:**
+   - en la bienvenida y en el cambio de contraseña va un **enlace para crear la contraseña** (token de un solo uso, 24 h);
+   - el código de acceso (`login_code`) sí puede ir, porque no es secreto por sí solo.
+4. **Sesiones:** un solo correo por lote de sesiones («Se programaron 6 sesiones: …») en vez de uno por sesión. Para el terapeuta, por defecto va en el resumen diario.
+5. **Crisis:** pasa por `_make_message` (remitente, cabeceras y texto alternativo).
+
 ### Success Criteria
 
 - [ ] `npm run build` en `emails/` compila sin errores con `--validation-level=strict`, y CI falla si el `.html` versionado no coincide con lo que genera el `.mjml`.
