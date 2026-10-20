@@ -143,6 +143,8 @@ class Config:
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER')
     MAIL_SENDER_NAME = os.getenv('MAIL_SENDER_NAME', 'Centro Juan Pablo II · Notificaciones')
+    # Frontend al que apuntan los enlaces de los correos (crear contraseña, ver pago…).
+    FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://moscowle.centrojuanpabloii.com')
     # URL publica de la API: enlaces de baja de los correos (no hay request en los jobs).
     PUBLIC_API_URL = os.getenv('PUBLIC_API_URL', 'https://api-centrojuanpabloii.online')
     # Timeout para SMTP (prevent hanging)

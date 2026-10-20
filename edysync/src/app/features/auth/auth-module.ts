@@ -6,6 +6,7 @@ import { AuthRoutingModule } from './auth-routing-module';
 import { SharedModule } from '../../shared/shared-module';
 import { Login } from './pages/login/login';
 import { ResetPassword } from './pages/reset-password/reset-password';
+import { SetPassword } from './pages/set-password/set-password';
 
 
 @NgModule({
@@ -16,6 +17,7 @@ import { ResetPassword } from './pages/reset-password/reset-password';
     SharedModule,
     Login,
     ResetPassword,
+    SetPassword,
   ],
 })
 export class AuthModule { }

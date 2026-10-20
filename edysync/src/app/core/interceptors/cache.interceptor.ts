@@ -19,6 +19,8 @@ const EXCLUDED = [
   '/api/public/',
   '/api/time',
   '/api/auth/me',
+  // Enlace de crear contraseña: un solo uso, nunca de caché.
+  '/api/auth/set-password',
   // El tablero lo modifican otros usuarios: un caché de 5 min hacía que los cambios solo aparecieran al reiniciar sesión.
   '/api/kanban',
   '/api/logout',

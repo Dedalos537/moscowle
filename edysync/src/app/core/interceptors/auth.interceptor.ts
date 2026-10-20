@@ -21,7 +21,7 @@ function getCookie(name: string): string | null {
 }
 
 
-const AUTH_ENDPOINTS = ['/api/auth/refresh', '/api/login', '/api/auth/webauthn/login', '/api/auth/reset-password'];
+const AUTH_ENDPOINTS = ['/api/auth/refresh', '/api/login', '/api/auth/webauthn/login', '/api/auth/reset-password', '/api/auth/set-password'];
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
 

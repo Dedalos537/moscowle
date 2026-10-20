@@ -96,9 +96,12 @@ class MessagingService:
     @staticmethod
     def resolve_email(patient):
         """Correo del apoderado si guardian_contact trae uno; si no, el del paciente."""
+        from app.services.email_service import is_real_email
+
         guardian = (getattr(patient, 'guardian_contact', None) or '').strip()
         own = (getattr(patient, 'email', None) or '').strip()
-        return guardian if '@' in guardian else (own if '@' in own else '')
+        # Los correos generados (`noemail_…@local`) no son de nadie: no se les escribe.
+        return guardian if is_real_email(guardian) else (own if is_real_email(own) else '')
 
     @staticmethod
     def send_email(patient, subject, body):

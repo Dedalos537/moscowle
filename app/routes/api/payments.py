@@ -69,7 +69,7 @@ def send_payment_reminder():
         patient_name = info.get('name')
 
         if channel == 'email':
-            from app.services.email_service import EmailService
+            from app.services.email_service import EmailService, is_real_email
 
             subject = 'Recordatorio: pago pendiente - Centro de Terapias'
             body = f"""
@@ -90,10 +90,28 @@ Gracias,
 Centro de Terapias
 """
             try:
-                EmailService.send_email(patient_email, subject, body)
-                return api_response(
-                    success=True, data={'message': f'Recordatorio enviado a {patient_email}', 'channel': 'email'}
-                )
+                from app.models import User
+                from app.services.email_service import recipient_for
+
+                # Al apoderado si tiene correo; nunca a un correo generado. Antes llamaba a `send_email`, que no
+                # existía: el recordatorio nunca salía aunque la pantalla dijera «enviado».
+                patient = db.session.get(User, int(patient_id))
+                to = recipient_for(patient) or (patient_email if is_real_email(patient_email) else None)
+                if not to:
+                    return api_response(
+                        success=False,
+                        error={
+                            'message': 'Este paciente no tiene un correo real registrado. Usa WhatsApp o agrega su correo.'
+                        },
+                        status=400,
+                    )
+                if not EmailService.send_email(to, subject, body):
+                    return api_response(
+                        success=False,
+                        error={'message': 'No se pudo enviar el correo. Revisa la configuración de correo.'},
+                        status=502,
+                    )
+                return api_response(success=True, data={'message': f'Recordatorio enviado a {to}', 'channel': 'email'})
             except Exception as e:
                 current_app.logger.error(f'Error sending email reminder: {e}')
                 return api_response(

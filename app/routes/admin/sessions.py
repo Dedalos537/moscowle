@@ -147,13 +147,69 @@ def _valid_hhmm(value):
     return (h, m) if 0 <= h <= 23 and 0 <= m <= 59 else None
 
 
+def _email_session_summary(session_ids):
+    """Un solo correo por paciente con todas las sesiones creadas en el lote (antes el lote no avisaba por correo).
+
+    Va al apoderado o al correo real del paciente; si no tiene, no se envía (el aviso queda en la app y en el
+    recordatorio de WhatsApp). Las sesiones pasadas (cargadas como historial) no se incluyen.
+    """
+    from collections import defaultdict
+    from zoneinfo import ZoneInfo
+
+    from app.models import User
+    from app.services.email_service import EmailService, recipient_for
+
+    lima = ZoneInfo('America/Lima')
+    rows = Appointment.query.filter(Appointment.id.in_(session_ids), Appointment.status == 'scheduled').all()
+    by_patient = defaultdict(list)
+    for a in rows:
+        by_patient[a.patient_id].append(a)
+    sent = 0
+    for pid, appts in by_patient.items():
+        patient = db.session.get(User, pid)
+        to = recipient_for(patient)
+        if not to:
+            continue
+        appts.sort(key=lambda a: a.start_time)
+        lines = []
+        for a in appts:
+            start = a.start_time.replace(tzinfo=ZoneInfo('UTC')) if a.start_time.tzinfo is None else a.start_time
+            local = start.astimezone(lima)
+            therapist = db.session.get(User, a.therapist_id)
+            lines.append(
+                f'• {local.strftime("%d/%m/%Y")} a las {local.strftime("%H:%M")}'
+                + (f' con {therapist.username}' if therapist and therapist.username else '')
+            )
+        n = len(appts)
+        subject = (
+            f'Se programaron {n} sesión(es) para {patient.username}'
+            if n > 1
+            else f'Nueva sesión para {patient.username}'
+        )
+        body = (
+            f'Hola,\n\nSe programaron estas sesiones para {patient.username}:\n\n'
+            + '\n'.join(lines)
+            + '\n\nUn día antes te llegará un recordatorio. Si necesitas cambiar una fecha, escríbenos.\n\n'
+            'Saludos,\nCentro de Terapias Juan Pablo II'
+        )
+        if EmailService.send_notification_email(subject, [to], body=body, user_id=pid):
+            sent += 1
+    return sent
+
+
 def _notify_new_sessions(session_ids):
     """Una sesión creada para hoy o mañana avisa al apoderado de inmediato.
 
     El recordatorio programado corre una vez al día (8:30); lo creado después quedaba sin aviso. El servicio respeta
     el interruptor de avisos, el modo piloto y marca lo enviado, así que no duplica.
     """
-    if not session_ids or current_app.config.get('TESTING'):
+    if not session_ids:
+        return
+    try:
+        _email_session_summary(session_ids)
+    except Exception:
+        current_app.logger.exception('No se pudo enviar el resumen de sesiones por correo')
+    if current_app.config.get('TESTING'):
         return
     try:
         from zoneinfo import ZoneInfo

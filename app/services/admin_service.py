@@ -344,15 +344,10 @@ class AdminService:
         user.admin_password_changed_count += 1
         db.session.commit()
 
-        try:
-            msg_type = 'manual' if new_password else 'automatico'
-            self.email_service.send_email(
-                user.email,
-                'Tu contraseña ha sido actualizada',
-                f'Hola {user.username},\n\nTu contraseña ha sido actualizada ({msg_type}).\nNueva contraseña: {plain_password}\n\nPor favor, contacta con soporte si no solicitaste esto.',
-            )
-        except Exception:
-            pass
+        # Sin la contraseña en el correo: aviso + enlace para crearla (la persona no la conoce si la puso un admin).
+        # Antes llamaba a `send_email`, que no existía: este correo nunca salía.
+        with contextlib.suppress(Exception):
+            self.email_service.send_password_change_email(user.email, None, user.username)
 
         return True, plain_password
 
@@ -663,9 +658,13 @@ class AdminService:
                     u.id, f'Mensaje del administrador: {subject or "Sin asunto"}', link=role_path(u, 'messages')
                 )
 
-                self.email_service.send_new_message_email(
-                    u.email, u.username, 'Administrador', body[:100] + '...' if body and len(body) > 100 else body
-                )
+                from app.services.email_service import recipient_for
+
+                to = recipient_for(u)
+                if to:
+                    self.email_service.send_new_message_email(
+                        to, u.username, 'Administrador', body[:100] + '...' if body and len(body) > 100 else body
+                    )
             except Exception:
                 pass
 
