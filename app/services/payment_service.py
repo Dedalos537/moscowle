@@ -148,9 +148,11 @@ class PaymentService:
             user.is_active = True
             db.session.commit()
         with contextlib.suppress(Exception):
-            self.email_service.send_payment_confirmation(
-                user.email, user.username, payment.amount, payment.date, method
-            )
+            from app.services.email_service import recipient_for
+
+            to = recipient_for(user)  # apoderado o correo real
+            if to:
+                self.email_service.send_payment_confirmation(to, user.username, payment.amount, payment.date, method)
         return True, payment
 
     def update_payment_settings(self, patient_id, amount, due_date_str, frequency):
@@ -205,9 +207,13 @@ class PaymentService:
             if delta in {3, 0}:
                 is_urgent = delta == 0
 
-                self.email_service.send_payment_reminder(
-                    user.email, user.username, delta, user.payment_due_date, user.payment_amount or 0
-                )
+                from app.services.email_service import recipient_for
+
+                to = recipient_for(user)  # apoderado o correo real; sin correo, solo el aviso en la app
+                if to:
+                    self.email_service.send_payment_reminder(
+                        to, user.username, delta, user.payment_due_date, user.payment_amount or 0
+                    )
 
                 msg = f' Tu pago de S/ {user.payment_amount} vence {"HOY" if is_urgent else "en 3 días"}. Por favor regulariza para evitar bloqueos.'
                 self.notification_service.create_notification(user.id, msg, link='/patient/dashboard')

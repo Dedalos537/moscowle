@@ -2,10 +2,12 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { Login } from './pages/login/login';
 import { ResetPassword } from './pages/reset-password/reset-password';
+import { SetPassword } from './pages/set-password/set-password';
 
 const routes: Routes = [
   { path: 'login', component: Login },
   { path: 'reset-password', component: ResetPassword },
+  { path: 'set-password', component: SetPassword },
   { path: '', redirectTo: 'login', pathMatch: 'full' },
 ];
 

@@ -198,9 +198,11 @@ class AppointmentService:
             )
 
             therapist = User.query.get(therapist_id)
-            self.email_service.send_session_notification(
-                patient.email, patient.username, 'programada', msg_details, 'patient'
-            )
+            from app.services.email_service import recipient_for
+
+            to = recipient_for(patient)  # apoderado o correo real; si no hay, solo el aviso en la app
+            if to:
+                self.email_service.send_session_notification(to, patient.username, 'programada', msg_details, 'patient')
             self.email_service.send_session_notification(
                 therapist.email,
                 therapist.username,
@@ -286,10 +288,11 @@ class AppointmentService:
                         therapist = User.query.get(therapist_id)
                         patient = User.query.get(patient_id)
                         details = f'Título: {title}\nLa sesión ha sido eliminada del calendario.'
-                        if patient:
-                            self.email_service.send_session_notification(
-                                patient.email, patient.username, 'cancelada', details
-                            )
+                        from app.services.email_service import recipient_for
+
+                        to = recipient_for(patient)
+                        if to:
+                            self.email_service.send_session_notification(to, patient.username, 'cancelada', details)
                         if therapist:
                             self.email_service.send_session_notification(
                                 therapist.email, therapist.username, 'cancelada', details

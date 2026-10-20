@@ -367,12 +367,16 @@ def api_patient_send_message():
 
     try:
         email_service = EmailService()
-        email_service.send_new_message_email(
-            receiver.email,
-            receiver.username,
-            current_user.username,
-            (body or 'Has recibido un archivo adjunto')[:100] + ('...' if body and len(body) > 100 else ''),
-        )
+        from app.services.email_service import recipient_for
+
+        to = recipient_for(receiver)  # apoderado o correo real; sin correo, solo el aviso en la app
+        if to:
+            email_service.send_new_message_email(
+                to,
+                receiver.username,
+                current_user.username,
+                (body or 'Has recibido un archivo adjunto')[:100] + ('...' if body and len(body) > 100 else ''),
+            )
     except Exception:  # noqa: S110 - fallo esperado y sin consecuencia, se ignora a proposito
         pass
 

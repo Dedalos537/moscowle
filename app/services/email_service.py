@@ -11,6 +11,45 @@ from app.extensions import mail
 UNSUBSCRIBE_PATH = '/api/public/email/unsubscribe'
 NEW_MESSAGE_COOLDOWN_MINUTES = 30
 
+# Correos que el sistema genera cuando no se dio uno (pacientes sin correo): nunca se les escribe.
+_PLACEHOLDER_PREFIXES = ('noemail_', 'temp_')
+_PLACEHOLDER_DOMAINS = ('local', 'localhost', 'invalid')
+
+
+def is_real_email(address):
+    """True si es un correo dado por la persona (no el generado `noemail_…@local` / `temp_…`)."""
+    addr = (address or '').strip().lower()
+    if '@' not in addr or addr.startswith(_PLACEHOLDER_PREFIXES):
+        return False
+    domain = addr.rsplit('@', 1)[1]
+    return bool(domain) and domain not in _PLACEHOLDER_DOMAINS and not domain.endswith('.local')
+
+
+def recipient_for(user):
+    """A quién se le escribe: para un paciente, el correo del apoderado si lo tiene; si no, el suyo si es real.
+
+    Si no hay ningún correo real, None: el aviso queda solo en la app (y WhatsApp donde aplique). En cuanto se
+    registre un correo real, los envíos vuelven solos.
+    """
+    if not user:
+        return None
+    if getattr(user, 'role', None) == 'jugador':
+        guardian = (getattr(user, 'guardian_contact', None) or '').strip()
+        if is_real_email(guardian):
+            return guardian
+    own = (getattr(user, 'email', None) or '').strip()
+    return own if is_real_email(own) else None
+
+
+def _send(msg):
+    """Último filtro antes de Gmail: quita direcciones generadas; si no queda ninguna, no envía."""
+    msg.recipients = [r for r in (msg.recipients or []) if is_real_email(r if isinstance(r, str) else r[-1])]
+    if not msg.recipients:
+        current_app.logger.info(f'Correo «{msg.subject}» no enviado: sin dirección real (aviso solo en la app)')
+        return False
+    mail.send(msg)
+    return True
+
 
 def _html_to_text(markup):
     """Alternativa de texto plano para un correo HTML (clientes sin HTML y filtros antispam)."""
@@ -61,53 +100,92 @@ class EmailService:
         return password
 
     @staticmethod
-    def send_welcome_email(recipient_email: str, plain_password: str, username: str):
-        """Bienvenida con credenciales"""
+    def send_welcome_email(recipient_email: str, plain_password: str = None, username: str = None):
+        """Bienvenida SIN contraseña en el correo: código de acceso + enlace para crearla (un solo uso, 72 h).
+
+        `plain_password` se mantiene por compatibilidad con quienes llaman, pero ya no se escribe en el correo.
+        """
         if not current_app.config.get('MAIL_USERNAME') or not current_app.config.get('MAIL_PASSWORD'):
             current_app.logger.warning('Email not configured in MAIL_USERNAME/MAIL_PASSWORD. Skipping welcome email.')
             return False
         try:
-            subject = 'Bienvenido a Moscowle'
-            body = (
-                f'Hola {username or recipient_email},\n\n'
-                f'Tu cuenta ha sido creada exitosamente en Moscowle.\n\n'
-                f'Credenciales de acceso:\n'
-                f'Correo: {recipient_email}\n'
-                f'Contraseña temporal: {plain_password}\n\n'
-                f'Inicia sesión y cambia tu contraseña temporal por una más segura desde tu perfil.\n\n'
-                'Saludos,\nEquipo Moscowle'
+            from app.models import User
+            from app.utils.email_tokens import set_password_link
+
+            user = User.query.filter(User.email == recipient_email).first()
+            to = recipient_for(user) if user else (recipient_email if is_real_email(recipient_email) else None)
+            if not to:
+                return False
+            code_line = f'Tu código de acceso: {user.login_code}\n' if user and user.login_code else ''
+            link_line = (
+                f'Crea tu contraseña aquí (el enlace sirve una vez y vence en 72 horas):\n{set_password_link(user)}\n\n'
+                if user
+                else ''
             )
-            sender = current_app.config.get('MAIL_DEFAULT_SENDER') or current_app.config.get('MAIL_USERNAME')
-            msg = MailMessage(subject=subject, recipients=[recipient_email], body=body, sender=sender)
-            mail.send(msg)
-            current_app.logger.info(f'Welcome email sent successfully to {recipient_email}')
+            body = (
+                f'Hola {username or (user.username if user else recipient_email)},\n\n'
+                'Tu cuenta en la plataforma del Centro de Terapias Juan Pablo II ya está lista.\n\n'
+                f'{code_line}Correo: {recipient_email}\n\n'
+                f'{link_line}'
+                'Si no esperabas este correo, puedes ignorarlo.\n\n'
+                'Saludos,\nCentro de Terapias Juan Pablo II'
+            )
+            msg = _make_message('Bienvenido(a) al Centro Juan Pablo II', [to], body)
+            if not _send(msg):
+                return False
+            current_app.logger.info(f'Welcome email sent successfully to {to}')
             return True
         except Exception as e:
             current_app.logger.error(f'Failed to send welcome email to {recipient_email}: {str(e)}')
             return False
 
     @staticmethod
-    def send_password_change_email(recipient_email: str, new_password: str, username: str):
-        """Aviso de cambio de contraseña"""
+    def send_password_change_email(recipient_email: str, new_password: str = None, username: str = None):
+        """Aviso de cambio de contraseña SIN la contraseña: fecha y enlace por si no fue la persona (o no la conoce,
+        cuando la cambió un administrador)."""
         if not current_app.config.get('MAIL_USERNAME') or not current_app.config.get('MAIL_PASSWORD'):
             current_app.logger.warning('Email not configured. Skipping password change email.')
             return False
         try:
-            subject = 'Cambio de contraseña en Moscowle'
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
+
+            from app.models import User
+            from app.utils.email_tokens import set_password_link
+
+            user = User.query.filter(User.email == recipient_email).first()
+            to = recipient_for(user) if user else (recipient_email if is_real_email(recipient_email) else None)
+            if not to:
+                return False
+            when = datetime.now(ZoneInfo('America/Lima')).strftime('%d/%m/%Y a las %H:%M')
+            link = (
+                f'\n\nSi no fuiste tú, o no conoces la nueva contraseña, créala aquí (un solo uso, 72 h):\n{set_password_link(user)}'
+                if user
+                else ''
+            )
             body = (
                 f'Hola {username or recipient_email},\n\n'
-                f'Tu contraseña ha sido actualizada exitosamente.\n\n'
-                f'Nueva contraseña: {new_password}\n\n'
-                'Si no realizaste este cambio, por favor contacta al administrador de inmediato.\n\n'
-                'Saludos,\nEquipo Moscowle'
+                f'La contraseña de tu cuenta se cambió el {when}.{link}\n\n'
+                'Si no reconoces este cambio, avisa al centro de inmediato.\n\n'
+                'Saludos,\nCentro de Terapias Juan Pablo II'
             )
-            msg = MailMessage(subject=subject, recipients=[recipient_email], body=body)
-            mail.send(msg)
-            current_app.logger.info(f'Password change email sent to {recipient_email}')
+            msg = _make_message('Se cambió tu contraseña', [to], body)
+            if not _send(msg):
+                return False
+            current_app.logger.info(f'Password change email sent to {to}')
             return True
         except Exception as e:
             current_app.logger.error(f'Failed to send password change email to {recipient_email}: {str(e)}')
             return False
+
+    @staticmethod
+    def send_email(
+        recipient=None, subject=None, body=None, *, recipients=None, text_body=None, html=None, user_id=None
+    ):
+        """Compatibilidad: 3 lugares llamaban a `EmailService.send_email`, que no existía (esos correos nunca
+        salían: recordatorio manual de deuda, renovación y cambio de contraseña por admin)."""
+        to = list(recipients or ([recipient] if recipient else []))
+        return EmailService.send_notification_email(subject, to, body=body or text_body, html=html, user_id=user_id)
 
     @staticmethod
     def send_payment_reminder(recipient_email, username, days_until_due, due_date, amount):
@@ -139,7 +217,8 @@ class EmailService:
                 'Saludos,\nEquipo Moscowle'
             )
             msg = _make_message(subject, [recipient_email], body)
-            mail.send(msg)
+            if not _send(msg):
+                return False
             current_app.logger.info(f'Payment reminder email sent to {recipient_email}')
             return True
         except Exception as e:
@@ -166,7 +245,8 @@ class EmailService:
                 'Saludos,\nEquipo Moscowle'
             )
             msg = _make_message(subject, [recipient_email], body)
-            mail.send(msg)
+            if not _send(msg):
+                return False
             current_app.logger.info(f'Payment confirmation email sent to {recipient_email}')
             return True
         except Exception as e:
@@ -199,8 +279,7 @@ class EmailService:
                 'Saludos,\nEquipo Moscowle'
             )
             msg = _make_message(subject, [recipient_email], body)
-            mail.send(msg)
-            return True
+            return _send(msg)
         except Exception as e:
             current_app.logger.error(f'Failed to send session notification to {recipient_email}: {str(e)}')
             return False
@@ -227,8 +306,7 @@ class EmailService:
                 'Saludos,\nEquipo Moscowle'
             )
             msg = _make_message(subject, [recipient_email], body)
-            mail.send(msg)
-            return True
+            return _send(msg)
         except Exception as e:
             current_app.logger.error(f'Failed to send message notification to {recipient_email}: {str(e)}')
             return False
@@ -249,7 +327,8 @@ class EmailService:
                 'Saludos,\nEquipo Moscowle'
             )
             msg = MailMessage(subject=subject, recipients=[recipient_email], body=body)
-            mail.send(msg)
+            if not _send(msg):
+                return False
             current_app.logger.info(f'Password reset code sent to {recipient_email}')
             return True
         except Exception as e:
@@ -270,7 +349,8 @@ class EmailService:
                 'Saludos,\nEquipo Moscowle'
             )
             msg = MailMessage(subject=subject, recipients=[admin_email], body=body)
-            mail.send(msg)
+            if not _send(msg):
+                return False
             current_app.logger.info(f'Password reset notification sent to admin {admin_email}')
             return True
         except Exception as e:
@@ -352,7 +432,8 @@ class EmailService:
                 html=html_body,
                 body='Por favor habilita HTML para ver este reporte.',
             )
-            mail.send(msg)
+            if not _send(msg):
+                return False
             current_app.logger.info(f'Enhanced admin report sent to {admin_email}')
             return True
 
@@ -368,8 +449,7 @@ class EmailService:
             current_app.logger.info(f'[MOCK EMAIL] {subject} to {recipients}')
             return False
         try:
-            mail.send(_make_message(subject, recipients, body, html=html, user_id=user_id))
-            return True
+            return _send(_make_message(subject, recipients, body, html=html, user_id=user_id))
         except Exception as e:
             current_app.logger.error(f'Failed to send notification email: {e}')
             return False

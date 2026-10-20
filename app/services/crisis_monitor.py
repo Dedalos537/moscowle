@@ -65,9 +65,7 @@ def send_telegram_alert(bot_token, chat_id, alert):
 
 def send_email_alert(recipient, alert):
     try:
-        from flask_mail import Message as MailMessage
-
-        from app.extensions import mail
+        from app.services.email_service import EmailService
 
         subject = f'[CrisisMonitor] {alert["type"].replace("_", " ").title()}'
         body = (
@@ -76,8 +74,9 @@ def send_email_alert(recipient, alert):
             f'Value: {alert.get("value", "N/A")}\n'
             f'Timestamp: {datetime.utcnow().isoformat()}'
         )
-        msg = MailMessage(subject, recipients=[recipient], body=body)
-        mail.send(msg)
+        # Por el mismo envío que el resto: remitente con nombre, cabeceras de correo automático y filtro de direcciones.
+        if not EmailService.send_notification_email(subject, [recipient], body=body):
+            return
         logger.info('Email alert sent to %s: %s', recipient, alert['type'])
     except Exception as e:
         logger.exception('Failed to send email alert: %s', e)

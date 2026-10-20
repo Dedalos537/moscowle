@@ -397,6 +397,39 @@ def api_reset_password_request():
         return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
 
+# ── Crear la contraseña desde el enlace del correo (bienvenida / cambio por admin) ──
+@auth_bp.route('/api/auth/set-password', methods=['GET'])
+@csrf.exempt
+@limiter.limit('30 per hour')
+def api_set_password_check():
+    """¿Sigue vigente el enlace? Devuelve a quién pertenece (sin datos sensibles) para mostrarlo en la página."""
+    from app.utils.email_tokens import read_set_password_token
+
+    user = read_set_password_token(request.args.get('t'))
+    if not user:
+        return jsonify({'success': False, 'error': 'El enlace venció o ya se usó. Pide uno nuevo al centro.'}), 400
+    return jsonify({'success': True, 'name': user.username or '', 'login_code': user.login_code or None})
+
+
+@auth_bp.route('/api/auth/set-password', methods=['POST'])
+@csrf.exempt
+@limiter.limit('10 per hour')
+def api_set_password():
+    """Guarda la contraseña nueva. El enlace sirve una vez: al cambiar la contraseña queda inválido solo."""
+    from app.utils.email_tokens import read_set_password_token
+
+    data = request.get_json(silent=True) or {}
+    user = read_set_password_token(data.get('token'))
+    if not user:
+        return jsonify({'success': False, 'error': 'El enlace venció o ya se usó. Pide uno nuevo al centro.'}), 400
+    password = data.get('new_password') or ''
+    if len(password) < 8:
+        return jsonify({'success': False, 'error': 'La contraseña debe tener al menos 8 caracteres.'}), 400
+    user.password = bcrypt.generate_password_hash(password).decode('utf-8')
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Listo: ya puedes entrar con tu nueva contraseña.'})
+
+
 @auth_bp.route('/api/auth/reset-password/confirm', methods=['POST'])
 @csrf.exempt
 def api_reset_password_confirm():
