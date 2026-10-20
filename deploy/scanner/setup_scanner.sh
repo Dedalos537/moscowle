@@ -41,7 +41,7 @@ echo "Servicio: HTTP $code · $(cat /tmp/scand-status.json 2>/dev/null)"; rm -f 
 
 # Pasar URL y token al .env de Moscowle en VM-APP (con la llave del host) y reiniciar el backend.
 if [ -f "$VM_KEY" ]; then
-  sudo -u diego ssh -i "$VM_KEY" -o StrictHostKeyChecking=accept-new "diego@$VM" \
+  sudo -u diego ssh -n -i "$VM_KEY" -o StrictHostKeyChecking=accept-new "diego@$VM" \
     "cd /home/diego/moscowle_ia && sed -i '/^SCAN_SERVER_URL=/d; /^SCAN_TOKEN=/d' .env && \
      printf 'SCAN_SERVER_URL=http://192.168.122.1:8631\nSCAN_TOKEN=%s\n' '$TOKEN' >> .env && chmod 600 .env && \
      sudo systemctl restart moscowle && echo 'VM-APP: .env actualizado y backend reiniciado'"

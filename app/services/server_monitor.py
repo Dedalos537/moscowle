@@ -130,7 +130,10 @@ def _tcp(host, port, timeout=2.0):
 
 
 def _http(url, timeout=4.0):
-    req = urllib.request.Request(url, headers={'User-Agent': 'moscowle-monitor'})  # noqa: S310 - URLs fijas
+    # User-Agent de navegador: Cloudflare filtra con 403 los agentes «raros» (pasaba con la sonda del túnel).
+    req = urllib.request.Request(  # noqa: S310 - URLs fijas
+        url, headers={'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) MoscowleMonitor/1.0', 'Accept': '*/*'}
+    )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 - URLs fijas internas
             return resp.status
@@ -191,13 +194,21 @@ def _check_mysql():
 
 
 def _check_tunnel():
-    """De ida y vuelta por Cloudflare: si responde el dominio público, el túnel del host funciona."""
+    """De ida y vuelta por Cloudflare: si el dominio público devuelve la hora de Moscowle, el túnel funciona.
+
+    Un 403/429 lo pone Cloudflare (no llegó al backend): no prueba que el túnel ande, así que no cuenta como activo.
+    """
     base = (current_app.config.get('PUBLIC_API_URL') or 'https://api-centrojuanpabloii.online').rstrip('/')
     try:
         code = _http(base + '/api/time', timeout=6)
-        return ('active' if code < 500 else 'failed'), f'{base.split("//")[-1]} → HTTP {code}'
     except Exception as exc:
         return 'inactive', f'Sin respuesta pública ({type(exc).__name__})'
+    host = base.split('//')[-1]
+    if code == 200:
+        return 'active', f'{host} → HTTP 200'
+    if code in (401, 403, 429):
+        return 'degraded', f'{host} → HTTP {code}: Cloudflare filtró la sonda (el sitio puede estar bien)'
+    return 'failed', f'{host} → HTTP {code}'
 
 
 def _check_ollama():

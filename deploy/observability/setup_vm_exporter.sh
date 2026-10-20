@@ -5,6 +5,13 @@
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || { echo "Córrelo con sudo."; exit 1; }
 HOST_IP=192.168.122.1
+# Se corre DENTRO de VM-APP o VM-DB. En el host (tiene virbr0) dejaría node_exporter en otra dirección.
+if ip link show virbr0 >/dev/null 2>&1; then
+  echo "Esto es el HOST, no una VM. Entra primero a la VM:"
+  echo "  ssh -i ~/.ssh/id_ed25519_vm diego@192.168.122.10   (VM-APP)"
+  echo "  ssh -i ~/.ssh/id_ed25519_vm diego@192.168.122.20   (VM-DB)"
+  exit 1
+fi
 VM_IP=$(ip -4 route get "$HOST_IP" | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
 [ -n "$VM_IP" ] || { echo "No pude saber la IP interna de esta VM."; exit 1; }
 echo "== VM $(hostname) en $VM_IP"
