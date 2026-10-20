@@ -60,7 +60,12 @@
           @for (sv of s.services; track sv.unit) {
             <li>
               <span class="sm-dot" [attr.data-state]="sv.state" aria-hidden="true"></span>
-              <span class="sm-list__name">{{ sv.label }}</span>
+              <span class="sm-list__name">
+                {{ sv.label }}
+                @if (sv.where || sv.detail) {
+                  <small class="sm-list__meta">@if (sv.where) { <b>{{ sv.where }}</b> }@if (sv.where && sv.detail) { · }{{ sv.detail }}</small>
+                }
+              </span>
               <span class="sm-state" [attr.data-state]="sv.state">{{ stateLabel(sv.state) }}</span>
             </li>
           }

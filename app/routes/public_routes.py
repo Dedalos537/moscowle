@@ -101,8 +101,11 @@ _SPA_DIR = os.path.normpath(
 )
 
 
+# El frontend son ~60 archivos por carga y el limitador cuenta a toda la clínica como una sola IP (sin sesión):
+# con varias personas se llegaba a 600/h y todos recibían «429 Too Many Requests». Los estáticos no se limitan.
 @spa_bp.route('/app/')
 @spa_bp.route('/app/<path:subpath>')
+@limiter.exempt
 def serve_spa(subpath='index.html'):
     if not subpath:
         subpath = 'index.html'
@@ -115,5 +118,6 @@ def serve_spa(subpath='index.html'):
 
 
 @spa_bp.route('/app')
+@limiter.exempt
 def redirect_app():
     return redirect(url_for('spa.serve_spa'))

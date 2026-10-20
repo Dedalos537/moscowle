@@ -6,7 +6,7 @@ from datetime import UTC
 from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy import text
 
-from app.extensions import csrf, db
+from app.extensions import csrf, db, limiter
 from app.services.crisis_monitor import crisis_monitor
 
 logger = logging.getLogger(__name__)
@@ -41,6 +41,7 @@ def _lock_debug_endpoints():
 
 
 @health_bp.route('/health', methods=['GET'])
+@limiter.exempt
 def health_check():
     """Health check: DB, Groq, Gemini, Ollama, crisis alerts"""
     checks = {}

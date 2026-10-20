@@ -201,6 +201,7 @@ def server_restart():
 
 
 @api_bp.route('/time', methods=['GET'])
+@limiter.exempt
 def api_time():
     now_local = datetime.now()
     now_utc = datetime.utcnow()

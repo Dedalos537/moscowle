@@ -11,7 +11,7 @@ interface ServerStatus {
   disks: { label: string; total: number; used: number; pct: number }[];
   uptime: number | null;
   process: { pid: number; rss: number | null; threads: number | null };
-  services: { unit: string; label: string; state: string }[];
+  services: { unit: string; label: string; state: string; where?: string; detail?: string; ms?: number }[];
   checks: { name: string; ok: boolean; detail: string }[];
   cockpit_url: string | null;
 }
@@ -82,7 +82,7 @@ export class ServerMonitor implements OnInit, OnDestroy {
     return i == null || !snaps[i] ? null : snaps[i];
   });
 
-  readonly downServices = computed(() => (this.status()?.services ?? []).filter((s) => s.state !== 'active' && s.state !== 'unknown'));
+  readonly downServices = computed(() => (this.status()?.services ?? []).filter((s) => !['active', 'unknown', 'off', 'degraded'].includes(s.state)));
 
   readonly downLabels = computed(() => this.downServices().map((s) => s.label).join(', '));
 
@@ -147,7 +147,8 @@ export class ServerMonitor implements OnInit, OnDestroy {
   }
 
   stateLabel(state: string) {
-    return state === 'active' ? 'Activo' : state === 'inactive' ? 'Detenido' : state === 'failed' ? 'Con fallas' : state === 'activating' ? 'Iniciando' : 'Sin dato';
+    return state === 'active' ? 'Activo' : state === 'inactive' ? 'Sin respuesta' : state === 'failed' ? 'Con fallas'
+      : state === 'activating' ? 'Iniciando' : state === 'degraded' ? 'En pausa' : state === 'off' ? 'No instalado' : 'Sin dato';
   }
 
   size(bytes: number | null | undefined) {
