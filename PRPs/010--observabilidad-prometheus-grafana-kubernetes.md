@@ -172,7 +172,7 @@ Condiciones para que sea seguro:
 
 | Servicio | Escucha | Acceso |
 |---|---|---|
-| Prometheus | host `127.0.0.1:9090` | Grafana local; backend vía `192.168.122.1:9090` con ufw solo desde `192.168.122.10` |
+| Prometheus | host `192.168.122.1:9095` (el 9090 es de **Cockpit**) | Grafana local; backend vía `192.168.122.1:9095` con ufw solo desde `192.168.122.10` |
 | Alertmanager | host `127.0.0.1:9093` | Prometheus |
 | Grafana | host `192.168.1.249:3000` (LAN) | admin; desde fuera solo con Cloudflare Access |
 | node_exporter | host `127.0.0.1:9100`, VM-APP y VM-DB en su IP de `virbr0` `:9100` | Prometheus |
