@@ -8,6 +8,7 @@ import { WakeLockService } from '../../services/wake-lock.service';
 import { SidebarService } from '../../services/sidebar.service';
 import { Sidebar } from '../../components/sidebar/sidebar';
 import { Header } from '../../components/header/header';
+import { NoticeBanners } from '../../../shared/components/notice-banners/notice-banners';
 import { Spinner } from '../../../shared/components/spinner/spinner';
 import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { AiChat } from '../../../shared/components/ai-chat/ai-chat';
@@ -19,7 +20,7 @@ import { ChartsToggle } from '../../../shared/components/charts-toggle/charts-to
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
-  imports: [RouterModule, CommonModule, Sidebar, Header, Spinner, ConfirmDialog, AiChat, HelpButton, HelpPanel, BeaconOverlay, ChartsToggle],
+  imports: [RouterModule, CommonModule, Sidebar, Header, NoticeBanners, Spinner, ConfirmDialog, AiChat, HelpButton, HelpPanel, BeaconOverlay, ChartsToggle],
   templateUrl: './admin-layout.html',
   styleUrl: './admin-layout.scss',
   animations: [routeAnimations],

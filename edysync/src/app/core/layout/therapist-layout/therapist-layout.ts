@@ -10,6 +10,7 @@ import { ThemeService } from '../../services/theme.service';
 import { WakeLockService } from '../../services/wake-lock.service';
 import { HelpPanel } from '../../../shared/contextual-help/components/help-panel/help-panel';
 import { Header } from '../../components/header/header';
+import { NoticeBanners } from '../../../shared/components/notice-banners/notice-banners';
 import { Sidebar } from '../../components/sidebar/sidebar';
 import { Spinner } from '../../../shared/components/spinner/spinner';
 import { Button } from '../../../shared/components/button/button';
@@ -18,7 +19,7 @@ import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm
 @Component({
   selector: 'app-therapist-layout',
   standalone: true,
-  imports: [RouterModule, CommonModule, FontAwesomeModule, Header, Spinner, Button, ConfirmDialog, HelpPanel, Sidebar],
+  imports: [RouterModule, CommonModule, FontAwesomeModule, Header, NoticeBanners, Spinner, Button, ConfirmDialog, HelpPanel, Sidebar],
   templateUrl: './therapist-layout.html',
   styleUrl: './therapist-layout.scss',
   animations: [routeAnimations],

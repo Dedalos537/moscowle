@@ -23,6 +23,7 @@
   <app-sidebar class="layout__sidebar"></app-sidebar>
   <div class="layout__main">
     <app-header class="layout__header"></app-header>
+    <app-notice-banners></app-notice-banners>
     <main class="layout__content">
       <div [@routeAnimations]="prepareRoute()" [@.disabled]="reduceMotion">
         <router-outlet></router-outlet>

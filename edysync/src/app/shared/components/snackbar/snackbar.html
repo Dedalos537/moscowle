@@ -1,0 +1,16 @@
+<div class="snack-region" role="status" aria-live="polite">
+  @if (presenter.snackbar(); as n) {
+    <div class="snack" [attr.data-tone]="n.tone"
+      (mouseenter)="presenter.pauseSnackbar()" (mouseleave)="presenter.resumeSnackbar()"
+      (focusin)="presenter.pauseSnackbar()" (focusout)="presenter.resumeSnackbar()">
+      <fa-icon class="snack__icon" [icon]="['fas', n.icon]" aria-hidden="true"></fa-icon>
+      <p class="snack__text"><strong>{{ n.title }}</strong>@if (n.message && n.message !== n.title) { <span>{{ n.message }}</span> }</p>
+      @if (n.action) {
+        <button type="button" class="snack__action" (click)="act()">{{ n.action.label }}</button>
+      }
+      <button type="button" class="snack__close" (click)="presenter.dismissSnackbar()" aria-label="Cerrar aviso">
+        <fa-icon [icon]="['fas', 'xmark']" aria-hidden="true"></fa-icon>
+      </button>
+    </div>
+  }
+</div>

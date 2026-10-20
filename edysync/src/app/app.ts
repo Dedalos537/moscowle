@@ -8,6 +8,8 @@ import { SplashScreen } from './shared/components/splash-screen/splash-screen';
 import { SplashService } from './core/services/splash.service';
 import { AlertModal } from './shared/components/alert-modal/alert-modal.component';
 import { ToastContainer } from './shared/components/toast-container/toast-container';
+import { Snackbar } from './shared/components/snackbar/snackbar';
+import { NotificationSheet } from './shared/components/notification-sheet/notification-sheet';
 import { RecordingOverlay } from './shared/components/recording-overlay/recording-overlay';
 import { ServerDownGame } from './shared/components/server-down-game/server-down-game';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -19,7 +21,7 @@ import { CursorHalo } from './shared/components/cursor-halo/cursor-halo';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CursorHalo, Logo, RouterModule, FontAwesomeModule, SplashScreen, AlertModal, ToastContainer, RecordingOverlay, ServerDownGame],
+  imports: [CursorHalo, Logo, RouterModule, FontAwesomeModule, SplashScreen, AlertModal, ToastContainer, Snackbar, NotificationSheet, RecordingOverlay, ServerDownGame],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })

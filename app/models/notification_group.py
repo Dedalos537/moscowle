@@ -18,6 +18,8 @@ class NotificationGroup(db.Model):
     group_key = db.Column(db.String(100), nullable=False, index=True)
     category = db.Column(db.String(50), nullable=False, default='system')
     priority = db.Column(db.String(20), nullable=False, default='normal')
+    # Tipo canónico (PRP 011): decide cómo se muestra (badge, toast, snackbar, banner, modal, push).
+    kind = db.Column(db.String(40), nullable=True, index=True)
     title = db.Column(db.String(200), nullable=True)
     summary = db.Column(db.Text, nullable=True)
     count = db.Column(db.Integer, default=0, nullable=False)
