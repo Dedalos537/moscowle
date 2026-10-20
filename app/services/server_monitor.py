@@ -419,6 +419,7 @@ def notify_alerts(alerts):
                 category='system',
                 priority='high' if resolved else ('urgent' if severity == 'critical' else 'high'),
                 metadata_json={'alertname': labels.get('alertname'), 'severity': severity, 'resolved': resolved},
+                kind='mimo.paused' if labels.get('alertname') == 'MiMoEnPausa' else 'server.alert',
             )
             sent += 1
     return sent

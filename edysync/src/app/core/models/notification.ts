@@ -66,6 +66,9 @@ export interface NotificationItem {
 }
 
 export interface NotificationGroup {
+  /** PRP 011: tipo canónico y cómo se muestra (badge, toast, snackbar, banner, modal, push). */
+  kind?: string;
+  presentation?: string[];
   id: number;
   title: string;
   category: NotificationCategory;

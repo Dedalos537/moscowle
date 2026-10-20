@@ -1,0 +1,21 @@
+@if (presenter.banners().length) {
+  <section class="nb" aria-label="Avisos">
+    @for (n of visible(); track n.key) {
+      <div class="nb__item" [attr.data-tone]="n.tone" [attr.role]="n.tone === 'danger' ? 'alert' : 'status'">
+        <fa-icon class="nb__icon" [icon]="['fas', n.icon]" aria-hidden="true"></fa-icon>
+        <p class="nb__text"><strong>{{ n.title }}</strong>@if (n.message && n.message !== n.title) { <span>{{ n.message }}</span> }</p>
+        @if (n.action) {
+          <button type="button" class="nb__btn" (click)="act(n)">{{ n.action.label }}</button>
+        }
+        <button type="button" class="nb__close" (click)="presenter.dismissBanner(n.key)" [attr.aria-label]="'Cerrar aviso: ' + n.title">
+          <fa-icon [icon]="['fas', 'xmark']" aria-hidden="true"></fa-icon>
+        </button>
+      </div>
+    }
+    @if (hidden() > 0) {
+      <button type="button" class="nb__more" (click)="expanded.set(true)">Ver {{ hidden() }} aviso{{ hidden() === 1 ? '' : 's' }} más</button>
+    } @else if (expanded() && presenter.banners().length > 2) {
+      <button type="button" class="nb__more" (click)="expanded.set(false)">Mostrar menos</button>
+    }
+  </section>
+}

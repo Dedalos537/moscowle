@@ -1,0 +1,18 @@
+@if (presenter.modals()[0]; as n) {
+  <div class="ns-overlay">
+    <section class="ns" [attr.data-tone]="n.tone" role="alertdialog" aria-modal="true" aria-labelledby="ns-title" aria-describedby="ns-body"
+      (keydown.escape)="acknowledge()">
+      <span class="ns__grip" aria-hidden="true"></span>
+      <div class="ns__icon" aria-hidden="true"><fa-icon [icon]="['fas', n.icon]"></fa-icon></div>
+      <h2 id="ns-title" class="ns__title">{{ n.title }}</h2>
+      @if (n.message && n.message !== n.title) { <p id="ns-body" class="ns__body">{{ n.message }}</p> }
+      @if (presenter.modals().length > 1) { <p class="ns__queue">{{ presenter.modals().length - 1 }} aviso(s) más después de este</p> }
+      <div class="ns__actions">
+        @if (n.action) {
+          <button type="button" class="ns__btn ns__btn--ghost" (click)="acknowledge(true)">{{ n.action.label }}</button>
+        }
+        <button #okBtn type="button" class="ns__btn ns__btn--primary" (click)="acknowledge()">Entendido</button>
+      </div>
+    </section>
+  </div>
+}

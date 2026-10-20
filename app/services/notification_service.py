@@ -43,6 +43,7 @@ class NotificationService:
         skip_telegram=False,
         event_type=None,
         event_kwargs=None,
+        kind=None,
     ):
         """Create a grouped notification with optional real-time push.
 
@@ -77,25 +78,7 @@ class NotificationService:
         )
 
         # Always emit Socket.IO so the user sees the update in real-time
-        count = get_user_group_count(user_id)
-        socketio.emit(
-            'notification:new',
-            {
-                'id': group.id,
-                'title': group.title or self._default_title(category),
-                'message': group.summary or message[:120],
-                'type': notif_type,
-                'category': group.category,
-                'priority': group.priority,
-                'icon': icon,
-                'link': link,
-                'timestamp': group.last_item_at.strftime('%d %b, %H:%M'),
-                'unread_count': count,
-                'group_count': group.count,
-                'is_group': True,
-            },
-            room=f'user_{user_id}',
-        )
+        self._emit(user_id, group, message, notif_type, category, icon, link, metadata_json, kind, etype)
 
         # Telegram: según el nivel que eligió el usuario ('all' = todo; 'important' = urgentes/altas o avisos repetidos).
         if not skip_telegram and self._telegram_wanted(prefs, priority, group):
@@ -125,6 +108,7 @@ class NotificationService:
         priority='normal',
         icon=None,
         metadata_json=None,
+        kind=None,
     ):
         """Create a notification without preference check (for system/internal use).
 
@@ -154,7 +138,23 @@ class NotificationService:
         )
 
         # Emit Socket.IO
-        count = get_user_group_count(user_id)
+        self._emit(user_id, group, message, notif_type, category, icon, link, metadata_json, kind, etype)
+
+        return group
+
+    def _emit(self, user_id, group, message, notif_type, category, icon, link, metadata_json, kind, etype):
+        """Evento en tiempo real con el tipo y cómo mostrarlo (PRP 011 · E2): badge, toast, snackbar, banner…"""
+        from app.services import notification_kinds
+
+        meta = metadata_json if isinstance(metadata_json, dict) else {}
+        resolved_kind = notification_kinds.resolve_kind(kind, etype, category, meta)
+        info = notification_kinds.describe(resolved_kind, group.priority, link, resolved=bool(meta.get('resolved')))
+        if getattr(group, 'kind', None) != resolved_kind:
+            try:
+                group.kind = resolved_kind
+                db.session.commit()
+            except Exception:  # noqa: BLE001 - el tipo es informativo: nunca bloquea la notificación
+                db.session.rollback()
         socketio.emit(
             'notification:new',
             {
@@ -164,17 +164,20 @@ class NotificationService:
                 'type': notif_type,
                 'category': group.category,
                 'priority': group.priority,
-                'icon': icon,
+                'icon': icon or info['icon'],
                 'link': link,
                 'timestamp': group.last_item_at.strftime('%d %b, %H:%M'),
-                'unread_count': count,
+                'unread_count': get_user_group_count(user_id),
                 'group_count': group.count,
                 'is_group': True,
+                'kind': resolved_kind,
+                'presentation': info['presentation'],
+                'action': info['action'],
+                'push_when': info['push_when'],
+                'payload': {k: v for k, v in meta.items() if isinstance(v, (str, int, float, bool)) or v is None},
             },
             room=f'user_{user_id}',
         )
-
-        return group
 
     # ─── Read Operations ────────────────────────────────────────────────────
 

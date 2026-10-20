@@ -6,6 +6,7 @@ import { NotificationItem, NotificationPreferences, NotificationGroup, Notificat
 import { AdminService } from './admin.service';
 import { ChatService } from './chat.service';
 import { AuthService } from './auth.service';
+import { NotificationPresenterService } from '../notifications/notification-presenter.service';
 
 @Injectable({
   providedIn: 'root',
@@ -16,6 +17,7 @@ export class NotificationService implements OnDestroy {
   private authService = inject(AuthService);
   private http = inject(HttpClient);
   private zone = inject(NgZone);
+  private presenter = inject(NotificationPresenterService);
 
   // ─── Legacy signals (backward compat) ──────────────────────────────
   notifications = signal<NotificationItem[]>([]);
@@ -101,7 +103,8 @@ export class NotificationService implements OnDestroy {
           }
           this.unreadCount.set(data.unread_count);
           this.playNotificationSound();
-          this.tryBrowserNotification(data);
+          // PRP 011: toast, snackbar, banner, modal o push según el tipo (el badge es el contador de arriba).
+          this.presenter.present(data);
         });
       })
     );
@@ -140,18 +143,6 @@ export class NotificationService implements OnDestroy {
     const audio = new Audio('assets/sounds/notification.wav');
     audio.volume = 0.5;
     audio.play().catch(() => {});
-  }
-
-  private tryBrowserNotification(item: any): void {
-    const prefs = this.preferences();
-    if (!prefs || !prefs.browser_notifications) return;
-    if (!('Notification' in window)) return;
-    if (Notification.permission !== 'granted') return;
-
-    new Notification(item.title || 'EdySync', {
-      body: item.message || item.summary,
-      icon: '/assets/img/logo.svg',
-    });
   }
 
   requestBrowserPermission(): void {
@@ -271,7 +262,10 @@ export class NotificationService implements OnDestroy {
 
   fetchPreferences(): void {
     this.adminService.getNotificationPreferences().subscribe({
-      next: (data) => this.preferences.set(data),
+      next: (data) => {
+        this.preferences.set(data);
+        this.presenter.pushEnabled = !!data?.browser_notifications;
+      },
       error: () => this.preferences.set({ ...this._defaultPrefs }),
     });
   }

@@ -832,6 +832,8 @@ def create_app(config_class=None):
                 ('contract', 'renewable', 'ALTER TABLE contract ADD COLUMN renewable BOOLEAN NOT NULL DEFAULT 0'),
                 ('contract', 'payment_day', 'ALTER TABLE contract ADD COLUMN payment_day INTEGER NULL'),
                 ('expense', 'payroll_period_id', 'ALTER TABLE expense ADD COLUMN payroll_period_id INTEGER NULL'),
+                # PRP 011: tipo canónico de cada grupo de notificaciones.
+                ('notif_group', 'kind', 'ALTER TABLE notif_group ADD COLUMN kind VARCHAR(40) NULL'),
             ):
                 try:
                     from sqlalchemy import text

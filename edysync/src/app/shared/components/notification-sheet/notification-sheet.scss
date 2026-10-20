@@ -1,0 +1,42 @@
+$ease: cubic-bezier(0.2, 0, 0, 1);
+.ns-overlay {
+  position: fixed; inset: 0; z-index: 20000; display: grid; place-items: center; padding: 1rem;
+  background: rgb(10 14 8 / 0.55); animation: ns-fade 160ms $ease;
+}
+.ns {
+  width: min(28rem, 100%); padding: 1.5rem; border-radius: 1.25rem; text-align: center;
+  background: var(--color-surface-container-lowest); color: var(--color-on-surface);
+  box-shadow: 0 24px 64px -16px rgb(0 0 0 / 0.5); animation: ns-pop 200ms $ease;
+  &__grip { display: none; }
+  &__icon {
+    width: 3.25rem; height: 3.25rem; margin: 0 auto 0.75rem; display: grid; place-items: center; border-radius: 999px;
+    font-size: 1.25rem; background: var(--color-surface-container-high); color: var(--color-primary-text, var(--color-primary));
+  }
+  &[data-tone='danger'] .ns__icon { background: var(--badge-error-bg); color: var(--badge-error-fg); }
+  &[data-tone='warning'] .ns__icon { background: var(--badge-warning-bg); color: var(--badge-warning-fg); }
+  &__title { margin: 0; font-size: 1.125rem; font-weight: 700; }
+  &__body { margin: 0.5rem 0 0; font-size: 0.9375rem; line-height: 1.5; color: var(--color-on-surface-variant); }
+  &__queue { margin: 0.75rem 0 0; font-size: 0.75rem; color: var(--color-on-surface-variant); }
+  &__actions { display: flex; gap: 0.5rem; justify-content: center; margin-top: 1.25rem; }
+  &__btn {
+    min-height: 2.75rem; padding: 0 1.25rem; border-radius: 0.75rem; border: 1px solid var(--color-outline-variant);
+    background: var(--color-surface-container-lowest); color: var(--color-on-surface); font: inherit; font-weight: 700; cursor: pointer;
+    &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+    &--primary { border-color: transparent; background: var(--color-primary); color: var(--color-on-primary); }
+    &--ghost:hover { background: var(--color-surface-container); }
+  }
+}
+// Móvil: hoja inferior, botones a lo ancho.
+@media (max-width: 40rem) {
+  .ns-overlay { place-items: end stretch; padding: 0; }
+  .ns {
+    width: 100%; border-radius: 1.25rem 1.25rem 0 0; padding: 0.75rem 1.25rem max(1.25rem, env(safe-area-inset-bottom));
+    animation: ns-up 240ms $ease;
+    &__grip { display: block; width: 2.5rem; height: 0.25rem; margin: 0 auto 0.75rem; border-radius: 999px; background: var(--color-outline-variant); }
+    &__actions { flex-direction: column-reverse; .ns__btn { width: 100%; } }
+  }
+}
+@keyframes ns-fade { from { opacity: 0; } }
+@keyframes ns-pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+@keyframes ns-up { from { transform: translateY(100%); } }
+@media (prefers-reduced-motion: reduce) { .ns-overlay, .ns { animation: none; } }

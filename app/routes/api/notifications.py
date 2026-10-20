@@ -40,12 +40,31 @@ def get_notification_groups():
                     'ai_summary_generated': g.ai_summary_generated,
                     'timestamp': g.last_item_at.strftime('%d %b, %H:%M'),
                     'last_item_at': g.last_item_at.isoformat() + 'Z',
+                    **_kind_fields(g),
                 }
             )
         return jsonify(result)
     except Exception as e:
         current_app.logger.error(f'Error in get_notification_groups: {str(e)}')
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+def _kind_fields(group):
+    """Tipo y forma de mostrar (PRP 011). Los grupos viejos sin `kind` se infieren de su categoría."""
+    from app.services import notification_kinds
+
+    kind = notification_kinds.resolve_kind(getattr(group, 'kind', None), None, group.category)
+    info = notification_kinds.describe(kind, group.priority)
+    return {'kind': kind, 'presentation': info['presentation'], 'icon_kind': info['icon']}
+
+
+@api_bp.route('/notifications/kinds')
+@login_required
+def get_notification_kinds():
+    """Catálogo de tipos de notificación y cómo se muestra cada uno (lo usa el frontend)."""
+    from app.services import notification_kinds
+
+    return jsonify({'kinds': notification_kinds.catalog(), 'presentations': list(notification_kinds.PRESENTATIONS)})
 
 
 @api_bp.route('/notifications/groups/<int:group_id>/items')
