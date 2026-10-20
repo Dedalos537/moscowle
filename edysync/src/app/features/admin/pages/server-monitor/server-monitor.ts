@@ -14,6 +14,9 @@ interface ServerStatus {
   services: { unit: string; label: string; state: string; where?: string; detail?: string; ms?: number }[];
   checks: { name: string; ok: boolean; detail: string }[];
   cockpit_url: string | null;
+  grafana_url?: string | null;
+  /** 720 (30 días) si el historial viene de Prometheus; 168 si viene de la tabla local. */
+  history_max_hours?: number;
 }
 
 interface Snapshot {
@@ -53,6 +56,12 @@ export class ServerMonitor implements OnInit, OnDestroy {
   readonly history = signal<Snapshot[]>([]);
   readonly error = signal<string | null>(null);
   readonly hours = signal(24);
+  /** Con Prometheus (PRP 010) el historial llega a 30 días. */
+  readonly ranges = computed(() => ((this.status()?.history_max_hours ?? 168) >= 720 ? [6, 24, 168, 720] : [6, 24, 168]));
+
+  hoursLabel(h: number) {
+    return h === 720 ? 'últimos 30 días' : h === 168 ? 'últimos 7 días' : `últimas ${h} h`;
+  }
   readonly hover = signal<number | null>(null);
 
   readonly W = W;

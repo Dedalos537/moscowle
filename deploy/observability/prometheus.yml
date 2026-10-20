@@ -1,0 +1,78 @@
+# PRP 010 — Prometheus del host. Todo escucha en direcciones internas; nada va a internet.
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+rule_files:
+  - /etc/prometheus/rules/moscowle.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['127.0.0.1:9093']
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['192.168.122.1:9090']
+        labels: {instance: prometheus}
+
+  # CPU, RAM, disco y red de cada máquina.
+  - job_name: node
+    static_configs:
+      - targets: ['127.0.0.1:9100']
+        labels: {instance: host}
+      - targets: ['192.168.122.10:9100']
+        labels: {instance: vm-app}
+      - targets: ['192.168.122.20:9100']
+        labels: {instance: vm-db}
+
+  - job_name: mysqld
+    static_configs:
+      - targets: ['192.168.122.20:9104']
+        labels: {instance: vm-db}
+
+  # Métricas de Moscowle (latencia y códigos por ruta, MiMo, pagos). Con token: por el túnel todo llega del host.
+  - job_name: moscowle
+    metrics_path: /api/server-monitor/metrics
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/moscowle_metrics.token
+    static_configs:
+      - targets: ['192.168.122.10:5000']
+        labels: {instance: vm-app}
+
+  # Sondas: ¿responde cada servicio donde vive?
+  - job_name: blackbox_http
+    metrics_path: /probe
+    params: {module: [http_2xx]}
+    static_configs:
+      - targets: ['https://api-centrojuanpabloii.online/api/health']
+        labels: {service: tunel}
+      - targets: ['http://192.168.122.10:5000/api/health']
+        labels: {service: backend}
+      - targets: ['http://127.0.0.1/app/']
+        labels: {service: nginx}
+      - targets: ['http://127.0.0.1:11434/api/tags']
+        labels: {service: ollama}
+      - targets: ['https://moscowle.centrojuanpabloii.com/']
+        labels: {service: cpanel}
+    relabel_configs: &blackbox_relabel
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115
+
+  - job_name: blackbox_tcp
+    metrics_path: /probe
+    params: {module: [tcp_connect]}
+    static_configs:
+      - targets: ['127.0.0.1:631']
+        labels: {service: cups}
+      - targets: ['192.168.122.1:8631']
+        labels: {service: escaner}
+      - targets: ['192.168.122.20:3306']
+        labels: {service: mysql}
+    relabel_configs: *blackbox_relabel

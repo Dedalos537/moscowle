@@ -89,3 +89,61 @@ def test_record_and_history(client, app):
         server_monitor.record()
     snaps = client.get('/api/server-monitor/history?hours=1', headers=_h('admin')).get_json()['snapshots']
     assert snaps and snaps[-1]['cpu_pct'] == 40.0 and snaps[-1]['services_down'] == ['nginx']
+
+
+# ── Prometheus (PRP 010) ─────────────────────────────────────────────────────
+def test_metrics_need_the_token_and_count_requests(client, app, monkeypatch):
+    monkeypatch.setenv('METRICS_TOKEN', 'tok-123')
+    assert client.get('/api/server-monitor/metrics').status_code == 401
+    assert client.get('/api/server-monitor/metrics', headers={'Authorization': 'Bearer otro'}).status_code == 401
+    client.get('/api/time')
+    r = client.get('/api/server-monitor/metrics', headers={'Authorization': 'Bearer tok-123'})
+    body = r.get_data(as_text=True)
+    assert r.status_code == 200 and r.mimetype == 'text/plain'
+    assert 'moscowle_http_requests_total{method="GET",route="/api/time",code="200"}' in body
+    assert 'moscowle_http_request_duration_seconds_bucket{route="/api/time",le="+Inf"}' in body
+    assert 'moscowle_mimo_paused{instance_name="chat"}' in body
+
+
+def test_alert_webhook_notifies_every_admin(client, app, monkeypatch):
+    from app.services import notification_service
+
+    monkeypatch.setenv('ALERT_WEBHOOK_TOKEN', 'al-1')
+    _h('admin')
+    sent = []
+    monkeypatch.setattr(
+        notification_service.NotificationService, 'notify_user', lambda self, uid, msg, **kw: sent.append((uid, kw))
+    )
+    payload = {
+        'alerts': [
+            {
+                'status': 'firing',
+                'labels': {'alertname': 'ServicioCriticoCaido', 'severity': 'critical', 'service': 'tunel'},
+                'annotations': {'summary': 'tunel no responde', 'description': 'La sonda falla hace 3 min.'},
+            }
+        ]
+    }
+    assert client.post('/api/server-monitor/alerts', json=payload).status_code == 401
+    r = client.post('/api/server-monitor/alerts', json=payload, headers={'Authorization': 'Bearer al-1'})
+    admins = User.query.filter(User.role == 'admin', User.is_active.isnot(False)).count()
+    assert r.status_code == 200 and r.get_json()['notified'] == admins == len(sent)
+    assert all(kw['priority'] == 'urgent' and kw['title'].startswith('🚨') for _, kw in sent)
+
+
+def test_history_comes_from_prometheus_when_available(app, monkeypatch):
+    monkeypatch.setenv('PROMETHEUS_URL', 'http://192.168.122.1:9090')
+
+    def fake_range(query, start, end, step):
+        if 'probe_success' in query:
+            return [{'metric': {'service': 'cups'}, 'values': [[1800000000, '0']]}]
+        return [{'metric': {}, 'values': [[1800000000, '42.5']]}]
+
+    monkeypatch.setattr(server_monitor, '_prom_range', fake_range)
+    rows = server_monitor.history(720)
+    assert rows[0]['cpu_pct'] == 42.5 and rows[0]['services_down'] == ['cups']
+
+    def down(*a):
+        raise OSError('prometheus caído')
+
+    monkeypatch.setattr(server_monitor, '_prom_range', down)
+    assert isinstance(server_monitor.history(24), list)  # cae a la tabla local, sin error
