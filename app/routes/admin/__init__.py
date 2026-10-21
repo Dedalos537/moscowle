@@ -11,4 +11,4 @@ payment_service = PaymentService()
 finance_service = FinancialService()
 workflow_engine = WorkflowEngine()
 
-from . import contracts, misc, password_resets, payments, reports, sessions, users
+from . import activity, contracts, misc, password_resets, payments, reports, sessions, users

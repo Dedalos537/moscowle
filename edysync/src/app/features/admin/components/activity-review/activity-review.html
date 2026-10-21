@@ -1,0 +1,147 @@
+<section class="ar" aria-labelledby="ar-title">
+  <header class="ar__head">
+    <div>
+      <h2 id="ar-title">Actividad de usuarios</h2>
+      <p>Lo que cada persona hizo y lo que tiene pendiente. Primero quien tiene más pendientes urgentes.</p>
+    </div>
+    <button type="button" class="ar-btn" (click)="export(true)">
+      <fa-icon [icon]="['fas', 'file-excel']" aria-hidden="true"></fa-icon><span>Exportar todo (30 días)</span>
+    </button>
+  </header>
+
+  <div class="ar__kpis" role="list">
+    <div class="ar-kpi" role="listitem"><strong>{{ totals().people }}</strong><span>personas</span></div>
+    <div class="ar-kpi" role="listitem"><strong>{{ totals().withPending }}</strong><span>con pendientes</span></div>
+    <div class="ar-kpi" role="listitem" [class.is-alert]="totals().high > 0"><strong>{{ totals().high }}</strong><span>pendientes urgentes</span></div>
+  </div>
+
+  <div class="ar__filters">
+    <label class="ar-search">
+      <fa-icon [icon]="['fas', 'magnifying-glass']" aria-hidden="true"></fa-icon>
+      <input type="search" placeholder="Buscar por nombre, código o correo" aria-label="Buscar usuario"
+        [(ngModel)]="query" (ngModelChange)="onFilter()" />
+    </label>
+    <select class="ar-select" [(ngModel)]="role" (ngModelChange)="load()" aria-label="Filtrar por rol">
+      @for (r of roles; track r.value) { <option [value]="r.value">{{ r.label }}</option> }
+    </select>
+    <label class="ar-check"><input type="checkbox" [(ngModel)]="onlyPending" (ngModelChange)="load()" /> Solo con pendientes</label>
+  </div>
+
+  @if (loading()) {
+    <p class="ar-muted" role="status">Cargando actividad…</p>
+  } @else if (!users().length) {
+    <p class="ar-muted">No hay usuarios con esos filtros.</p>
+  } @else {
+    <ul class="ar-list" aria-label="Usuarios">
+      @for (u of users(); track u.id) {
+        <li>
+          <button type="button" class="ar-row" (click)="open(u)" [attr.aria-label]="'Ver actividad de ' + u.name">
+            <span class="ar-row__name">
+              <strong>{{ u.name | personLabel: u.id : u.login_code }}</strong>
+              <small>{{ roleLabel(u.role) }} · último acceso {{ ago(u.last_login) }}</small>
+            </span>
+            <span class="ar-row__stat" title="Acciones en los últimos 7 días"><b>{{ u.actions_7d }}</b><small>7 días</small></span>
+            @if (u.pending) {
+              <span class="ar-badge" [attr.data-tone]="u.pending_high ? 'high' : 'medium'">
+                {{ u.pending }} pendiente{{ u.pending === 1 ? '' : 's' }}
+                @if (u.pending_oldest_days) { <small>· {{ u.pending_oldest_days }} d</small> }
+              </span>
+            } @else {
+              <span class="ar-badge" data-tone="ok">Al día</span>
+            }
+            <fa-icon class="ar-row__chev" [icon]="['fas', 'chevron-right']" aria-hidden="true"></fa-icon>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</section>
+
+@if (selected(); as u) {
+  <div class="ar-overlay" (click)="close()"></div>
+  <aside class="ar-panel" role="dialog" aria-modal="true" aria-labelledby="ar-panel-title" (keydown.escape)="close()">
+    <header class="ar-panel__head">
+      <div>
+        <h3 id="ar-panel-title">{{ u.name | personLabel: u.id : u.login_code }}</h3>
+        <p>{{ roleLabel(u.role) }} · último acceso {{ ago(u.last_login) }}</p>
+      </div>
+      <button type="button" class="ar-icon" (click)="close()" aria-label="Cerrar"><fa-icon [icon]="['fas', 'xmark']"></fa-icon></button>
+    </header>
+
+    @if (detail(); as d) {
+      <div class="ar-spark" [attr.aria-label]="'Acciones por día, últimos 30 días'" role="img">
+        @for (p of d.daily; track p.day) {
+          <span [style.height.%]="(p.n / sparkMax()) * 100" [title]="p.day + ': ' + p.n"></span>
+        }
+      </div>
+      <div class="ar-sessions">
+        <span><fa-icon [icon]="['fas', 'desktop']" aria-hidden="true"></fa-icon> {{ d.sessions.length }} sesión(es) abierta(s)</span>
+        @if (d.sessions.length) {
+          <button type="button" class="ar-btn ar-btn--danger ar-btn--sm" (click)="revoke()">Cerrar sus sesiones</button>
+        }
+      </div>
+    }
+
+    <div class="ar-tabs" role="tablist">
+      <button type="button" role="tab" [attr.aria-selected]="tab() === 'pending'" [class.is-on]="tab() === 'pending'" (click)="tab.set('pending')">
+        Pendiente @if (detail()?.pending?.length) { <b>{{ detail()!.pending.length }}</b> }
+      </button>
+      <button type="button" role="tab" [attr.aria-selected]="tab() === 'done'" [class.is-on]="tab() === 'done'" (click)="tab.set('done')">Hecho</button>
+    </div>
+
+    <div class="ar-panel__body">
+      @if (tab() === 'pending') {
+        @if (!detail()) {
+          <p class="ar-muted" role="status">Calculando pendientes…</p>
+        } @else if (!detail()!.pending.length) {
+          <p class="ar-empty"><fa-icon [icon]="['fas', 'circle-check']" aria-hidden="true"></fa-icon> No tiene nada pendiente.</p>
+        } @else {
+          <ul class="ar-pending">
+            @for (p of detail()!.pending; track p.key) {
+              <li [attr.data-tone]="p.severity">
+                <span class="ar-pending__tag">{{ severityLabel(p) }}</span>
+                <p><strong>{{ p.count }}</strong> {{ p.label }}@if (p.days) { <small> · la más antigua hace {{ p.days }} día{{ p.days === 1 ? '' : 's' }}</small> }@if (p.team) { <small> · del equipo</small> }</p>
+                @if (p.link) { <button type="button" class="ar-btn ar-btn--sm" (click)="go(p.link)">Ir</button> }
+              </li>
+            }
+          </ul>
+        }
+      } @else {
+        <div class="ar-done__filters">
+          <select class="ar-select" [ngModel]="rangeDays" (ngModelChange)="setRange(+$event)" aria-label="Rango">
+            <option [value]="7">7 días</option>
+            <option [value]="30">30 días</option>
+            <option [value]="90">90 días</option>
+          </select>
+          <select class="ar-select" [ngModel]="typeFilter()" (ngModelChange)="setType($event)" aria-label="Tipo de actividad">
+            <option value="">Todo</option>
+            @for (t of eventTypes(); track t) { <option [value]="t">{{ typeLabels[t] || t }}</option> }
+          </select>
+          <button type="button" class="ar-btn ar-btn--sm" (click)="export()">
+            <fa-icon [icon]="['fas', 'file-excel']" aria-hidden="true"></fa-icon> Excel
+          </button>
+        </div>
+        @if (!events().length && !loadingEvents()) {
+          <p class="ar-muted">Sin actividad en este rango.</p>
+        }
+        @for (g of grouped(); track g.day) {
+          <h4 class="ar-day">{{ g.day }}</h4>
+          <ol class="ar-timeline">
+            @for (e of g.items; track $index) {
+              <li>
+                <span class="ar-timeline__icon" aria-hidden="true"><fa-icon [icon]="['fas', e.icon]"></fa-icon></span>
+                <span class="ar-timeline__text">{{ e.summary }}</span>
+                <time class="ar-timeline__time" [attr.datetime]="e.at">{{ time(e.at) }}</time>
+                @if (e.link) { <button type="button" class="ar-link" (click)="go(e.link)" [attr.aria-label]="'Abrir: ' + e.summary">Ver</button> }
+              </li>
+            }
+          </ol>
+        }
+        @if (loadingEvents()) { <p class="ar-muted" role="status">Cargando…</p> }
+        @if (hasMore() && !loadingEvents()) {
+          <button type="button" class="ar-btn ar-btn--wide" (click)="more()">Ver más ({{ eventsTotal() - events().length }})</button>
+        }
+      }
+    </div>
+  </aside>
+}

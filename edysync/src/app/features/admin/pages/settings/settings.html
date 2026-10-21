@@ -247,6 +247,10 @@
   }
 
   <!-- Equipo: lo que piden y reportan terapeutas y pacientes (antes en el menú lateral) -->
+  @if (section === 'actividad') {
+    <app-activity-review></app-activity-review>
+  }
+
   @if (section === 'requests') {
     <app-admin-requests class="settings-embedded" [embedded]="true" />
   }

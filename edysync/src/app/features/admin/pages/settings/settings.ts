@@ -18,6 +18,7 @@ import { VisorFuncionamiento, type TabId } from '../visor-funcionamiento/visor-f
 import { NotificationPrefs } from '../../../../shared/components/notification-prefs/notification-prefs';
 import { Incidents } from '../incidents/incidents';
 import { AdminRequests } from '../requests/requests';
+import { ActivityReview } from '../../components/activity-review/activity-review';
 import { Website } from '../website/website';
 import { ActionRequestService } from '../../../../core/services/action-request.service';
 import { IncidentService } from '../../../../core/services/incident.service';
@@ -26,7 +27,7 @@ import { LandingAdminService } from '../../../../core/services/landing-admin.ser
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [FontAwesomeModule, FormsModule, RouterLink, AvatarUploader, FingerprintCard, VisorFuncionamiento, NotificationPrefs, Incidents, AdminRequests, Website],
+  imports: [FontAwesomeModule, FormsModule, RouterLink, AvatarUploader, FingerprintCard, VisorFuncionamiento, NotificationPrefs, Incidents, AdminRequests, Website, ActivityReview],
   templateUrl: './settings.html',
   styleUrls: ['./settings.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -66,6 +67,7 @@ export class Settings implements OnInit, OnDestroy {
     {
       label: 'Sistema',
       items: [
+        { id: 'actividad', label: 'Actividad de usuarios', icon: ['fas', 'user-clock'] },
         { id: 'backend', label: 'Estado del servidor', icon: ['fas', 'server'] },
         { id: 'logs', label: 'Registros', icon: ['fas', 'terminal'] },
         { id: 'csp', label: 'Seguridad web (CSP)', icon: ['fas', 'bug'] },
@@ -103,7 +105,7 @@ export class Settings implements OnInit, OnDestroy {
   }
 
   get isTeamSection(): boolean {
-    return this.section === 'requests' || this.section === 'incidents' || this.section === 'website';
+    return this.section === 'requests' || this.section === 'incidents' || this.section === 'website' || this.section === 'actividad';
   }
 
   get systemTab(): TabId {
