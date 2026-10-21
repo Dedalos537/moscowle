@@ -599,4 +599,9 @@ def init_scheduler(app):
         id='faq_auto_grow',
     )
 
+    # --- PRP 012: la actividad registrada se guarda 180 días ---
+    from app.services.activity_review import purge_old
+
+    scheduler.add_job(func=_wrap(purge_old), trigger='cron', hour=3, minute=15, id='activity_retention')
+
     scheduler.start()

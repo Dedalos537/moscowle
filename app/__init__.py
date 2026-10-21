@@ -664,6 +664,21 @@ def create_app(config_class=None):
     except Exception as e:
         app.logger.warning(f'Rate limiter initialization failed: {e}')
 
+    @app.after_request
+    def _record_activity(response):
+        # PRP 012: escrituras exitosas de la lista blanca → activity_event (sin el cuerpo de la petición).
+        try:
+            from flask import request as _req
+
+            from app.auth_compat import current_user as _cu
+            from app.services.activity_review import maybe_record_request
+
+            uid = getattr(_cu, 'id', None) if getattr(_cu, 'is_authenticated', False) else None
+            maybe_record_request(_req, response, uid)
+        except Exception:  # noqa: BLE001 - nunca rompe la respuesta
+            pass
+        return response
+
     try:
         from app.services import app_metrics
 

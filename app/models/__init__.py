@@ -45,3 +45,4 @@ from app.models.billing import PayrollPeriod as PayrollPeriod
 from app.models.landing import LandingContentVersion as LandingContentVersion
 from app.models.landing import LandingLead as LandingLead
 from app.models.ai_external_call import AiExternalCall as AiExternalCall
+from app.models.activity_event import ActivityEvent as ActivityEvent

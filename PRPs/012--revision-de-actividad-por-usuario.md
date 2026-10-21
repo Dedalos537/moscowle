@@ -2,7 +2,12 @@
 
 > **Version:** 1.0
 > **Created:** 2026-10-21
-> **Status:** Para aprobar
+> **Status:** Implementado (2026-10-21), fases A–E.
+> **Decisiones por defecto (cambiables):**
+> 1. Solo **admin**; el supervisor queda para después, limitado a su sede.
+> 2. Las sesiones pasadas sin cerrar son pendiente **urgente**; las completadas sin notas, pendiente **menor**.
+> 3. `activity_event` se guarda **180 días**.
+> 4. Incluye **«Cerrar sus sesiones»**.
 > **Depende de:** PRP 011 (tipos de notificación y destinatarios por rol), PRP 010 (Prometheus, para la parte técnica)
 
 ---

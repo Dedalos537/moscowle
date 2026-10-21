@@ -496,6 +496,40 @@ export class AdminService {
     return this.http.post<{ success: boolean }>(`/admin/api/tokens/deactivate/${tokenId}`, {});
   }
 
+  // ── Actividad por usuario (PRP 012) ──
+  activityUsers(filters: { role?: string; sede_id?: number | null; only_pending?: boolean; q?: string } = {}): Observable<{ users: ActivityUserRow[] }> {
+    let params = new HttpParams();
+    if (filters.role) params = params.set('role', filters.role);
+    if (filters.sede_id) params = params.set('sede_id', filters.sede_id);
+    if (filters.only_pending) params = params.set('only_pending', '1');
+    if (filters.q) params = params.set('q', filters.q);
+    return this.http.get<{ users: ActivityUserRow[] }>('/admin/api/activity/users', { params });
+  }
+
+  activityDetail(userId: number): Observable<ActivityDetail> {
+    return this.http.get<ActivityDetail>(`/admin/api/activity/users/${userId}`);
+  }
+
+  activityTimeline(userId: number, opts: { from?: string; to?: string; types?: string[]; page?: number } = {}): Observable<ActivityTimeline> {
+    let params = new HttpParams().set('page', opts.page ?? 1);
+    if (opts.from) params = params.set('from', opts.from);
+    if (opts.to) params = params.set('to', opts.to);
+    if (opts.types?.length) params = params.set('types', opts.types.join(','));
+    return this.http.get<ActivityTimeline>(`/admin/api/activity/users/${userId}/timeline`, { params });
+  }
+
+  revokeUserSessions(userId: number): Observable<{ success: boolean; revoked: number }> {
+    return this.http.post<{ success: boolean; revoked: number }>(`/admin/api/activity/users/${userId}/revoke-sessions`, {});
+  }
+
+  exportActivity(opts: { user_id?: number; from?: string; to?: string } = {}): Observable<Blob> {
+    let params = new HttpParams();
+    if (opts.user_id) params = params.set('user_id', opts.user_id);
+    if (opts.from) params = params.set('from', opts.from);
+    if (opts.to) params = params.set('to', opts.to);
+    return this.http.get('/admin/api/activity/export.xlsx', { params, responseType: 'blob' });
+  }
+
   /** PRP 009: estado de opencode (MiMo) y sus interruptores. */
   opencodeStatus(): Observable<OpencodeStatus> {
     return this.http.get<OpencodeStatus>('/mcp/opencode/status');
@@ -1044,4 +1078,49 @@ export interface OpencodeStatus {
   chat: OpencodeInstance;
   dev: OpencodeInstance;
   usage_today: Record<string, { calls: number; tokens_in: number; tokens_out: number; errors: number }>;
+}
+
+export interface ActivityUserRow {
+  id: number;
+  name: string;
+  login_code: string | null;
+  role: string;
+  sede_id: number | null;
+  last_login: string | null;
+  actions_7d: number;
+  pending: number;
+  pending_high: number;
+  pending_oldest_days: number;
+}
+
+export interface ActivityPending {
+  key: string;
+  label: string;
+  count: number;
+  days: number | null;
+  severity: 'high' | 'medium' | 'low';
+  link: string | null;
+  team?: boolean;
+}
+
+export interface ActivityDetail {
+  user: { id: number; name: string; role: string; login_code: string | null };
+  pending: ActivityPending[];
+  sessions: { id: number; device: string | null; ip: string | null; since: string | null }[];
+  daily: { day: string; n: number }[];
+}
+
+export interface ActivityEventRow {
+  at: string;
+  type: string;
+  icon: string;
+  summary: string;
+  link: string | null;
+}
+
+export interface ActivityTimeline {
+  events: ActivityEventRow[];
+  total: number;
+  page: number;
+  per_page: number;
 }
