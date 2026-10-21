@@ -207,8 +207,11 @@
 
 .logs__actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .logs__search {
@@ -391,4 +394,16 @@
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+@media (max-width: 599px) {
+  .logs__actions { width: 100%; }
+  .logs__actions > :first-child { flex: 1 1 100%; min-width: 0; }
+}
+
+@media (max-width: 599px) {
+  .log-entry__main { flex-wrap: wrap; row-gap: 0.25rem; min-width: 0; }
+  .log-entry__level { min-width: 0; }
+  .log-entry__time { min-width: 0; margin-left: auto; }
+  .log-entry__msg { flex: 1 1 100%; min-width: 0; order: 3; }
 }

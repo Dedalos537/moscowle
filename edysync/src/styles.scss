@@ -774,3 +774,8 @@ tr {
   // Los contenedores con scroll horizontal ya no hacen falta.
   div:has(> table.mtable) { overflow-x: visible !important; }
 }
+
+// Textos técnicos (rutas, tokens, URLs) dentro de Configuración: se parten antes que correr la hoja.
+@media (max-width: 899px) {
+  .settings-pane code, .settings-pane pre { overflow-wrap: anywhere; white-space: pre-wrap; }
+}

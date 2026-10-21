@@ -333,3 +333,50 @@ def _default_title(category):
         'activity': 'Actividad',
     }
     return titles.get(category, 'Notificaciones')
+
+
+# ─── Web Push: avisos con el navegador cerrado ─────────────────────────────
+
+
+@api_bp.route('/push/vapid-key')
+@login_required
+def push_vapid_key():
+    from app.services import web_push
+
+    return jsonify({'key': web_push.public_key()})
+
+
+@api_bp.route('/push/subscribe', methods=['POST'])
+@login_required
+@csrf.exempt
+def push_subscribe():
+    """Guarda (o reasigna) la suscripción de este navegador al usuario actual."""
+    from app.extensions import db
+    from app.models.push_subscription import PushSubscription
+
+    data = request.get_json(silent=True) or {}
+    endpoint = str(data.get('endpoint') or '')
+    keys = data.get('keys') or {}
+    p256dh, auth = str(keys.get('p256dh') or ''), str(keys.get('auth') or '')
+    if not endpoint.startswith('https://') or len(endpoint) > 700 or not p256dh or not auth:
+        return jsonify({'success': False, 'message': 'Suscripción inválida'}), 400
+    sub = PushSubscription.query.filter_by(endpoint=endpoint).first() or PushSubscription(endpoint=endpoint)
+    sub.user_id = current_user.id
+    sub.p256dh, sub.auth = p256dh[:200], auth[:64]
+    sub.user_agent = (request.headers.get('User-Agent') or '')[:200]
+    db.session.add(sub)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@api_bp.route('/push/unsubscribe', methods=['POST'])
+@login_required
+@csrf.exempt
+def push_unsubscribe():
+    from app.extensions import db
+    from app.models.push_subscription import PushSubscription
+
+    endpoint = str((request.get_json(silent=True) or {}).get('endpoint') or '')
+    PushSubscription.query.filter_by(endpoint=endpoint, user_id=current_user.id).delete()
+    db.session.commit()
+    return jsonify({'success': True})

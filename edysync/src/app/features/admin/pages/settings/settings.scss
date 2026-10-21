@@ -469,3 +469,10 @@
   .setting-item > .seg { width: 100%; }
   .setting-item > .seg > .seg__btn { flex: 1 1 0; }
 }
+
+/* La hoja solo se desplaza hacia abajo: lo que no quepa se acomoda, nunca se corre a la derecha. */
+.settings-pane { overflow-x: hidden; }
+.settings-pane__inner { min-width: 0; }
+@media (max-width: 899px) {
+  .seg__btn { white-space: normal; line-height: 1.15; }
+}

@@ -37,7 +37,7 @@ import { NotificationPreferences } from '../../../core/models/notification';
 
       @if (open) {
         <div
-          class="absolute right-0 mt-3 w-[min(20rem,calc(100vw-1.5rem))] bg-surface-container-lowest/95 backdrop-blur-xl rounded-xl shadow-soft border border-border/50 z-50 flex flex-col animate-fade-in"
+          class="absolute right-0 mt-3 w-[min(20rem,calc(100vw-1.5rem))] max-sm:fixed max-sm:inset-x-3 max-sm:top-16 max-sm:mt-0 max-sm:w-auto max-sm:max-h-[calc(100dvh-5rem)] max-sm:overflow-y-auto bg-surface-container-lowest/95 backdrop-blur-xl rounded-xl shadow-soft border border-border/50 z-50 flex flex-col animate-fade-in"
           (click)="$event.stopPropagation()"
         >
           <div class="p-4 border-b border-border/30 flex justify-between items-center bg-surface-container-low/80 rounded-t-xl">
