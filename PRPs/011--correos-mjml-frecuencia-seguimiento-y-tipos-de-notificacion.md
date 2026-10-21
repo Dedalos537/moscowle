@@ -267,6 +267,35 @@ KINDS = {
 - **Columnas nuevas:** `notification.kind` y `notification_group.kind`. Más adelante, en `user_notification_preference`, `presentation_overrides` (JSON por categoría).
 
 
+
+## Audiencia por rol: qué le llega a quién (2026-10-21)
+
+**Regla:**
+
+- **Lo técnico** (servidor, latencia, red, accesos, IA) es solo para quien administra el sistema.
+- **Lo clínico y operativo**, para quien lo atiende.
+- **Lo del paciente**, para el paciente o su apoderado.
+
+Vive en `app/services/audience.py` y se aplica antes de cada aviso: en la app, en Telegram y por correo.
+
+| Aviso / correo | Admin | Supervisor | Terapeuta | Paciente / apoderado |
+|---|:-:|:-:|:-:|:-:|
+| Servidor caído, latencia, disco, memoria (PRP 010) | ✓ | ✓ | — | — |
+| MiMo en pausa / uso de IA | ✓ | ✓ | — | — |
+| Incidencia **técnica** (SOFTWARE, HARDWARE, RED, ACCESOS o detectada automáticamente) | ✓ | ✓ | — aunque sea su responsable | — (solo quien la reportó, por su propio caso) |
+| Incidencia **operativa** (OPERACIONES) | ✓ | ✓ | ✓ si es responsable | quien la reportó |
+| SLA vencido, escalamiento | ✓ | ✓ | — | — |
+| Reporte de pagos, resumen diario, reportes semanal y mensual | ✓ | — | — | — |
+| Cuotas vencidas (resumen) | ✓ | ✓ | — | — |
+| Recordatorio o confirmación de pago, renovación | — | — | — | ✓ (al apoderado) |
+| Sesiones programadas o canceladas | — | — | ✓ las suyas | ✓ las suyas |
+| Nómina por cobrar | ✓ | ✓ | ✓ la suya | — |
+| Alerta de crisis (riesgo de paciente) | ✓ | ✓ | ✓ si es su paciente | — |
+| Seguridad de la cuenta (contraseña, acceso nuevo) | cada quien la suya | ✓ | ✓ | ✓ |
+| Mensaje nuevo del chat | el receptor | el receptor | el receptor | el receptor |
+
+**Bug corregido de paso:** el escalamiento de incidencias operativas buscaba el rol `terapeuta`. En el sistema el rol se llama `terapista`, así que nunca encontraba a nadie y siempre caía en el admin.
+
 ## Auditoría de correos: qué llega y a quién (2026-10-21)
 
 | # | Correo | Lo dispara | Destinatario | Rol | Formato hoy | Estado |

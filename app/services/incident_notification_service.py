@@ -224,22 +224,27 @@ class IncidentNotificationService:
 
     @classmethod
     def _get_responsible_email(cls, incidente: Incidente):
+        """Correo del responsable, solo si su rol debe recibir esta incidencia: una de latencia o del servidor
+        (técnica) no le llega a un terapeuta aunque lo hayan puesto como responsable por error."""
         if incidente.responsable_id:
             from app.models.user import User
+            from app.services.audience import may_receive_incident
+            from app.services.email_service import recipient_for
 
             user = User.query.get(incidente.responsable_id)
-            if user and user.email:
-                return user.email
+            if may_receive_incident(user, incidente):
+                return recipient_for(user)
         return None
 
     @classmethod
     def _get_creator_email(cls, incidente: Incidente):
         if incidente.user_id:
             from app.models.user import User
+            from app.services.email_service import recipient_for
 
             user = User.query.get(incidente.user_id)
-            if user and user.email:
-                return user.email
+            # Quien la reportó sí se entera de su propio caso (aunque sea técnica), a su correo real.
+            return recipient_for(user)
         return None
 
     @classmethod
@@ -538,8 +543,12 @@ class IncidentNotificationService:
             if uid != incidente.user_id:
                 cls._notify_user(uid, msg, title='Nuevo Incidente', category='alert', priority='high', link=link)
 
-        # Notify responsible
-        if incidente.responsable_id and incidente.responsable_id != incidente.user_id:
+        # Notify responsible (solo si su rol debe ver esta incidencia: las técnicas son del equipo de sistema)
+        from app.models.user import User
+        from app.services.audience import may_receive_incident
+
+        resp = User.query.get(incidente.responsable_id) if incidente.responsable_id else None
+        if resp and incidente.responsable_id != incidente.user_id and may_receive_incident(resp, incidente):
             cls._notify_user(
                 incidente.responsable_id, msg, title='Incidente Asignado', category='alert', priority='high', link=link
             )

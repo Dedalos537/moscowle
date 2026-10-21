@@ -50,6 +50,10 @@ class NotificationService:
         This is the PRIMARY entry point for all new notifications.
         It checks preferences, groups similar notifications, and pushes via Socket.IO.
         """
+        # Audiencia por rol (PRP 011): un aviso técnico (servidor, MiMo, SLA…) no le llega a quien no le corresponde.
+        if not self._audience_ok(user_id, kind, event_type, category, metadata_json):
+            return None
+
         # Check user preferences
         prefs = self._get_preferences(user_id)
         if prefs:
@@ -119,6 +123,8 @@ class NotificationService:
         prefs = self._get_preferences(user_id)
         if prefs and not getattr(prefs, 'notifications_enabled', True):
             return None
+        if not self._audience_ok(user_id, kind, None, category, metadata_json):
+            return None
         etype = self._infer_event_type(category, notif_type, metadata_json)
         kwargs = {}
         if metadata_json and isinstance(metadata_json, dict):
@@ -141,6 +147,16 @@ class NotificationService:
         self._emit(user_id, group, message, notif_type, category, icon, link, metadata_json, kind, etype)
 
         return group
+
+    @staticmethod
+    def _audience_ok(user_id, kind, event_type, category, metadata_json):
+        from app.models import User
+        from app.services import notification_kinds
+        from app.services.audience import may_receive_kind
+
+        meta = metadata_json if isinstance(metadata_json, dict) else {}
+        resolved = notification_kinds.resolve_kind(kind, event_type or meta.get('event_type'), category, meta)
+        return may_receive_kind(db.session.get(User, user_id), resolved)
 
     def _emit(self, user_id, group, message, notif_type, category, icon, link, metadata_json, kind, etype):
         """Evento en tiempo real con el tipo y cómo mostrarlo (PRP 011 · E2): badge, toast, snackbar, banner…"""

@@ -117,7 +117,8 @@ class IncidentEscalationService:
             'SOFTWARE': ['admin'],
             'RED': ['admin'],
             'ACCESOS': ['admin'],
-            'OPERACIONES': ['terapeuta', 'admin'],
+            # El rol se llama «terapista» en el sistema: con «terapeuta» nunca encontraba a nadie y caía en admin.
+            'OPERACIONES': ['terapista', 'admin'],
         }
 
         target_roles = escalation_map.get(incidente.categoria, ['admin'])
