@@ -215,6 +215,13 @@ body { font-size: 16px; }
   table:not(.dv-table):not(.data-table) td:nth-child(n + 2) {
     text-align: center !important;
   }
+  // En móvil las tablas .mtable son tarjetas: se leen a la izquierda (mismo layer para poder ganarle).
+  @media (max-width: 767.98px) {
+    table.mtable:not(.dv-table):not(.data-table) td:nth-child(n + 2):not([colspan]),
+    table.mtable.data-table td:nth-child(n + 2):not([colspan]) {
+      text-align: left !important;
+    }
+  }
 }
 
 @layer components {
@@ -731,4 +738,39 @@ tr {
     input { width: 0; min-width: 0; padding: 0; }
     &:focus-within { width: 9.5rem !important; padding: 0 0.625rem !important; gap: 0.375rem !important; input { width: 100%; } }
   }
+}
+
+// ── Tablas en móvil: cada fila es una tarjeta (como Usuarios) ──────────────
+// Se activa con class="mtable" en la tabla; cada <td> lleva data-label con su columna. La primera
+// celda (mt-lead) va arriba como título y la de acciones (mt-actions) abajo, separada.
+@media (max-width: 767.98px) {
+  table.mtable { display: block; min-width: 0 !important; width: 100% !important; border: 0; }
+  .mtable thead {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .mtable tbody { display: flex; flex-direction: column; gap: 0.75rem; background: transparent !important; }
+  .mtable tbody > tr {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.625rem 0.75rem;
+    padding: 0.875rem; border: 1px solid var(--color-border) !important; border-radius: var(--radius-lg, 0.75rem);
+    background: var(--color-surface-container-lowest);
+  }
+  .mtable tbody > tr > td {
+    display: block; min-width: 0; padding: 0 !important; border: 0 !important; text-align: left !important;
+    white-space: normal !important; overflow-wrap: anywhere;
+  }
+  .mtable td[data-label]::before {
+    content: attr(data-label); display: block; margin-bottom: 0.125rem;
+    font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--color-on-surface-variant);
+  }
+  .mtable td.mt-lead { grid-column: 1 / -1; font-size: 0.9375rem; font-weight: 700; color: var(--color-on-surface); }
+  .mtable td.mt-actions {
+    grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem;
+    padding-top: 0.5rem !important; border-top: 1px solid var(--color-border) !important;
+  }
+  .mtable td.mt-actions:empty { display: none; }
+  .mtable td[colspan] { grid-column: 1 / -1; text-align: center !important; }
+  .mtable tbody > tr:has(> td[colspan]) { display: block; }
+  // Los contenedores con scroll horizontal ya no hacen falta.
+  div:has(> table.mtable) { overflow-x: visible !important; }
 }

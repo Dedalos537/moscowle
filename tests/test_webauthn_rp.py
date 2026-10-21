@@ -27,3 +27,10 @@ def test_unknown_or_insecure_origin_falls_back(app):
         with _ctx(app, origin):
             assert svc.rp_id() == 'api-centrojuanpabloii.online'
             assert all('evil' not in o for o in svc.origins())
+
+
+def test_android_app_origin_is_accepted(app):
+    # La app de Android firma con el hash de su certificado; el RP sigue siendo el del sitio.
+    with _ctx(app, 'https://moscowle.centrojuanpabloii.com'):
+        assert svc.rp_id() == 'centrojuanpabloii.com'
+        assert svc.ANDROID_APP_ORIGINS[0] in svc.origins()

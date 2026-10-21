@@ -23,6 +23,9 @@ const MAX_BANNERS = 4;
  * banner, modal o push. Aplica contexto (si ya estás en esa pantalla no interrumpe), «no molestar» de 21:00 a
  * 07:00 (solo urgentes) y evita duplicados.
  */
+/** Puente que expone la app de Android (MainActivity → MoscowleNative). */
+type NativeWindow = Window & { MoscowleNative?: { notify?: (json: string) => void } };
+
 @Injectable({ providedIn: 'root' })
 export class NotificationPresenterService {
   private router = inject(Router);
@@ -47,6 +50,7 @@ export class NotificationPresenterService {
     if (this.seen.size > 300) this.seen = new Set([...this.seen].slice(-150));
 
     const notice = this.toNotice(ev);
+    this.nativeNotify(ev, notice);
     const shown = new Set<Presentation>(presentationOf(ev));
     const urgent = ev.priority === 'urgent';
     const here = this.isHere(ev.link);
@@ -138,6 +142,23 @@ export class NotificationPresenterService {
       this.open(n);
       note.close();
     };
+  }
+
+  /** En la app de Android cada aviso va también a la barra de notificaciones del sistema, siempre
+   * (la app lo deduplica con el mismo id y conteo que usa su revisión en segundo plano). */
+  private nativeNotify(ev: NotificationEvent, n: Notice): void {
+    const bridge = typeof window === 'undefined' ? undefined : (window as NativeWindow).MoscowleNative;
+    if (!bridge?.notify) return;
+    bridge.notify(
+      JSON.stringify({
+        id: ev.id,
+        count: ev.group_count ?? 1,
+        title: n.title,
+        message: n.message,
+        link: n.action?.link ?? '',
+        priority: ev.priority ?? 'normal',
+      }),
+    );
   }
 
   /** ¿El usuario ya está en la pantalla del aviso? Entonces no se interrumpe (solo badge). */

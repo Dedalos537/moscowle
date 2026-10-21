@@ -56,6 +56,32 @@ export class Reports implements OnInit, OnDestroy {
   /** Búsqueda por nombre, código o correo que filtra todas las tablas de personas del reporte. */
   readonly personQuery = signal('');
 
+  /** Paginado de las tablas largas del reporte (10 filas por página, una página por tabla). */
+  readonly pageSize = 10;
+  private pages: Record<string, number> = {};
+
+  pageCount(list: readonly unknown[]): number {
+    return Math.max(1, Math.ceil(list.length / this.pageSize));
+  }
+
+  pageIndex(key: string, list: readonly unknown[]): number {
+    return Math.min(this.pages[key] ?? 0, this.pageCount(list) - 1);
+  }
+
+  pageOf<T>(key: string, list: readonly T[]): T[] {
+    const start = this.pageIndex(key, list) * this.pageSize;
+    return list.slice(start, start + this.pageSize);
+  }
+
+  setPage(key: string, page: number): void {
+    this.pages[key] = Math.max(0, page);
+  }
+
+  search(q: string): void {
+    this.pages = {};
+    this.personQuery.set(q);
+  }
+
   match(list: readonly any[] | null | undefined, nameKey: string, idKey?: string, emailKey?: string): any[] {
     const rows = (list ?? []) as any[];
     const q = this.personQuery();

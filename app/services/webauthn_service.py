@@ -26,6 +26,11 @@ from app.models.webauthn import WebAuthnChallenge, WebAuthnCredential
 CHALLENGE_TTL_SECONDS = 300
 
 
+# Origen WebAuthn de la app Android «Moscowle» (com.centrojuanpabloii.moscowle): SHA-256 de su
+# certificado de firma en base64url. Debe coincidir con /.well-known/assetlinks.json del RP ID.
+ANDROID_APP_ORIGINS = ('android:apk-key-hash:l5a-iQLxFlzQpkCjHYWHdmG2lHbeR998IDXHN_2y0sA',)
+
+
 def _configured_rp_id():
     return current_app.config.get('WEBAUTHN_RP_ID', 'api-centrojuanpabloii.online')
 
@@ -66,6 +71,10 @@ def origins():
     if isinstance(value, str):
         value = [o.strip() for o in value.split(',') if o.strip()]
     result = list(value or [f'https://{_configured_rp_id()}'])
+    # La app de Android (WebView con WebAuthn en modo app) firma como su certificado, no como el sitio.
+    for app_origin in current_app.config.get('WEBAUTHN_ANDROID_ORIGINS', ANDROID_APP_ORIGINS):
+        if app_origin not in result:
+            result.append(app_origin)
     origin, _ = _request_origin() if has_request_context() else (None, None)
     if origin and origin not in result:
         result.append(origin)

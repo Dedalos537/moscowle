@@ -42,9 +42,9 @@
       </div>
     </div>
 
-    <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/20 p-6 xl:p-8">
+    <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/20 p-4 sm:p-6 xl:p-8">
       <div class="overflow-x-auto rounded-lg border border-border/20 shadow-soft">
-        <table class="w-full min-w-[650px]">
+        <table class="mtable w-full min-w-[650px]">
           <thead>
             <tr class="bg-surface-container-high">
               <th class="px-5 py-4 text-left text-xs font-bold text-on-surface-variant uppercase">Fecha</th>
@@ -59,23 +59,23 @@
           <tbody class="divide-border/20 bg-surface-container-lowest">
             @for (p of payments; track p.id) {
               <tr class="hover:bg-surface-container-high/80">
-                <td class="px-5 py-4 text-sm text-on-surface">{{ p.date | date:'dd/MM/yyyy' }}</td>
-                <td class="px-5 py-4 text-right text-sm font-bold text-on-surface">S/ {{ p.amount.toFixed(2) }}</td>
-                <td class="px-5 py-4 text-right text-sm text-on-surface-variant">{{ p.discount ? 'S/ ' + p.discount.toFixed(2) : '—' }}</td>
-                <td class="px-5 py-4 text-center">
+                <td class="mt-lead px-5 py-4 text-sm text-on-surface">{{ p.date | date:'dd/MM/yyyy' }}</td>
+                <td class="px-5 py-4 text-right text-sm font-bold text-on-surface" data-label="Monto">S/ {{ p.amount.toFixed(2) }}</td>
+                <td class="px-5 py-4 text-right text-sm text-on-surface-variant" data-label="Descuento">{{ p.discount ? 'S/ ' + p.discount.toFixed(2) : '—' }}</td>
+                <td class="px-5 py-4 text-center" data-label="Metodo">
                   <span class="inline-flex items-center gap-1 text-xs font-medium text-on-surface-variant">
                     <fa-icon [icon]="['fas', getMethodIcon(p.method)]" class="text-on-surface-variant/60"></fa-icon> {{ p.method }}
                   </span>
                 </td>
-                <td class="px-5 py-4 text-sm text-on-surface-variant">{{ p.reference || '—' }}</td>
-                <td class="px-5 py-4 text-center">
+                <td class="px-5 py-4 text-sm text-on-surface-variant" data-label="Referencia">{{ p.reference || '—' }}</td>
+                <td class="px-5 py-4 text-center" data-label="Estado">
                   @if (p.status === 'completed') {
                     <span class="inline-block px-2 py-0.5 text-[10px] font-bold rounded-full bg-success-container text-on-success-container">Completado</span>
                   } @else {
                     <span class="inline-block px-2 py-0.5 text-[10px] font-bold rounded-full bg-warning-container text-warning">Pendiente</span>
                   }
                 </td>
-                <td class="px-5 py-4 text-right">
+                <td class="mt-actions px-5 py-4 text-right">
                   <app-button variant="danger" label="Eliminar" (clicked)="deletePayment(p.id)"></app-button>
                 </td>
               </tr>

@@ -285,3 +285,15 @@
   .ai-facts { grid-template-columns: 1fr 1fr; }
   .ai-top li { grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) 2.25rem; }
 }
+
+// ── paginado ────────────────────────────────────────────────────────────────
+.rp-pager {
+  display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; padding: 0.75rem 0.25rem 0;
+  font-size: 0.8125rem; font-weight: 600; color: var(--color-on-surface-variant);
+  button {
+    display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 0.75rem; cursor: pointer;
+    border: 1px solid var(--color-outline-variant); background: var(--color-surface-container-lowest); color: var(--color-on-surface);
+    &:disabled { opacity: 0.4; cursor: default; }
+    &:not(:disabled):hover { background: var(--color-surface-container-high); }
+  }
+}

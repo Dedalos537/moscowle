@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.centrojuanpabloii.moscowle",
+      "sha256_cert_fingerprints": [
+        "97:96:BE:89:02:F1:16:5C:D0:A6:40:A3:1D:85:87:76:61:B6:94:76:DE:47:DF:7C:20:35:C7:37:FD:B2:D2:C0"
+      ]
+    }
+  }
+]

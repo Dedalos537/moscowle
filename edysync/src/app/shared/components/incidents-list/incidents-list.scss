@@ -6,11 +6,11 @@
 [data-estado='RESUELTO'] { --st: var(--color-success); --st-text: var(--color-success-text); }
 [data-estado='CERRADO'] { --st: var(--color-outline); --st-text: var(--color-on-surface-variant); }
 
-.il { display: grid; gap: 1.25rem; max-width: 80rem; margin: 0 auto; padding: 0.25rem; align-items: start; }
+.il { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; max-width: 80rem; margin: 0 auto; padding: 0.25rem; align-items: start; }
 @media (min-width: 960px) { .il { grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); } }
 
 // ── lista ───────────────────────────────────────────────────────────────────
-.il-list { display: grid; gap: 0.75rem; min-width: 0; }
+.il-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem; min-width: 0; }
 .il-filters {
   display: flex; padding: 0.1875rem; border-radius: 999px; background: var(--color-surface-container); width: max-content; max-width: 100%;
   button {
@@ -22,7 +22,7 @@
     &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
   }
 }
-.il-items { display: grid; gap: 0.5rem; }
+.il-items { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
 .il-item {
   width: 100%; display: grid; gap: 0.25rem; padding: 0.875rem 1rem; border-radius: 0.875rem; text-align: left; cursor: pointer;
   border: 1px solid var(--color-outline-variant); background: var(--color-surface-container-lowest); color: inherit; font: inherit;

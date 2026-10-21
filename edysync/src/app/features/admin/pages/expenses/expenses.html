@@ -14,12 +14,12 @@
       <app-spinner size="md" colorClass="text-primary"></app-spinner>
     </div>
   } @else {
-    <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 overflow-hidden">
+    <div class="bg-surface-container-lowest rounded-lg shadow-soft p-4 sm:p-6 overflow-hidden">
       <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <h3 class="text-lg font-semibold text-on-surface">Nomina de Terapeutas (Mes Actual)</h3>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full">
+        <table class="mtable w-full">
           <thead>
             <tr class="border-b border-border/20">
               <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Terapeuta</th>
@@ -34,8 +34,8 @@
           <tbody class="divide-y divide-border/10">
             @for (t of therapistFinancials; track t.therapist.id) {
               <tr class="hover:bg-surface-container-high/50">
-                <td class="px-6 py-4 font-medium text-on-surface">{{ t.therapist.username | personLabel }}</td>
-                <td class="px-6 py-4 text-sm text-on-surface-variant">
+                <td class="mt-lead px-6 py-4 font-medium text-on-surface">{{ t.therapist.username | personLabel }}</td>
+                <td class="px-6 py-4 text-sm text-on-surface-variant" data-label="Contrato">
                   @if (t.contract_hours > 0) {
                     S/ {{ t.rate.toFixed(2) }}/hr
                     <div class="text-xs text-on-surface-variant/60">{{ t.contract_hours }} hrs base / S/ {{ t.therapist.salary_base }}</div>
@@ -43,13 +43,13 @@
                     <span class="text-xs text-warning bg-warning-container px-2 py-1 rounded">Sin contrato</span>
                   }
                 </td>
-                <td class="px-6 py-4 text-sm text-on-surface-variant">{{ t.worked_hours.toFixed(1) }} hrs</td>
-                <td class="px-6 py-4 text-sm font-bold text-on-surface">S/ {{ t.projected_pay.toFixed(2) }}</td>
-                <td class="px-6 py-4 text-sm text-success">S/ {{ t.paid.toFixed(2) }}</td>
-                <td class="px-6 py-4 text-sm" [class.text-error]="t.balance > 0" [class.text-success]="t.balance <= 0">
+                <td class="px-6 py-4 text-sm text-on-surface-variant" data-label="Horas Trab.">{{ t.worked_hours.toFixed(1) }} hrs</td>
+                <td class="px-6 py-4 text-sm font-bold text-on-surface" data-label="A Pagar (Est.)">S/ {{ t.projected_pay.toFixed(2) }}</td>
+                <td class="px-6 py-4 text-sm text-success" data-label="Pagado">S/ {{ t.paid.toFixed(2) }}</td>
+                <td class="px-6 py-4 text-sm" [class.text-error]="t.balance > 0" [class.text-success]="t.balance <= 0" data-label="Pendiente">
                   S/ {{ t.balance.toFixed(2) }}
                 </td>
-                <td class="px-6 py-4 text-right">
+                <td class="mt-actions px-6 py-4 text-right">
                   @if (t.balance > 0) {
                     <app-button variant="primary" label="Pagar" [icon]="['fas', 'hand-holding-dollar']" (clicked)="openPaymentModal(t)"></app-button>
                   }
@@ -63,10 +63,10 @@
       </div>
     </div>
 
-    <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 overflow-hidden">
+    <div class="bg-surface-container-lowest rounded-lg shadow-soft p-4 sm:p-6 overflow-hidden">
       <h3 class="text-lg font-semibold text-on-surface mb-6">Historial de Gastos Recientes</h3>
       <div class="overflow-x-auto">
-        <table class="w-full">
+        <table class="mtable w-full">
           <thead>
             <tr class="border-b border-border/20">
               <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Fecha</th>
@@ -79,8 +79,8 @@
           <tbody class="divide-y divide-border/10">
             @for (e of recentExpenses; track e.id) {
               <tr class="hover:bg-surface-container-high/50">
-                <td class="px-6 py-4 text-sm text-on-surface-variant">{{ e.date }}</td>
-                <td class="px-6 py-4 text-sm capitalize">
+                <td class="mt-lead px-6 py-4 text-sm text-on-surface-variant">{{ e.date }}</td>
+                <td class="px-6 py-4 text-sm capitalize" data-label="Categoria">
                   <span class="px-2 py-1 rounded text-xs font-bold"
                     [class.bg-info-container]="e.category === 'therapist_payment'" [class.text-info]="e.category === 'therapist_payment'"
                     [class.bg-surface-container-high]="e.category === 'operational'" [class.text-on-surface]="e.category === 'operational'"
@@ -90,7 +90,7 @@
                     {{ e.category.replace('_', ' ') }}
                   </span>
                 </td>
-                <td class="px-6 py-4 text-sm text-on-surface">
+                <td class="px-6 py-4 text-sm text-on-surface" data-label="Descripcion">
                   {{ e.description }}
                   @if (e.therapist) {
                     <span class="text-on-surface-variant/60 text-xs block">Destino: {{ e.therapist.username | personLabel }}</span>
@@ -108,8 +108,8 @@
                     }
                   </div>
                 </td>
-                <td class="px-6 py-4 text-right font-mono font-bold text-on-surface">S/ {{ e.amount.toFixed(2) }}</td>
-                <td class="px-6 py-4 text-right">
+                <td class="px-6 py-4 text-right font-mono font-bold text-on-surface" data-label="Monto">S/ {{ e.amount.toFixed(2) }}</td>
+                <td class="mt-actions px-6 py-4 text-right">
                   <button (click)="deleteExpense(e)" title="Eliminar gasto"
                     class="p-2 text-on-surface-variant/60 hover:text-error transition-colors cursor-pointer"
                     [attr.aria-label]="'Eliminar gasto'">

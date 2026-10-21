@@ -231,7 +231,15 @@
 }
 
 @media (max-width: 768px) {
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  // Dentro de Configuración ya hay hoja con márgenes: aquí no se suman otros.
+  .incidents-page { padding: 0; }
+  .incidents-toolbar { padding: 0.875rem; }
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.625rem; margin-bottom: 1rem; }
+  .kpi-card { min-width: 0; gap: 0.625rem; padding: 0.75rem; }
+  .kpi-icon { display: none; }
+  .kpi-content { min-width: 0; }
+  .kpi-label { font-size: 0.6875rem; letter-spacing: 0.02em; }
+  .kpi-value { font-size: 1.375rem; }
   .filters-bar { flex-direction: column; align-items: stretch; }
   .form-row { flex-direction: column; }
 }

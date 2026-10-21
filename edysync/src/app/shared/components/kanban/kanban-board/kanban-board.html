@@ -95,7 +95,7 @@
           [cdkDropListData]="col.tasks"
           [id]="col.id"
           [cdkDropListConnectedTo]="getConnectedLists(col.id)"
-          [cdkDropListDisabled]="!canWrite || searching()"
+          [cdkDropListDisabled]="!canWrite || !dragEnabled || searching()"
           (cdkDropListDropped)="onDrop($event)"
           class="kanban-column__body"
         >
@@ -106,7 +106,7 @@
           @for (task of visibleTasks(col); track task.id) {
             <app-kanban-task-card
               cdkDrag
-              [cdkDragDisabled]="!canWrite"
+              [cdkDragDisabled]="!canWrite || !dragEnabled"
               (cdkDragStarted)="onDragStarted()"
               [task]="task"
               [viewMode]="viewMode()"
