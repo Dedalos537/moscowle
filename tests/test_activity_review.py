@@ -122,4 +122,7 @@ def test_revoke_sessions_and_retention(app):
     old = ActivityEvent(user_id=admin.id, action='x.updated', created_at=datetime.utcnow() - timedelta(days=200))
     db.session.add(old)
     db.session.commit()
-    assert act.purge_old() >= 1 and db.session.get(ActivityEvent, old.id) is None
+    old_id = old.id  # tras borrar, la instancia queda expirada: se guarda el id antes
+    assert act.purge_old() >= 1
+    db.session.expire_all()
+    assert db.session.get(ActivityEvent, old_id) is None
