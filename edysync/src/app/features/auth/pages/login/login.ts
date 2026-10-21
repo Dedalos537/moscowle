@@ -1,8 +1,9 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, ViewChild, inject } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
-import { firstValueFrom, Subscription } from 'rxjs';
+import { filter, firstValueFrom, Subscription, take } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { SplashService } from '../../../../core/services/splash.service';
@@ -57,10 +58,19 @@ export class Login implements OnInit, OnDestroy {
     private splash: SplashService,
   ) {}
 
+  private readonly splashPhase$ = toObservable(inject(SplashService).phase);
+
   ngOnInit() {
     this.subs.add(
       this.route.queryParams.subscribe((params) => {
-        if (params['logout'] === 'success') this.toast.show('Cerraste sesión. ¡Hasta pronto!', 'success');
+        if (params['logout'] !== 'success') return;
+        // El aviso espera a que el logo termine de abrirse sobre el login; si salía antes, aparecía
+        // encima de la animación de cierre de sesión.
+        this.subs.add(
+          this.splashPhase$.pipe(filter((p) => p === 'done'), take(1)).subscribe(() =>
+            this.toast.show('Cerraste sesión. ¡Hasta pronto!', 'success'),
+          ),
+        );
       }),
     );
     this.restoreRemembered();

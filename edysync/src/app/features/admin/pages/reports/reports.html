@@ -3,7 +3,7 @@
     <label class="rp-search">
       <fa-icon [icon]="['fas', 'magnifying-glass']" aria-hidden="true"></fa-icon>
       <input type="search" placeholder="Buscar por nombre, código o correo…" aria-label="Buscar personas en los reportes"
-             [ngModel]="personQuery()" (ngModelChange)="personQuery.set($event)" />
+             [ngModel]="personQuery()" (ngModelChange)="search($event)" />
     </label>
     <button type="button" class="rp-btn" (click)="exportCSV()" [disabled]="exporting" title="Descargar los pagos en CSV">
       <fa-icon [icon]="['fas', 'file-arrow-down']" aria-hidden="true"></fa-icon><span>{{ exporting ? 'Exportando…' : 'Exportar pagos' }}</span>
@@ -91,17 +91,18 @@
           <h2 id="rp-ther-title" class="rp-h">Terapeutas</h2>
           <span class="rp-count">{{ therapists.length }}</span>
         </header>
+        @let therRows = match(therapists, 'name', 'id', 'email');
         <div class="rp-scroll">
-          <table class="rp-table data-table">
+          <table class="mtable rp-table data-table">
             <thead>
               <tr><th scope="col">Nombre</th><th scope="col" class="rp-num">Sesiones</th><th scope="col">Precisión</th></tr>
             </thead>
             <tbody>
-              @for (t of match(therapists, 'name', 'id', 'email'); track t.id) {
+              @for (t of pageOf('ther', therRows); track t.id) {
                 <tr>
-                  <td><span class="rp-name">{{ t.name | personLabel: t.id }}</span>@if (people.mode() !== 'code') { <span class="rp-mail">{{ t.email }}</span> }</td>
-                  <td class="rp-num">{{ num(t.sessions) }}</td>
-                  <td>
+                  <td class="mt-lead"><span class="rp-name">{{ t.name | personLabel: t.id }}</span>@if (people.mode() !== 'code') { <span class="rp-mail">{{ t.email }}</span> }</td>
+                  <td class="rp-num" data-label="Sesiones">{{ num(t.sessions) }}</td>
+                  <td data-label="Precisión">
                     <span class="rp-bar" [attr.data-level]="level(t.avg_accuracy)">
                       <span class="rp-bar__track"><span class="rp-bar__fill" [style.width.%]="min100(t.avg_accuracy)"></span></span>
                       <span class="rp-bar__value">{{ pct(t.avg_accuracy) }}</span>
@@ -114,6 +115,13 @@
             </tbody>
           </table>
         </div>
+        @if (pageCount(therRows) > 1) {
+          <nav class="rp-pager" aria-label="Páginas de terapeutas">
+            <button type="button" (click)="setPage('ther', pageIndex('ther', therRows) - 1)" [disabled]="pageIndex('ther', therRows) === 0" aria-label="Página anterior"><fa-icon [icon]="['fas', 'chevron-left']" /></button>
+            <span>{{ pageIndex('ther', therRows) + 1 }} / {{ pageCount(therRows) }}</span>
+            <button type="button" (click)="setPage('ther', pageIndex('ther', therRows) + 1)" [disabled]="pageIndex('ther', therRows) + 1 >= pageCount(therRows)" aria-label="Página siguiente"><fa-icon [icon]="['fas', 'chevron-right']" /></button>
+          </nav>
+        }
       </section>
 
       <section class="rp-panel" aria-labelledby="rp-pat-title">
@@ -121,17 +129,18 @@
           <h2 id="rp-pat-title" class="rp-h">Pacientes</h2>
           <span class="rp-count">{{ patients.length }}</span>
         </header>
+        @let patRows = match(patients, 'name', 'id', 'email');
         <div class="rp-scroll">
-          <table class="rp-table data-table">
+          <table class="mtable rp-table data-table">
             <thead>
               <tr><th scope="col">Nombre</th><th scope="col" class="rp-num">Juegos</th><th scope="col">Precisión</th></tr>
             </thead>
             <tbody>
-              @for (p of match(patients, 'name', 'id', 'email'); track p.id) {
+              @for (p of pageOf('pat', patRows); track p.id) {
                 <tr>
-                  <td><span class="rp-name">{{ p.name | personLabel: p.id }}</span>@if (people.mode() !== 'code') { <span class="rp-mail">{{ p.email }}</span> }</td>
-                  <td class="rp-num">{{ num(p.plays) }}</td>
-                  <td>
+                  <td class="mt-lead"><span class="rp-name">{{ p.name | personLabel: p.id }}</span>@if (people.mode() !== 'code') { <span class="rp-mail">{{ p.email }}</span> }</td>
+                  <td class="rp-num" data-label="Juegos">{{ num(p.plays) }}</td>
+                  <td data-label="Precisión">
                     <span class="rp-bar" [attr.data-level]="level(p.avg_accuracy)">
                       <span class="rp-bar__track"><span class="rp-bar__fill" [style.width.%]="min100(p.avg_accuracy)"></span></span>
                       <span class="rp-bar__value">{{ pct(p.avg_accuracy) }}</span>
@@ -144,6 +153,13 @@
             </tbody>
           </table>
         </div>
+        @if (pageCount(patRows) > 1) {
+          <nav class="rp-pager" aria-label="Páginas de pacientes">
+            <button type="button" (click)="setPage('pat', pageIndex('pat', patRows) - 1)" [disabled]="pageIndex('pat', patRows) === 0" aria-label="Página anterior"><fa-icon [icon]="['fas', 'chevron-left']" /></button>
+            <span>{{ pageIndex('pat', patRows) + 1 }} / {{ pageCount(patRows) }}</span>
+            <button type="button" (click)="setPage('pat', pageIndex('pat', patRows) + 1)" [disabled]="pageIndex('pat', patRows) + 1 >= pageCount(patRows)" aria-label="Página siguiente"><fa-icon [icon]="['fas', 'chevron-right']" /></button>
+          </nav>
+        }
       </section>
     </div>
 
@@ -295,7 +311,7 @@
                   </button>
                   @if (isTherapistExpanded('w-' + t.therapist_id)) {
                     <div class="border-t border-border/20 bg-surface-container-lowest">
-                      <table class="w-full text-sm">
+                      <table class="mtable w-full text-sm">
                         <thead>
                           <tr class="border-b border-border/20">
                             <th class="px-4 py-2 text-left text-label-caps text-on-surface-variant">Paciente</th>
@@ -308,9 +324,9 @@
                         <tbody>
                           @for (p of members(t); track p.patient_id || $index) {
                             <tr class="border-t border-border/10 hover:bg-surface-container-low transition-colors">
-                              <td class="px-4 py-2.5 text-sm text-on-surface">{{ p.patient_name | personLabel: p.patient_id }}</td>
-                              <td class="px-4 py-2.5 text-sm text-center font-medium text-on-surface">{{ p.sessions_count || 0 }}</td>
-                              <td class="px-4 py-2.5 text-center">
+                              <td class="mt-lead px-4 py-2.5 text-sm text-on-surface">{{ p.patient_name | personLabel: p.patient_id }}</td>
+                              <td class="px-4 py-2.5 text-sm text-center font-medium text-on-surface" data-label="Sesiones">{{ p.sessions_count || 0 }}</td>
+                              <td class="px-4 py-2.5 text-center" data-label="Score">
                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
                                       [class.bg-success-container]="(p.avg_score || 0) >= 80"
                                       [class.text-success]="(p.avg_score || 0) >= 80"
@@ -321,10 +337,10 @@
                                   {{ p.avg_score || 0 }}%
                                 </span>
                               </td>
-                              <td class="px-4 py-2.5 text-sm text-center text-on-surface-variant">
+                              <td class="px-4 py-2.5 text-sm text-center text-on-surface-variant" data-label="Objetivos">
                                 {{ p.objectives_achieved || 0 }}/{{ p.objectives_total || 0 }}
                               </td>
-                              <td class="px-4 py-2.5 text-right">
+                              <td class="px-4 py-2.5 text-right" data-label="Eficiencia">
                                 @if (p.efficiency !== undefined) {
                                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
                                         [class.bg-success-container]="p.efficiency >= 80"
@@ -402,7 +418,7 @@
                   </button>
                   @if (isTherapistExpanded('m-' + $index)) {
                     <div class="border-t border-border/20 bg-surface-container-lowest">
-                      <table class="w-full text-sm">
+                      <table class="mtable w-full text-sm">
                         <thead>
                           <tr class="border-b border-border/20">
                             <th class="px-4 py-2 text-left text-label-caps text-on-surface-variant">Paciente</th>
@@ -414,9 +430,9 @@
                         <tbody>
                           @for (p of members(entry); track p.patient_id) {
                             <tr class="border-t border-border/10 hover:bg-surface-container-low transition-colors">
-                              <td class="px-4 py-2.5 text-sm text-on-surface">{{ p.patient_name | personLabel: p.patient_id }}</td>
-                              <td class="px-4 py-2.5 text-sm text-center font-medium text-on-surface">{{ p.sessions_count || 0 }}</td>
-                              <td class="px-4 py-2.5 text-center">
+                              <td class="mt-lead px-4 py-2.5 text-sm text-on-surface">{{ p.patient_name | personLabel: p.patient_id }}</td>
+                              <td class="px-4 py-2.5 text-sm text-center font-medium text-on-surface" data-label="Sesiones">{{ p.sessions_count || 0 }}</td>
+                              <td class="px-4 py-2.5 text-center" data-label="Score">
                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
                                       [class.bg-success-container]="(p.avg_score || 0) >= 80"
                                       [class.text-success]="(p.avg_score || 0) >= 80"
@@ -427,7 +443,7 @@
                                   {{ p.avg_score || 0 }}%
                                 </span>
                               </td>
-                              <td class="px-4 py-2.5 text-sm text-center text-on-surface-variant">
+                              <td class="px-4 py-2.5 text-sm text-center text-on-surface-variant" data-label="Objetivos">
                                 {{ p.objectives_achieved || 0 }}/{{ p.objectives_total || 0 }}
                               </td>
                             </tr>
@@ -493,7 +509,7 @@
                   </button>
                   @if (isTherapistExpanded('q-' + $index)) {
                     <div class="border-t border-border/20 bg-surface-container-lowest">
-                      <table class="w-full text-sm">
+                      <table class="mtable w-full text-sm">
                         <thead>
                           <tr class="border-b border-border/20">
                             <th class="px-4 py-2 text-left text-label-caps text-on-surface-variant">Paciente</th>
@@ -505,9 +521,9 @@
                         <tbody>
                           @for (p of members(entry); track p.patient_id) {
                             <tr class="border-t border-border/10 hover:bg-surface-container-low transition-colors">
-                              <td class="px-4 py-2.5 text-sm text-on-surface">{{ p.patient_name | personLabel: p.patient_id }}</td>
-                              <td class="px-4 py-2.5 text-sm text-center font-medium text-on-surface">{{ p.sessions_count || 0 }}</td>
-                              <td class="px-4 py-2.5 text-center">
+                              <td class="mt-lead px-4 py-2.5 text-sm text-on-surface">{{ p.patient_name | personLabel: p.patient_id }}</td>
+                              <td class="px-4 py-2.5 text-sm text-center font-medium text-on-surface" data-label="Sesiones">{{ p.sessions_count || 0 }}</td>
+                              <td class="px-4 py-2.5 text-center" data-label="Score">
                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
                                       [class.bg-success-container]="(p.avg_score || 0) >= 80"
                                       [class.text-success]="(p.avg_score || 0) >= 80"
@@ -518,7 +534,7 @@
                                   {{ p.avg_score || 0 }}%
                                 </span>
                               </td>
-                              <td class="px-4 py-2.5 text-sm text-center text-on-surface-variant">
+                              <td class="px-4 py-2.5 text-sm text-center text-on-surface-variant" data-label="Objetivos">
                                 {{ p.objectives_achieved || 0 }}/{{ p.objectives_total || 0 }}
                               </td>
                             </tr>
@@ -560,8 +576,9 @@
             <app-spinner size="sm" colorClass="text-info"></app-spinner>
           </div>
         } @else if (dailyReports.length > 0) {
+          @let dailyRows = matchAny(dailyReports, 'therapist_name', 'patient_name');
           <div class="rp-scroll rp-scroll--tall">
-            <table class="w-full text-sm data-table rp-daily">
+            <table class="mtable w-full text-sm data-table rp-daily">
               <thead>
                 <tr class="border-b border-border/40">
                   <th class="px-3 py-2 text-left text-label-caps text-on-surface-variant">Fecha</th>
@@ -572,13 +589,13 @@
                 </tr>
               </thead>
               <tbody>
-                @for (d of matchAny(dailyReports, 'therapist_name', 'patient_name'); track d.id) {
+                @for (d of pageOf('daily', dailyRows); track d.id) {
                   <tr class="border-t border-border/20 hover:bg-surface-container-low transition-colors">
-                    <td class="px-3 py-2 text-xs text-on-surface">{{ d.date | date:'dd/MM' }}</td>
-                    <td class="px-3 py-2 text-xs text-on-surface-variant">{{ d.therapist_name | personLabel }}</td>
-                    <td class="px-3 py-2 text-xs text-on-surface-variant">{{ d.patient_name | personLabel }}</td>
-                    <td class="px-3 py-2 text-xs text-center font-medium text-on-surface">{{ d.sessions_count }}</td>
-                    <td class="px-3 py-2 text-xs text-right">
+                    <td class="mt-lead px-3 py-2 text-xs text-on-surface">{{ d.date | date:'dd/MM' }}</td>
+                    <td class="px-3 py-2 text-xs text-on-surface-variant" data-label="Terapeuta">{{ d.therapist_name | personLabel }}</td>
+                    <td class="px-3 py-2 text-xs text-on-surface-variant" data-label="Paciente">{{ d.patient_name | personLabel }}</td>
+                    <td class="px-3 py-2 text-xs text-center font-medium text-on-surface" data-label="Sesiones">{{ d.sessions_count }}</td>
+                    <td class="px-3 py-2 text-xs text-right" data-label="Score">
                       <span class="rp-chip" [attr.data-level]="level(d.avg_score)">{{ pct(d.avg_score) }}</span>
                     </td>
                   </tr>
@@ -586,6 +603,13 @@
               </tbody>
             </table>
           </div>
+        @if (pageCount(dailyRows) > 1) {
+          <nav class="rp-pager" aria-label="Páginas de reportes diarios">
+            <button type="button" (click)="setPage('daily', pageIndex('daily', dailyRows) - 1)" [disabled]="pageIndex('daily', dailyRows) === 0" aria-label="Página anterior"><fa-icon [icon]="['fas', 'chevron-left']" /></button>
+            <span>{{ pageIndex('daily', dailyRows) + 1 }} / {{ pageCount(dailyRows) }}</span>
+            <button type="button" (click)="setPage('daily', pageIndex('daily', dailyRows) + 1)" [disabled]="pageIndex('daily', dailyRows) + 1 >= pageCount(dailyRows)" aria-label="Página siguiente"><fa-icon [icon]="['fas', 'chevron-right']" /></button>
+          </nav>
+        }
         } @else {
           <div class="text-center py-6 text-sm text-on-surface-variant">
             No hay reportes diarios en este rango. Se generan automáticamente a partir de sesiones completadas.

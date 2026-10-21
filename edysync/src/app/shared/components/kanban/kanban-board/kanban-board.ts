@@ -75,6 +75,9 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   viewer: KanbanViewer | null = null;
 
   private kanbanService = inject(KanbanService);
+  /** Arrastrar tarjetas solo en PC (mouse). En el celular el arrastre peleaba con el deslizamiento
+   * horizontal entre columnas: ahí se mueven con los botones de cada tarjeta. */
+  readonly dragEnabled = typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   private cdr = inject(ChangeDetectorRef);
   private auth = inject(AuthService);
   private toast = inject(ToastService);

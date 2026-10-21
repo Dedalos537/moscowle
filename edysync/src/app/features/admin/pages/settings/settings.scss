@@ -454,3 +454,18 @@
 /* Preferencia personal fijada por el ajuste del centro */
 .setting-item.is-locked .seg { opacity: 0.55; }
 .setting-item.is-locked .seg__btn:disabled { cursor: not-allowed; }
+
+/* ── Móvil: la hoja centrada y a todo el ancho, sin márgenes dobles ───────── */
+@media (max-width: 899px) {
+  .settings-page { padding: 0.75rem 0.75rem 5rem; }
+  .settings-hub { gap: 0.75rem; }
+  .settings-pane__inner { padding: 1rem 0.875rem 1.5rem; min-width: 0; }
+  .settings-pane .settings-save-bar { margin: 1rem -0.875rem -1.5rem; padding: 0.75rem 0.875rem; bottom: -1.5rem; }
+  .settings-pane .setting-item { padding: 0.75rem 0.25rem; }
+  .setting-divider { margin: 0 0.25rem; }
+  // Ajustes con dos opciones (segmentado): el control baja a su propia línea en vez de apretar el texto.
+  .setting-item:has(> .seg) { flex-wrap: wrap; row-gap: 0.625rem; }
+  .setting-item:has(> .seg) > .setting-item__left { flex: 1 1 100%; }
+  .setting-item > .seg { width: 100%; }
+  .setting-item > .seg > .seg__btn { flex: 1 1 0; }
+}

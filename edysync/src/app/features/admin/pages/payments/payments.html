@@ -23,7 +23,7 @@
   } @else {
 
         @if (incompletePlanPatients.length > 0) {
-      <div class="flex items-start gap-4 p-4 bg-warning-container border border-warning-container rounded-xl">
+      <div class="flex flex-wrap sm:flex-nowrap items-start gap-3 sm:gap-4 p-4 bg-warning-container border border-warning-container rounded-xl">
         <fa-icon [icon]="['fas', 'circle-exclamation']" class="text-warning text-2xl shrink-0"></fa-icon>
         <div class="flex-1 min-w-0">
           <p class="text-sm font-bold text-warning">
@@ -31,7 +31,7 @@
           </p>
           <p class="text-xs text-warning mt-0.5">Configura el monto, plan, y fecha de vencimiento para estos pacientes.</p>
         </div>
-        <a routerLink="/admin/payments" class="btn-primary text-xs !px-4 !py-2 shrink-0">
+        <a routerLink="/admin/payments" class="btn-primary text-xs !px-4 !py-2 shrink-0 w-full sm:w-auto justify-center">
           <fa-icon [icon]="['fas', 'gear']" class="text-[16px]"></fa-icon>
           Configurar Ahora
         </a>
@@ -492,7 +492,7 @@
         </div>
 
         <div class="overflow-x-auto rounded-xl border border-border/30">
-          <table class="w-full min-w-[800px]">
+          <table class="mtable w-full min-w-[800px]">
             <thead>
               <tr class="bg-surface-container-high/50">
                 <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Paciente</th>
@@ -507,14 +507,14 @@
             <tbody class="divide-y divide-border/20">
               @for (p of filteredHistory; track p.id) {
                 <tr class="hover:bg-surface-container-low/50 transition-colors">
-                  <td class="px-4 py-3.5 text-sm font-semibold text-on-surface">{{ p.patient_name | personLabel }}</td>
-                  <td class="px-4 py-3.5 text-right">
+                  <td class="mt-lead px-4 py-3.5 text-sm font-semibold text-on-surface">{{ p.patient_name | personLabel }}</td>
+                  <td class="px-4 py-3.5 text-right" data-label="Monto">
                     <span class="text-sm font-bold text-on-surface">S/ {{ (p.amount - (p.discount || 0)).toFixed(2) }}</span>
                     @if (p.discount > 0) {
                       <span class="text-[10px] text-on-surface-variant block">Desc: S/ {{ p.discount.toFixed(2) }}</span>
                     }
                   </td>
-                  <td class="px-4 py-3.5 text-center">
+                  <td class="px-4 py-3.5 text-center" data-label="Método">
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
                       [class]="getMethodBadgeClass(p.method)">
                       @switch (p.method) {
@@ -528,8 +528,8 @@
                       {{ getMethodLabel(p.method) }}
                     </span>
                   </td>
-                  <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.reference || '—' }}</td>
-                  <td class="px-4 py-3.5 text-center">
+                  <td class="px-4 py-3.5 text-sm text-on-surface-variant" data-label="Referencia">{{ p.reference || '—' }}</td>
+                  <td class="px-4 py-3.5 text-center" data-label="Documentos">
                     <div class="flex items-center justify-center gap-1.5">
                       @if (p.receipt_image_path) {
                         <button (click)="previewImage('/uploads/' + p.receipt_image_path)" class="btn-ghost !px-2 !py-1 text-xs" title="Ver Voucher">
@@ -546,8 +546,8 @@
                       }
                     </div>
                   </td>
-                  <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.date | date:'dd/MM/yyyy' }}</td>
-                  <td class="px-4 py-3.5 text-right">
+                  <td class="px-4 py-3.5 text-sm text-on-surface-variant" data-label="Fecha">{{ p.date | date:'dd/MM/yyyy' }}</td>
+                  <td class="mt-actions px-4 py-3.5 text-right">
                       <button (click)="deletePayment(p.id)" class="btn-ghost !px-2 !py-1 text-xs text-error hover:bg-error-container" title="Eliminar">
                       <fa-icon [icon]="['fas', 'trash-can']" class="text-[16px]"></fa-icon>
                     </button>

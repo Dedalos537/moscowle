@@ -23,7 +23,7 @@
 <div class="space-y-4" [@fadeInUp]>
   <div class="bg-surface-container-lowest rounded-2xl shadow-soft border border-border/20 overflow-hidden">
     <div class="overflow-x-auto">
-      <table class="w-full">
+      <table class="mtable w-full">
         <thead class="bg-surface-container-low">
           <tr>
             <th class="text-left px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Paciente</th>
@@ -35,7 +35,7 @@
         <tbody class="divide-y divide-border">
           @for (patient of patients; track patient.id) {
             <tr class="hover:bg-surface-container-low transition-colors">
-              <td class="px-6 py-4">
+              <td class="mt-lead px-6 py-4">
                 <div class="flex items-center gap-3">
                   <div class="w-10 h-10 rounded-full bg-primary-container/15 flex items-center justify-center">
                     <fa-icon [icon]="['fas', 'user']" class="text-primary text-sm"></fa-icon>
@@ -43,14 +43,14 @@
                   <span class="font-medium text-on-surface">{{ patient.username | personLabel }}</span>
                 </div>
               </td>
-              <td class="px-6 py-4 text-sm text-on-surface-variant">{{ patient.email }}</td>
-              <td class="px-6 py-4">
+              <td class="px-6 py-4 text-sm text-on-surface-variant" data-label="Email">{{ patient.email }}</td>
+              <td class="px-6 py-4" data-label="Estado">
                 <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
                       [class]="patient.status_color || 'bg-surface-container-high text-on-surface-variant'">
                   {{ patient.status_label || 'Activo' }}
                 </span>
               </td>
-              <td class="px-6 py-4">
+              <td class="mt-actions px-6 py-4">
                 <a [routerLink]="['/therapist/patients', patient.id]"
                    class="text-sm font-bold text-primary hover:text-primary-fixed-dim transition-colors">
                   Ver Detalle
