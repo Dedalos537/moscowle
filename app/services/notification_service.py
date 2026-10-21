@@ -327,6 +327,7 @@ class NotificationService:
         return priority in ('urgent', 'high') or (group.count >= 5 and group.count % 5 == 0)
 
     TELEGRAM_LEVELS = ('important', 'all')
+    INCIDENT_EMAIL_LEVELS = ('all', 'important', 'off')
 
     BOOL_PREFS = (
         'notifications_enabled',
@@ -352,6 +353,8 @@ class NotificationService:
             raise ValueError('digest_channel inválido')
         if 'telegram_level' in data and data['telegram_level'] not in self.TELEGRAM_LEVELS:
             raise ValueError('telegram_level inválido')
+        if 'incident_email' in data and data['incident_email'] not in self.INCIDENT_EMAIL_LEVELS:
+            raise ValueError('incident_email inválido')
 
         prefs = Pref.query.filter_by(user_id=user_id).first()
         if not prefs:
@@ -369,6 +372,7 @@ class NotificationService:
             'digest_enabled',
             'digest_channel',
             'telegram_level',
+            'incident_email',
         ]:
             if field in data:
                 setattr(prefs, field, data[field])

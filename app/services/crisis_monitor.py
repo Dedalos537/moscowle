@@ -63,7 +63,16 @@ def send_telegram_alert(bot_token, chat_id, alert):
         logger.exception('Failed to send Telegram alert: %s', e)
 
 
+_EMAIL_COOLDOWN_SECONDS = 3 * 3600
+_last_email_at: dict = {}
+
+
 def send_email_alert(recipient, alert):
+    # La revisión corre cada 5 min: el mismo tipo de alerta se avisa por correo como mucho cada 3 h.
+    now = time.monotonic()
+    if now - _last_email_at.get(alert['type'], -_EMAIL_COOLDOWN_SECONDS) < _EMAIL_COOLDOWN_SECONDS:
+        return
+    _last_email_at[alert['type']] = now
     try:
         from app.services.email_service import EmailService
 
@@ -162,10 +171,10 @@ class CrisisMonitor:
             from app.services.incident_escalation_service import IncidentEscalationService
 
             titulo = f'CrisisMonitor: {alert["type"].replace("_", " ").title()}'
+            # Una sola incidencia abierta por tipo de alerta (antes se abría otra cada hora).
             existente = Incidente.query.filter(
                 Incidente.titulo == titulo,
-                Incidente.estado.in_(['NUEVO', 'EN_CURSO']),
-                Incidente.created_at > datetime.utcnow() - timedelta(hours=1),
+                ~Incidente.estado.in_(('RESUELTO', 'CERRADO')),
             ).first()
             if existente:
                 return

@@ -23,6 +23,43 @@ CATEGORY_COLORS = {
 }
 
 
+# Incidencias que crea el sistema solo (monitoreo, alertas, evaluaciones), no una persona.
+AUTOMATIC_EVIDENCE = {'MONITORING', 'SYSTEM_ALERT', 'EVALUATION'}
+
+
+def is_automatic(incidente) -> bool:
+    return (getattr(incidente, 'evidencia_tipo', None) or '').upper() in AUTOMATIC_EVIDENCE
+
+
+def incident_email_level(user) -> str:
+    """Preferencia de correos de incidencias del usuario: 'all' | 'important' | 'off' (por defecto 'important')."""
+    from app.models.notification import UserNotificationPreference as Pref
+
+    prefs = Pref.query.filter_by(user_id=user.id).first()
+    if prefs is not None and not getattr(prefs, 'notifications_enabled', True):
+        return 'off'
+    return (getattr(prefs, 'incident_email', None) if prefs else None) or 'important'
+
+
+def wants_incident_email(user, event: str, incidente=None) -> bool:
+    """¿Le mandamos este correo de incidencia? event: new | escalation | sla | resolution.
+
+    - 'off': ninguno.
+    - 'important': lo que reporta una persona (nueva, escalada, SLA vencido) y la resolución de su propio reporte.
+      Las técnicas automáticas (latencia, errores del modelo…) quedan solo en la campana.
+    - 'all': todo, como antes.
+    """
+    level = incident_email_level(user)
+    if level == 'off':
+        return False
+    if level == 'all':
+        return True
+    if event == 'resolution':
+        return True
+    # new / escalation / sla: solo si la incidencia (o alguna del resumen) la reportó una persona.
+    return incidente is not None and not is_automatic(incidente)
+
+
 class IncidentNotificationService:
     @classmethod
     def _notify_user(cls, user_id, message, title=None, category='alert', priority='normal', link=None):
@@ -212,15 +249,82 @@ class IncidentNotificationService:
         logger.info('Notifying resolution for incident #%s', incidente.id_incidente)
 
         cls._send_email_resolution(incidente)
+        try:
+            cls.clear_resolved_alerts()
+        except Exception:  # noqa: BLE001 - retirar banners es cosmético: nunca frena la resolución
+            logger.exception('No se pudieron retirar los avisos de la incidencia resuelta')
         cls._send_slack_resolution(incidente)
         cls._notify_inapp_resolution(incidente)
 
     @classmethod
-    def _get_admin_emails(cls):
+    def clear_resolved_alerts(cls):
+        """Marca como leídos los avisos de incidencias que ya no tienen nada abierto y avisa a las páginas abiertas
+        (`notification:dismiss`) para que quiten el banner sin recargar.
+
+        - Un aviso que enlaza a incidencias concretas se retira cuando todas ellas están resueltas o cerradas.
+        - El aviso agrupado de «SLA vencido» (enlaza a la lista) se retira cuando ya no queda ninguna abierta vencida.
+        """
+        import re
+        from datetime import datetime
+
+        from app.extensions import db, socketio
+        from app.models.notification_group import NotificationGroup, NotificationItem
+        from app.services.notification_intelligence import get_user_group_count
+
+        closed = ('RESUELTO', 'CERRADO')
+        groups = NotificationGroup.query.filter_by(category='alert', is_read=False, is_active=True).all()
+        if not groups:
+            return
+        any_overdue_open = (
+            Incidente.query.filter(
+                ~Incidente.estado.in_(closed),
+                Incidente.fecha_limite_sla < datetime.utcnow(),
+            ).count()
+            > 0
+        )
+        state_cache = {}
+
+        def is_closed(inc_id):
+            if inc_id not in state_cache:
+                inc = Incidente.query.get(inc_id)
+                state_cache[inc_id] = inc is None or inc.estado in closed
+            return state_cache[inc_id]
+
+        dismissed = {}
+        for g in groups:
+            links = [i.link or '' for i in NotificationItem.query.filter_by(group_id=g.id).all()]
+            ids = {int(m) for link in links for m in re.findall(r'/incidents/(\d+)', link)}
+            mentions_list = any(re.search(r'/incidents/?(\?|$)', link) for link in links)
+            if not ids and not mentions_list:
+                continue  # no es un aviso de incidencias
+            if all(is_closed(i) for i in ids) and not (mentions_list and any_overdue_open):
+                g.is_read = True
+                dismissed.setdefault(g.user_id, []).append(g.id)
+        if not dismissed:
+            return
+        db.session.commit()
+        for user_id, ids in dismissed.items():
+            socketio.emit(
+                'notification:dismiss',
+                {'ids': ids, 'unread_count': get_user_group_count(user_id)},
+                room=f'user_{user_id}',
+            )
+
+    @classmethod
+    def _get_admin_emails(cls, event='new', incidente=None):
+        """Correos reales de los admins que quieren este tipo de correo (Mis notificaciones → Correos de incidencias)."""
         from app.models.user import User
+        from app.services.email_service import recipient_for
 
         admins = User.query.filter_by(role='admin', is_active=True).all()
-        return [a.email for a in admins if a.email]
+        out = []
+        for a in admins:
+            if not wants_incident_email(a, event, incidente):
+                continue
+            email = recipient_for(a)
+            if email:
+                out.append(email)
+        return out
 
     @classmethod
     def _get_responsible_email(cls, incidente: Incidente):
@@ -232,7 +336,7 @@ class IncidentNotificationService:
             from app.services.email_service import recipient_for
 
             user = User.query.get(incidente.responsable_id)
-            if may_receive_incident(user, incidente):
+            if may_receive_incident(user, incidente) and wants_incident_email(user, 'new', incidente):
                 return recipient_for(user)
         return None
 
@@ -243,13 +347,15 @@ class IncidentNotificationService:
             from app.services.email_service import recipient_for
 
             user = User.query.get(incidente.user_id)
-            # Quien la reportó sí se entera de su propio caso (aunque sea técnica), a su correo real.
-            return recipient_for(user)
+            # Quien la reportó sí se entera de su propio caso (aunque sea técnica), a su correo real, salvo que
+            # haya apagado los correos de incidencias.
+            if user and wants_incident_email(user, 'resolution', incidente):
+                return recipient_for(user)
         return None
 
     @classmethod
     def _send_email_new(cls, incidente: Incidente):
-        recipients = cls._get_admin_emails()
+        recipients = cls._get_admin_emails('new', incidente)
         resp_email = cls._get_responsible_email(incidente)
         if resp_email:
             recipients.append(resp_email)
@@ -278,7 +384,7 @@ class IncidentNotificationService:
 
     @classmethod
     def _send_email_escalation(cls, incidente: Incidente, nivel_anterior: int):
-        recipients = cls._get_admin_emails()
+        recipients = cls._get_admin_emails('escalation', incidente)
         if not recipients:
             return
 
@@ -301,7 +407,7 @@ class IncidentNotificationService:
 
     @classmethod
     def _send_email_sla_breach(cls, incidente: Incidente):
-        recipients = cls._get_admin_emails()
+        recipients = cls._get_admin_emails('sla', incidente)
         resp_email = cls._get_responsible_email(incidente)
         if resp_email:
             recipients.append(resp_email)
@@ -331,7 +437,11 @@ class IncidentNotificationService:
     @classmethod
     def _send_email_sla_breach_grouped(cls, incidentes: list):
         """Send ONE email with all SLA breaches grouped."""
-        recipients = cls._get_admin_emails()
+        # En «solo importantes» el resumen llega si incluye alguna reportada por una persona.
+        human = next((i for i in incidentes if not is_automatic(i)), None)
+        recipients = cls._get_admin_emails(
+            'sla', human if human is not None else (incidentes[0] if incidentes else None)
+        )
         if not recipients:
             return
 

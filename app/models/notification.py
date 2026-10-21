@@ -42,6 +42,9 @@ class UserNotificationPreference(db.Model, AuditMixin):
     digest_channel = db.Column(db.String(20), default='both')
     # Qué se reenvía a Telegram: 'important' (urgentes/altas y avisos repetidos) o 'all' (todo lo que llega a la campana).
     telegram_level = db.Column(db.String(12), default='important', nullable=False, server_default='important')
+    # Correos de incidencias: 'all' (cada novedad), 'important' (las reportadas por personas y el resumen de SLA
+    # vencidos; las técnicas automáticas solo en la campana) u 'off' (ninguno).
+    incident_email = db.Column(db.String(12), default='important', nullable=False, server_default='important')
 
     user = db.relationship(
         'User',

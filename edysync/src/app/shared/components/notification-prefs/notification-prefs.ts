@@ -107,6 +107,11 @@ export class NotificationPrefs implements OnInit, OnDestroy {
     { value: 'important', label: 'Solo lo importante (alertas y deudas)' },
     { value: 'all', label: 'Todos mis avisos' },
   ];
+  readonly incidentEmailLevels: { value: 'all' | 'important' | 'off'; label: string }[] = [
+    { value: 'important', label: 'Solo importantes' },
+    { value: 'all', label: 'Todas' },
+    { value: 'off', label: 'Ninguno' },
+  ];
   telegramBot = true;
   testing = false;
 

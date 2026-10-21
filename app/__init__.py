@@ -784,6 +784,28 @@ def create_app(config_class=None):
                 result = db.session.execute(
                     text(
                         'SELECT COUNT(*) FROM information_schema.columns '
+                        "WHERE table_name = 'user_notification_preference' AND column_name = 'incident_email'"
+                    )
+                )
+                if result.scalar() == 0:
+                    db.session.execute(
+                        text(
+                            'ALTER TABLE user_notification_preference '
+                            "ADD COLUMN incident_email VARCHAR(12) NOT NULL DEFAULT 'important'"
+                        )
+                    )
+                    db.session.commit()
+                    app.logger.info('user_notification_preference.incident_email added')
+            except Exception as e:
+                app.logger.warning(f'incident_email migration (non-fatal): {e}')
+                db.session.rollback()
+
+            try:
+                from sqlalchemy import text
+
+                result = db.session.execute(
+                    text(
+                        'SELECT COUNT(*) FROM information_schema.columns '
                         "WHERE table_name = 'user_notification_preference' AND column_name = 'notifications_enabled'"
                     )
                 )
