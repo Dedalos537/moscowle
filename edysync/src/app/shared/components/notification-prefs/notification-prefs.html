@@ -69,6 +69,26 @@
       </div>
     }
 
+    <div class="np__row np__row--stack">
+      <span class="np__row-icon" aria-hidden="true"><fa-icon [icon]="['fas', 'triangle-exclamation']"></fa-icon></span>
+      <div class="np__row-text">
+        <label class="np__row-label" for="np-incident-email">Correos de incidencias</label>
+        <span class="np__row-hint">
+          @switch (prefs().incident_email || 'important') {
+            @case ('all') { Un correo por cada incidencia, escalamiento y SLA vencido }
+            @case ('off') { Ningún correo: las incidencias quedan solo en la campana }
+            @default { Solo las que reporta una persona; las automáticas (latencia, servidor) quedan en la campana }
+          }
+        </span>
+      </div>
+      <select id="np-incident-email" class="np__select" [value]="prefs().incident_email || 'important'" [disabled]="!masterOn()"
+        (change)="set('incident_email', $any($event.target).value)">
+        @for (l of incidentEmailLevels; track l.value) {
+          <option [value]="l.value">{{ l.label }}</option>
+        }
+      </select>
+    </div>
+
     <div class="np__row">
       <span class="np__row-icon np__row-icon--tg" aria-hidden="true"><fa-icon [icon]="['fab', 'telegram']"></fa-icon></span>
       <div class="np__row-text">

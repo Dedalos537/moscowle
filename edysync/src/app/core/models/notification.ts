@@ -105,4 +105,6 @@ export interface NotificationPreferences {
   digest_enabled: boolean;
   digest_channel: 'telegram' | 'email' | 'both';
   telegram_level?: 'all' | 'important';
+  /** Correos de incidencias: todos, solo importantes (las reportadas por personas y el resumen de SLA) o ninguno. */
+  incident_email?: 'all' | 'important' | 'off';
 }

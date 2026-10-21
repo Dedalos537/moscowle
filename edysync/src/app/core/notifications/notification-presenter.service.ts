@@ -102,6 +102,14 @@ export class NotificationPresenterService {
     this.banners.update((list) => list.filter((b) => b.key !== key));
   }
 
+  /** Retira banners y modales de esos avisos (los resolvió alguien, aquí o en otro dispositivo). */
+  dismissIds(ids: readonly number[]): void {
+    if (!ids.length) return;
+    const gone = new Set(ids);
+    this.banners.update((list) => list.filter((b) => !gone.has(b.id)));
+    this.modals.update((q) => q.filter((m) => !gone.has(m.id)));
+  }
+
   acknowledgeModal(): void {
     this.modals.update((q) => q.slice(1));
   }

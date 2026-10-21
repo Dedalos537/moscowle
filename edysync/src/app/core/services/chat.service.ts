@@ -70,6 +70,9 @@ export class ChatService {
 
   private _notificationEvent = new Subject<any>();
   notificationEvent$ = this._notificationEvent.asObservable();
+  /** El servidor retira avisos que ya no aplican (p. ej. la incidencia se resolvió). */
+  private _notificationDismiss = new Subject<{ ids: number[]; unread_count?: number }>();
+  notificationDismiss$ = this._notificationDismiss.asObservable();
 
   private _botEvent = new Subject<{ conversation_id: number; channel: string }>();
   /** Un mensaje nuevo del bot (Telegram, WhatsApp o web): la bandeja se actualiza al instante. */
@@ -176,6 +179,10 @@ export class ChatService {
 
     this.socket.on('notification:new', (data: any) => {
       this._notificationEvent.next(data);
+    });
+
+    this.socket.on('notification:dismiss', (data: { ids: number[]; unread_count?: number }) => {
+      this._notificationDismiss.next(data);
     });
   }
 

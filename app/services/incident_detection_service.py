@@ -20,6 +20,12 @@ def _utcnow():
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+# Estados en los que una incidencia ya no está abierta.
+CLOSED_STATES = ('RESUELTO', 'CERRADO')
+# Horas que deben pasar tras resolver una alerta automática para que el sistema vuelva a abrirla.
+REOPEN_COOLDOWN_HOURS = 6
+
+
 class IncidentDetectionService:
     """
     Servicio de detección automática de incidencias.
@@ -291,14 +297,31 @@ class IncidentDetectionService:
         """Crea un incidente y calcula su SLA."""
         titulo = kwargs.get('titulo')
 
-        existente = Incidente.query.filter(
-            Incidente.titulo == titulo,
-            Incidente.estado.in_(['NUEVO', 'EN_CURSO']),
-            Incidente.created_at > _utcnow() - timedelta(hours=24),
-        ).first()
-
+        # Antes solo miraba NUEVO/EN_CURSO de las últimas 24 h: al escalar (PENDIENTE_PROVEEDOR) o al día siguiente
+        # se creaba otra igual en cada revisión, con otro correo a cada admin. Ahora la abierta se actualiza.
+        existente = (
+            Incidente.query.filter(
+                Incidente.titulo == titulo,
+                ~Incidente.estado.in_(CLOSED_STATES),
+            )
+            .order_by(Incidente.fecha_creacion.desc())
+            .first()
+        )
         if existente:
+            nueva = kwargs.get('descripcion')
+            if nueva and nueva != existente.descripcion:
+                existente.descripcion = nueva
+                db.session.commit()
             return existente
+
+        # Recién resuelta: no se reabre la misma alerta automática enseguida (evita el «resuelvo y vuelve»).
+        reciente = Incidente.query.filter(
+            Incidente.titulo == titulo,
+            Incidente.estado.in_(CLOSED_STATES),
+            Incidente.fecha_resolucion > _utcnow() - timedelta(hours=REOPEN_COOLDOWN_HOURS),
+        ).first()
+        if reciente:
+            return reciente
 
         fecha_creacion = _utcnow()
         fecha_limite = IncidentEscalationService.calculate_sla_deadline(

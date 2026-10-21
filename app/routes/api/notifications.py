@@ -250,6 +250,7 @@ def notification_preferences():
                     'digest_enabled': getattr(prefs, 'digest_enabled', True),
                     'digest_channel': getattr(prefs, 'digest_channel', 'both'),
                     'telegram_level': getattr(prefs, 'telegram_level', None) or 'important',
+                    'incident_email': getattr(prefs, 'incident_email', None) or 'important',
                 }
             )
         else:

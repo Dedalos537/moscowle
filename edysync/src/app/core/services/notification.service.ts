@@ -79,6 +79,16 @@ export class NotificationService implements OnDestroy {
       })
     );
 
+    // Avisos que el servidor retira (incidencia resuelta): fuera el banner sin recargar la página.
+    this.subs.add(
+      this.chatService.notificationDismiss$.subscribe((data) => {
+        this.zone.run(() => {
+          this.presenter.dismissIds(data.ids ?? []);
+          if (typeof data.unread_count === 'number') this.unreadCount.set(data.unread_count);
+        });
+      }),
+    );
+
     // Handle new socket events — groups come as is_group: true
     this.subs.add(
       this.chatService.notificationEvent$.subscribe(data => {
