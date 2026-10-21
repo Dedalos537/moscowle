@@ -135,6 +135,8 @@ export class NotificationPresenterService {
   private push(ev: NotificationEvent, n: Notice): void {
     if (!this.pushEnabled || typeof window === 'undefined' || !('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
+    // Con Web Push activo, el service worker ya muestra el aviso (también con la página cerrada): no se duplica.
+    if (navigator.serviceWorker?.controller) return;
     if (ev.push_when !== 'always' && document.visibilityState === 'visible') return;
     const note = new Notification(n.title, { body: n.message, icon: 'assets/img/logo-silhouette.png', tag: n.key });
     note.onclick = () => {

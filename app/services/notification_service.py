@@ -194,6 +194,27 @@ class NotificationService:
             },
             room=f'user_{user_id}',
         )
+        self._web_push(user_id, group, message, category, link, resolved_kind)
+
+    def _web_push(self, user_id, group, message, category, link, kind):
+        """Copia del aviso al navegador aunque esté cerrado (si el usuario lo aceptó). Nunca bloquea."""
+        try:
+            from app.services import web_push
+
+            web_push.notify_user(
+                user_id,
+                {
+                    'id': group.id,
+                    'count': group.count,
+                    'title': group.title or self._default_title(category),
+                    'body': group.summary or message[:160],
+                    'link': link or '',
+                    'kind': kind,
+                },
+                urgency='high' if group.priority in ('urgent', 'high') else 'normal',
+            )
+        except Exception as exc:  # noqa: BLE001
+            current_app.logger.debug(f'web push omitido: {exc}')
 
     # ─── Read Operations ────────────────────────────────────────────────────
 

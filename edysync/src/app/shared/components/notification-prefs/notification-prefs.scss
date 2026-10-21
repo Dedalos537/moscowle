@@ -170,3 +170,9 @@
   .np__group,
   .np__ok { transition: none; animation: none; }
 }
+
+@media (max-width: 599px) {
+  .np__row--sub { flex-wrap: wrap; row-gap: 0.5rem; }
+  .np__row--sub .np__select { flex: 1 1 100%; width: 100%; min-width: 0; }
+  .np__row { min-width: 0; }
+}

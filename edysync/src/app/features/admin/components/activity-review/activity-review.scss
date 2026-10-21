@@ -1,7 +1,7 @@
 $ease: cubic-bezier(0.2, 0, 0, 1);
 :host { display: block; }
 
-.ar { display: grid; gap: 1rem; }
+.ar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
 .ar__head {
   display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;
   h2 { margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--color-on-surface); }
@@ -109,3 +109,8 @@ $ease: cubic-bezier(0.2, 0, 0, 1);
 @keyframes ar-fade { from { opacity: 0; } }
 @keyframes ar-in { from { transform: translateX(24px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .ar-overlay, .ar-panel { animation: none; } }
+
+@media (max-width: 599px) {
+  .ar__kpis { grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); }
+  .ar-search { flex-basis: 100%; min-width: 0; }
+}
