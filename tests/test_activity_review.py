@@ -14,7 +14,8 @@ from app.services import activity_review as act
 
 def _user(role, **kw):
     tag = uuid.uuid4().hex[:8]
-    u = User(username=f'{role[:3]}{tag}', email=f'{tag}@gmail.com', password='x', role=role, **kw)
+    kw.setdefault('email', f'{tag}@gmail.com')
+    u = User(username=f'{role[:3]}{tag}', password='x', role=role, **kw)
     db.session.add(u)
     db.session.commit()
     return u
