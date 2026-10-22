@@ -331,6 +331,49 @@ def app_checks():
     return checks
 
 
+def infra_links():
+    """Cockpit, Grafana, Prometheus y el frontend LAN en la dirección donde están AHORA (PRP 014).
+
+    La IP del host la da su servicio por virbr0 (no depende del router); si no responde, se usa su nombre
+    .local, que el host anuncia por mDNS. Prometheus no se publica en la LAN (no tiene login): se abre su
+    explorador dentro de Grafana.
+    """
+    from app.services import scan_service
+
+    w = scan_service.where() or {}
+    host = w.get('host') or {}
+    services = w.get('services') or {}
+    mdns = host.get('mdns') or current_app.config.get('LAN_MDNS_NAME', 'moscowle.local')
+    ip = host.get('lan_ip')
+
+    def make(key, label, icon, scheme, port, path, service):
+        def url(h):
+            default = (scheme == 'https' and port == 443) or (scheme == 'http' and port == 80)
+            return f'{scheme}://{h}{"" if default else f":{port}"}{path}'
+
+        up = (services.get(service) or {}).get('up')
+        return {
+            'id': key,
+            'label': label,
+            'icon': icon,
+            'url': url(ip or mdns),
+            'alt': url(mdns) if ip else None,
+            'up': up,
+        }
+
+    return [
+        make('grafana', 'Grafana', 'chart-line', 'http', 3000, '/', 'grafana'),
+        make('prometheus', 'Prometheus', 'gauge-high', 'http', 3000, '/explore', 'grafana'),
+        make('cockpit', 'Cockpit', 'terminal', 'https', 9090, '/', 'cockpit'),
+        make('app', 'Moscowle (red local)', 'network-wired', 'http', 80, '/app/', 'app'),
+    ]
+
+
+def _legacy_links(links):
+    by_id = {link['id']: link['url'] for link in links}
+    return {'cockpit_url': by_id.get('cockpit'), 'grafana_url': by_id.get('grafana')}
+
+
 def snapshot_now():
     """Estado completo en este momento."""
     load = _read('/proc/loadavg').split()
@@ -344,8 +387,8 @@ def snapshot_now():
         'process': app_process(),
         'services': services(),
         'checks': app_checks(),
-        'cockpit_url': current_app.config.get('COCKPIT_URL') or None,
-        'grafana_url': os.environ.get('GRAFANA_URL') or None,
+        **_legacy_links(links := infra_links()),
+        'links': links,
         'history_max_hours': 24 * 30 if prometheus_available() else 24 * RETENTION_DAYS,
     }
 

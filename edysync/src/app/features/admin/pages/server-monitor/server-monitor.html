@@ -8,17 +8,11 @@
       </p>
     </div>
     <div class="sm-links">
-      @if (status()?.grafana_url; as url) {
-        <a class="sm-cockpit" [href]="url" target="_blank" rel="noopener noreferrer" title="Tableros y alertas (solo desde la red del centro)">
-          <fa-icon [icon]="['fas', 'chart-line']" aria-hidden="true"></fa-icon>
-          Abrir Grafana
-          <fa-icon [icon]="['fas', 'arrow-up-right-from-square']" class="sm-cockpit__ext" aria-hidden="true"></fa-icon>
-        </a>
-      }
-      @if (status()?.cockpit_url; as url) {
-        <a class="sm-cockpit" [href]="url" target="_blank" rel="noopener noreferrer">
-          <fa-icon [icon]="['fas', 'terminal']" aria-hidden="true"></fa-icon>
-          Abrir Cockpit
+      @for (l of status()?.links ?? []; track l.id) {
+        <a class="sm-cockpit" [class.is-down]="l.up === false" [href]="l.url" target="_blank" rel="noopener noreferrer"
+           [title]="'Solo desde la red del centro · ' + l.url + (l.alt ? ' · también ' + l.alt : '')">
+          <fa-icon [icon]="['fas', $any(l.icon)]" aria-hidden="true"></fa-icon>
+          {{ l.label }}
           <fa-icon [icon]="['fas', 'arrow-up-right-from-square']" class="sm-cockpit__ext" aria-hidden="true"></fa-icon>
         </a>
       }
@@ -27,6 +21,15 @@
 
   @if (error()) {
     <p class="sm-alert" role="alert">{{ error() }}</p>
+  }
+
+  @if (status()?.links?.length) {
+    <p class="sm-where">
+      Direcciones de ahora (cambian solas si el router le da otra IP al servidor):
+      @for (l of status()!.links!; track l.id; let last = $last) {
+        <span class="sm-where__item"><strong>{{ l.label }}</strong> {{ l.url }}@if (l.alt) { <span class="sm-where__alt">o {{ l.alt }}</span> }</span>@if (!last) {<span aria-hidden="true"> · </span>}
+      }
+    </p>
   }
 
   @if (status(); as s) {

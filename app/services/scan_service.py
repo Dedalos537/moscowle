@@ -16,6 +16,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
+from app.extensions import db
 from app.services import drive_service as drive
 from app.services.print_service import _gateway
 
@@ -90,6 +91,36 @@ def status():
         'modes': list(MODES),
         'sizes': list(SIZES),
     }
+
+
+_where_cache = {'at': 0.0, 'data': None}
+WHERE_TTL = 30
+
+
+def where(force=False):
+    """Dónde está el host y la Epson ahora (lo responde el servicio del host por virbr0, que no cambia de IP).
+
+    None si el servicio no está instalado o no responde: quien llama cae a los nombres .local.
+    """
+    now = time.time()
+    if not force and _where_cache['data'] is not None and now - _where_cache['at'] < WHERE_TTL:
+        return _where_cache['data']
+    try:
+        raw, _ = _call('GET', '/where', timeout=6)
+        data = json.loads(raw or b'{}')
+    except (ScanError, ValueError):
+        data = None
+    _where_cache.update(at=now, data=data)
+    return data
+
+
+def printer_state():
+    """Estado de la Epson según el host (IP, si responde, último cambio de IP)."""
+    try:
+        raw, _ = _call('GET', '/printer', timeout=15)
+        return json.loads(raw or b'{}')
+    except (ScanError, ValueError):
+        return None
 
 
 def repair_printer():
@@ -209,3 +240,70 @@ def finish(scan_id, folder='', name='', fmt='pdf'):
         entry = drive.save_bytes(folder, f'{base}.pdf', buf.getvalue())
     discard(scan_id)
     return entry
+
+
+# ── avisos de la impresora a los admins (PRP 014) ────────────────────────────
+_CHANGE_KEY = 'printer.last_change_at'
+_OFFLINE_KEY = 'printer.offline_notified'
+
+
+def _setting(key):
+    from app.models.system_setting import SystemSetting
+
+    row = db.session.get(SystemSetting, key)
+    return row.value if row else None
+
+
+def _set_setting(key, value):
+    from app.models.system_setting import SystemSetting
+
+    row = db.session.get(SystemSetting, key) or SystemSetting(key=key)
+    row.value = value
+    db.session.add(row)
+    db.session.commit()
+
+
+def _notify_admins(title, message, priority):
+    from app.models.user import User
+    from app.services.notification_service import NotificationService
+
+    service = NotificationService()
+    for admin in User.query.filter_by(role='admin', is_active=True).all():
+        service.notify_user(
+            user_id=admin.id,
+            message=message,
+            title=title,
+            link='/admin/drive',
+            category='system',
+            priority=priority,
+            icon=['fas', 'print'],
+        )
+
+
+def check_printer():
+    """Lo corre el scheduler: avisa una vez cuando la Epson cambió de IP (y ya se reconectó) o se fue del WiFi."""
+    if not configured():
+        return
+    state = printer_state()
+    if state is None:
+        return
+    change = state.get('last_change') or {}
+    at = str(change.get('at') or '')
+    if at and at != (_setting(_CHANGE_KEY) or ''):
+        _set_setting(_CHANGE_KEY, at)
+        _notify_admins(
+            'La impresora cambió de IP',
+            f'La Epson pasó de {change.get("from")} a {change.get("to")}: impresora y escáner ya se reconectaron solos.',
+            'normal',
+        )
+    offline_notified = _setting(_OFFLINE_KEY) == '1'
+    if not state.get('reachable') and not offline_notified:
+        _set_setting(_OFFLINE_KEY, '1')
+        _notify_admins(
+            'La impresora no está en la red',
+            'La Epson se desconectó del WiFi del centro. En la impresora presiona el botón de Wi-Fi para '
+            'reconectarla; luego, en el Drive, «Reconectar impresora y escáner».',
+            'high',
+        )
+    elif state.get('reachable') and offline_notified:
+        _set_setting(_OFFLINE_KEY, '0')

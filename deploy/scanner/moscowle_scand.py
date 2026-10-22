@@ -35,6 +35,11 @@ RESOLUTIONS = (150, 200, 300, 600)
 PRINTER = os.environ.get('PRINTER_NAME', 'Epson_L4150')
 _SAFE_PRINTER = re.compile(r'^[A-Za-z0-9_.@-]{1,127}$')
 WATCH_EVERY = int(os.environ.get('PRINTER_WATCH_SECONDS', '600'))
+# Identidad de la Epson (MAC, nombre mDNS, última IP): sobrevive a reinicios (StateDirectory del servicio).
+STATE_DIR = os.environ.get('STATE_DIRECTORY') or os.environ.get('SCAND_STATE_DIR', '/var/lib/moscowle-scand')
+IDENTITY_FILE = os.path.join(STATE_DIR, 'epson.json')
+# Servicios del host que se abren desde el Monitor: puerto y esquema (se comprueban en el momento).
+HOST_SERVICES = {'cockpit': (9090, 'https'), 'grafana': (3000, 'http'), 'app': (80, 'http')}
 MODES = ('Color', 'Gray')
 # Tamaños en mm (ancho, alto) que caben en el vidrio de la L4150 (216 × 297 mm). None = todo el vidrio.
 SIZES = {
@@ -113,15 +118,70 @@ def _ip_of(uri):
     return m.group(1) if m else None
 
 
-def _lan_network():
-    """Red /24 de la LAN del host (la de la ruta por defecto), p. ej. 192.168.1.0/24."""
+def _lan_ip():
+    """IP actual del host en la LAN (la de la ruta por defecto). La pone el router por DHCP y puede cambiar."""
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
             s.connect(('1.1.1.1', 80))  # UDP: no envía nada, solo elige la interfaz de salida
-            ip = s.getsockname()[0]
-        return ipaddress.ip_network(f'{ip}/24', strict=False)
+            return s.getsockname()[0]
     except OSError:
         return None
+
+
+def _lan_network():
+    """Red /24 de la LAN del host, p. ej. 192.168.1.0/24."""
+    ip = _lan_ip()
+    return ipaddress.ip_network(f'{ip}/24', strict=False) if ip else None
+
+
+def _load_identity():
+    try:
+        with open(IDENTITY_FILE, encoding='utf-8') as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_identity(data):
+    try:
+        os.makedirs(STATE_DIR, exist_ok=True)
+        tmp = IDENTITY_FILE + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(data, f)
+        os.replace(tmp, IDENTITY_FILE)
+    except OSError as exc:
+        print(f'no se pudo guardar la identidad de la Epson: {exc}', flush=True)
+
+
+def _mac_of(ip):
+    """MAC de una IP de la LAN según la tabla de vecinos (se llena al conectarse, p. ej. en el barrido)."""
+    try:
+        out = subprocess.run(['ip', 'neigh', 'show', ip], capture_output=True, text=True, timeout=5, check=False).stdout  # noqa: S603, S607 - comando fijo del sistema
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    m = re.search(r'lladdr ([0-9a-f]{2}(?::[0-9a-f]{2}){5})', out.lower())
+    return m.group(1) if m else None
+
+
+def _mdns_epsons():
+    """Epson que se anuncian por mDNS con impresión directa (puerto 9100): [(nombre, host.local, ip)]."""
+    try:
+        out = subprocess.run(  # noqa: S603 - comando fijo del sistema
+            ['avahi-browse', '-rpt', '_pdl-datastream._tcp'],  # noqa: S607
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        ).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    found = []
+    for line in out.splitlines():
+        parts = line.split(';')
+        # =;iface;IPv4;nombre;tipo;dominio;host.local;ip;puerto;txt
+        if len(parts) >= 9 and parts[0] == '=' and parts[2] == 'IPv4' and 'epson' in parts[3].lower():
+            found.append((parts[3].replace('\\032', ' '), parts[6], parts[7]))
+    return found
 
 
 def _is_epson(ip):
@@ -133,42 +193,94 @@ def _is_epson(ip):
         return False
 
 
-def _sweep_ip():
-    """Busca en toda la LAN, en paralelo, quién acepta impresión (puerto 9100) y se presenta como Epson (~3 s)."""
+def _sweep_9100():
+    """IPs de la LAN que aceptan impresión directa (puerto 9100), probadas en paralelo (~3 s)."""
     net = _lan_network()
     if net is None:
-        return None
+        return []
     hosts = [str(h) for h in net.hosts()]
     with ThreadPoolExecutor(max_workers=64) as pool:
-        open_9100 = [
-            ip for ip, ok in zip(hosts, pool.map(lambda h: _reachable(h, timeout=0.6), hosts), strict=True) if ok
-        ]
-    for ip in open_9100:
+        return [ip for ip, ok in zip(hosts, pool.map(lambda h: _reachable(h, timeout=0.6), hosts), strict=True) if ok]
+
+
+def _found(ip, via, mdns=None):
+    ident = _load_identity()
+    return {'ip': ip, 'mac': _mac_of(ip) or ident.get('mac'), 'mdns': mdns or ident.get('mdns'), 'via': via}
+
+
+def discover():
+    """Dónde está la Epson ahora. Por quién es, no por su IP: mDNS → su MAC guardada → su página web → SANE."""
+    ident = _load_identity()
+    known_mac = ident.get('mac')
+    for _name, host, ip in _mdns_epsons():
+        mac = _mac_of(ip)
+        if known_mac and mac and mac != known_mac:
+            continue  # otra Epson en la red: no es la nuestra
+        return _found(ip, 'mdns', host)
+    candidates = _sweep_9100()
+    if known_mac:
+        for ip in candidates:
+            if _mac_of(ip) == known_mac:
+                return _found(ip, 'mac')
+    for ip in candidates:
         if _is_epson(ip):
-            return ip
-    return open_9100[0] if len(open_9100) == 1 else None
-
-
-def discover_ip():
-    """IP actual de la Epson: barrido rápido de la LAN y, si no aparece, el descubrimiento de SANE (lento)."""
-    ip = _sweep_ip()
-    if ip:
-        return ip
+            return _found(ip, 'web')
+    if len(candidates) == 1:
+        return _found(candidates[0], 'unica')
     for dev in devices(force=True):
         m = _IP_RE.search(dev['name'] + ' ' + dev['label'])
         if m and 'epson' in (dev['name'] + dev['label']).lower():
-            return m.group(1)
+            return _found(m.group(1), 'sane')
     return None
+
+
+def discover_ip():
+    found = discover()
+    return found['ip'] if found else None
+
+
+def _resolves(host):
+    try:
+        socket.gethostbyname(host)
+        return True
+    except OSError:
+        return False
+
+
+def _host_of(uri):
+    m = re.search(r'//([^:/]+)', uri or '')
+    return m.group(1) if m else None
 
 
 def printer_info():
     uri = printer_uri()
-    ip = _ip_of(uri)
-    return {'name': PRINTER, 'uri': uri, 'ip': ip, 'reachable': bool(ip and _reachable(ip))}
+    host = _host_of(uri)
+    ident = _load_identity()
+    return {
+        'name': PRINTER,
+        'uri': uri,
+        'ip': _ip_of(uri) or ident.get('ip'),
+        'host': host,
+        'by_name': bool(host and not _ip_of(uri)),
+        'reachable': bool(host and _reachable(host)),
+        'mac': ident.get('mac'),
+        'mdns': ident.get('mdns'),
+        'last_change': ident.get('last_change'),
+    }
+
+
+def _point_cups(uri):
+    for cmd in (['lpadmin', '-p', PRINTER, '-v', uri], ['cupsenable', PRINTER], ['cupsaccept', PRINTER]):
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)  # noqa: S603, S607 - comandos fijos de CUPS
+        if res.returncode != 0:
+            raise RuntimeError(f'CUPS no aceptó el cambio ({(res.stderr or res.stdout).strip()[:160]}).')
 
 
 def repair_printer(wait=0):
-    """Repunta CUPS a la IP actual de la Epson. `wait`: segundos que se espera si el vigilante ya está en eso."""
+    """Encuentra la Epson por quién es y deja CUPS apuntando a ella (por nombre si se puede), y el escáner igual.
+
+    `wait`: segundos que se espera si el vigilante ya está en eso.
+    """
     if not _SAFE_PRINTER.match(PRINTER):
         raise RuntimeError('Nombre de impresora no válido.')
     got = _printer_lock.acquire(timeout=wait) if wait else _printer_lock.acquire(blocking=False)
@@ -176,36 +288,74 @@ def repair_printer(wait=0):
         raise BusyError('Ya estoy reconectando la impresora: espera unos segundos y vuelve a intentar.')
     try:
         before = printer_info()
-        if before['reachable']:
+        ident = _load_identity()
+        if not ident.get('mdns') and before['ip']:
+            # Aprende su nombre .local aunque nunca se haya perdido, para dejar CUPS apuntando por nombre.
+            ident['mdns'] = next((h for _n, h, mip in _mdns_epsons() if mip == before['ip']), None)
+        named = ident.get('mdns') and _resolves(ident['mdns'])
+        if before['reachable'] and (before['by_name'] or not named):
             return {
                 **before,
                 'changed': False,
-                'message': 'La impresora ya responde en su IP: no hacía falta cambiar nada.',
+                'message': 'La impresora y el escáner ya responden: no hacía falta cambiar nada.',
             }
-        ip = discover_ip()
-        if not ip:
+        found = None if before['reachable'] else discover()
+        if before['reachable']:
+            found = {'ip': before['ip'], 'mac': _mac_of(before['ip']) or ident.get('mac'), 'mdns': ident.get('mdns')}
+        if not found:
             net = _lan_network()
             raise RuntimeError(
                 f'La Epson no está en la red del centro ({net or "LAN"}): se desconectó del WiFi. En la impresora '
                 'presiona el botón de Wi-Fi (o imprime la hoja de estado de red) y vuelve a conectarla; '
                 'luego reintenta.'
             )
+        ip = found['ip']
         if not _reachable(ip):
             raise RuntimeError(f'La Epson aparece en {ip} pero no acepta trabajos en el puerto 9100.')
-        uri = f'socket://{ip}:9100'
-        for cmd in (['lpadmin', '-p', PRINTER, '-v', uri], ['cupsenable', PRINTER], ['cupsaccept', PRINTER]):
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)  # noqa: S603, S607 - comandos fijos del sistema (sane/cups), sin entrada libre
-            if res.returncode != 0:
-                raise RuntimeError(f'CUPS no aceptó el cambio ({(res.stderr or res.stdout).strip()[:160]}).')
+        # Por nombre (mDNS) CUPS la vuelve a encontrar en cada trabajo aunque cambie de IP; si el host no resuelve
+        # .local, queda por IP y el vigilante la repunta.
+        target = found.get('mdns') if found.get('mdns') and _resolves(found['mdns']) else ip
+        uri = f'socket://{target}:9100'
+        if uri != before['uri']:
+            _point_cups(uri)
+        _cache['at'] = 0.0  # el escáner es el mismo equipo: que lo vuelva a buscar en su nueva dirección
+        change = None
+        if before['ip'] and before['ip'] != ip:
+            change = {'from': before['ip'], 'to': ip, 'at': time.time()}
+        _save_identity(
+            {
+                **ident,
+                'ip': ip,
+                'mac': found.get('mac') or ident.get('mac'),
+                'mdns': found.get('mdns') or ident.get('mdns'),
+                'last_change': change or ident.get('last_change'),
+            }
+        )
         print(f'impresora {PRINTER}: {before["uri"]} → {uri}', flush=True)
+        where = f'{found["mdns"]} ({ip})' if target != ip else ip
         return {
             **printer_info(),
             'changed': True,
             'old_uri': before['uri'],
-            'message': f'Impresora reconectada en {ip}.',
+            'message': f'Impresora y escáner reconectados en {where}.',
         }
     finally:
         _printer_lock.release()
+
+
+def where():
+    """Dónde está todo ahora: IP del host en la LAN, su nombre .local, servicios y la Epson."""
+    ip = _lan_ip()
+    host = socket.gethostname()
+    services = {
+        name: {'port': port, 'scheme': scheme, 'up': bool(ip and _reachable(ip, port, timeout=1))}
+        for name, (port, scheme) in HOST_SERVICES.items()
+    }
+    return {
+        'host': {'lan_ip': ip, 'mdns': f'{host}.local', 'name': host},
+        'services': services,
+        'epson': printer_info(),
+    }
 
 
 class BusyError(RuntimeError):
@@ -213,10 +363,12 @@ class BusyError(RuntimeError):
 
 
 def _watch_printer():
+    """Cada WATCH_EVERY: si la Epson no responde (o aún va por IP y ya se puede por nombre), la reconecta."""
     while True:
         time.sleep(WATCH_EVERY)
         try:
-            if not printer_info()['reachable']:
+            info = printer_info()
+            if not info['reachable'] or not info['by_name']:
                 repair_printer()
         except Exception as exc:  # noqa: BLE001 - el vigilante nunca se cae
             print(f'vigilante de impresora: {exc}', flush=True)
@@ -245,6 +397,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {'devices': devs, 'device': FIXED_DEVICE or (devs[0]['name'] if devs else None)})
         if self.path == '/printer':
             return self._json(200, printer_info())
+        if self.path == '/where':
+            return self._json(200, where())
         return self._json(404, {'error': 'ruta'})
 
     def do_POST(self):  # noqa: N802
