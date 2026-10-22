@@ -10,6 +10,8 @@ Group=moscowle-scan
 # lpadmin: puede repuntar la impresora en CUPS (sin sudo ni root).
 SupplementaryGroups=scanner lp lpadmin
 EnvironmentFile=/etc/moscowle-scand.env
+# /var/lib/moscowle-scand: identidad de la Epson (MAC, nombre .local, última IP).
+StateDirectory=moscowle-scand
 ExecStart=/usr/bin/python3 /opt/moscowle-scand/moscowle_scand.py
 Restart=on-failure
 RestartSec=5

@@ -3,6 +3,16 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription, interval, startWith } from 'rxjs';
 
+interface InfraLink {
+  id: string;
+  label: string;
+  icon: string;
+  url: string;
+  /** Mismo servicio por su nombre .local (por si la IP cambia mientras está abierta la pestaña). */
+  alt: string | null;
+  up: boolean | null;
+}
+
 interface ServerStatus {
   at: string;
   host: string;
@@ -15,6 +25,8 @@ interface ServerStatus {
   checks: { name: string; ok: boolean; detail: string }[];
   cockpit_url: string | null;
   grafana_url?: string | null;
+  /** Servicios del host en la dirección donde están ahora (PRP 014): la IP cambia por DHCP, el enlace no se rompe. */
+  links?: InfraLink[];
   /** 720 (30 días) si el historial viene de Prometheus; 168 si viene de la tabla local. */
   history_max_hours?: number;
 }

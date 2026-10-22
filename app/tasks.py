@@ -483,6 +483,17 @@ def record_server_snapshot(app):
         server_monitor.record()
 
 
+def check_printer(app):
+    """Avisa a los admins si la Epson cambió de IP o salió del WiFi (una vez por cambio, PRP 014)."""
+    with app.app_context():
+        from app.services import scan_service
+
+        try:
+            scan_service.check_printer()
+        except Exception as e:  # noqa: BLE001 - un fallo del host no debe frenar el scheduler
+            print(f'Error in check_printer: {e}')
+
+
 def cleanup_drive_uploads(app):
     with app.app_context():
         from app.services import drive_service
@@ -512,6 +523,7 @@ def init_scheduler(app):
     )
     scheduler.add_job(func=lambda: cleanup_drive_uploads(app), trigger='interval', hours=6, id='drive_upload_cleanup')
     scheduler.add_job(func=lambda: record_server_snapshot(app), trigger='interval', minutes=5, id='server_snapshot')
+    scheduler.add_job(func=lambda: check_printer(app), trigger='interval', minutes=5, id='printer_watch')
     scheduler.add_job(
         func=lambda: sync_website_faq(app), trigger='cron', day_of_week='mon', hour=5, minute=0, id='website_faq_sync'
     )

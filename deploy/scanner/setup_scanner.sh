@@ -8,7 +8,8 @@ VM=192.168.122.10
 VM_KEY=/home/diego/.ssh/id_ed25519_vm
 [ "$(id -u)" -eq 0 ] || { echo "Córrelo con sudo."; exit 1; }
 
-apt-get install -y -qq sane-utils sane-airscan >/dev/null
+# avahi-utils: buscar la Epson por su nombre en la red; libnss-mdns: que CUPS resuelva EPSONxxxx.local.
+apt-get install -y -qq sane-utils sane-airscan avahi-utils libnss-mdns >/dev/null
 id moscowle-scan >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin moscowle-scan
 getent group scanner >/dev/null && usermod -aG scanner moscowle-scan || true
 getent group lpadmin >/dev/null && usermod -aG lpadmin moscowle-scan || true
@@ -48,5 +49,7 @@ if [ -f "$VM_KEY" ]; then
 else
   echo "No encontré $VM_KEY: agrega a mano en VM-APP (.env): SCAN_SERVER_URL=http://192.168.122.1:8631 y SCAN_TOKEN (en /etc/moscowle-scand.env)."
 fi
-echo "Impresora: $(curl -s -H "X-Scan-Token: $TOKEN" http://192.168.122.1:8631/printer)"
+# Deja la impresora apuntando por nombre (sigue a la Epson aunque cambie de IP) y muestra dónde está todo.
+echo "Impresora: $(curl -s -X POST -H "X-Scan-Token: $TOKEN" http://192.168.122.1:8631/printer/repair)"
+echo "Dónde está: $(curl -s -H "X-Scan-Token: $TOKEN" http://192.168.122.1:8631/where)"
 echo "Listo. En el Drive: «Escanear» y, en Impresiones, «Reconectar impresora» (también se repunta sola cada 10 min)."

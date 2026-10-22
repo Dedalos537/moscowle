@@ -115,3 +115,10 @@
   .sm-block { min-width: 0; padding: 0.875rem; }
   .sm-links { justify-content: flex-start; }
 }
+
+.sm-cockpit.is-down { opacity: 0.6; border-style: dashed; }
+.sm-where {
+  margin: 0; font-size: 0.75rem; line-height: 1.6; color: var(--color-on-surface-variant); overflow-wrap: anywhere;
+  strong { color: var(--color-on-surface); font-weight: 600; }
+}
+.sm-where__alt { opacity: 0.8; }

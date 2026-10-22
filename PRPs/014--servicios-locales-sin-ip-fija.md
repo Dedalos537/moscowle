@@ -2,7 +2,8 @@
 
 > **Version:** 1.0
 > **Created:** 2026-10-22
-> **Status:** Propuesto
+> **Status:** Implementado (2026-10-22), fases A–D. En el host falta correr `setup_scanner.sh` una vez.
+> **Decisiones:** (1) el aviso «la impresora cambió de IP» llega a **todos los admins**; (2) también Prometheus y el frontend LAN (`/app/`). Prometheus no se publica en la LAN porque no tiene login: su botón abre el explorador de Grafana.
 > **Restricción:** **no se puede reservar IP en el router** (por seguridad). La IP del servidor y la de la Epson van a seguir cambiando por DHCP. El sistema tiene que encontrarlas solo.
 
 ---
@@ -133,7 +134,8 @@ La app bloquea dominios fuera de Moscowle, así que las direcciones de la LAN (`
    - `setup_scanner.sh` instala `avahi-utils` si falta y migra la cola de CUPS a la URI por nombre.
    - En el host solo hay que correrlo una vez más.
 
-## Preguntas abiertas
+## Notas de implementación
 
-1. ¿Quieres que el aviso «la impresora cambió de IP y ya se reconectó» llegue a todos los admins, o solo quede en el registro del Monitor?
-2. ¿Agregamos también Prometheus y el frontend LAN (`/app/`) a los botones con redirección, o bastan Cockpit y Grafana?
+- **Sin redirección 302.** Un enlace que se abre en una pestaña nueva no lleva el token de la sesión. Por eso el Monitor recibe en `links` las direcciones resueltas (se refrescan cada 10 s) y muestra la dirección en texto.
+- **CUPS apunta por nombre con `socket://EPSONxxxx.local:9100`.** No usa `ipp://`, para mantener el mismo driver y formato que hoy.
+- **El aviso de «no está en la red» sale una vez**, y se rearma cuando la Epson vuelve.
