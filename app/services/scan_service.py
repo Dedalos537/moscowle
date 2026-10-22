@@ -94,7 +94,8 @@ def status():
 
 def repair_printer():
     """Pide al servicio del host que busque la IP actual de la Epson y repunte CUPS (acción fija, sin comandos libres)."""
-    raw, _ = _call('POST', '/printer/repair', {}, timeout=120)
+    # Por debajo del corte del túnel de Cloudflare (~100 s): así llega el error real y no «error de conexión».
+    raw, _ = _call('POST', '/printer/repair', {}, timeout=75)
     return json.loads(raw or b'{}')
 
 

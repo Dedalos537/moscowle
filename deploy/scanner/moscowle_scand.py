@@ -15,6 +15,7 @@ responda en su puerto 9100 y, si no, la repunta solo. Es una acción fija: no ej
 """
 
 import hmac
+import ipaddress
 import json
 import os
 import re
@@ -22,6 +23,8 @@ import socket
 import subprocess
 import threading
 import time
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 BIND = os.environ.get('SCAND_BIND', '192.168.122.1')
@@ -52,7 +55,7 @@ def devices(force=False):
     if not force and time.time() - _cache['at'] < 600 and _cache['devices']:
         return _cache['devices']
     try:
-        out = subprocess.run(['scanimage', '-L'], capture_output=True, text=True, timeout=40).stdout
+        out = subprocess.run(['scanimage', '-L'], capture_output=True, text=True, timeout=40, check=False).stdout  # noqa: S603, S607 - comandos fijos del sistema (sane/cups), sin entrada libre
     except (OSError, subprocess.TimeoutExpired):
         out = ''
     found = [{'name': m.group(1), 'label': m.group(2)} for m in re.finditer(r"device `([^']+)' is a (.+)", out)]
@@ -75,7 +78,7 @@ def scan(resolution, mode, size='full'):
     if SIZES.get(size):
         w, h = SIZES[size]
         cmd += ['-l', '0', '-t', '0', '-x', str(w), '-y', str(h)]
-    res = subprocess.run(cmd, capture_output=True, timeout=180)
+    res = subprocess.run(cmd, capture_output=True, timeout=180, check=False)  # noqa: S603, S607 - comandos fijos del sistema (sane/cups), sin entrada libre
     if res.returncode != 0 or not res.stdout:
         _cache['at'] = 0.0  # la IP del escáner pudo cambiar: se vuelve a buscar
         err = res.stderr.decode('utf-8', 'replace').strip().splitlines()[-1:] or ['sin detalle']
@@ -98,7 +101,7 @@ def _reachable(ip, port=9100, timeout=3):
 
 def printer_uri():
     try:
-        out = subprocess.run(['lpstat', '-v', PRINTER], capture_output=True, text=True, timeout=15).stdout
+        out = subprocess.run(['lpstat', '-v', PRINTER], capture_output=True, text=True, timeout=15, check=False).stdout  # noqa: S603, S607 - comandos fijos del sistema (sane/cups), sin entrada libre
     except (OSError, subprocess.TimeoutExpired):
         return None
     m = re.search(r':\s*(\S+)\s*$', out.strip())
@@ -110,8 +113,47 @@ def _ip_of(uri):
     return m.group(1) if m else None
 
 
+def _lan_network():
+    """Red /24 de la LAN del host (la de la ruta por defecto), p. ej. 192.168.1.0/24."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(('1.1.1.1', 80))  # UDP: no envía nada, solo elige la interfaz de salida
+            ip = s.getsockname()[0]
+        return ipaddress.ip_network(f'{ip}/24', strict=False)
+    except OSError:
+        return None
+
+
+def _is_epson(ip):
+    """La Epson responde su página de configuración web con «EPSON» en el contenido."""
+    try:
+        with urllib.request.urlopen(f'http://{ip}/', timeout=2) as resp:  # noqa: S310 - IP de la LAN
+            return b'epson' in resp.read(65536).lower()
+    except Exception:  # noqa: BLE001 - cualquier fallo: no es la Epson
+        return False
+
+
+def _sweep_ip():
+    """Busca en toda la LAN, en paralelo, quién acepta impresión (puerto 9100) y se presenta como Epson (~3 s)."""
+    net = _lan_network()
+    if net is None:
+        return None
+    hosts = [str(h) for h in net.hosts()]
+    with ThreadPoolExecutor(max_workers=64) as pool:
+        open_9100 = [
+            ip for ip, ok in zip(hosts, pool.map(lambda h: _reachable(h, timeout=0.6), hosts), strict=True) if ok
+        ]
+    for ip in open_9100:
+        if _is_epson(ip):
+            return ip
+    return open_9100[0] if len(open_9100) == 1 else None
+
+
 def discover_ip():
-    """IP actual de la Epson según el descubrimiento de SANE (epsonds/airscan la anuncian)."""
+    """IP actual de la Epson: barrido rápido de la LAN y, si no aparece, el descubrimiento de SANE (lento)."""
+    ip = _sweep_ip()
+    if ip:
+        return ip
     for dev in devices(force=True):
         m = _IP_RE.search(dev['name'] + ' ' + dev['label'])
         if m and 'epson' in (dev['name'] + dev['label']).lower():
@@ -125,10 +167,14 @@ def printer_info():
     return {'name': PRINTER, 'uri': uri, 'ip': ip, 'reachable': bool(ip and _reachable(ip))}
 
 
-def repair_printer():
+def repair_printer(wait=0):
+    """Repunta CUPS a la IP actual de la Epson. `wait`: segundos que se espera si el vigilante ya está en eso."""
     if not _SAFE_PRINTER.match(PRINTER):
         raise RuntimeError('Nombre de impresora no válido.')
-    with _printer_lock:
+    got = _printer_lock.acquire(timeout=wait) if wait else _printer_lock.acquire(blocking=False)
+    if not got:
+        raise BusyError('Ya estoy reconectando la impresora: espera unos segundos y vuelve a intentar.')
+    try:
         before = printer_info()
         if before['reachable']:
             return {
@@ -138,12 +184,17 @@ def repair_printer():
             }
         ip = discover_ip()
         if not ip:
-            raise RuntimeError('No encontré la Epson en la red: revisa que esté encendida y conectada al WiFi.')
+            net = _lan_network()
+            raise RuntimeError(
+                f'La Epson no está en la red del centro ({net or "LAN"}): se desconectó del WiFi. En la impresora '
+                'presiona el botón de Wi-Fi (o imprime la hoja de estado de red) y vuelve a conectarla; '
+                'luego reintenta.'
+            )
         if not _reachable(ip):
             raise RuntimeError(f'La Epson aparece en {ip} pero no acepta trabajos en el puerto 9100.')
         uri = f'socket://{ip}:9100'
         for cmd in (['lpadmin', '-p', PRINTER, '-v', uri], ['cupsenable', PRINTER], ['cupsaccept', PRINTER]):
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)  # noqa: S603, S607 - comandos fijos del sistema (sane/cups), sin entrada libre
             if res.returncode != 0:
                 raise RuntimeError(f'CUPS no aceptó el cambio ({(res.stderr or res.stdout).strip()[:160]}).')
         print(f'impresora {PRINTER}: {before["uri"]} → {uri}', flush=True)
@@ -153,6 +204,12 @@ def repair_printer():
             'old_uri': before['uri'],
             'message': f'Impresora reconectada en {ip}.',
         }
+    finally:
+        _printer_lock.release()
+
+
+class BusyError(RuntimeError):
+    pass
 
 
 def _watch_printer():
@@ -195,7 +252,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(401, {'error': 'token'})
         if self.path == '/printer/repair':
             try:
-                return self._json(200, repair_printer())
+                return self._json(200, repair_printer(wait=20))
+            except BusyError as exc:
+                return self._json(409, {'error': str(exc)})
             except (RuntimeError, subprocess.TimeoutExpired) as exc:
                 return self._json(502, {'error': str(exc)})
         if self.path != '/scan':
