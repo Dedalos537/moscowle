@@ -26,6 +26,8 @@ type Phase = 'loading' | 'playing' | 'saving' | 'closing';
  * pulsar «Salir» se le pide el resultado de la partida en curso para no perderla.
  * No muestra ningún KPI: el resultado va directo al servidor.
  */
+import { HttpClient } from '@angular/common/http';
+import { AuthService } from '../../../core/services/auth.service';
 @Component({
   selector: 'app-game-player',
   standalone: true,
@@ -36,10 +38,15 @@ type Phase = 'loading' | 'playing' | 'saving' | 'closing';
 })
 export class GamePlayer implements OnInit, OnDestroy {
   private catalog = inject(GameCatalogService);
+  private auth = inject(AuthService);
+  private http = inject(HttpClient);
   private sanitizer = inject(DomSanitizer);
 
   game = input.required<CatalogGame>();
   sessionId = input<number | null>(null);
+  /** De quién es el avance guardado en el navegador (niveles, estrellas): el paciente de la sesión.
+   * Si no se indica, el usuario con sesión. Así un paciente no ve el avance de otro ni el de una prueba. */
+  playerId = input<number | null>(null);
   /** El equipo prueba el juego: la partida no se guarda como si fuera de un paciente. */
   preview = input(false);
   closed = output<boolean>();
@@ -53,7 +60,12 @@ export class GamePlayer implements OnInit, OnDestroy {
   readonly fullscreen = signal(false);
 
   readonly src = computed<SafeResourceUrl>(() =>
-    this.sanitizer.bypassSecurityTrustResourceUrl(this.catalog.playUrl(this.game(), { session_id: this.sessionId() })),
+    this.sanitizer.bypassSecurityTrustResourceUrl(
+      this.catalog.playUrl(this.game(), {
+        session_id: this.sessionId(),
+        player: this.preview() ? `prueba${this.auth.currentUserId ?? ''}` : (this.playerId() ?? this.auth.currentUserId),
+      }),
+    ),
   );
 
   private closeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -84,7 +96,7 @@ export class GamePlayer implements OnInit, OnDestroy {
     if (!data || data.source !== 'moscowle-game') return;
     if (data.type === 'result' && data.payload) this.save(data.payload);
     else if (data.type === 'exit') this.requestClose();
-    else if (data.type === 'nothing' && this.phase() === 'closing') this.finish();
+    else if (data.type === 'nothing' && this.phase() === 'closing') this.markPlayed(Number((data.payload as { duration_s?: number })?.duration_s) || 0);
   }
 
   private save(result: GameResult) {
@@ -119,6 +131,20 @@ export class GamePlayer implements OnInit, OnDestroy {
       /* si el juego no responde, se cierra igual */
     }
     this.closeTimer = setTimeout(() => this.finish(), 1500);
+  }
+
+  /** Salió antes de que el juego diera un resultado: en una sesión igual cuenta como realizado (no hace falta
+   * terminarlo). Sin sesión, o en una prueba, no se guarda nada. */
+  private markPlayed(durationS: number) {
+    const sid = this.sessionId();
+    if (!sid || this.preview() || this.saved() || durationS < 5) return this.finish();
+    this.http.post(`/api/sessions/${sid}/games/${this.game().id}/played`, { duration_s: durationS }).subscribe({
+      next: () => {
+        this.saved.set(true);
+        this.finish();
+      },
+      error: () => this.finish(),
+    });
   }
 
   private finish() {

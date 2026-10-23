@@ -303,3 +303,15 @@ def test_adjust_installment_changes_unpaid_installment_and_keeps_paid_ones(app):
     Installment.query.filter_by(contract_id=c.id).delete()
     Contract.query.filter_by(id=c.id).delete()
     db.session.commit()
+
+
+def test_parse_step_tolerates_an_extra_closing_brace():
+    """Caso real: MiMo cerró el JSON con una llave de más y el paso se mostraba como texto al usuario."""
+    from app.services.opencode_agent import parse_step
+
+    text = (
+        '```json\n\n{"kind": "tool", "tool": "list_expenses", "args": {"month": "2026-09"}, '
+        '"reason": "El usuario pregunta por los gastos del mes pasado."}\n\n}\n\n```'
+    )
+    step = parse_step(text)
+    assert step['kind'] == 'tool' and step['tool'] == 'list_expenses' and step['args'] == {'month': '2026-09'}

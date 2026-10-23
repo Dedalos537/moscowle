@@ -310,6 +310,19 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   }
 
   private pageSuggestions(): string[] {
+    // Terapeutas y pacientes tienen sus propias preguntas (antes veían las del admin en todas las pantallas).
+    const path = window.location.pathname;
+    if (path.includes('/therapist')) {
+      return [
+        '¿Qué pacientes no tienen sesiones agendadas?',
+        'Solicitar sesiones para un paciente',
+        'Solicitar el alta de un paciente nuevo',
+        '¿En qué quedaron mis solicitudes?',
+      ];
+    }
+    if (path.includes('/patient')) {
+      return ['¿Cuándo es mi próxima sesión?', '¿Tengo cuotas pendientes?', '¿Qué juegos tengo para hoy?'];
+    }
     switch (this.currentPage) {
       case 'finanzas':
         return ['Resumen financiero del mes', 'Mostrar deudores del mes', 'Comparar este mes con el anterior'];

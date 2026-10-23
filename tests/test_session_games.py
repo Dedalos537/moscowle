@@ -117,3 +117,17 @@ def test_batch_create_attaches_optional_games(client, app):
     # sin juegos también se puede (son opcionales)
     payload.update(games=[], dates=['2027-03-11'])
     assert client.post('/admin/api/sessions/batch', json=payload, headers=_h(admin)).status_code == 200
+
+
+def test_leaving_without_result_still_counts_as_played(client, app):
+    """No hace falta terminar el juego: al salir sin resultado queda «jugado sin terminar», sin inventar precisión."""
+    ther, pat = _user('terapista'), _user('jugador')
+    g = _game()
+    appt = _session(ther, pat, [g])
+    r = client.post(f'/api/sessions/{appt.id}/games/{g.id}/played', json={'duration_s': 95}, headers=_h(ther))
+    assert r.status_code == 200 and r.get_json()['session_status'] == 'completed'
+    assert SessionMetrics.query.filter_by(session_id=appt.id).count() == 0  # no hay partida falsa con 0 %
+    status = client.get(f'/api/sessions/{appt.id}', headers=_h(ther)).get_json()['game_status'][0]
+    assert status['status'] == 'completed' and status['partial'] is True and status['duration_s'] == 95
+    other = _user('terapista')
+    assert client.post(f'/api/sessions/{appt.id}/games/{g.id}/played', json={}, headers=_h(other)).status_code == 403

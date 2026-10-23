@@ -14,6 +14,24 @@
  */
 (function () {
   var params = new URLSearchParams(location.search);
+
+  // Progreso por paciente: el juego guarda su avance (niveles, estrellas) en el navegador. Sin esto, en una
+  // computadora compartida (la del terapeuta, o donde el admin probó el juego) un paciente veía el avance de
+  // otro. Con «player» cada uno tiene su propio espacio; se instala antes de que el juego lea su avance.
+  var player = params.get('player');
+  if (player && window.localStorage && window.Storage) {
+    try {
+      var store = window.localStorage;
+      var proto = window.Storage.prototype;
+      var prefix = 'moscowle:p' + player + ':';
+      var get = proto.getItem, set = proto.setItem, rem = proto.removeItem;
+      proto.getItem = function (k) { return get.call(this, this === store ? prefix + k : k); };
+      proto.setItem = function (k, v) { return set.call(this, this === store ? prefix + k : k, v); };
+      proto.removeItem = function (k) { return rem.call(this, this === store ? prefix + k : k); };
+    } catch (e) {
+      /* sin almacenamiento el juego sigue, solo no recuerda el avance */
+    }
+  }
   var embedded = window.parent && window.parent !== window;
   var startedAt = Date.now();
   var gameName = params.get('title') || document.title || 'Juego';
@@ -105,6 +123,6 @@
     if (e.source !== window.parent || !e.data || e.data.source !== 'moscowle-player' || e.data.type !== 'collect') return;
     var result = collector ? collector() : null;
     if (result && !sent) window.MoscowleGame.finish(result);
-    else post('nothing');
+    else post('nothing', { duration_s: Math.round((Date.now() - startedAt) / 1000), sent: sent });
   });
 })();
