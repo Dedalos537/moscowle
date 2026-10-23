@@ -58,3 +58,31 @@
 @for $i from 1 through 6 { .mb > :nth-child(#{$i}) { animation-delay: #{$i * 60}ms; } }
 @keyframes mb-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .mb > * { animation: none; } }
+
+.mb-action {
+  display: grid; gap: 0.75rem; padding: 1rem 1.125rem; border-radius: 1.25rem; background: var(--color-surface-container-lowest);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
+  box-shadow: 0 8px 24px -16px color-mix(in srgb, var(--color-primary) 60%, transparent);
+  &[data-status='done'] { border-color: color-mix(in srgb, var(--color-success) 35%, transparent); box-shadow: none; }
+  &[data-status='error'] { border-color: color-mix(in srgb, var(--color-error) 40%, transparent); box-shadow: none; }
+}
+.mb-action__head { display: flex; gap: 0.75rem; align-items: flex-start; }
+.mb-action__icon {
+  display: grid; place-items: center; flex: none; width: 2.25rem; height: 2.25rem; border-radius: 0.75rem;
+  background: var(--color-nav-active-bg, color-mix(in srgb, var(--color-primary) 12%, transparent)); color: var(--color-primary-text, var(--color-primary));
+  [data-status='done'] & { color: var(--color-success-text, var(--color-success)); }
+  [data-status='error'] & { color: var(--color-error-text, var(--color-error)); }
+}
+.mb-action__title { margin: 0; font-size: 0.9375rem; font-weight: 700; color: var(--color-on-surface); }
+.mb-action__sub { margin: 0.125rem 0 0; font-size: 0.8125rem; color: var(--color-on-surface-variant); }
+.mb-action__args {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 0.5rem 1rem; margin: 0;
+  padding: 0.75rem; border-radius: 0.875rem; background: var(--color-surface-container);
+  div { min-width: 0; } dt { font-size: 0.6875rem; color: var(--color-on-surface-variant); } dd { margin: 0; font-size: 0.875rem; font-weight: 600; color: var(--color-on-surface); overflow-wrap: anywhere; }
+}
+.mb-action__btn {
+  justify-self: start; min-height: 2.5rem; padding: 0 1.125rem; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--color-primary); color: var(--color-on-primary); font: inherit; font-size: 0.875rem; font-weight: 700;
+  transition: background-color 160ms ease, transform 160ms ease;
+  &:hover { background: var(--color-primary-hover); transform: translateY(-1px); }
+}

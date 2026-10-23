@@ -30,7 +30,28 @@ export type AssistantBlock =
   | { type: 'kpis'; items: KpiItem[] }
   | { type: 'chart'; kind: 'line' | 'bar' | 'doughnut'; title: string; x: string[]; series: { name: string; data: (number | null)[] }[]; format: ValueFormat }
   | { type: 'table'; title: string; columns: TableColumn[]; rows: Record<string, unknown>[]; totals?: boolean }
-  | { type: 'people'; title: string; items: { id: number; name: string; code: string; detail: string; amount: number | null; link: string }[] };
+  | { type: 'people'; title: string; items: { id: number; name: string; code: string; detail: string; amount: number | null; link: string }[] }
+  | ActionBlock;
+
+/** Campo del formulario de una acción (sale del esquema de la herramienta). */
+export interface ActionField {
+  key: string;
+  label: string;
+  type: 'string' | 'integer' | 'number' | 'boolean' | 'enum' | 'list' | 'object';
+  required: boolean;
+  options?: { value: string | number; label: string }[];
+}
+
+/** Acción que propuso la IA (crear usuario, registrar pago…): se revisa en un formulario y se confirma. */
+export interface ActionBlock {
+  type: 'action';
+  tool: string;
+  title: string;
+  args: Record<string, unknown>;
+  fields: ActionField[];
+  status: 'pending' | 'done' | 'error';
+  result_text?: string;
+}
 
 export interface AssistantSource {
   tool: string;
@@ -106,6 +127,10 @@ export class AssistantService {
 
   ask(question: string, threadId: number | null): Observable<{ thread: AssistantThread; message: AssistantMessage }> {
     return this.http.post<{ thread: AssistantThread; message: AssistantMessage }>(`${this.base}/ask`, { question, thread_id: threadId });
+  }
+
+  runAction(messageId: number, args: Record<string, unknown>): Observable<{ message: AssistantMessage; reply: AssistantMessage }> {
+    return this.http.post<{ message: AssistantMessage; reply: AssistantMessage }>(`${this.base}/messages/${messageId}/action`, { args });
   }
 
   refresh(messageId: number): Observable<AssistantMessage> {

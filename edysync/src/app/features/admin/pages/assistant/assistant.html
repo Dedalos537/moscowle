@@ -99,7 +99,7 @@
             <div class="as-q"><p>{{ m.text }}</p></div>
           } @else {
             <article class="as-a">
-              <app-message-blocks [blocks]="m.blocks" />
+              <app-message-blocks [blocks]="m.blocks" (review)="openAction(m, $event)" />
               <footer class="as-a__foot">
                 @if (m.sources.length) {
                   <details class="as-sources">
@@ -170,5 +170,52 @@
   <div modal-footer class="as-form__foot">
     <button type="button" class="as-btn" (click)="scheduleOpen.set(false)">Cancelar</button>
     <button type="button" class="as-btn as-btn--primary" (click)="saveSchedule()" [disabled]="!scheduleForm.question.trim()">Programar</button>
+  </div>
+</app-modal>
+
+<!-- Acción propuesta por la IA: se completa y confirma aquí (antes había que responder dato por dato) -->
+<app-modal [isOpen]="!!action()" [title]="action()?.block?.title || 'Confirmar'" (close)="action.set(null)" [allowOverflow]="true">
+  @if (action(); as a) {
+    <form class="as-form" (submit)="$event.preventDefault(); confirmAction()">
+      @for (f of a.block.fields; track f.key) {
+        <label class="as-field">
+          <span>{{ f.label }} @if (f.required) { <em class="as-req" aria-label="obligatorio">*</em> }</span>
+          @switch (f.type) {
+            @case ('enum') {
+              <app-select [(ngModel)]="actionForm[f.key]" [name]="f.key" [options]="enumOptions(f)" [ariaLabel]="f.label" placeholder="Elegir…" />
+            }
+            @case ('boolean') {
+              <app-select [(ngModel)]="actionForm[f.key]" [name]="f.key" [options]="yesNo" [ariaLabel]="f.label" placeholder="Elegir…" />
+            }
+            @case ('list') {
+              <input class="input-field" [name]="f.key" [(ngModel)]="actionForm[f.key]" placeholder="Separa con comas" />
+            }
+            @default {
+              <input class="input-field" [name]="f.key" [(ngModel)]="actionForm[f.key]"
+                [type]="f.type === 'integer' || f.type === 'number' ? 'number' : f.key.includes('email') ? 'email' : f.key.includes('date') ? 'date' : 'text'" />
+            }
+          }
+        </label>
+      }
+      @if (actionError()) { <p class="as-error" role="alert">{{ actionError() }}</p> }
+    </form>
+  }
+  <div modal-footer class="as-form__foot">
+    <button type="button" class="as-btn" (click)="action.set(null)">Cancelar</button>
+    <button type="button" class="as-btn as-btn--primary" (click)="confirmAction()" [disabled]="runningAction() || !actionReady()">
+      {{ runningAction() ? 'Haciéndolo…' : 'Confirmar' }}
+    </button>
+  </div>
+</app-modal>
+
+<app-modal [isOpen]="renameOpen()" title="Nombre de la conversación" (close)="renameOpen.set(false)">
+  <form class="as-form" (submit)="$event.preventDefault(); saveRename()">
+    <label class="as-field"><span>Nombre</span>
+      <input class="input-field" name="rn" [(ngModel)]="renameValue" maxlength="160" />
+    </label>
+  </form>
+  <div modal-footer class="as-form__foot">
+    <button type="button" class="as-btn" (click)="renameOpen.set(false)">Cancelar</button>
+    <button type="button" class="as-btn as-btn--primary" (click)="saveRename()" [disabled]="!renameValue.trim()">Guardar</button>
   </div>
 </app-modal>

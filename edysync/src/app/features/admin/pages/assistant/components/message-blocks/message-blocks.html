@@ -63,6 +63,34 @@
           </div>
         </section>
       }
+      @case ('action') {
+        <section class="mb-action" [attr.data-status]="b.status">
+          <header class="mb-action__head">
+            <span class="mb-action__icon" aria-hidden="true">
+              <fa-icon [icon]="['fas', b.status === 'done' ? 'circle-check' : b.status === 'error' ? 'circle-exclamation' : 'wand-magic-sparkles']" />
+            </span>
+            <div>
+              <h3 class="mb-action__title">{{ b.title }}</h3>
+              <p class="mb-action__sub">
+                @if (b.status === 'done') { {{ b.result_text || 'Hecho' }} }
+                @else if (b.status === 'error') { {{ b.result_text }} }
+                @else if (missing(b)) { Faltan {{ missing(b) }} {{ missing(b) === 1 ? 'dato' : 'datos' }}: complétalos en el formulario. }
+                @else { Todo listo para confirmar. }
+              </p>
+            </div>
+          </header>
+          @if (argsPreview(b).length) {
+            <dl class="mb-action__args">
+              @for (a of argsPreview(b); track a.label) { <div><dt>{{ a.label }}</dt><dd>{{ a.value }}</dd></div> }
+            </dl>
+          }
+          @if (b.status !== 'done') {
+            <button type="button" class="mb-action__btn" (click)="review.emit(b)">
+              {{ b.status === 'error' ? 'Corregir y reintentar' : 'Revisar y confirmar' }}
+            </button>
+          }
+        </section>
+      }
       @case ('people') {
         <section class="mb-people">
           <h3 class="mb-table__title">{{ b.title }}</h3>

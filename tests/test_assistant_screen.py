@@ -141,3 +141,72 @@ def test_only_data_questions_can_be_scheduled(app):
         raise AssertionError('debió rechazarse')
     except svc.AssistantError as exc:
         assert 'datos del centro' in str(exc)
+
+
+def _fake_ai(monkeypatch, replies):
+    from app.routes import mcp_routes
+
+    calls = []
+
+    def fake(message, user_role, user_id, mode='grande', history=None, **kw):
+        calls.append({'message': message, 'history': history})
+        return replies.pop(0)
+
+    monkeypatch.setattr(mcp_routes.mcp_service, 'process_message', fake)
+    return calls
+
+
+def test_pending_action_becomes_a_form_and_runs_on_confirm(app, monkeypatch):
+    admin = _user('admin')
+    _fake_ai(
+        monkeypatch,
+        [
+            {
+                'response': 'Acción pendiente de confirmación.',
+                'requires_confirmation': True,
+                'pending_tool': {'name': 'create_user', 'args': {'role': 'jugador', 'username': 'Cesar Jesús Gamboa'}},
+            }
+        ],
+    )
+    thread, answer = svc.ask(admin, 'crea un usuario jugador Cesar Jesús Gamboa')
+    action = next(b for b in answer.blocks if b['type'] == 'action')
+    keys = {f['key'] for f in action['fields']}
+    assert action['tool'] == 'create_user' and {'username', 'role'} <= keys
+    assert action['args']['username'] == 'Cesar Jesús Gamboa' and action['status'] == 'pending'
+
+    ran = []
+    monkeypatch.setattr(
+        'app.services.tools_registry.execute_tool',
+        lambda name, args, user_id=None, role=None: (
+            ran.append((name, args, role)) or {'success': True, 'message': 'Usuario creado.'}
+        ),
+    )
+    updated, reply = svc.run_action(
+        admin, answer.id, {'role': 'jugador', 'username': 'Cesar Jesús Gamboa', 'email': ''}
+    )
+    assert ran == [('create_user', {'role': 'jugador', 'username': 'Cesar Jesús Gamboa'}, 'admin')]  # vacíos fuera
+    assert next(b for b in updated.blocks if b['type'] == 'action')['status'] == 'done'
+    assert 'Usuario creado' in reply.text
+    try:
+        svc.run_action(admin, answer.id, {})
+        raise AssertionError('no debía repetirse')
+    except svc.AssistantError as exc:
+        assert 'ya se hizo' in str(exc)
+
+
+def test_follow_up_stays_with_the_ai_conversation(app, monkeypatch):
+    admin = _user('admin')
+    calls = _fake_ai(
+        monkeypatch,
+        [
+            {'response': '¿Qué rol tendrá?', 'provider': 'opencode'},
+            {'response': 'Falta el correo.', 'provider': 'opencode'},
+        ],
+    )
+    thread, _ = svc.ask(admin, 'puedes crear un usuario?')
+    _, follow = svc.ask(admin, '¿qué falta?', thread.id)
+    assert follow.blocks[0]['md'] == 'Falta el correo.'  # antes se iba al análisis de «asistencia»
+    assert len(calls) == 2 and calls[1]['history']  # con el historial de la conversación
+    # un pedido de datos explícito sí pasa al análisis aunque venga de la IA
+    _, data = svc.ask(admin, 'compara las sedes este mes', thread.id)
+    assert data.model == analytics.MODEL_NAME

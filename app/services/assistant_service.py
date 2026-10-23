@@ -102,13 +102,85 @@ def _history(thread):
     return [{'role': m.role, 'content': m.text or ''} for m in reversed(msgs)]
 
 
+# En esta pantalla hay formularios: el modelo no necesita preguntar dato por dato antes de proponer una acción.
+SCREEN_HINT = (
+    '[Pantalla del asistente: si el usuario pide crear, registrar, programar o cambiar algo, PROPÓN la herramienta '
+    'en cuanto sepas cuál es, con los datos que ya tengas; el sistema le muestra un formulario para completar lo que '
+    'falte y confirmar. No preguntes los datos uno por uno. Mantén el hilo de la conversación.]\n'
+)
+
+
+# Nombres claros para los campos más comunes (la descripción de la herramienta es para el modelo, no para la gente).
+FIELD_LABELS = {
+    'username': 'Nombre completo',
+    'name': 'Nombre',
+    'email': 'Correo',
+    'phone': 'Teléfono',
+    'role': 'Tipo de usuario',
+    'sede_id': 'Sede',
+    'guardian': 'Apoderado',
+    'guardian_name': 'Apoderado',
+    'guardian_contact': 'Contacto del apoderado',
+    'amount': 'Monto (S/)',
+    'method': 'Método de pago',
+    'date': 'Fecha',
+    'start_time': 'Hora de inicio',
+    'end_time': 'Hora de fin',
+    'notes': 'Notas',
+    'description': 'Descripción',
+    'reason': 'Motivo',
+}
+ROLE_OPTIONS = [
+    {'value': 'jugador', 'label': 'Paciente'},
+    {'value': 'terapista', 'label': 'Terapeuta'},
+    {'value': 'supervisor', 'label': 'Supervisor'},
+    {'value': 'admin', 'label': 'Administrador'},
+]
+
+
+def _field(key, spec, required):
+    """Campo del formulario de una acción, a partir del esquema JSON de la herramienta."""
+    kind = spec.get('type') or 'string'
+    default_label = (spec.get('description') or key.replace('_', ' ')).split('(')[0].split(':')[0].split('.')[0]
+    out = {
+        'key': key,
+        'label': FIELD_LABELS.get(key) or default_label.strip()[:60] or key,
+        'type': 'enum' if spec.get('enum') else kind,
+        'required': key in required,
+    }
+    if spec.get('enum'):
+        out['options'] = [{'value': o, 'label': str(o)} for o in spec['enum']]
+    if kind == 'array':
+        out['type'] = 'list'
+    if key == 'role':
+        out.update(type='enum', options=ROLE_OPTIONS)
+    if key == 'sede_id':
+        from app.models import Sede
+
+        sedes = Sede.query.filter(db.or_(Sede.is_active.is_(True), Sede.is_active.is_(None))).order_by(Sede.name).all()
+        out.update(type='enum', options=[{'value': x.id, 'label': x.name} for x in sedes])
+    return out
+
+
+def action_block(name, args):
+    """Bloque de acción por confirmar: los campos salen del esquema de la herramienta, con lo que ya dijo el usuario."""
+    from app.services.tools_registry import TOOL_REGISTRY
+
+    spec = TOOL_REGISTRY.get(name) or {}
+    params = (spec.get('parameters') or {}).get('properties') or {}
+    required = set((spec.get('parameters') or {}).get('required') or [])
+    fields = [_field(k, v, required) for k, v in params.items()]
+    title = (spec.get('description') or name).split('.')[0][:120]
+    return {'type': 'action', 'tool': name, 'title': title, 'args': args or {}, 'fields': fields, 'status': 'pending'}
+
+
 def _general_ai(question, user, history):
     """Preguntas que no son de datos conocidos: la IA general del sistema (OpenCode/MCP con respaldo)."""
     from app.routes.mcp_routes import mcp_service
 
     try:
         result = mcp_service.process_message(
-            message=question, user_role=user.role, user_id=user.id, mode='grande', history=history
+            message=SCREEN_HINT + question, user_role=user.role, user_id=user.id, mode='grande', history=history
         )
     except Exception as exc:  # noqa: BLE001 - la IA puede caerse: se responde algo útil igual
         current_app.logger.warning(f'asistente: IA general no respondió: {exc}')
@@ -117,6 +189,18 @@ def _general_ai(question, user, history):
         'No pude responder eso ahora. Prueba con una pregunta de datos del centro, por ejemplo '
         '«¿cómo vamos este mes?» o «compara las sedes este trimestre».'
     )
+    pending = (result or {}).get('pending_tool') if (result or {}).get('requires_confirmation') else None
+    if pending and pending.get('name'):
+        block = action_block(pending['name'], pending.get('args'))
+        return {
+            'title': block['title'][:80],
+            'blocks': [
+                {'type': 'text', 'md': 'Revisa los datos, completa lo que falte y confirma.'},
+                block,
+            ],
+            'sources': [{'tool': pending['name'], 'scope': 'acción por confirmar'}],
+            'model': (result or {}).get('provider') or 'IA del centro',
+        }
     return {
         'title': question[:80],
         'blocks': [{'type': 'text', 'md': text}],
@@ -127,13 +211,24 @@ def _general_ai(question, user, history):
     }
 
 
-def compute(question, user, history=None):
-    """La respuesta (sin guardar): datos del centro si se reconoce la pregunta; si no, la IA general."""
+def compute(question, user, history=None, follow_ai=False):
+    """La respuesta (sin guardar): datos del centro si se reconoce la pregunta; si no, la IA general.
+
+    follow_ai: el hilo viene de una conversación con la IA (p. ej. creando un usuario). Un seguimiento como
+    «¿qué falta?» sigue con ella; solo se pasa al análisis si la pregunta lo pide claramente.
+    """
     try:
-        res = analytics.answer(question, user)
+        res = analytics.answer(question, user, strict=follow_ai)
     except analytics.ScopeError as exc:
         raise AssistantError(str(exc), 403) from exc
     return res or _general_ai(question, user, history or [])
+
+
+def _follows_ai(thread):
+    if not thread:
+        return False
+    last = thread.messages.filter_by(role='assistant').order_by(AssistantMessage.id.desc()).first()
+    return bool(last and last.model and last.model != analytics.MODEL_NAME)
 
 
 def _plain(blocks):
@@ -148,7 +243,7 @@ def ask(user, question, thread_id=None):
         raise AssistantError('La pregunta es muy larga (máx. 2000 caracteres)')
     thread = get_thread(thread_id, user, write=True) if thread_id else None
     history = _history(thread) if thread else []
-    res = compute(question, user, history)
+    res = compute(question, user, history, follow_ai=_follows_ai(thread))
     now = datetime.utcnow()
     if thread is None:
         thread = AssistantThread(user_id=user.id, title=(res.get('title') or question)[:160], created_at=now)
@@ -186,6 +281,49 @@ def refresh(user, message_id):
     m.created_at = datetime.utcnow()
     db.session.commit()
     return m
+
+
+def run_action(user, message_id, args):
+    """El usuario revisó el formulario y confirmó: se ejecuta con sus permisos y queda en la conversación."""
+    from app.services.tools_registry import TOOL_REGISTRY, execute_tool
+
+    m = db.session.get(AssistantMessage, message_id)
+    if not m or m.role != 'assistant':
+        raise AssistantError('Respuesta no encontrada', 404)
+    thread = get_thread(m.thread_id, user, write=True)
+    blocks = list(m.blocks or [])
+    idx = next((i for i, b in enumerate(blocks) if b.get('type') == 'action'), None)
+    if idx is None:
+        raise AssistantError('Esta respuesta no tiene una acción por confirmar')
+    block = dict(blocks[idx])
+    if block.get('status') == 'done':
+        raise AssistantError('Esa acción ya se hizo')
+    name = block['tool']
+    if name not in TOOL_REGISTRY:
+        raise AssistantError('Esa acción ya no existe', 404)
+    clean = {k: v for k, v in (args or {}).items() if v not in (None, '', [])}
+    result = execute_tool(name, clean, user_id=user.id, role=user.role)
+    ok = isinstance(result, dict) and not result.get('error') and result.get('success', True) is not False
+    message = (result or {}).get('message') if isinstance(result, dict) else None
+    text = (
+        f'Listo: {message}' if ok and message else 'Listo, quedó hecho.' if ok else f'No se pudo: {result.get("error")}'
+    )
+    block.update(status='done' if ok else 'error', args=clean, result_text=text)
+    blocks[idx] = block
+    m.blocks = blocks
+    reply = AssistantMessage(
+        thread_id=thread.id,
+        role='assistant',
+        text=text,
+        blocks=[{'type': 'text', 'md': text}],
+        sources=[{'tool': name, 'scope': 'acción confirmada'}],
+        model='acción confirmada',
+        question=None,
+    )
+    db.session.add(reply)
+    thread.updated_at = datetime.utcnow()
+    db.session.commit()
+    return m, reply
 
 
 def set_feedback(user, message_id, value):
