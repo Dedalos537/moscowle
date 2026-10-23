@@ -7,6 +7,7 @@ respondia con lo que tenia a mano y por eso dijo 'ninguno sin contrato'.
 'is_active' y 'status' pueden no coincidir: varias filas de contract tienen
 is_active en NULL, asi que un contrato vigente puede ser cualquiera de los dos.
 """
+
 import pytest
 
 _CREADOS = []
@@ -30,8 +31,7 @@ def _limpiar(db, session):
 def _paciente(session, username, **extra):
     from app.models.user import User
 
-    u = User(username=username, email=f'{username}@x.com', password='x',
-             role='jugador', is_active=True, **extra)
+    u = User(username=username, email=f'{username}@x.com', password='x', role='jugador', is_active=True, **extra)
     session.add(u)
     session.commit()
     _CREADOS.append(username)
@@ -41,17 +41,24 @@ def _paciente(session, username, **extra):
 def _contrato(session, pid, is_active=None, status='active', total=4560.0):
     from app.models.contract import Contract
 
-    session.add(Contract(
-        patient_id=pid, total_amount=total, installment_amount=380.0,
-        installment_count=12, is_active=is_active, status=status,
-    ))
+    session.add(
+        Contract(
+            patient_id=pid,
+            total_amount=total,
+            installment_amount=380.0,
+            installment_count=12,
+            is_active=is_active,
+            status=status,
+        )
+    )
     session.commit()
 
 
 def _listar(**kw):
     from app.services.tools_registry import execute_tool
 
-    r = execute_tool('list_patients', kw, user_id=1, role='admin')
+    # Sin el tope por defecto (50 por nombre): otros tests crean pacientes y empujaban a los de aquí fuera.
+    r = execute_tool('list_patients', {'limit': 100000, **kw}, user_id=1, role='admin')
     assert r.get('success'), r
     return {p['username'] for p in r['patients']}
 
