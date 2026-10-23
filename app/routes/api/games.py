@@ -34,6 +34,10 @@ def api_list_games():
     return jsonify({'games': files})
 
 
+def _norm(name):
+    return (name or '').lower().replace('.html', '').replace('_', ' ').strip()
+
+
 @api_bp.route('/save_game', methods=['POST'])
 @login_required
 @limiter.limit('20 per minute')
@@ -65,12 +69,17 @@ def save_game():
 
             if current_user.role == 'jugador' and appt.patient_id != current_user.id:
                 return jsonify({'error': 'No autorizado para esta sesión'}), 403
+            # El terapeuta puede jugar con el paciente desde su cuenta durante la sesión (solo las suyas).
+            if current_user.role == 'terapista' and appt.therapist_id != current_user.id:
+                return jsonify({'error': 'No autorizado para esta sesión'}), 403
+            if current_user.role not in ('jugador', 'terapista', 'admin', 'supervisor'):
+                return jsonify({'error': 'No autorizado para esta sesión'}), 403
 
             if appt.status == 'completed':
                 return jsonify({'error': 'Esta sesión ya se completó'}), 400
 
-            assigned_normalized = [g.lower().replace('.html', '').replace('_', ' ') for g in appt.games_list]
-            current_normalized = game_name.lower().replace('.html', '').replace('_', ' ')
+            assigned_normalized = [_norm(g) for g in appt.games_list]
+            current_normalized = _norm(game_name)
 
             if appt.games_list and current_normalized not in assigned_normalized:
                 current_app.logger.warning(f'Game mismatch: {game_name} not in {appt.games_list}')
@@ -89,8 +98,9 @@ def save_game():
         if any(v is not None for v in extras.values()):
             details = json.dumps(extras, ensure_ascii=False)
 
+        # Con sesión, la partida es del paciente aunque se juegue desde la cuenta del terapeuta.
         m = SessionMetrics(
-            user_id=current_user.id,
+            user_id=appt.patient_id if appt else current_user.id,
             session_id=int(session_id) if session_id else None,
             game_name=game_name,
             accurracy=accuracy,
@@ -111,21 +121,32 @@ def save_game():
 
         if appt:
             db.session.flush()
+            from app.models import AppointmentGame
 
-            played_count = SessionMetrics.query.filter_by(session_id=appt.id).count()
-
-            total_assigned = len(appt.games_list)
-
-            if played_count >= total_assigned > 0:
+            assigned = AppointmentGame.query.filter_by(appointment_id=appt.id).all()
+            for ag in assigned:
+                if (m.game_id and ag.game_id == m.game_id) or (
+                    ag.game and current_normalized in (_norm(ag.game.filename), _norm(ag.game.title))
+                ):
+                    ag.status = 'completed'
+            # Se completa cuando se jugó cada juego asignado (antes contaba partidas: repetir uno la cerraba).
+            if assigned:
+                all_played = all(ag.status == 'completed' for ag in assigned)
+            else:
+                # Sesiones antiguas: los juegos solo están en appt.games (sin filas AppointmentGame).
+                played = {_norm(x.game_name) for x in SessionMetrics.query.filter_by(session_id=appt.id).all()}
+                all_played = bool(appt.games_list) and all(_norm(g) in played for g in appt.games_list)
+            if all_played:
                 appt.status = 'completed'
                 appt.end_time = datetime.utcnow()
                 db.session.add(appt)
-                with contextlib.suppress(Exception):
-                    notification_service.create_notification(
-                        appt.therapist_id,
-                        f'Sesión #{appt.id} completada por {current_user.username}',
-                        link='/therapist/patients',
-                    )
+                if current_user.id != appt.therapist_id:
+                    with contextlib.suppress(Exception):
+                        notification_service.create_notification(
+                            appt.therapist_id,
+                            f'Sesión #{appt.id} completada por {current_user.username}',
+                            link='/therapist/patients',
+                        )
 
         db.session.commit()
 

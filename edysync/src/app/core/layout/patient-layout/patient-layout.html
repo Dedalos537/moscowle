@@ -29,6 +29,7 @@
         <router-outlet></router-outlet>
       </div>
     </main>
+    @if (assistant.visible()) { <app-ai-chat></app-ai-chat> }
     <app-help-panel></app-help-panel>
   </div>
 </div>

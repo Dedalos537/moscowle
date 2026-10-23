@@ -7,6 +7,7 @@ from app.auth_compat import current_user, login_required
 from app.extensions import db
 from app.models import Appointment, User
 from app.routes.admin import admin_bp
+from app.services.appointment_service import AppointmentService
 from app.services.holiday_service import is_holiday
 from app.utils import (
     get_user_day_utc_range,
@@ -17,6 +18,8 @@ from app.utils import (
 VALID_STATUSES = ('scheduled', 'in_progress', 'completed', 'cancelled')
 MAX_RANGE_DAYS = 100
 STATUS_COLORS = {'completed': '#10b981', 'cancelled': '#ef4444', 'scheduled': '#3b82f6'}
+
+appointment_service = AppointmentService()
 
 
 def _parse_day(value):
@@ -268,6 +271,12 @@ def create_sessions_batch(data):
     group_id = data.get('group_id')
     notes = (data.get('notes') or '').strip() or None
     day_notes = data.get('day_notes') if isinstance(data.get('day_notes'), dict) else {}
+    # Juegos para jugar en la sesión: opcionales; los mismos para todas las fechas y pacientes del lote.
+    game_names = [str(g.get('name') if isinstance(g, dict) else g) for g in (data.get('games') or []) if g]
+    try:
+        session_games = appointment_service.resolve_games(game_names) if game_names else []
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
 
     if not all([therapist_id, patient_ids, start_time_str, end_time_str]):
         return jsonify({'error': 'Faltan datos requeridos'}), 400
@@ -393,6 +402,8 @@ def create_sessions_batch(data):
                     )
                     db.session.add(appt)
                     db.session.flush()
+                    if session_games:
+                        appointment_service.attach_games(appt, session_games)
                     existing.append({**candidate, 'status': appt.status})
                     created_ids.append(appt.id)
                     created_count += 1

@@ -24,6 +24,7 @@ import { ActionRequestService } from '../../../../core/services/action-request.s
 import { IncidentService } from '../../../../core/services/incident.service';
 import { LandingAdminService } from '../../../../core/services/landing-admin.service';
 
+import { AssistantVisibilityService } from '../../../../core/services/assistant-visibility';
 @Component({
   selector: 'app-settings',
   standalone: true,
@@ -33,6 +34,8 @@ import { LandingAdminService } from '../../../../core/services/landing-admin.ser
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Settings implements OnInit, OnDestroy {
+  /** Para qué tipos de usuario aparece el botón flotante del asistente. */
+  readonly assistant = inject(AssistantVisibilityService);
   private theme = inject(ThemeService);
   private settings = inject(GlobalSettingsService);
   private notifService = inject(NotificationService);
