@@ -47,3 +47,6 @@ from app.models.landing import LandingLead as LandingLead
 from app.models.ai_external_call import AiExternalCall as AiExternalCall
 from app.models.activity_event import ActivityEvent as ActivityEvent
 from app.models.push_subscription import PushSubscription as PushSubscription
+from app.models.assistant_thread import AssistantMessage as AssistantMessage
+from app.models.assistant_thread import AssistantSchedule as AssistantSchedule
+from app.models.assistant_thread import AssistantThread as AssistantThread

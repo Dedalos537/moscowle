@@ -1,6 +1,7 @@
 import { NgModule, inject } from '@angular/core';
 import { Router, RouterModule, Routes } from '@angular/router';
 import { RoleGuard } from '../../core/guards/role.guard';
+import { Assistant } from './pages/assistant/assistant';
 import { Dashboard } from './pages/dashboard/dashboard';
 import { Sedes } from './pages/sedes/sedes';
 import { UsersList } from './pages/users/users-list/users-list';
@@ -28,6 +29,7 @@ const routes: Routes = [
     canActivate: [RoleGuard],
     data: { role: ['admin', 'supervisor'] },
     children: [
+      { path: 'assistant', component: Assistant },
       { path: 'dashboard', component: Dashboard },
       { path: 'sedes', component: Sedes },
       { path: 'users', component: UsersList },
@@ -66,7 +68,7 @@ const routes: Routes = [
       { path: 'drive', loadComponent: () => import('./pages/drive/drive').then(m => m.Drive) },
       { path: 'kanban', loadComponent: () => import('./pages/kanban/kanban').then(m => m.KanbanPage) },
       { path: 'settings', loadComponent: () => import('./pages/settings/settings').then(m => m.Settings) },
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
+      { path: '', redirectTo: 'assistant', pathMatch: 'full' }
     ]
   }
 ];

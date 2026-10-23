@@ -2,7 +2,8 @@
 
 > **Version:** 1.0
 > **Created:** 2026-10-23
-> **Status:** Propuesto
+> **Status:** Implementado (2026-10-23), fases A–D.
+> **Decisiones:** (1) el supervisor también la tiene, limitada a su sede; (2) sí a los reportes programados (cada día o semana, por correo y/o Telegram); (3) las conversaciones se pueden compartir con los demás admins (un supervisor solo ve las compartidas por supervisores de su sede); (4) **es la pantalla de inicio** del admin y del supervisor al entrar.
 > **Depende de:** PRP 009 (OpenCode + MiMo con caída a la cadena actual), PRP 011 (tipos de notificación), PRP 013 (móvil sin desplazamiento horizontal)
 
 ---
@@ -180,8 +181,9 @@ Las consultas son **predefinidas y parametrizadas**: sin SQL libre del modelo. A
 - ❌ Guardar conversaciones con contenido clínico en un servicio externo.
 - ❌ Copiar el panel flotante a pantalla completa: aquí los bloques y la persistencia son lo principal.
 
-## Preguntas abiertas
+## Notas de implementación
 
-1. ¿El supervisor también tiene la pantalla completa (limitada a su sede), o solo el admin?
-2. ¿Quieres que la conversación pueda **programar un reporte** («mándame esto cada lunes»), reutilizando el resumen por correo o Telegram?
-3. ¿Se comparten conversaciones entre admins (por ejemplo, fijar una «para el equipo»), o cada una es privada?
+- **Router de intención determinista.** Reconoce resumen, sedes, equipo, deudores, riesgo, altas y bajas, tendencia y pagos por método. Arma los bloques con `center_dashboard` y `sede_scorecard`, así los números son los mismos del Dashboard. Lo que no reconoce va a la IA general (OpenCode/MiMo con respaldo) como texto.
+- **Bloques:** `text`, `kpis`, `chart` (line, bar, doughnut), `table` (ordenable, totales, exportar a CSV) y `people`. Se validan en `assistant_analytics.validate_block`.
+- **Persistencia:** `assistant_thread`, `assistant_message` y `assistant_schedule` (se crean solas con `create_all`). El job corre cada hora en el minuto 2. La retención es de 180 días para las no fijadas.
+- **Botón flotante:** en esta pantalla se oculta, porque sobra.

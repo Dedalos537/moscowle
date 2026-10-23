@@ -12,8 +12,9 @@ import { base64urlToBuffer, serializeWebauthnCredential } from '../../../../shar
 import { Logo } from '../../../../shared/components/logo/logo';
 
 const HOME_BY_ROLE: Record<string, string> = {
-  admin: '/admin/dashboard',
-  supervisor: '/admin/dashboard',
+  // El asistente es la pantalla de inicio del admin y del supervisor (PRP 015).
+  admin: '/admin/assistant',
+  supervisor: '/admin/assistant',
   terapista: '/therapist/dashboard',
   jugador: '/patient/dashboard',
 };

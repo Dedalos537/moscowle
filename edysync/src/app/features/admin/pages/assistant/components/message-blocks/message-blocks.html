@@ -1,0 +1,84 @@
+<div class="mb">
+  @for (b of blocks(); track $index; let i = $index) {
+    @switch (b.type) {
+      @case ('text') {
+        <div class="mb-text" [innerHTML]="md(b.md)"></div>
+      }
+      @case ('kpis') {
+        <ul class="mb-kpis" role="list">
+          @for (k of b.items; track k.key) {
+            <li class="mb-kpi" [attr.data-status]="k.status">
+              <span class="mb-kpi__label">{{ k.label }}</span>
+              <strong class="mb-kpi__value">{{ value(k.value, k.format) }}</strong>
+              <span class="mb-kpi__delta" [attr.data-tone]="deltaTone(k)">{{ deltaLabel(k) }}</span>
+            </li>
+          }
+        </ul>
+      }
+      @case ('chart') {
+        <app-block-chart [block]="b" />
+      }
+      @case ('table') {
+        <section class="mb-table">
+          <header class="mb-table__head">
+            <h3 class="mb-table__title">{{ b.title }}</h3>
+            <button type="button" class="mb-link" (click)="exportCsv(b)"><fa-icon [icon]="['fas', 'file-csv']" aria-hidden="true" /> Exportar</button>
+          </header>
+          <div class="mb-table__wrap">
+            <table class="mtable data-table">
+              <thead>
+                <tr>
+                  @for (c of b.columns; track c.key) {
+                    <th scope="col" [class.is-num]="c.format && c.format !== 'date'" [attr.aria-sort]="sortState(i, c.key)">
+                      <button type="button" class="mb-sort" (click)="sortBy(i, c.key)">{{ c.label }}</button>
+                    </th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of rows(i, b); track $index) {
+                  <tr>
+                    @for (c of b.columns; track c.key; let first = $first) {
+                      <td [class.mt-lead]="first" [class.is-num]="c.format && c.format !== 'date'" [attr.data-label]="first ? null : c.label">
+                        @if (link(r, c); as href) {
+                          <a [routerLink]="href">{{ c.person_code ? ($any(r[c.key]) | personLabel: undefined : code(r, c)) : value(r[c.key], c.format) }}</a>
+                        } @else {
+                          {{ value(r[c.key], c.format) }}
+                        }
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+              @if (b.totals) {
+                <tfoot>
+                  <tr>
+                    @for (c of b.columns; track c.key; let first = $first) {
+                      <td [class.is-num]="c.format && c.format !== 'date'">{{ first ? 'Total' : total(b, c) }}</td>
+                    }
+                  </tr>
+                </tfoot>
+              }
+            </table>
+          </div>
+        </section>
+      }
+      @case ('people') {
+        <section class="mb-people">
+          <h3 class="mb-table__title">{{ b.title }}</h3>
+          <ul role="list">
+            @for (p of b.items; track p.id) {
+              <li>
+                <a [routerLink]="p.link" class="mb-person">
+                  <span class="mb-person__name">{{ p.name | personLabel: p.id : p.code }}</span>
+                  <span class="mb-person__detail">{{ p.detail }}</span>
+                </a>
+                @if (p.amount) { <span class="mb-person__amount">{{ value(p.amount, 'money') }}</span> }
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    }
+  }
+</div>

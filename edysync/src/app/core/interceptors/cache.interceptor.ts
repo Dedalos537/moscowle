@@ -15,6 +15,7 @@ const EXCLUDED = [
   '/admin/api/payroll',
   // Actividad por usuario (PRP 012): siempre al día.
   '/admin/api/activity/',
+  '/api/assistant/',
   // Estado de opencode (PRP 009): pausa por cuota y servicio en línea cambian en minutos.
   '/mcp/opencode/',
   '/api/health',
