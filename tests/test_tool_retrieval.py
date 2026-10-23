@@ -106,6 +106,9 @@ class TestRecuperadorRespetaElRol:
                 'get_notifications',
                 'mark_notifications_read',
                 'list_sedes',
+                # De solo lectura y siempre sobre el propio paciente (tools_role.py).
+                'my_sessions',
+                'my_payments',
             }
             assert not restringidas, f'"{consulta}" Leak al paciente: {restringidas}'
 

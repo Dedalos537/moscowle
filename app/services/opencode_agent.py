@@ -79,7 +79,14 @@ def enabled_for(user):
     if not user or not oc.configured('chat') or oc.blocked('chat'):
         return False
     conf = settings()
-    return conf['enabled'] and user.role in conf['roles']
+    if not conf['enabled']:
+        return False
+    if user.role in conf['roles']:
+        return True
+    # Si el admin encendió el asistente para ese tipo de usuario (Configuración → Apariencia), también va por MiMo.
+    from app.routes.api.assistant import visible_for
+
+    return visible_for(user.role)
 
 
 def dev_enabled_for(user):
@@ -212,6 +219,27 @@ def _today_line():
     return f'[Hoy: {_DIAS[today.weekday()]} {today.isoformat()} (Lima). Próximos días: {days}]'
 
 
+_ROLE_GUIDES = {
+    'terapista': (
+        'QUIÉN TE ESCRIBE: un TERAPEUTA. Ayúdale con su trabajo diario: su agenda, SUS pacientes (no ve a los de '
+        'otros), quién no tiene sesión agendada (my_patients_overview), sesiones por cerrar, y cómo usar la '
+        'plataforma. El terapeuta NO crea usuarios ni programa sesiones directo: lo pide a coordinación. Para un '
+        'paciente nuevo usa request_patient_signup; para agendar usa request_sessions (1 a 10 fechas, mismo '
+        'horario); para ver en qué quedó, list_my_requests. Guíalo paso a paso y pide solo los datos que falten.\n'
+    ),
+    'jugador': (
+        'QUIÉN TE ESCRIBE: un PACIENTE o su familia. Habla simple y cálido, sin términos clínicos. Puedes contarle '
+        'sus próximas sesiones y juegos (my_sessions) y sus cuotas y pagos (my_payments). No des valoraciones '
+        'clínicas ni datos de otras personas. Para cambiar una cita o dudas de terapia, que hable con su terapeuta '
+        'o con el centro.\n'
+    ),
+}
+
+
+def _role_guide(role):
+    return _ROLE_GUIDES.get(role, '')
+
+
 def _primer(user, tools, write_names, mode='grande'):
     from app.services.report_service import lima_today
 
@@ -230,6 +258,7 @@ def _primer(user, tools, write_names, mode='grande'):
         'claro y breve. NO trabajas con código ni archivos: no uses tus herramientas de código (bash, read, edit, '
         'etc.); para datos del centro usa SOLO las herramientas del sistema de abajo, que ejecuta Moscowle.\n\n'
         f'Fecha de hoy (Lima): {lima_today().isoformat()}. Usuario: rol {user.role}.\n'
+        + _role_guide(user.role)
         + mode_rule
         + 'Los nombres, correos, teléfonos y DNI llegan como fichas («P1», «E1», «C1», «D1»): úsalas tal cual en '
         'los argumentos y en tus respuestas; el sistema las traduce.\n\n'
@@ -256,20 +285,24 @@ _JSON_BLOCK = re.compile(r'```(?:json)?\s*(\{.*?\})\s*```', re.S)
 
 
 def parse_step(text):
-    """Extrae el JSON del paso. Si el modelo respondió en prosa, se toma como respuesta final."""
+    """Extrae el JSON del paso. Si el modelo respondió en prosa, se toma como respuesta final.
+
+    Lee el PRIMER objeto JSON válido que encuentre aunque venga con basura alrededor: MiMo a veces cierra con una
+    llave de más («...}\n}») y antes eso hacía que el paso se mostrara como texto en vez de ejecutarse.
+    """
     text = (text or '').strip()
-    candidates = [m.group(1) for m in _JSON_BLOCK.finditer(text)]
-    if not candidates:
-        first, last = text.find('{'), text.rfind('}')
-        if first != -1 and last > first:
-            candidates = [text[first : last + 1]]
-    for raw in candidates:
-        try:
-            data = json.loads(raw)
-        except ValueError:
-            continue
-        if isinstance(data, dict) and data.get('kind') in ('tool', 'answer', 'clarify'):
-            return data
+    decoder = json.JSONDecoder()
+    sources = [m.group(1) for m in _JSON_BLOCK.finditer(text)] + [text]
+    for src in sources:
+        for i, ch in enumerate(src):
+            if ch != '{':
+                continue
+            try:
+                data, _end = decoder.raw_decode(src, i)
+            except ValueError:
+                continue
+            if isinstance(data, dict) and data.get('kind') in ('tool', 'answer', 'clarify'):
+                return data
     return {'kind': 'answer', 'answer': text} if text else None
 
 

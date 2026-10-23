@@ -200,7 +200,9 @@
                 <div class="sr-game__info">
                   <span class="sr-game__title">{{ g.title }}</span>
                   <span class="sr-meta" [class.sr-meta--ok]="g.status === 'completed'">
-                    {{ g.status === 'completed' ? 'Jugado' + (g.accuracy != null ? ' · ' + g.accuracy + '% de precisión' : '') : 'Pendiente' }}
+                    @if (g.status !== 'completed') { Pendiente }
+                    @else if (g.partial) { Jugado sin terminar{{ g.duration_s ? ' · ' + playedTime(g.duration_s) : '' }} }
+                    @else { Jugado{{ g.accuracy != null ? ' · ' + g.accuracy + '% de precisión' : '' }} }
                   </span>
                 </div>
                 @if (catalogFor(g); as cg) {
@@ -421,5 +423,5 @@
 }
 
 @if (playing; as pg) {
-  <app-game-player [game]="pg" [sessionId]="sessionId" (closed)="onGameClosed($event)" />
+  <app-game-player [game]="pg" [sessionId]="sessionId" [playerId]="session?.patient?.id ?? null" (closed)="onGameClosed($event)" />
 }

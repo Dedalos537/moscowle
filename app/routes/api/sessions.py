@@ -429,6 +429,39 @@ def api_get_session(session_id):
     )
 
 
+@api_bp.route('/sessions/<int:session_id>/games/<int:game_id>/played', methods=['POST'])
+@login_required
+def mark_session_game_played(session_id, game_id):
+    """El juego se abrió en la sesión pero se salió antes de que diera un resultado: cuenta como realizado
+    (no hace falta terminarlo), sin inventar precisión. Lo marca el reproductor al cerrar."""
+    from app.models import AppointmentGame
+
+    appt = Appointment.query.get(session_id)
+    if not appt:
+        return jsonify({'error': 'Sesión no encontrada'}), 404
+    allowed = (
+        (current_user.role == 'jugador' and appt.patient_id == current_user.id)
+        or (current_user.role == 'terapista' and appt.therapist_id == current_user.id)
+        or current_user.role in ('admin', 'supervisor')
+    )
+    if not allowed:
+        return jsonify({'error': 'No autorizado para esta sesión'}), 403
+    ag = AppointmentGame.query.filter_by(appointment_id=session_id, game_id=game_id).first()
+    if not ag:
+        return jsonify({'error': 'Ese juego no está asignado a la sesión'}), 404
+    duration = max(0, min(int((request.get_json(silent=True) or {}).get('duration_s') or 0), 6 * 3600))
+    if ag.status != 'completed':
+        ag.status = 'completed'
+        ag.config = json.dumps({'partial': True, 'duration_s': duration})
+    if appt.status != 'completed' and all(
+        g.status == 'completed' for g in AppointmentGame.query.filter_by(appointment_id=session_id).all()
+    ):
+        appt.status = 'completed'
+        appt.end_time = appt.end_time or datetime.utcnow()
+    db.session.commit()
+    return jsonify({'status': 'ok', 'session_status': appt.status})
+
+
 def _game_status(appt):
     """Juegos asignados a la sesión con su estado y la última partida (de cualquier cuenta, siempre del paciente)."""
     from app.models import AppointmentGame
@@ -442,12 +475,18 @@ def _game_status(appt):
             .order_by(SessionMetrics.date.desc())
             .first()
         )
+        try:
+            extra = json.loads(ag.config) if ag.config else {}
+        except ValueError:
+            extra = {}
         out.append(
             {
                 'game_id': ag.game_id,
                 'filename': ag.game.filename,
                 'title': ag.game.title,
                 'status': ag.status or 'pending',
+                'partial': bool(extra.get('partial')) and last is None,
+                'duration_s': extra.get('duration_s'),
                 'accuracy': round(last.accurracy, 1) if last else None,
                 'played_at': last.date.isoformat() + 'Z' if last and last.date else None,
             }

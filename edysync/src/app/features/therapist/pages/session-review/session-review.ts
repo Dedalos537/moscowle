@@ -27,6 +27,8 @@ interface SessionGameStatus {
   status: string;
   accuracy: number | null;
   played_at: string | null;
+  partial?: boolean;
+  duration_s?: number | null;
 }
 
 @Component({
@@ -116,6 +118,10 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
 
   get canEditGames(): boolean {
     return !!this.session && this.session.status !== 'completed' && this.session.status !== 'cancelled';
+  }
+
+  playedTime(s: number): string {
+    return s < 60 ? `${s} s` : `${Math.round(s / 60)} min`;
   }
 
   catalogFor(g: SessionGameStatus): CatalogGame | null {

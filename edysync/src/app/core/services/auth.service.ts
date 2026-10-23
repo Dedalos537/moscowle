@@ -19,6 +19,11 @@ export class AuthService {
   private currentUserSubject = new BehaviorSubject<any>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
+  /** Id del usuario con sesión (o null). */
+  get currentUserId(): number | null {
+    return this.currentUserSubject.value?.id ?? null;
+  }
+
   constructor(
     private http: HttpClient,
     private cache: DataCacheService,

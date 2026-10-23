@@ -23,6 +23,9 @@ PERMITIDAS_PACIENTE = {
     'get_notifications',
     'mark_notifications_read',
     'list_sedes',
+    # De solo lectura y siempre sobre el propio paciente (tools_role.py): sus sesiones, juegos y cuotas.
+    'my_sessions',
+    'my_payments',
 }
 
 # Tools que exponen datos o escrituras de la BD: solo personal
@@ -43,9 +46,7 @@ STAFF_ONLY = {
 class TestToolsNoExpuestasAlPaciente:
     @pytest.mark.parametrize('name', sorted(STAFF_ONLY))
     def test_no_esta_en_la_lista_del_paciente(self, name):
-        assert 'jugador' not in TOOL_REGISTRY[name]['roles'], (
-            f'{name} sigue disponible para el rol jugador'
-        )
+        assert 'jugador' not in TOOL_REGISTRY[name]['roles'], f'{name} sigue disponible para el rol jugador'
 
     def test_el_paciente_no_recibe_tools_de_la_bd(self):
         tools = {t['function']['name'] for t in get_tools_for_mode('grande', 'jugador')}
@@ -54,9 +55,7 @@ class TestToolsNoExpuestasAlPaciente:
 
     def test_el_paciente_conserva_el_chatbot_informativo(self):
         tools = {t['function']['name'] for t in get_tools_for_mode('grande', 'jugador')}
-        assert tools == PERMITIDAS_PACIENTE, (
-            f'se perdio o se sumo una tool para el paciente: {sorted(tools)}'
-        )
+        assert tools == PERMITIDAS_PACIENTE, f'se perdio o se sumo una tool para el paciente: {sorted(tools)}'
 
     def test_el_staff_conserva_su_acceso(self):
         """Restringir al paciente no debe quitarle nada al personal."""
@@ -80,7 +79,8 @@ class TestToolsNoExpuestasAlPaciente:
 
     def test_no_queda_ninguna_tool_abierta_a_todos_menos_las_cuatro(self):
         abiertas = [n for n, v in TOOL_REGISTRY.items() if set(v['roles']) == ROLES_ALL]
-        assert sorted(abiertas) == sorted(PERMITIDAS_PACIENTE), (
+        # my_sessions / my_payments son solo del paciente (no están abiertas a todos los roles).
+        assert sorted(abiertas) == sorted(PERMITIDAS_PACIENTE - {'my_sessions', 'my_payments'}), (
             f'quedan tools sin restringir: {sorted(abiertas)}'
         )
 
