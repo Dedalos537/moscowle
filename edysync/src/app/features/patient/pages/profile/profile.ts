@@ -10,10 +10,11 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { PatientService } from '../../../../core/services/patient.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
+import { Select } from '../../../../shared/components/select/select';
 @Component({
   selector: 'app-patient-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, AvatarUploader, FingerprintCard],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, AvatarUploader, FingerprintCard, Select],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

@@ -12,45 +12,40 @@
   </div>
 
   <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 border border-border/20">
-    <h2 class="text-lg font-bold text-on-surface mb-6">Informacion Personal</h2>
+    <h2 class="text-lg font-bold text-on-surface mb-6">Información Personal</h2>
     <div class="space-y-4">
       <div>
-        <label class="block text-sm font-medium text-on-surface-variant mb-1">Email</label>
+        <label class="block text-sm font-medium text-on-surface mb-1.5">Email</label>
         <input [value]="user?.email" disabled
                class="w-full rounded-xl bg-surface-container-low border border-border px-4 py-2.5 text-sm text-on-surface-variant">
       </div>
       <div>
-        <label class="block text-sm font-medium text-on-surface-variant mb-1">Nombre de usuario</label>
+        <label class="block text-sm font-medium text-on-surface mb-1.5">Nombre de usuario</label>
         <input [(ngModel)]="username"
                class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors">
       </div>
       <div>
-        <label class="block text-sm font-medium text-on-surface-variant mb-1">Telefono</label>
+        <label class="block text-sm font-medium text-on-surface mb-1.5">Teléfono</label>
         <input [(ngModel)]="phone"
                class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors">
       </div>
       <div>
-        <label class="block text-sm font-medium text-on-surface-variant mb-1">Zona Horaria</label>
-        <select [(ngModel)]="timezone"
-                class="w-full rounded-xl border border-border px-4 py-2.5 text-sm bg-surface-container-lowest text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors">
-          @for (tz of timezones; track tz.value) {
-            <option [value]="tz.value">{{ tz.label }}</option>
-          }
-        </select>
+        <label class="block text-sm font-medium text-on-surface mb-1.5">Zona Horaria</label>
+        <app-select [(ngModel)]="timezone" [options]="timezones" ariaLabel="Zona horaria"></app-select>
       </div>
     </div>
   </div>
 
   <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 border border-border/20">
-    <h2 class="text-lg font-bold text-on-surface mb-6">Cambiar Contrasena</h2>
+    <h2 class="text-lg font-bold text-on-surface mb-6">Cambiar Contraseña</h2>
     <div class="space-y-4">
       <div>
-        <label class="block text-sm font-medium text-on-surface-variant mb-1">Nueva contrasena</label>
+        <label class="block text-sm font-medium text-on-surface mb-1.5">Nueva contraseña</label>
         <input [(ngModel)]="newPassword" type="password"
                class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors">
       </div>
       <div>
-        <label class="block text-sm font-medium text-on-surface-variant mb-1">Confirmar contrasena</label>
+        <label class="block text-sm font-medium text-on-surface mb-1.5">Confirmar contraseña</label>
         <input [(ngModel)]="confirmPassword" type="password"
                class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors">
       </div>

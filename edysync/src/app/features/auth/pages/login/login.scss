@@ -302,6 +302,8 @@
 
 // ── ayuda (dialog nativo: Esc, foco atrapado y devuelto por el navegador) ──
 .lg-dialog {
+  // El reset de Tailwind pone margin: 0 a todo; <dialog> se centra justamente con margin: auto.
+  margin: auto;
   width: min(28rem, calc(100% - 1.5rem));
   max-height: calc(100dvh - 2rem);
   padding: 0;

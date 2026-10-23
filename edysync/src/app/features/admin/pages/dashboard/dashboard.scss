@@ -267,3 +267,13 @@
   .db-detail, .db-skel { animation: none; }
   .db-content { transition: none; }
 }
+
+.db-sede { display: block; min-width: 11rem; }
+.db-quality__hint { margin: 0 0 0.75rem; font-size: 0.875rem; color: var(--color-on-surface-variant); }
+// En el modal: una persona por línea, fácil de tocar en el celular.
+app-modal .db-quality__list {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; margin: 0; padding: 0; list-style: none;
+  li + li { border-top: 1px solid var(--color-outline-variant); }
+  a { display: block; padding: 0.75rem 0.25rem; color: var(--color-on-surface); font-weight: 600; text-decoration: none; }
+  a:hover { color: var(--color-primary-text, var(--color-primary)); }
+}

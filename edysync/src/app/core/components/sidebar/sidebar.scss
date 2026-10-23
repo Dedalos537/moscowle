@@ -248,13 +248,16 @@
     inset: 0 auto 0 0;
     z-index: 50;
     transform: translateX(-100%);
-    width: 16rem;
+    // Respeta «Barra lateral» de Preferencias también en el celular: ancha (íconos + subtítulos) o solo íconos.
+    width: 4.5rem;
     transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
                 background-color 0.3s ease;
   }
+  .sidebar.sidebar--expanded {
+    width: 16rem;
+  }
   .sidebar.sidebar--open {
     transform: translateX(0);
-    width: 16rem;
   }
   .sidebar-overlay {
     display: block;
@@ -265,9 +268,9 @@
     backdrop-filter: blur(2px);
   }
   .nav-flyout { display: none; }
-  /* En móvil el panel siempre es ancho: título y subtítulo visibles */
-  .nav-link-text,
-  .sidebar-brand-name {
+  /* En móvil, con la barra ancha, título y subtítulo se ven al abrir (sin la demora de escritorio) */
+  .sidebar--expanded .nav-link-text,
+  .sidebar--expanded .sidebar-brand-name {
     opacity: 1;
     transition: none;
   }

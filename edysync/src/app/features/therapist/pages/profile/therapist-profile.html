@@ -36,12 +36,12 @@
         <div class="space-y-4">
           <app-input id="tp-username" label="Nombre de Usuario" [(value)]="username"></app-input>
           <div>
-            <label class="block text-xs font-bold text-on-surface-variant uppercase mb-2">Email</label>
+            <label class="block text-sm font-medium text-on-surface mb-1.5">Email</label>
             <p class="px-4 py-3 bg-surface-container-high border border-border rounded-xl text-sm text-on-surface-variant">{{ email }}</p>
           </div>
           <div>
-            <label class="block text-xs font-bold text-on-surface-variant uppercase mb-2">Zona Horaria</label>
-            <app-select [(ngModel)]="timezone" [options]="timezoneOptions" class="w-full rounded-lg border-border focus:ring-primary focus:border-primary text-sm"></app-select>
+            <label class="block text-sm font-medium text-on-surface mb-1.5">Zona Horaria</label>
+            <app-select [(ngModel)]="timezone" [options]="timezoneOptions" ariaLabel="Zona horaria"></app-select>
           </div>
         </div>
       </app-card>

@@ -19,6 +19,8 @@ import { rangeLabel, scoreTone } from '../sedes/kpi-format';
 import { GrowthPanel } from './components/growth-panel/growth-panel';
 import { RiskPanel } from './components/risk-panel/risk-panel';
 import { TeamPanel } from './components/team-panel/team-panel';
+import { Select, SelectOption } from '../../../../shared/components/select/select';
+import { Modal } from '../../../../shared/components/modal/modal';
 import { SedeCompare } from './components/sede-compare/sede-compare';
 import { SchedulePanel } from './components/schedule-panel/schedule-panel';
 import { PayTherapist } from '../../components/pay-therapist/pay-therapist';
@@ -47,6 +49,8 @@ type TodayKey = 'sessions' | 'payments' | 'approvals' | 'incidents';
     SedeCompare,
     SchedulePanel,
     PayTherapist,
+    Select,
+    Modal,
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
@@ -89,6 +93,11 @@ export class Dashboard implements OnInit, OnDestroy {
     return d ? `${rangeLabel(d.range)} · comparado con ${rangeLabel(d.previous_range)}` : '';
   });
   readonly scoreTone = computed(() => scoreTone(this.data()?.score));
+  /** Mismo desplegable que el resto de pantallas (antes era el nativo del sistema). 0 = todo el centro. */
+  readonly sedeOptions = computed<SelectOption[]>(() => [
+    { value: 0, label: 'Todo el centro' },
+    ...this.sedes().map((s) => ({ value: s.id, label: s.name })),
+  ]);
   readonly sedeName = computed(() => this.sedes().find((s) => s.id === this.sedeId())?.name ?? null);
   readonly approvals = computed(() => {
     const p = this.data()?.today.pending;

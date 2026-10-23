@@ -12,6 +12,7 @@ import { Input } from '../../../../shared/components/input/input';
 import { Card } from '../../../../shared/components/card/card';
 import { Alert } from '../../../../shared/components/alert/alert';
 
+import { Select } from '../../../../shared/components/select/select';
 @Component({
   selector: 'app-profile',
   standalone: true,
@@ -19,7 +20,7 @@ import { Alert } from '../../../../shared/components/alert/alert';
   styleUrl: './profile.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Input, Card, Alert, AvatarUploader, FingerprintCard],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Input, Card, Alert, AvatarUploader, FingerprintCard, Select],
 })
 export class Profile implements OnInit, OnDestroy {
   username = '';
