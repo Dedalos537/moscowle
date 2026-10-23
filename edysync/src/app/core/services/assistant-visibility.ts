@@ -15,6 +15,8 @@ export interface AssistantVisibility {
 export class AssistantVisibilityService {
   private http = inject(HttpClient);
   readonly visible = signal(false);
+  /** En la pantalla completa del asistente el botón flotante sobra (y tapaba el botón de enviar). */
+  readonly suppressed = signal(false);
   readonly settings = signal<AssistantVisibility>({ admin: true, terapista: false, jugador: false });
 
   load(): void {

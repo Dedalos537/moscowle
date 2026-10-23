@@ -62,6 +62,7 @@ export class Sidebar implements OnInit, OnDestroy, AfterViewInit {
   private subs = new Subscription();
 
   private readonly adminItems: NavItem[] = [
+    { path: '/admin/assistant', label: 'Asistente', subtitle: 'Pregunta por el centro', icon: ['fas', 'brain'], supervisor: true },
     { path: '/admin/dashboard', label: 'Panel', subtitle: 'Resumen general', icon: ['fas', 'gauge-high'], supervisor: true },
     { path: '/admin/sessions', label: 'Sesiones', subtitle: 'Calendario global', icon: ['fas', 'calendar-days'], supervisor: true },
     { path: '/admin/users', label: 'Usuarios', subtitle: 'Gestión de usuarios', icon: ['fas', 'users'] },

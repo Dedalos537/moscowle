@@ -1,0 +1,143 @@
+"""PRP 015: pantalla del asistente (bloques con los números del sistema, conversaciones y reportes programados)."""
+
+import uuid
+from datetime import datetime
+
+from flask_jwt_extended import create_access_token
+
+from app.extensions import db
+from app.models import Payment, Sede, User
+from app.models.assistant_thread import AssistantSchedule, AssistantThread
+from app.services import assistant_analytics as analytics
+from app.services import assistant_service as svc
+
+
+def _user(role, **kw):
+    tag = uuid.uuid4().hex[:8]
+    u = User(username=f'{role[:3]}{tag}', email=f'{tag}@gmail.com', password='x', role=role, **kw)
+    db.session.add(u)
+    db.session.commit()
+    return u
+
+
+def _sede(name=None):
+    s = Sede(name=name or f'Sede {uuid.uuid4().hex[:4]}')
+    db.session.add(s)
+    db.session.commit()
+    return s
+
+
+def _h(u):
+    return {'Authorization': 'Bearer ' + create_access_token(identity=str(u.id))}
+
+
+def test_intents_and_periods():
+    n = analytics._norm
+    assert analytics._intent(n('Compara las sedes este trimestre')) == 'by_sede'
+    assert analytics._intent(n('¿Quiénes deben cuotas?')) == 'debtors'
+    assert analytics._intent(n('pagos por método')) == 'payment_methods'
+    assert analytics._intent(n('¿Cómo vamos este mes?')) == 'summary'
+    assert analytics._intent(n('cuéntame un chiste')) is None
+    assert analytics._period(n('este trimestre')) == 'quarter'
+    assert analytics._period(n('en el año')) == 'year'
+    assert analytics._metrics(n('ingresos y asistencia'))[:2] == ['revenue', 'attendance']
+
+
+def test_summary_blocks_use_dashboard_numbers(app):
+    admin = _user('admin')
+    pat = _user('jugador')
+    db.session.add(Payment(patient_id=pat.id, amount=150, method='yape', status='completed', date=datetime.utcnow()))
+    db.session.commit()
+    res = analytics.answer('¿Cómo vamos este mes?', admin)
+    kinds = [b['type'] for b in res['blocks']]
+    assert kinds[:2] == ['text', 'kpis'] and res['sources'][0]['scope'] == 'todo el centro'
+    revenue = next(i for i in res['blocks'][1]['items'] if i['key'] == 'revenue')
+    from app.services import center_dashboard
+
+    pulse = {k['key']: k for k in center_dashboard.dashboard('month')['pulse']}
+    assert revenue['value'] == pulse['revenue']['value']  # mismo número que el Dashboard
+
+
+def test_supervisor_is_limited_to_own_sede(app):
+    mine, other = _sede('Mía'), _sede('Otra')
+    sup = _user('supervisor', sede_id=mine.id)
+    db.session.add(
+        Payment(
+            patient_id=_user('jugador', sede_id=other.id).id,
+            amount=999,
+            method='cash',
+            status='completed',
+            date=datetime.utcnow(),
+        )
+    )
+    db.session.commit()
+    assert analytics.scope_for(sup) == mine.id
+    res = analytics.answer('Compara las sedes', sup)
+    assert 'solo tu sede' in res['blocks'][0]['md']
+    assert all(b['type'] != 'table' or 'Comparativo de sedes' != b.get('title') for b in res['blocks'])
+    pm = analytics.answer('pagos por método este mes', sup)
+    assert all('999' not in str(b) for b in pm['blocks'])  # el pago de otra sede no aparece
+
+
+def test_supervisor_without_sede_gets_clear_error(client, app):
+    sup = _user('supervisor')
+    r = client.post('/api/assistant/ask', json={'question': '¿cómo vamos?'}, headers=_h(sup))
+    assert r.status_code == 403 and 'sede' in r.get_json()['message']
+
+
+def test_ask_saves_thread_and_sharing_rules(client, app):
+    admin, other_admin = _user('admin'), _user('admin')
+    sede = _sede()
+    sup = _user('supervisor', sede_id=sede.id)
+    r = client.post('/api/assistant/ask', json={'question': '¿Cómo vamos este mes?'}, headers=_h(admin))
+    assert r.status_code == 200, r.get_json()
+    tid = r.get_json()['thread']['id']
+    # privada: nadie más la ve
+    assert client.get(f'/api/assistant/threads/{tid}', headers=_h(other_admin)).status_code == 404
+    client.patch(f'/api/assistant/threads/{tid}', json={'shared': True, 'pinned': True}, headers=_h(admin))
+    assert client.get(f'/api/assistant/threads/{tid}', headers=_h(other_admin)).status_code == 200
+    # compartida por un admin (datos de todo el centro): el supervisor no la ve
+    assert client.get(f'/api/assistant/threads/{tid}', headers=_h(sup)).status_code == 404
+    # solo el autor la cambia
+    assert (
+        client.patch(f'/api/assistant/threads/{tid}', json={'title': 'x'}, headers=_h(other_admin)).status_code == 403
+    )
+    thread = client.get(f'/api/assistant/threads/{tid}', headers=_h(admin)).get_json()
+    assert [m['role'] for m in thread['messages']] == ['user', 'assistant'] and thread['pinned']
+
+
+def test_therapist_cannot_use_the_screen(client, app):
+    assert client.get('/api/assistant/threads', headers=_h(_user('terapista'))).status_code == 403
+
+
+def test_schedule_runs_once_and_appends_to_thread(app, monkeypatch):
+    admin = _user('admin')
+    thread, _ = svc.ask(admin, '¿Cómo vamos este mes?')
+    s = svc.create_schedule(
+        admin,
+        {
+            'question': '¿Cómo vamos este mes?',
+            'cadence': 'daily',
+            'hour': 8,
+            'channel': 'email',
+            'thread_id': thread.id,
+        },
+    )
+    sent = []
+    monkeypatch.setattr(svc, '_send_email', lambda user, subject, text: sent.append(subject))
+    from zoneinfo import ZoneInfo
+
+    at8 = datetime(2026, 10, 26, 8, 5, tzinfo=ZoneInfo('America/Lima'))
+    assert svc.run_schedules(at8) >= 1
+    assert svc.run_schedules(at8) == 0 or sent.count(sent[0]) == 1  # no se repite en la misma hora
+    assert db.session.get(AssistantSchedule, s.id).last_run_at is not None
+    assert db.session.get(AssistantThread, thread.id).messages.count() == 3
+
+
+def test_only_data_questions_can_be_scheduled(app):
+    admin = _user('admin')
+    try:
+        svc.create_schedule(admin, {'question': 'cuéntame un chiste'})
+        raise AssertionError('debió rechazarse')
+    except svc.AssistantError as exc:
+        assert 'datos del centro' in str(exc)

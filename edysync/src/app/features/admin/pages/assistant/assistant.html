@@ -1,0 +1,156 @@
+<div class="as" [class.as--list-open]="listOpen()">
+  <!-- Conversaciones -->
+  <aside class="as-list" aria-label="Conversaciones">
+    <button type="button" class="as-new" (click)="select(null)">
+      <fa-icon [icon]="['fas', 'plus']" aria-hidden="true" /> Nueva conversación
+    </button>
+    <label class="as-search">
+      <fa-icon [icon]="['fas', 'magnifying-glass']" aria-hidden="true" />
+      <input type="search" placeholder="Buscar…" aria-label="Buscar conversaciones" [ngModel]="search()" (ngModelChange)="search.set($event)" />
+    </label>
+    <nav class="as-groups">
+      @for (g of [{ label: 'Fijadas', items: pinned() }, { label: 'Mías', items: mine() }, { label: 'Compartidas conmigo', items: shared() }]; track g.label) {
+        @if (g.items.length) {
+          <p class="as-group">{{ g.label }}</p>
+          <ul role="list">
+            @for (t of g.items; track t.id) {
+              <li>
+                <button type="button" class="as-item" [class.is-on]="current()?.id === t.id" (click)="select(t)" [attr.aria-current]="current()?.id === t.id ? 'true' : null">
+                  <span class="as-item__title">{{ t.title }}</span>
+                  <span class="as-item__meta">
+                    @if (t.shared) { <fa-icon [icon]="['fas', 'share-nodes']" aria-label="Compartida" /> }
+                    @if (!t.mine && t.author) { {{ t.author }} · }
+                    {{ t.updated_at | date: 'd MMM, HH:mm' }}
+                  </span>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      }
+      @if (!threads().length) { <p class="as-empty-list">Tus conversaciones aparecerán aquí.</p> }
+    </nav>
+  </aside>
+  <button type="button" class="as-scrim" aria-label="Cerrar conversaciones" (click)="listOpen.set(false)"></button>
+
+  <!-- Conversación -->
+  <section class="as-main">
+    <header class="as-bar">
+      <button type="button" class="as-icon as-icon--list" (click)="listOpen.set(true)" aria-label="Ver conversaciones">
+        <fa-icon [icon]="['fas', 'list']" aria-hidden="true" />
+      </button>
+      <h2 class="as-bar__title">{{ current()?.title || 'Nueva conversación' }}</h2>
+      @if (current(); as t) {
+        <div class="as-bar__actions">
+          @if (t.mine) {
+            <button type="button" class="as-icon" [class.is-on]="t.pinned" (click)="toggle('pinned')" [attr.aria-pressed]="t.pinned" [attr.aria-label]="t.pinned ? 'Quitar de fijadas' : 'Fijar'" title="Fijar"><fa-icon [icon]="['fas', 'thumbtack']" /></button>
+            <button type="button" class="as-icon" [class.is-on]="t.shared" (click)="toggle('shared')" [attr.aria-pressed]="t.shared" aria-label="Compartir con el equipo" title="Compartir con el equipo"><fa-icon [icon]="['fas', 'share-nodes']" /></button>
+            <button type="button" class="as-icon" (click)="openSchedule()" aria-label="Programar reporte" title="Recibir esto cada día o semana"><fa-icon [icon]="['fas', 'clock']" /></button>
+            <button type="button" class="as-icon" (click)="rename()" aria-label="Cambiar nombre" title="Cambiar nombre"><fa-icon [icon]="['fas', 'pen']" /></button>
+            <button type="button" class="as-icon" (click)="remove()" aria-label="Borrar conversación" title="Borrar"><fa-icon [icon]="['fas', 'trash']" /></button>
+          } @else {
+            <span class="as-chip">De {{ t.author }} · solo lectura</span>
+          }
+        </div>
+      }
+    </header>
+
+    @if (current()?.schedules?.length) {
+      <div class="as-schedules">
+        @for (s of current()!.schedules!; track s.id) {
+          <span class="as-chip"><fa-icon [icon]="['fas', 'clock']" aria-hidden="true" /> «{{ s.question }}» {{ s.label }}
+            <button type="button" (click)="unschedule(s)" [attr.aria-label]="'Quitar reporte ' + s.label"><fa-icon [icon]="['fas', 'xmark']" /></button>
+          </span>
+        }
+      </div>
+    }
+
+    <div class="as-thread" #thread aria-live="polite">
+      @if (loadingThread()) {
+        <div class="as-skel" aria-hidden="true"></div><div class="as-skel as-skel--short" aria-hidden="true"></div>
+      } @else if (!messages().length && !asking()) {
+        <div class="as-hello">
+          <div class="as-hello__icon" aria-hidden="true"><fa-icon [icon]="['fas', 'brain']" /></div>
+          <h3>¿Qué quieres saber del centro?</h3>
+          <p>Respondo con los mismos números del Dashboard: comparo periodos y sedes, muestro tendencias y armo tablas que puedes exportar.</p>
+          <div class="as-suggestions">
+            @for (s of suggestions(); track s) {
+              <button type="button" class="as-suggestion" (click)="send(s)">{{ s }}</button>
+            }
+          </div>
+        </div>
+      } @else {
+        @for (m of messages(); track m.id) {
+          @if (m.role === 'user') {
+            <div class="as-q"><p>{{ m.text }}</p></div>
+          } @else {
+            <article class="as-a">
+              <app-message-blocks [blocks]="m.blocks" />
+              <footer class="as-a__foot">
+                @if (m.sources.length) {
+                  <details class="as-sources">
+                    <summary><fa-icon [icon]="['fas', 'circle-info']" aria-hidden="true" /> De dónde sale</summary>
+                    <ul>
+                      @for (s of m.sources; track $index) {
+                        <li>{{ s.scope }} @if (s.range) { · {{ s.range.replace('..', ' a ') }} } @if (s.previous) { · comparado con {{ s.previous.replace('..', ' a ') }} }</li>
+                      }
+                      <li>Respondió: {{ m.model }} · {{ m.created_at | date: 'd MMM, HH:mm' }}</li>
+                    </ul>
+                  </details>
+                }
+                <div class="as-a__actions">
+                  @if (current()?.mine) {
+                    <button type="button" class="as-mini" (click)="refresh(m)" title="Volver a calcular con los datos de hoy"><fa-icon [icon]="['fas', 'rotate']" aria-hidden="true" /> Actualizar</button>
+                    <button type="button" class="as-mini" (click)="openSchedule(m)" title="Recibir esta respuesta cada día o semana"><fa-icon [icon]="['fas', 'clock']" aria-hidden="true" /> Programar</button>
+                  }
+                  <button type="button" class="as-mini" (click)="copy(m)" aria-label="Copiar texto"><fa-icon [icon]="['fas', 'copy']" aria-hidden="true" /></button>
+                  <button type="button" class="as-mini" [class.is-on]="m.feedback === 1" (click)="feedback(m, 1)" aria-label="Útil" [attr.aria-pressed]="m.feedback === 1"><fa-icon [icon]="['fas', 'thumbs-up']" aria-hidden="true" /></button>
+                  <button type="button" class="as-mini" [class.is-on]="m.feedback === -1" (click)="feedback(m, -1)" aria-label="No útil" [attr.aria-pressed]="m.feedback === -1"><fa-icon [icon]="['fas', 'thumbs-down']" aria-hidden="true" /></button>
+                </div>
+              </footer>
+            </article>
+          }
+        }
+        @if (asking(); as q) {
+          <div class="as-q"><p>{{ q }}</p></div>
+          <div class="as-thinking" role="status"><span></span><span></span><span></span> Consultando los datos del centro…</div>
+        }
+      }
+    </div>
+
+    <form class="as-composer" (submit)="$event.preventDefault(); send()">
+      @if (commands().length) {
+        <ul class="as-cmds" role="listbox" aria-label="Comandos">
+          @for (c of commands(); track c.cmd) {
+            <li><button type="button" (click)="useCommand(c.text)"><strong>{{ c.cmd }}</strong> {{ c.text }}</button></li>
+          }
+        </ul>
+      }
+      <label for="as-input" class="sr-only">Pregunta</label>
+      <textarea id="as-input" #composer rows="1" [ngModel]="draft" (ngModelChange)="onDraft($event)" name="q" (keydown)="onKey($event)"
+        placeholder="Pregunta… (escribe / para ver atajos)" [disabled]="!!asking()"></textarea>
+      <button type="submit" class="as-send" [disabled]="!draft.trim() || !!asking()" aria-label="Enviar"><fa-icon [icon]="['fas', 'paper-plane']" /></button>
+    </form>
+  </section>
+</div>
+
+<app-modal [isOpen]="scheduleOpen()" title="Recibir este reporte" (close)="scheduleOpen.set(false)" [allowOverflow]="true">
+  <div class="as-form">
+    <label class="as-field"><span>Pregunta</span>
+      <input class="input-field" [(ngModel)]="scheduleForm.question" name="sq" maxlength="2000" />
+    </label>
+    <div class="as-form__row">
+      <label class="as-field"><span>Cada</span><app-select [(ngModel)]="scheduleForm.cadence" name="sc" [options]="cadenceOptions" ariaLabel="Frecuencia" /></label>
+      @if (scheduleForm.cadence === 'weekly') {
+        <label class="as-field"><span>Día</span><app-select [(ngModel)]="scheduleForm.weekday" name="sw" [options]="weekdayOptions" ariaLabel="Día" /></label>
+      }
+      <label class="as-field"><span>Hora</span><app-select [(ngModel)]="scheduleForm.hour" name="sh" [options]="hourOptions" ariaLabel="Hora" /></label>
+    </div>
+    <label class="as-field"><span>Por</span><app-select [(ngModel)]="scheduleForm.channel" name="sch" [options]="channelOptions" ariaLabel="Canal" /></label>
+    <p class="as-hint">Se calcula con los datos de ese momento y también queda en esta conversación.</p>
+  </div>
+  <div modal-footer class="as-form__foot">
+    <button type="button" class="as-btn" (click)="scheduleOpen.set(false)">Cancelar</button>
+    <button type="button" class="as-btn as-btn--primary" (click)="saveSchedule()" [disabled]="!scheduleForm.question.trim()">Programar</button>
+  </div>
+</app-modal>

@@ -494,6 +494,19 @@ def check_printer(app):
             print(f'Error in check_printer: {e}')
 
 
+def run_assistant_schedules(app):
+    """Reportes programados desde el asistente (PRP 015) y retención de sus conversaciones."""
+    with app.app_context():
+        from app.services import assistant_service
+
+        try:
+            assistant_service.run_schedules()
+            if datetime.now().hour == 3:
+                assistant_service.purge_old()
+        except Exception as e:  # noqa: BLE001
+            print(f'Error in run_assistant_schedules: {e}')
+
+
 def cleanup_drive_uploads(app):
     with app.app_context():
         from app.services import drive_service
@@ -524,6 +537,7 @@ def init_scheduler(app):
     scheduler.add_job(func=lambda: cleanup_drive_uploads(app), trigger='interval', hours=6, id='drive_upload_cleanup')
     scheduler.add_job(func=lambda: record_server_snapshot(app), trigger='interval', minutes=5, id='server_snapshot')
     scheduler.add_job(func=lambda: check_printer(app), trigger='interval', minutes=5, id='printer_watch')
+    scheduler.add_job(func=lambda: run_assistant_schedules(app), trigger='cron', minute=2, id='assistant_schedules')
     scheduler.add_job(
         func=lambda: sync_website_faq(app), trigger='cron', day_of_week='mon', hour=5, minute=0, id='website_faq_sync'
     )

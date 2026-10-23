@@ -1,0 +1,26 @@
+<figure class="bc">
+  <figcaption class="bc__head">
+    <span class="bc__title">{{ block().title }}</span>
+    <button type="button" class="bc__toggle" (click)="asTable.set(!asTable())" [attr.aria-pressed]="asTable()">
+      {{ asTable() ? 'Ver gráfica' : 'Ver como tabla' }}
+    </button>
+  </figcaption>
+  @if (asTable()) {
+    <div class="bc__table-wrap">
+      <table class="bc__table">
+        <thead>
+          <tr><th scope="col"></th>@for (s of block().series; track s.name) { <th scope="col">{{ s.name }}</th> }</tr>
+        </thead>
+        <tbody>
+          @for (x of block().x; track $index; let i = $index) {
+            <tr><th scope="row">{{ x }}</th>@for (s of block().series; track s.name) { <td>{{ value(s.data[i], block().format) }}</td> }</tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <div class="bc__canvas" [class.bc__canvas--round]="block().kind === 'doughnut'">
+      <canvas baseChart [type]="config().type" [data]="config().data" [options]="config().options" [attr.aria-label]="block().title" role="img"></canvas>
+    </div>
+  }
+</figure>
