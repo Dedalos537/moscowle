@@ -57,6 +57,8 @@ export class Assistant implements OnInit, OnDestroy {
   readonly loadingThread = signal(false);
   readonly asking = signal<string | null>(null);
   readonly listOpen = signal(false);
+  /** Lista de conversaciones oculta (en PC); se recuerda en este navegador. */
+  readonly collapsed = signal(this.readCollapsed());
   readonly search = signal('');
   draft = '';
 
@@ -83,6 +85,23 @@ export class Assistant implements OnInit, OnDestroy {
     { value: 'telegram', label: 'Telegram' },
     { value: 'both', label: 'Correo y Telegram' },
   ];
+
+  toggleCollapsed(): void {
+    this.collapsed.update((v) => !v);
+    try {
+      localStorage.setItem('moscowle_assistant_collapsed', this.collapsed() ? '1' : '0');
+    } catch {
+      /* sin almacenamiento: vale solo para esta visita */
+    }
+  }
+
+  private readCollapsed(): boolean {
+    try {
+      return localStorage.getItem('moscowle_assistant_collapsed') === '1';
+    } catch {
+      return false;
+    }
+  }
 
   private filtered() {
     const q = this.search().trim().toLowerCase();

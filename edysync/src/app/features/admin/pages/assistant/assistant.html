@@ -1,9 +1,14 @@
-<div class="as" [class.as--list-open]="listOpen()">
+<div class="as" [class.as--list-open]="listOpen()" [class.as--collapsed]="collapsed()">
   <!-- Conversaciones -->
   <aside class="as-list" aria-label="Conversaciones">
-    <button type="button" class="as-new" (click)="select(null)">
-      <fa-icon [icon]="['fas', 'plus']" aria-hidden="true" /> Nueva conversación
-    </button>
+    <div class="as-list__top">
+      <button type="button" class="as-new" (click)="select(null)">
+        <fa-icon [icon]="['fas', 'pen-to-square']" aria-hidden="true" /> Nueva conversación
+      </button>
+      <button type="button" class="as-icon as-icon--collapse" (click)="toggleCollapsed()" aria-label="Ocultar conversaciones" title="Ocultar conversaciones">
+        <fa-icon [icon]="['fas', 'angles-left']" aria-hidden="true" />
+      </button>
+    </div>
     <label class="as-search">
       <fa-icon [icon]="['fas', 'magnifying-glass']" aria-hidden="true" />
       <input type="search" placeholder="Buscar…" aria-label="Buscar conversaciones" [ngModel]="search()" (ngModelChange)="search.set($event)" />
@@ -39,6 +44,14 @@
       <button type="button" class="as-icon as-icon--list" (click)="listOpen.set(true)" aria-label="Ver conversaciones">
         <fa-icon [icon]="['fas', 'list']" aria-hidden="true" />
       </button>
+      @if (collapsed()) {
+        <button type="button" class="as-icon as-icon--expand" (click)="toggleCollapsed()" aria-label="Mostrar conversaciones" title="Mostrar conversaciones">
+          <fa-icon [icon]="['fas', 'angles-right']" aria-hidden="true" />
+        </button>
+        <button type="button" class="as-icon as-icon--expand" (click)="select(null)" aria-label="Nueva conversación" title="Nueva conversación">
+          <fa-icon [icon]="['fas', 'pen-to-square']" aria-hidden="true" />
+        </button>
+      }
       <h2 class="as-bar__title">{{ current()?.title || 'Nueva conversación' }}</h2>
       @if (current(); as t) {
         <div class="as-bar__actions">
@@ -66,6 +79,7 @@
     }
 
     <div class="as-thread" #thread aria-live="polite">
+      <div class="as-col">
       @if (loadingThread()) {
         <div class="as-skel" aria-hidden="true"></div><div class="as-skel as-skel--short" aria-hidden="true"></div>
       } @else if (!messages().length && !asking()) {
@@ -116,8 +130,10 @@
           <div class="as-thinking" role="status"><span></span><span></span><span></span> Consultando los datos del centro…</div>
         }
       }
+      </div>
     </div>
 
+    <div class="as-dock">
     <form class="as-composer" (submit)="$event.preventDefault(); send()">
       @if (commands().length) {
         <ul class="as-cmds" role="listbox" aria-label="Comandos">
@@ -129,8 +145,10 @@
       <label for="as-input" class="sr-only">Pregunta</label>
       <textarea id="as-input" #composer rows="1" [ngModel]="draft" (ngModelChange)="onDraft($event)" name="q" (keydown)="onKey($event)"
         placeholder="Pregunta… (escribe / para ver atajos)" [disabled]="!!asking()"></textarea>
-      <button type="submit" class="as-send" [disabled]="!draft.trim() || !!asking()" aria-label="Enviar"><fa-icon [icon]="['fas', 'paper-plane']" /></button>
+      <button type="submit" class="as-send" [disabled]="!draft.trim() || !!asking()" aria-label="Enviar"><fa-icon [icon]="['fas', 'arrow-up']" /></button>
     </form>
+    <p class="as-dock__note">Los números salen de los datos del centro. Revisa lo importante antes de decidir.</p>
+    </div>
   </section>
 </div>
 

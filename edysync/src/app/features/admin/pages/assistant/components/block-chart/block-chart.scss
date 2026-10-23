@@ -1,5 +1,5 @@
 :host { display: block; }
-.bc { margin: 0; padding: 1rem; border: 1px solid var(--color-outline-variant); border-radius: 1rem; background: var(--color-surface-container-lowest); }
+.bc { margin: 0; padding: 1rem; border: 1px solid color-mix(in srgb, var(--color-outline-variant) 55%, transparent); border-radius: 1.25rem; background: var(--color-surface-container-lowest); }
 .bc__head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem; }
 .bc__title { font-size: 0.875rem; font-weight: 700; color: var(--color-on-surface); }
 .bc__toggle {
