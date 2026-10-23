@@ -18,6 +18,7 @@ from app.services import sede_scorecard as bsc
 from app.services.report_service import lima_today, utc_bounds
 
 MAX_ROWS = 500
+MODEL_NAME = 'datos del centro'
 METHOD_LABELS = {
     'yape': 'Yape',
     'plin': 'Plin',
@@ -36,7 +37,7 @@ METRIC_WORDS = [
     ('ticket', ('ticket', 'por sesion')),
     ('active_patients', ('atendid', 'pacientes activos')),
     ('new_patients', ('nuevos', 'altas', 'inscrit')),
-    ('attendance', ('asistencia', 'asisti', 'falta')),
+    ('attendance', ('asistencia', 'asisti', 'inasistencia')),
     ('retention', ('continuidad', 'retencion')),
     ('sessions_done', ('sesiones realizadas', 'sesiones')),
     ('cancel_rate', ('cancelac', 'cancelad')),
@@ -450,11 +451,21 @@ def _payment_methods(data, sede_id):
     ]
 
 
-def answer(question, user, today=None):
-    """Bloques para una pregunta de datos del centro, o None si no es una pregunta de datos conocida."""
+# Pedidos de datos inequívocos: valen aunque la conversación venga de otra cosa (strict).
+EXPLICIT = re.compile(
+    r'resumen|como vamos|kpi|indicador|compar|tendencia|evolucion|sedes|deudor|deben|riesgo|abandon|'
+    r'altas|bajas|metodo|ingresos|cobranza|grafic|tabla'
+)
+
+
+def answer(question, user, today=None, strict=False):
+    """Bloques para una pregunta de datos del centro, o None si no es una pregunta de datos conocida.
+
+    strict: en medio de una conversación con la IA, solo se responde aquí si el pedido de datos es explícito.
+    """
     q = _norm(question)
     intent = _intent(q)
-    if not intent:
+    if not intent or (strict and not EXPLICIT.search(q)):
         return None
     sede_id = scope_for(user)
     period = _period(q)
@@ -482,12 +493,12 @@ def answer(question, user, today=None):
         'period': period,
         'blocks': [validate_block(b) for b in blocks if b],
         'sources': [_source(f'center_dashboard.{intent}', data, sede_id)],
-        'model': 'datos del centro',
+        'model': MODEL_NAME,
     }
 
 
 # ── validación de bloques (el frontend solo dibuja lo que pasa por aquí) ─────
-BLOCK_TYPES = {'text', 'kpis', 'chart', 'table', 'people'}
+BLOCK_TYPES = {'text', 'kpis', 'chart', 'table', 'people', 'action'}
 CHART_KINDS = {'line', 'bar', 'doughnut'}
 
 

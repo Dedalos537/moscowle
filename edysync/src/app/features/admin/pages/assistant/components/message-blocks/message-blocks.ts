@@ -1,8 +1,8 @@
-import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import DOMPurify from 'dompurify';
-import { AssistantBlock, KpiItem, TableColumn, ValueFormat } from '../../../../../../core/services/assistant';
+import { ActionBlock, AssistantBlock, KpiItem, TableColumn, ValueFormat } from '../../../../../../core/services/assistant';
 import { PersonLabelPipe } from '../../../../../../shared/pipes/person-label.pipe';
 import { BlockChart } from '../block-chart/block-chart';
 import { formatValue } from './format';
@@ -20,6 +20,8 @@ type TableBlock = Extract<AssistantBlock, { type: 'table' }>;
 })
 export class MessageBlocks {
   readonly blocks = input.required<AssistantBlock[]>();
+  /** «Revisar y confirmar»: la página abre el formulario de la acción. */
+  readonly review = output<ActionBlock>();
   /** Orden elegido por tabla (índice del bloque → columna y sentido). */
   readonly sort = signal<Record<number, { key: string; dir: 1 | -1 }>>({});
 
@@ -40,6 +42,20 @@ export class MessageBlocks {
     }
     if (inList) html += '</ul>';
     return DOMPurify.sanitize(html);
+  }
+
+  argsPreview(b: ActionBlock): { label: string; value: string }[] {
+    return b.fields
+      .filter((f) => b.args[f.key] !== undefined && b.args[f.key] !== null && b.args[f.key] !== '')
+      .map((f) => {
+        const v = b.args[f.key];
+        const opt = f.options?.find((o) => String(o.value) === String(v));
+        return { label: f.label, value: opt ? opt.label : Array.isArray(v) ? v.join(', ') : String(v) };
+      });
+  }
+
+  missing(b: ActionBlock): number {
+    return b.fields.filter((f) => f.required && (b.args[f.key] === undefined || b.args[f.key] === null || b.args[f.key] === '')).length;
   }
 
   value(v: unknown, format?: ValueFormat): string {

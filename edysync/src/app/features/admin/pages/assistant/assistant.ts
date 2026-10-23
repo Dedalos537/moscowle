@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
-import { AssistantMessage, AssistantSchedule, AssistantService, AssistantThread } from '../../../../core/services/assistant';
+import { ActionBlock, ActionField, AssistantMessage, AssistantSchedule, AssistantService, AssistantThread } from '../../../../core/services/assistant';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AssistantVisibilityService } from '../../../../core/services/assistant-visibility';
 import { ToastService } from '../../../../core/services/toast.service';
@@ -70,6 +70,20 @@ export class Assistant implements OnInit, OnDestroy {
     return d.startsWith('/') ? COMMANDS.filter((c) => c.cmd.startsWith(d.split(' ')[0].toLowerCase())) : [];
   });
   private readonly draftSignal = signal('');
+
+  // Acción propuesta por la IA (formulario + confirmar)
+  readonly action = signal<{ message: AssistantMessage; block: ActionBlock } | null>(null);
+  readonly runningAction = signal(false);
+  readonly actionError = signal<string | null>(null);
+  actionForm: Record<string, unknown> = {};
+  readonly yesNo: SelectOption[] = [
+    { value: true, label: 'Sí' },
+    { value: false, label: 'No' },
+  ];
+
+  // Renombrar (modal del sistema, no el prompt del navegador)
+  readonly renameOpen = signal(false);
+  renameValue = '';
 
   // Programar reporte
   readonly scheduleOpen = signal(false);
@@ -249,9 +263,66 @@ export class Assistant implements OnInit, OnDestroy {
   rename(): void {
     const t = this.current();
     if (!t?.mine) return;
-    const title = window.prompt('Nombre de la conversación', t.title)?.trim();
-    if (!title) return;
+    this.renameValue = t.title;
+    this.renameOpen.set(true);
+  }
+
+  saveRename(): void {
+    const t = this.current();
+    const title = this.renameValue.trim();
+    if (!t || !title) return;
+    this.renameOpen.set(false);
     this.subs.add(this.api.updateThread(t.id, { title }).subscribe({ next: (fresh) => { this.current.set({ ...t, ...fresh }); this.loadThreads(); } }));
+  }
+
+  openAction(message: AssistantMessage, block: ActionBlock): void {
+    this.actionForm = {};
+    for (const f of block.fields) {
+      const v = block.args[f.key];
+      this.actionForm[f.key] = Array.isArray(v) ? v.join(', ') : (v ?? (f.type === 'boolean' ? null : ''));
+    }
+    this.actionError.set(null);
+    this.action.set({ message, block });
+  }
+
+  enumOptions(f: ActionField): SelectOption[] {
+    return (f.options ?? []).map((o) => ({ value: o.value, label: o.label }));
+  }
+
+  actionReady(): boolean {
+    const a = this.action();
+    if (!a) return false;
+    return a.block.fields.every((f) => !f.required || (this.actionForm[f.key] !== '' && this.actionForm[f.key] !== null && this.actionForm[f.key] !== undefined));
+  }
+
+  confirmAction(): void {
+    const a = this.action();
+    if (!a || !this.actionReady() || this.runningAction()) return;
+    const args: Record<string, unknown> = {};
+    for (const f of a.block.fields) {
+      const raw = this.actionForm[f.key];
+      if (raw === '' || raw === null || raw === undefined) continue;
+      if (f.type === 'integer') args[f.key] = parseInt(String(raw), 10);
+      else if (f.type === 'number') args[f.key] = Number(raw);
+      else if (f.type === 'list') args[f.key] = String(raw).split(',').map((x) => x.trim()).filter(Boolean);
+      else args[f.key] = raw;
+    }
+    this.runningAction.set(true);
+    this.actionError.set(null);
+    this.subs.add(
+      this.api.runAction(a.message.id, args).subscribe({
+        next: ({ message, reply }) => {
+          this.runningAction.set(false);
+          this.action.set(null);
+          this.messages.update((l) => [...l.map((x) => (x.id === message.id ? message : x)), reply]);
+          this.scrollDown();
+        },
+        error: (err) => {
+          this.runningAction.set(false);
+          this.actionError.set(err?.error?.message || 'No se pudo hacer. Revisa los datos.');
+        },
+      }),
+    );
   }
 
   remove(): void {

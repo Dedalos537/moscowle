@@ -155,3 +155,18 @@ def assistant_schedule_delete(schedule_id):
     from app.services import assistant_service as svc
 
     return _call(lambda: (svc.delete_schedule(current_user, schedule_id), {'success': True})[1])
+
+
+@api_bp.route('/assistant/messages/<int:message_id>/action', methods=['POST'])
+@login_required
+def assistant_run_action(message_id):
+    """Confirmar la acción propuesta (con los datos completados en el formulario)."""
+    from app.services import assistant_service as svc
+
+    args = (request.get_json(silent=True) or {}).get('args') or {}
+
+    def run():
+        updated, reply = svc.run_action(current_user, message_id, args)
+        return {'message': svc.message_dict(updated), 'reply': svc.message_dict(reply)}
+
+    return _call(run)

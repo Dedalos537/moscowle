@@ -212,3 +212,6 @@ $col: 48rem;
   .as, .as-list, .as-q, .as-a, .as-thinking, .as-hello *, .as-suggestion, .as-cmds, .as-icon--expand { transition: none; animation: none; }
   .as-thinking span, .as-skel { animation: none; }
 }
+
+.as-req { color: var(--color-error-text, var(--color-error)); font-style: normal; }
+.as-error { margin: 0; padding: 0.625rem 0.75rem; border-radius: 0.75rem; background: var(--badge-error-bg); color: var(--badge-error-fg); font-size: 0.8125rem; }
