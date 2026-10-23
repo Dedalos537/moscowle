@@ -3,7 +3,7 @@
     <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
       <fa-icon [icon]="['fas', 'circle-user']" class="text-primary"></fa-icon> Mi Perfil
     </h2>
-    <p class="text-sm text-on-surface-variant">Actualiza tu informacion personal y contrasena</p>
+    <p class="text-sm text-on-surface-variant">Actualiza tu información personal y contraseña</p>
   </div>
 
   <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 border border-border/20 space-y-8">
@@ -11,29 +11,24 @@
     <app-fingerprint-card></app-fingerprint-card>
   </div>
 
-  <app-card title="Informacion Personal">
+  <app-card title="Información Personal">
     <div class="space-y-4">
       <app-input id="profile-username" label="Nombre de Usuario" [(value)]="username"></app-input>
       <div>
-        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-2">Email</label>
+        <label class="block text-sm font-medium text-on-surface mb-1.5">Email</label>
         <p class="px-4 py-3 bg-surface-container-high border border-border/30 rounded-xl text-sm text-on-surface-variant">{{ email }}</p>
       </div>
       <div>
-        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-2">Zona Horaria</label>
-        <select [(ngModel)]="timezone"
-                class="w-full rounded-xl border border-border px-4 py-3 text-sm bg-surface-container-lowest text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors">
-          @for (tz of timezones; track tz.value) {
-            <option [value]="tz.value">{{ tz.label }}</option>
-          }
-        </select>
+        <label class="block text-sm font-medium text-on-surface mb-1.5">Zona Horaria</label>
+        <app-select [(ngModel)]="timezone" [options]="timezones" ariaLabel="Zona horaria"></app-select>
       </div>
     </div>
   </app-card>
 
-  <app-card title="Cambiar Contrasena" subtitle="Deja en blanco para mantener la actual">
+  <app-card title="Cambiar Contraseña" subtitle="Deja en blanco para mantener la actual">
     <div class="space-y-4">
-      <app-input id="profile-password" label="Nueva Contrasena" [(value)]="newPassword" type="password"></app-input>
-      <app-input id="profile-confirm" label="Confirmar Contrasena" [(value)]="confirmPassword" type="password"></app-input>
+      <app-input id="profile-password" label="Nueva Contraseña" [(value)]="newPassword" type="password"></app-input>
+      <app-input id="profile-confirm" label="Confirmar Contraseña" [(value)]="confirmPassword" type="password"></app-input>
     </div>
   </app-card>
 

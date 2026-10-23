@@ -18,14 +18,7 @@
         }
       </div>
       @if (sedes().length > 1) {
-        <label class="db-select">
-          <span class="sr-only">Sede</span>
-          <select [ngModel]="sedeId()" (ngModelChange)="setSede($event)">
-            <option [ngValue]="null">Todo el centro</option>
-            @for (s of sedes(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
-          </select>
-          <fa-icon [icon]="['fas', 'chevron-down']" aria-hidden="true"></fa-icon>
-        </label>
+        <app-select class="db-sede" [ngModel]="sedeId() ?? 0" (valueChange)="setSede($event)" [options]="sedeOptions()" ariaLabel="Sede"></app-select>
       }
       <button type="button" class="db-icon" (click)="load(true)" [disabled]="loading()" aria-label="Actualizar cifras" title="Actualizar cifras">
         <fa-icon [icon]="['fas', 'rotate']" [animation]="loading() ? 'spin' : undefined" aria-hidden="true"></fa-icon>
@@ -135,15 +128,19 @@
             <strong>{{ d.data_quality.without_plan }} {{ d.data_quality.without_plan === 1 ? 'paciente activo no tiene' : 'pacientes activos no tienen' }} plan de pago.</strong>
             Sus cobros no entran en la cobranza ni en la deuda, así que esas cifras quedan cortas.
           </p>
-          <button type="button" class="db-btn" [attr.aria-expanded]="showQuality()" aria-controls="db-quality-list" (click)="showQuality.set(!showQuality())">{{ showQuality() ? 'Ocultar' : 'Ver quiénes' }}</button>
-          @if (showQuality()) {
-            <ul id="db-quality-list" class="db-quality__list">
-              @for (p of d.data_quality.items; track p.id) {
-                <li><a [routerLink]="['/admin/patients', p.id]">{{ p.name | personLabel: p.id : p.code }}</a></li>
-              }
-            </ul>
-          }
+          <button type="button" class="db-btn" aria-haspopup="dialog" (click)="showQuality.set(true)">Ver quiénes</button>
         </div>
+        <app-modal [isOpen]="showQuality()" [title]="d.data_quality.without_plan + ' pacientes sin plan de pago'" (close)="showQuality.set(false)">
+          <p class="db-quality__hint">Configura su plan para que sus cobros cuenten en la cobranza y la deuda.</p>
+          <ul class="db-quality__list">
+            @for (p of d.data_quality.items; track p.id) {
+              <li><a [routerLink]="['/admin/patients', p.id]" (click)="showQuality.set(false)">{{ p.name | personLabel: p.id : p.code }}</a></li>
+            }
+          </ul>
+          <div modal-footer>
+            <a class="db-btn" routerLink="/admin/payments" (click)="showQuality.set(false)">Ir a Pagos</a>
+          </div>
+        </app-modal>
       }
 
       @if (!hideCharts()) {

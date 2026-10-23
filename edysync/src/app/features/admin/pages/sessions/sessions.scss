@@ -43,6 +43,10 @@
 
 // ── Filtros ──
 .sx-toolbar {
+  // La animación de entrada crea un contexto de apilamiento por bloque: sin esto el calendario (que va después)
+  // tapaba los desplegables de los filtros.
+  position: relative;
+  z-index: 10;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;

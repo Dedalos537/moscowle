@@ -779,3 +779,6 @@ tr {
 @media (max-width: 899px) {
   .settings-pane code, .settings-pane pre { overflow-wrap: anywhere; white-space: pre-wrap; }
 }
+
+// <dialog> se centra con margin: auto (el reset de Tailwind lo deja en 0 y quedaba arriba a la izquierda).
+dialog:modal { margin: auto; }
