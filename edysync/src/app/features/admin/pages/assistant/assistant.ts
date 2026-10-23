@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, OnInit, TemplateRef, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -12,6 +12,8 @@ import { ConfirmService } from '../../../../core/services/confirm.service';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { Select, SelectOption } from '../../../../shared/components/select/select';
 import { MessageBlocks } from './components/message-blocks/message-blocks';
+
+const SUBTITLE = 'Pregunta por el centro: cifras, comparativos y tendencias';
 
 /** Comandos rápidos del cuadro de texto («/» y elegir). */
 const COMMANDS = [
@@ -48,6 +50,7 @@ export class Assistant implements OnInit, OnDestroy {
   private floating = inject(AssistantVisibilityService);
   private subs = new Subscription();
   @ViewChild('thread') threadEl?: ElementRef<HTMLElement>;
+  @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<unknown>;
   @ViewChild('composer') composerEl?: ElementRef<HTMLTextAreaElement>;
 
   readonly threads = signal<AssistantThread[]>([]);
@@ -61,6 +64,9 @@ export class Assistant implements OnInit, OnDestroy {
   readonly collapsed = signal(this.readCollapsed());
   readonly search = signal('');
   draft = '';
+
+  /** El nombre de la conversación abierta va como subtítulo de la barra superior. */
+  private readonly headerTitle = effect(() => this.header.setConfig({ subtitle: this.current()?.title || SUBTITLE }));
 
   readonly pinned = computed(() => this.filtered().filter((t) => t.pinned));
   readonly mine = computed(() => this.filtered().filter((t) => !t.pinned && t.mine));
@@ -124,7 +130,7 @@ export class Assistant implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.floating.suppressed.set(true);
-    this.header.setConfig({ title: 'Asistente', subtitle: 'Pregunta por el centro: cifras, comparativos y tendencias', icon: ['fas', 'brain'] });
+    this.header.setConfig({ title: 'Asistente', subtitle: SUBTITLE, icon: ['fas', 'brain'], actionTemplate: this.headerActions });
     this.subs.add(this.api.home().subscribe({ next: (r) => this.suggestions.set(r.suggestions), error: () => {} }));
     this.loadThreads();
     this.subs.add(
