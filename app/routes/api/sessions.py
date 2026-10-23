@@ -423,9 +423,36 @@ def api_get_session(session_id):
             'location': appt.location,
             'notes': appt.notes,
             'games': appt.games_list,
+            'game_status': _game_status(appt),
             'images': images,
         }
     )
+
+
+def _game_status(appt):
+    """Juegos asignados a la sesión con su estado y la última partida (de cualquier cuenta, siempre del paciente)."""
+    from app.models import AppointmentGame
+
+    out = []
+    for ag in AppointmentGame.query.filter_by(appointment_id=appt.id).all():
+        if not ag.game:
+            continue
+        last = (
+            SessionMetrics.query.filter_by(session_id=appt.id, game_id=ag.game_id)
+            .order_by(SessionMetrics.date.desc())
+            .first()
+        )
+        out.append(
+            {
+                'game_id': ag.game_id,
+                'filename': ag.game.filename,
+                'title': ag.game.title,
+                'status': ag.status or 'pending',
+                'accuracy': round(last.accurracy, 1) if last else None,
+                'played_at': last.date.isoformat() + 'Z' if last and last.date else None,
+            }
+        )
+    return out
 
 
 def _session_denied(appt):

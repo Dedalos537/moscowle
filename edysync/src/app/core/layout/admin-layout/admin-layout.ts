@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
@@ -17,6 +17,7 @@ import { HelpPanel } from '../../../shared/contextual-help/components/help-panel
 import { BeaconOverlay } from 'ng-beacon';
 import { ChartsToggle } from '../../../shared/components/charts-toggle/charts-toggle';
 
+import { AssistantVisibilityService } from '../../services/assistant-visibility';
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
@@ -27,6 +28,8 @@ import { ChartsToggle } from '../../../shared/components/charts-toggle/charts-to
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminLayout implements OnInit, OnDestroy {
+  /** Botón flotante del asistente: visible solo si el admin lo activó para este tipo de usuario. */
+  readonly assistant = inject(AssistantVisibilityService);
   routeLoading = false;
   loadStartTime = 0;
   loadElapsed = '';
@@ -47,6 +50,7 @@ export class AdminLayout implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    this.assistant.load();
     this.wakeLockService.request();
     this.subs.add(this.router.events.subscribe(e => {
       if (e instanceof NavigationStart) {

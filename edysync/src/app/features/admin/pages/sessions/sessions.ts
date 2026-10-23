@@ -41,6 +41,7 @@ interface CreateResult {
   failed: boolean;
 }
 
+import { GameCatalogService } from '../../../../core/services/game-catalog.service';
 @Component({
   selector: 'app-sessions',
   standalone: true,
@@ -55,6 +56,10 @@ export class Sessions implements OnInit, OnDestroy {
   @ViewChild(CalendarWidget) calendarWidget?: CalendarWidget;
 
   private adminService = inject(AdminService);
+  private gameCatalog = inject(GameCatalogService);
+  /** Juegos opcionales del lote (nombres de archivo del catálogo). */
+  createGames: string[] = [];
+  gameOptions: SelectOption[] = [];
   private headerService = inject(HeaderService);
   private confirmService = inject(ConfirmService);
   private toastService = inject(ToastService);
@@ -516,6 +521,20 @@ export class Sessions implements OnInit, OnDestroy {
 
   // ── crear ───────────────────────────────────────────────────────────────
   openCreateModal() {
+    this.createGames = [];
+    if (!this.gameOptions.length) {
+      this.subs.add(
+        this.gameCatalog.catalog().subscribe({
+          next: (res) => {
+            this.gameOptions = res.games
+              .filter((g) => g.is_active !== false)
+              .map((g) => ({ value: g.filename, label: g.title, description: g.area || g.kind_label || undefined }));
+            this.cdr.markForCheck();
+          },
+          error: () => {},
+        }),
+      );
+    }
     this.createForm = { therapist_id: '', patient_id: '', title: '', sede: '', session_type: 'individual', start_time: '', end_time: '', notes: '' };
     this.createDates = [];
     this.dayNotes = {};
@@ -625,6 +644,7 @@ export class Sessions implements OnInit, OnDestroy {
       unlock_past_dates: this.unlockPastDates,
       notes: f.notes,
       day_notes: this.dayNotes,
+      games: this.createGames,
     };
     if (group) {
       payload.patient_ids = group.member_ids;

@@ -390,6 +390,14 @@ def mcp_chat():
         for k, v in cors.items():
             resp.headers[k] = v
         return resp
+    from app.routes.api.assistant import visible_for
+
+    if not visible_for(user.role):
+        resp = jsonify({'error': 'El asistente está desactivado para tu tipo de usuario.'})
+        resp.status_code = 403
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
 
     data = request.get_json(silent=True) or {}
     message = (data.get('message') or '').strip()

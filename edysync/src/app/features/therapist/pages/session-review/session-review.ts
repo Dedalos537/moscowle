@@ -15,10 +15,24 @@ import { ConfirmService } from '../../../../core/services/confirm.service';
 import { PersonLabelPipe } from '../../../../shared/pipes/person-label.pipe';
 import { PeopleService } from '../../../../core/services/people.service';
 
+import { Select, SelectOption } from '../../../../shared/components/select/select';
+import { GamePlayer } from '../../../../shared/components/game-player/game-player';
+import { CatalogGame, GameCatalogService } from '../../../../core/services/game-catalog.service';
+
+/** Estado de cada juego asignado a la sesión (GET /api/sessions/:id → game_status). */
+interface SessionGameStatus {
+  game_id: number;
+  filename: string;
+  title: string;
+  status: string;
+  accuracy: number | null;
+  played_at: string | null;
+}
+
 @Component({
   selector: 'app-therapist-session-review',
   standalone: true,
-  imports: [PersonLabelPipe, CommonModule, FormsModule, RouterModule, FontAwesomeModule, SessionLabelPipe],
+  imports: [PersonLabelPipe, CommonModule, FormsModule, RouterModule, FontAwesomeModule, SessionLabelPipe, Select, GamePlayer],
   templateUrl: './session-review.html',
   styleUrl: './session-review.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -86,6 +100,90 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   private remainingTimer: any = null;
 
   private subs = new Subscription();
+
+  // ── Juegos de la sesión (opcionales) ──
+  private gameCatalog = inject(GameCatalogService);
+  private catalogGames: CatalogGame[] = [];
+  gameOptions: SelectOption[] = [];
+  gameSelection: string[] = [];
+  editingGames = false;
+  savingGames = false;
+  playing: CatalogGame | null = null;
+
+  get sessionGames(): SessionGameStatus[] {
+    return (this.session?.game_status as SessionGameStatus[] | undefined) ?? [];
+  }
+
+  get canEditGames(): boolean {
+    return !!this.session && this.session.status !== 'completed' && this.session.status !== 'cancelled';
+  }
+
+  catalogFor(g: SessionGameStatus): CatalogGame | null {
+    return this.catalogGames.find((c) => c.id === g.game_id || c.filename === g.filename) ?? null;
+  }
+
+  private loadCatalog(): void {
+    this.subs.add(
+      this.gameCatalog.catalog().subscribe({
+        next: (res) => {
+          this.catalogGames = res.games;
+          this.gameOptions = res.games
+            .filter((g) => g.is_active !== false)
+            .map((g) => ({ value: g.filename, label: g.title, description: g.area || g.kind_label || undefined }));
+          this.cdr.markForCheck();
+        },
+        error: () => {},
+      }),
+    );
+  }
+
+  startEditGames(): void {
+    this.gameSelection = this.sessionGames.map((g) => g.filename);
+    this.editingGames = true;
+  }
+
+  saveGames(): void {
+    this.savingGames = true;
+    this.subs.add(
+      this.http.post('/api/sessions/assign-games', { session_id: this.sessionId, games: this.gameSelection }).subscribe({
+        next: () => {
+          this.savingGames = false;
+          this.editingGames = false;
+          this.toastService.show('Juegos de la sesión actualizados.', 'success');
+          this.refreshGames();
+        },
+        error: (err) => {
+          this.savingGames = false;
+          this.toastService.show(err?.error?.error || 'No se pudieron guardar los juegos.', 'error');
+          this.cdr.markForCheck();
+        },
+      }),
+    );
+  }
+
+  onGameClosed(saved: boolean): void {
+    this.playing = null;
+    if (saved) {
+      this.toastService.show('Partida guardada en el registro del paciente.', 'success');
+      this.refreshGames();
+    }
+    this.cdr.markForCheck();
+  }
+
+  private refreshGames(): void {
+    this.subs.add(
+      this.therapistService.getSession(this.sessionId).subscribe({
+        next: (data) => {
+          if (this.session) {
+            this.session.game_status = data.game_status;
+            this.session.games = data.games;
+            this.session.status = data.status;
+          }
+          this.cdr.markForCheck();
+        },
+      }),
+    );
+  }
 
   constructor(
     private route: ActivatedRoute,
@@ -196,6 +294,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
 
         this.loadAudit();
         this.loadProgram();
+        this.loadCatalog();
         this.initLiveScore();
         this.maybeAutoStartRecording();
         this.startRemainingTimer();

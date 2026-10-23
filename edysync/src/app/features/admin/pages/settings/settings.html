@@ -112,6 +112,54 @@
 
       <div class="setting-divider"></div>
 
+      <!-- Botón flotante del asistente por tipo de usuario (ajuste del centro) -->
+      <div class="setting-item">
+        <div class="setting-item__left">
+          <div class="setting-item__icon setting-item__icon--primary">
+            <fa-icon [icon]="['fas', 'brain']"></fa-icon>
+          </div>
+          <div class="setting-item__text">
+            <span class="setting-item__label">Asistente (botón flotante)</span>
+            <span class="setting-item__desc">Para quién aparece el chat con la IA. Apagado, el botón desaparece y el asistente no responde a ese tipo de usuario.</span>
+          </div>
+        </div>
+      </div>
+      <div class="setting-item setting-item--indent">
+        <div class="setting-item__left">
+          <div class="setting-item__text">
+            <span class="setting-item__label">Administradores</span>
+          </div>
+        </div>
+        <button type="button" class="toggle" role="switch" [class.toggle--on]="assistant.settings().admin" [attr.aria-checked]="assistant.settings().admin"
+                aria-label="Asistente para administradores" (click)="assistant.set('admin', !assistant.settings().admin)">
+          <span class="toggle__thumb"></span>
+        </button>
+      </div>
+      <div class="setting-item setting-item--indent">
+        <div class="setting-item__left">
+          <div class="setting-item__text">
+            <span class="setting-item__label">Terapeutas</span>
+          </div>
+        </div>
+        <button type="button" class="toggle" role="switch" [class.toggle--on]="assistant.settings().terapista" [attr.aria-checked]="assistant.settings().terapista"
+                aria-label="Asistente para terapeutas" (click)="assistant.set('terapista', !assistant.settings().terapista)">
+          <span class="toggle__thumb"></span>
+        </button>
+      </div>
+      <div class="setting-item setting-item--indent">
+        <div class="setting-item__left">
+          <div class="setting-item__text">
+            <span class="setting-item__label">Pacientes</span>
+          </div>
+        </div>
+        <button type="button" class="toggle" role="switch" [class.toggle--on]="assistant.settings().jugador" [attr.aria-checked]="assistant.settings().jugador"
+                aria-label="Asistente para pacientes" (click)="assistant.set('jugador', !assistant.settings().jugador)">
+          <span class="toggle__thumb"></span>
+        </button>
+      </div>
+
+      <div class="setting-divider"></div>
+
       <!-- Solo códigos para todo el centro (lo decide un administrador) -->
       <div class="setting-item">
         <div class="setting-item__left">

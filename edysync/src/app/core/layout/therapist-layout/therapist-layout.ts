@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -16,16 +16,20 @@ import { Spinner } from '../../../shared/components/spinner/spinner';
 import { Button } from '../../../shared/components/button/button';
 import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
 
+import { AiChat } from '../../../shared/components/ai-chat/ai-chat';
+import { AssistantVisibilityService } from '../../services/assistant-visibility';
 @Component({
   selector: 'app-therapist-layout',
   standalone: true,
-  imports: [RouterModule, CommonModule, FontAwesomeModule, Header, NoticeBanners, Spinner, Button, ConfirmDialog, HelpPanel, Sidebar],
+  imports: [RouterModule, CommonModule, FontAwesomeModule, Header, NoticeBanners, Spinner, Button, ConfirmDialog, HelpPanel, Sidebar, AiChat],
   templateUrl: './therapist-layout.html',
   styleUrl: './therapist-layout.scss',
   animations: [routeAnimations],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TherapistLayout implements OnInit, OnDestroy {
+  /** Botón flotante del asistente: visible solo si el admin lo activó para este tipo de usuario. */
+  readonly assistant = inject(AssistantVisibilityService);
   theme: string = 'light';
   routeLoading = false;
   loadStartTime = 0;
@@ -49,6 +53,7 @@ export class TherapistLayout implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    this.assistant.load();
     this.wakeLockService.request();
     this.subs.add(this.themeService.theme$.subscribe(t => {
       this.theme = t;

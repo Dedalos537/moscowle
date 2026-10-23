@@ -176,6 +176,47 @@
         </dl>
       </section>
 
+      <!-- Juegos de la sesión: se juegan aquí con el paciente (la partida queda en el paciente) o desde su cuenta -->
+      <section class="sr-card" aria-labelledby="sr-games-title">
+        <header class="sr-card__head">
+          <h2 id="sr-games-title" class="sr-card__title"><fa-icon [icon]="['fas', 'gamepad']" aria-hidden="true" /> Juegos de la sesión</h2>
+          @if (canEditGames && !editingGames) {
+            <button type="button" class="sr-link" (click)="startEditGames()">{{ sessionGames.length ? 'Cambiar' : 'Asignar' }}</button>
+          }
+        </header>
+        @if (editingGames) {
+          <app-select [multiple]="true" [searchable]="true" [(ngModel)]="gameSelection" [options]="gameOptions"
+            placeholder="Sin juegos" ariaLabel="Juegos de la sesión"></app-select>
+          <div class="sr-games__actions">
+            <button type="button" class="sr-btn" (click)="editingGames = false" [disabled]="savingGames">Cancelar</button>
+            <button type="button" class="sr-btn sr-btn--primary" (click)="saveGames()" [disabled]="savingGames">{{ savingGames ? 'Guardando…' : 'Guardar' }}</button>
+          </div>
+        } @else if (!sessionGames.length) {
+          <p class="sr-meta">Sin juegos asignados. Son opcionales.</p>
+        } @else {
+          <ul class="sr-games">
+            @for (g of sessionGames; track g.game_id) {
+              <li class="sr-game" [class.is-done]="g.status === 'completed'">
+                <div class="sr-game__info">
+                  <span class="sr-game__title">{{ g.title }}</span>
+                  <span class="sr-meta" [class.sr-meta--ok]="g.status === 'completed'">
+                    {{ g.status === 'completed' ? 'Jugado' + (g.accuracy != null ? ' · ' + g.accuracy + '% de precisión' : '') : 'Pendiente' }}
+                  </span>
+                </div>
+                @if (catalogFor(g); as cg) {
+                  @if (session.status !== 'completed' && session.status !== 'cancelled') {
+                    <button type="button" class="sr-btn sr-btn--primary" (click)="playing = cg">
+                      <fa-icon [icon]="['fas', 'play']" aria-hidden="true" /> {{ g.status === 'completed' ? 'Otra vez' : 'Jugar' }}
+                    </button>
+                  }
+                }
+              </li>
+            }
+          </ul>
+          <p class="sr-meta">El paciente también los ve en su cuenta durante la sesión.</p>
+        }
+      </section>
+
       <section class="sr-card">
         <header class="sr-card__head sr-card__head--tight">
           <h2 class="sr-card__title sr-card__title--plain"><fa-icon [icon]="['fas', 'wand-magic-sparkles']" aria-hidden="true" /> Auditoría IA</h2>
@@ -377,4 +418,8 @@
   <button class="absolute top-4 right-4 text-white text-xs px-2 py-1 border border-white/30 rounded z-10" (click)="closeFullscreen()">Cerrar</button>
   <img [src]="currentImage?.url" alt="Evidencia ampliada" class="max-w-full max-h-[90vh] object-contain shadow-2xl rounded-sm">
 </div>
+}
+
+@if (playing; as pg) {
+  <app-game-player [game]="pg" [sessionId]="sessionId" (closed)="onGameClosed($event)" />
 }

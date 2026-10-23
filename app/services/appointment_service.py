@@ -306,16 +306,15 @@ class AppointmentService:
 
         return True
 
-    def set_session_games(self, session_id, game_filenames):
-        """Asigna juegos a la sesión. Nombres repetidos los salta."""
-        from app.models import AppointmentGame, Game
+    def resolve_games(self, game_filenames):
+        """Juegos del catálogo por nombre de archivo (crea la fila si el archivo existe y aún no está). Sin repetidos."""
+        from app.models import Game
 
-        appt = Appointment.query.get(session_id)
-        if not appt:
-            raise ValueError('Sesión no encontrada')
-
-        validated_games = []
+        validated_games, seen = [], set()
         for filename in game_filenames:
+            if not filename or filename in seen:
+                continue
+            seen.add(filename)
             game = Game.query.filter_by(filename=filename, is_active=True).first()
 
             if not game:
@@ -330,15 +329,25 @@ class AppointmentService:
                 db.session.flush()
 
             validated_games.append(game)
+        return validated_games
 
-        AppointmentGame.query.filter_by(appointment_id=session_id).delete()
+    @staticmethod
+    def attach_games(appt, games):
+        """Deja esos juegos asignados a la sesión (reemplaza los anteriores). No hace commit."""
+        from app.models import AppointmentGame
 
-        for game in validated_games:
-            assoc = AppointmentGame(appointment_id=session_id, game_id=game.id)
-            db.session.add(assoc)
+        AppointmentGame.query.filter_by(appointment_id=appt.id).delete()
+        for game in games:
+            db.session.add(AppointmentGame(appointment_id=appt.id, game_id=game.id))
+        appt.games = json.dumps([g.filename for g in games])
 
-        appt.games = json.dumps([g.filename for g in validated_games])
-
+    def set_session_games(self, session_id, game_filenames):
+        """Asigna juegos a la sesión. Nombres repetidos los salta."""
+        appt = Appointment.query.get(session_id)
+        if not appt:
+            raise ValueError('Sesión no encontrada')
+        validated_games = self.resolve_games(game_filenames)
+        self.attach_games(appt, validated_games)
         db.session.commit()
         return validated_games
 
