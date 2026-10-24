@@ -121,9 +121,10 @@ def _history(thread):
 
 # En esta pantalla hay formularios: el modelo no necesita preguntar dato por dato antes de proponer una acción.
 SCREEN_HINT = (
-    '[Pantalla del asistente: si el usuario pide crear, registrar, programar o cambiar algo, PROPÓN la herramienta '
-    'en cuanto sepas cuál es, con los datos que ya tengas; el sistema le muestra un formulario para completar lo que '
-    'falte y confirmar. No preguntes los datos uno por uno. Mantén el hilo de la conversación.]\n'
+    '[Pantalla del asistente: si el usuario pide crear, registrar, programar o cambiar algo, LLAMA YA a la '
+    'herramienta de escritura con los datos que tengas, aunque falten obligatorios: el sistema le muestra un '
+    'formulario para completar lo que falte y confirmar. NUNCA preguntes los datos uno por uno. Si nombra a una '
+    'persona, búscala con las herramientas de consulta y usa su id. Mantén el hilo de la conversación.]\n'
 )
 
 
@@ -249,41 +250,161 @@ def action_block(name, args, user=None):
     return {'type': 'action', 'tool': name, 'title': title, 'args': args or {}, 'fields': fields, 'status': 'pending'}
 
 
-def _general_ai(question, user, history):
-    """Preguntas que no son de datos conocidos: la IA general del sistema (OpenCode/MCP con respaldo)."""
-    from app.routes.mcp_routes import mcp_service
+def _noop(*_a, **_k):
+    return None
 
-    try:
-        result = mcp_service.process_message(
-            message=SCREEN_HINT + question, user_role=user.role, user_id=user.id, mode='grande', history=history
-        )
-    except Exception as exc:  # noqa: BLE001 - la IA puede caerse: se responde algo útil igual
-        current_app.logger.warning(f'asistente: IA general no respondió: {exc}')
-        result = None
-    text = (result or {}).get('response') or (
-        'No pude responder eso ahora. Prueba con una pregunta de datos del centro, por ejemplo '
-        '«¿cómo vamos este mes?» o «compara las sedes este trimestre».'
-    )
-    pending = (result or {}).get('pending_tool') if (result or {}).get('requires_confirmation') else None
-    if pending and pending.get('name'):
-        block = action_block(pending['name'], pending.get('args'), user)
-        return {
-            'title': block['title'][:80],
-            'blocks': [
-                {'type': 'text', 'md': 'Revisa los datos, completa lo que falte y confirma.'},
-                block,
-            ],
-            'sources': [{'tool': pending['name'], 'scope': 'acción por confirmar'}],
-            'model': (result or {}).get('provider') or 'IA del centro',
+
+def _from_agent(events, step):
+    """Recorre los eventos de MiMo (opencode + herramientas MCP) y arma el resultado; cuenta el avance con `step`."""
+    from app.services.tools_registry import TOOL_REGISTRY
+
+    text, pending, calls = '', None, []
+    for ev in events:
+        kind = ev.get('type')
+        if kind == 'thinking' and ev.get('content'):
+            step(ev['content'][:160], ev.get('tool'))
+        elif kind == 'tool_call':
+            desc = (TOOL_REGISTRY.get(ev['name']) or {}).get('description') or ev['name']
+            step(f'Consultando: {_short_title(desc).lower()}', ev['name'])
+        elif kind == 'tool_result':
+            calls.append({'name': ev['name']})
+        elif kind == 'confirm':
+            pending = {'name': ev['name'], 'args': ev.get('args') or {}}
+        elif kind == 'final':
+            text = ev.get('content') or text
+        elif kind == 'done':
+            pending = pending or ev.get('pending_confirm')
+            calls = calls or [{'name': c.get('name')} for c in ev.get('tool_calls') or []]
+    return {'response': text, 'tool_calls': calls, 'provider': 'opencode', 'pending': pending}
+
+
+def _general_ai(question, user, history, step=_noop):
+    """Lo que no es una cifra ni un formulario conocido: MiMo con todas las herramientas MCP del rol (las mismas del
+    chat flotante), con el avance en vivo. Si MiMo no está, la cadena de respaldo."""
+    from app.services import opencode_agent
+    from app.services.opencode_client import OpencodeUnavailableError
+
+    result = None
+    if opencode_agent.enabled_for(user):
+        step('Pensando con MiMo…')
+        try:
+            result = _from_agent(opencode_agent.run(user, SCREEN_HINT + question, history=history, mode='grande'), step)
+        except OpencodeUnavailableError as exc:
+            current_app.logger.warning(f'asistente: MiMo no disponible, sigo con el respaldo: {exc}')
+            step('MiMo no responde ahora; sigo con el modelo de respaldo…')
+        except Exception as exc:  # noqa: BLE001
+            current_app.logger.warning(f'asistente: MiMo falló: {exc}')
+    if result is None:
+        from app.routes.mcp_routes import mcp_service
+
+        try:
+            raw = mcp_service.process_message(
+                message=SCREEN_HINT + question, user_role=user.role, user_id=user.id, mode='grande', history=history
+            )
+        except Exception as exc:  # noqa: BLE001 - la IA puede caerse: se responde algo útil igual
+            current_app.logger.warning(f'asistente: IA general no respondió: {exc}')
+            raw = None
+        raw = raw or {}
+        result = {
+            'response': raw.get('response'),
+            'tool_calls': raw.get('tool_calls') or [],
+            'provider': raw.get('provider'),
+            'pending': raw.get('pending_tool') if raw.get('requires_confirmation') else None,
         }
+    text = result.get('response') or ''
+    if not text or text.startswith(('Error procesando', 'All LLM providers')):
+        # El error técnico del proveedor no le sirve a nadie en pantalla: va al log.
+        if text:
+            current_app.logger.warning(f'asistente: respaldo falló: {text[:300]}')
+        text = (
+            'Ahora no tengo un modelo de IA disponible (MiMo no responde y el respaldo falló). '
+            'Las cifras del centro y los formularios siguen funcionando: prueba «¿cómo vamos este mes?» '
+            'o «crear un paciente».'
+        )
+    pending = result.get('pending')
+    if pending and pending.get('name'):
+        return _action_answer(
+            pending['name'], pending.get('args'), user, _model_label(result), intro=result.get('response')
+        )
     return {
         'title': question[:80],
         'blocks': [{'type': 'text', 'md': text}],
-        'sources': [
-            {'tool': t.get('name') or t.get('tool'), 'scope': 'IA'} for t in (result or {}).get('tool_calls') or []
-        ],
+        'sources': [{'tool': t.get('name') or t.get('tool'), 'scope': 'IA'} for t in result.get('tool_calls') or []],
         'model': _model_label(result),
     }
+
+
+def _action_answer(tool, args, user, model, intro=None):
+    block = action_block(tool, args, user)
+    lead = 'Completa el formulario y confirma.' if not args else 'Revisa los datos, completa lo que falte y confirma.'
+    return {
+        'title': block['title'][:80],
+        'blocks': [{'type': 'text', 'md': (intro or '').strip() or lead}, block],
+        'sources': [{'tool': tool, 'scope': 'acción por confirmar'}],
+        'model': model,
+    }
+
+
+# ── formularios al instante (sin esperar al modelo) ─────────────────────────
+# «quiero crear un usuario», «registra un pago», «agenda sesiones a Liam»: se abre el formulario de la herramienta
+# MCP al momento, con lo que se pueda deducir (rol, persona nombrada). Lo demás va a MiMo.
+_DO = re.compile(
+    r'\b(crea|crear|creame|registra|registrar|registrame|agrega|agregar|anade|anadir|nuevo|nueva|da de alta|'
+    r'dar de alta|inscribe|inscribir|agenda|agendar|agendale|programa|programar|anota|anotar|quiero|quisiera|'
+    r'necesito|hazme|haz)\b'
+)
+_ASKING = re.compile(r'\b(cuant[oa]s?|cuales|quienes|lista|listar|muestra|mostrar|ver|saber|como (se|hago|puedo))\b')
+QUICK = [
+    # (patrón del objeto, herramienta del admin/supervisor, herramienta del terapeuta, args)
+    (r'\b(paciente|alumno|nino|nina|jugador)\b', 'create_full_patient', 'request_patient_signup', {}),
+    (r'\b(terapeuta|terapista)\b', 'create_user', None, {'role': 'terapista'}),
+    (r'\bsupervisor\b', 'create_user', None, {'role': 'supervisor'}),
+    (r'\badministrador\b', 'create_user', None, {'role': 'admin'}),
+    (r'\busuario\b', 'create_user', None, {}),
+    (r'\bcontrato\b', 'create_service_contract', None, {}),
+    (r'\b(pago|cobro|abono)\b', 'register_payment', 'register_payment', {}),
+    (r'\bsesion(es)?\b', 'schedule_programmed_session', 'request_sessions', {}),
+    (r'\bgasto\b', 'create_expense', None, {}),
+    (r'\bincidencia\b', 'create_incident', None, {}),
+    (r'\bgrupo\b', 'create_patient_group', None, {}),
+]
+
+
+def quick_action(question, user):
+    """Herramienta + args si la pregunta es «haz X» de un formulario conocido; si no, None."""
+    from app.services.tools_registry import TOOL_REGISTRY
+
+    q = analytics._norm(question)
+    if not _DO.search(q) or _ASKING.search(q):
+        return None
+    for pattern, staff_tool, therapist_tool, base_args in QUICK:
+        if not re.search(pattern, q):
+            continue
+        tool = therapist_tool if user.role == 'terapista' else staff_tool
+        spec = TOOL_REGISTRY.get(tool or '') or {}
+        roles = spec.get('roles')
+        if not tool or not spec or (roles and user.role not in roles):
+            return None
+        args = dict(base_args)
+        named = _prefill_people(tool, q, args, user)
+        # Si trae datos (un nombre nuevo, un monto, una fecha), MiMo los pone en el formulario; aquí se perderían.
+        words = re.findall(r'[\wáéíóúñÁÉÍÓÚÑ]+', question)
+        extra = [w for w in words[1:] if w[:1].isupper() and analytics._norm(w) not in named] or re.search(r'\d', q)
+        return None if extra else (tool, args)
+    return None
+
+
+def _prefill_people(tool, q, args, user):
+    """Si la pregunta nombra a un paciente/terapeuta que existe, ya va elegido en el formulario. Devuelve sus palabras."""
+    named = set()
+    for f in action_block(tool, {}, user)['fields']:
+        if f['key'] not in PERSON_FIELDS:
+            continue
+        hits = [o for o in f.get('options') or [] if analytics._norm(o['label'].split(' · ')[0]) in q]
+        if len(hits) == 1:
+            args[f['key']] = hits[0]['value']
+            named.update(analytics._norm(hits[0]['label'].split(' · ')[0]).split())
+    return named
 
 
 def _model_label(result):
@@ -294,7 +415,7 @@ def _model_label(result):
     return f'{provider} (respaldo)' if provider else 'IA del centro'
 
 
-def compute(question, user, history=None, follow_ai=False):
+def compute(question, user, history=None, follow_ai=False, step=_noop):
     """La respuesta (sin guardar): datos del centro si se reconoce la pregunta; si no, la IA general.
 
     follow_ai: el hilo viene de una conversación con la IA (p. ej. creando un usuario). Un seguimiento como
@@ -304,7 +425,12 @@ def compute(question, user, history=None, follow_ai=False):
         res = analytics.answer(question, user, strict=follow_ai)
     except analytics.ScopeError as exc:
         raise AssistantError(str(exc), 403) from exc
-    return res or _general_ai(question, user, history or [])
+    if res:
+        return res
+    quick = quick_action(question, user)
+    if quick:
+        return _action_answer(quick[0], quick[1], user, 'formulario del sistema')
+    return _general_ai(question, user, history or [], step)
 
 
 def _follows_ai(thread):
@@ -318,7 +444,7 @@ def _plain(blocks):
     return '\n\n'.join(b['md'] for b in blocks if b.get('type') == 'text')
 
 
-def ask(user, question, thread_id=None):
+def ask(user, question, thread_id=None, step=_noop):
     question = (question or '').strip()
     if not question:
         raise AssistantError('Escribe una pregunta')
@@ -326,7 +452,7 @@ def ask(user, question, thread_id=None):
         raise AssistantError('La pregunta es muy larga (máx. 2000 caracteres)')
     thread = get_thread(thread_id, user, write=True) if thread_id else None
     history = _history(thread) if thread else []
-    res = compute(question, user, history, follow_ai=_follows_ai(thread))
+    res = compute(question, user, history, follow_ai=_follows_ai(thread), step=step)
     now = datetime.utcnow()
     if thread is None:
         thread = AssistantThread(user_id=user.id, title=(res.get('title') or question)[:160], created_at=now)

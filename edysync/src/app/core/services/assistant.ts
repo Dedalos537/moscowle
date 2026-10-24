@@ -1,6 +1,14 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { McpChatService } from './mcp-chat.service';
+
+/** Eventos de `/assistant/ask/stream`: pasos de MiMo y las herramientas MCP en vivo, y al final la respuesta. */
+export type AssistantStreamEvent =
+  | { type: 'step'; text: string; tool?: string | null }
+  | { type: 'done'; thread: AssistantThread; message: AssistantMessage }
+  | { type: 'error'; message: string };
 
 export type ValueFormat = 'money' | 'pct' | 'int' | 'dec' | 'date';
 
@@ -105,6 +113,7 @@ export interface AssistantThread {
 export class AssistantService {
   private http = inject(HttpClient);
   private base = '/api/assistant';
+  private mcp = inject(McpChatService);
 
   home(): Observable<{ suggestions: string[] }> {
     return this.http.get<{ suggestions: string[] }>(`${this.base}/home`);
@@ -131,7 +140,49 @@ export class AssistantService {
     return this.http.post<{ thread: AssistantThread; message: AssistantMessage }>(`${this.base}/ask`, { question, thread_id: threadId });
   }
 
-  runAction(messageId: number, args: Record<string, unknown>): Observable<{ message: AssistantMessage; reply: AssistantMessage }> {
+  /** Pregunta en vivo (SSE con fetch: renueva la sesión si venció). Cancelar la suscripción corta la petición. */
+  askStream(question: string, threadId: number | null): Observable<AssistantStreamEvent> {
+    return new Observable<AssistantStreamEvent>((sub) => {
+      const ctrl = new AbortController();
+      this.mcp
+        .authFetch(`${environment.apiBaseUrl}${this.base}/ask/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question, thread_id: threadId }),
+          signal: ctrl.signal,
+        })
+        .then(async (resp) => {
+          if (!resp.ok || !resp.body) {
+            const body = await resp.json().catch(() => null);
+            throw new Error(body?.message || `HTTP ${resp.status}`);
+          }
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const parts = buffer.split('\n\n');
+            buffer = parts.pop() || '';
+            for (const part of parts) {
+              const line = part.split('\n').find((l) => l.startsWith('data: '));
+              if (!line) continue;
+              const ev = JSON.parse(line.slice(6)) as AssistantStreamEvent;
+              sub.next(ev);
+              if (ev.type === 'done' || ev.type === 'error') return sub.complete();
+            }
+          }
+          sub.error(new Error('Se cortó la conexión antes de terminar.'));
+        })
+        .catch((err) => {
+          if (err?.name !== 'AbortError') sub.error(err);
+        });
+      return () => ctrl.abort();
+    });
+  }
+
+    runAction(messageId: number, args: Record<string, unknown>): Observable<{ message: AssistantMessage; reply: AssistantMessage }> {
     return this.http.post<{ message: AssistantMessage; reply: AssistantMessage }>(`${this.base}/messages/${messageId}/action`, { args });
   }
 

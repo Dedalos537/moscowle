@@ -114,6 +114,67 @@ def assistant_ask():
     return _call(run)
 
 
+@api_bp.route('/assistant/ask/stream', methods=['POST'])
+@login_required
+def assistant_ask_stream():
+    """Igual que `/assistant/ask`, pero en vivo (SSE): pasos de MiMo y herramientas MCP mientras trabaja, y al final
+    la conversación y la respuesta guardadas. Un latido cada pocos segundos evita que Cloudflare corte a los 100 s
+    (antes la espera larga llegaba al navegador como un error de CORS)."""
+    import json
+    import queue
+    import threading
+
+    from flask import Response, current_app, stream_with_context
+
+    from app.models import User
+    from app.services import assistant_service as svc
+
+    denied = _staff_only()
+    if denied:
+        return denied
+    data = request.get_json(silent=True) or {}
+    app, user_id = current_app._get_current_object(), current_user.id
+    events: queue.Queue = queue.Queue()
+
+    def work():
+        with app.app_context():
+            try:
+                user = db.session.get(User, user_id)
+                thread, answer = svc.ask(
+                    user,
+                    data.get('question'),
+                    data.get('thread_id'),
+                    step=lambda text, tool=None: events.put({'type': 'step', 'text': text, 'tool': tool}),
+                )
+                events.put(
+                    {'type': 'done', 'thread': svc.thread_dict(thread, user), 'message': svc.message_dict(answer, user)}
+                )
+            except svc.AssistantError as exc:
+                events.put({'type': 'error', 'message': str(exc), 'status': exc.status})
+            except Exception:  # noqa: BLE001
+                app.logger.exception('assistant stream falló')
+                events.put({'type': 'error', 'message': 'No pude responder ahora. Inténtalo de nuevo.'})
+            finally:
+                db.session.remove()
+
+    threading.Thread(target=work, daemon=True).start()
+
+    def generate():
+        yield ': inicio\n\n'
+        while True:
+            try:
+                ev = events.get(timeout=8)
+            except queue.Empty:
+                yield ': latido\n\n'
+                continue
+            yield f'data: {json.dumps(ev, ensure_ascii=False, default=str)}\n\n'
+            if ev['type'] in ('done', 'error'):
+                return
+
+    headers = {'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'}
+    return Response(stream_with_context(generate()), mimetype='text/event-stream', headers=headers)
+
+
 @api_bp.route('/assistant/messages/<int:message_id>/refresh', methods=['POST'])
 @login_required
 def assistant_refresh(message_id):
