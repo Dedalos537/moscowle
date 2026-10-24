@@ -164,6 +164,75 @@ FIELD_LABELS = {
     'assigned_therapist_id': 'Terapeuta asignado',
     'user_id': 'Usuario',
     'assignee_id': 'Responsable',
+    'sede_ids': 'Sedes asignadas',
+    'modality': 'Modalidad',
+    'payment_frequency': 'Frecuencia',
+    'plan_type': 'Tipo de plan',
+    'payment_amount': 'Monto a pagar (S/)',
+    'generate_schedule': 'Generar horario automático',
+    'evaluation_date': 'Fecha de la sesión de evaluación',
+    'days_of_week': 'Días de sesión',
+    'salary_base': 'Base salarial (S/)',
+    'contract_hours': 'Horas contratadas',
+}
+
+# Opciones con nombre (el esquema de la herramienta trae valores sueltos: 1, 'monthly', 0…).
+FIELD_OPTIONS = {
+    'modality': [
+        {'value': 1, 'label': '1x semana (4 sesiones)'},
+        {'value': 2, 'label': '2x semana (8 sesiones)'},
+        {'value': 3, 'label': '3x semana (12 sesiones)'},
+    ],
+    'payment_frequency': [
+        {'value': 'monthly', 'label': 'Mensual'},
+        {'value': 'biweekly', 'label': 'Quincenal'},
+        {'value': 'weekly', 'label': 'Semanal'},
+    ],
+    'plan_type': [{'value': 'individual', 'label': 'Individual'}, {'value': 'group', 'label': 'Grupal'}],
+    'guardian_type': [
+        {'value': 'padre', 'label': 'Padre'},
+        {'value': 'madre', 'label': 'Madre'},
+        {'value': 'tutor', 'label': 'Tutor'},
+        {'value': 'otro', 'label': 'Otro'},
+    ],
+    'days_of_week': [
+        {'value': i, 'label': d} for i, d in enumerate(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'])
+    ],
+}
+
+# Crear usuario: los mismos pasos del panel de Usuarios, y cada campo solo para el tipo de usuario que lo usa.
+_PATIENT = {'role': ['jugador']}
+_STAFF_SEDES = {'role': ['terapista', 'supervisor']}
+_SCHEDULE = {'role': ['jugador'], 'generate_schedule': [True]}
+FORM_LAYOUT = {
+    'create_user': {
+        'username': ('Datos', None),
+        'email': ('Datos', None),
+        'role': ('Datos', None),
+        'phone': ('Datos', None),
+        'sede_id': ('Datos', _PATIENT),
+        'sede_ids': ('Datos', _STAFF_SEDES),
+        'modality': ('Plan y horario', _PATIENT),
+        'payment_frequency': ('Plan y horario', _PATIENT),
+        'plan_type': ('Plan y horario', _PATIENT),
+        'payment_amount': ('Plan y horario', _PATIENT),
+        'generate_schedule': ('Plan y horario', _PATIENT),
+        'evaluation_date': ('Plan y horario', _SCHEDULE),
+        'start_date': ('Plan y horario', _SCHEDULE),
+        'start_time': ('Plan y horario', _SCHEDULE),
+        'therapist_id': ('Plan y horario', _SCHEDULE),
+        'days_of_week': ('Plan y horario', _SCHEDULE),
+        'guardian': ('Apoderado', _PATIENT),
+        'guardian_type': ('Apoderado', _PATIENT),
+        'guardian_dni': ('Apoderado', _PATIENT),
+        'guardian_contact': ('Apoderado', _PATIENT),
+        'salary_base': ('Contrato', {'role': ['terapista']}),
+        'contract_hours': ('Contrato', {'role': ['terapista']}),
+    },
+}
+# Valores por defecto del formulario (los mismos del panel).
+FORM_DEFAULTS = {
+    'create_user': {'payment_frequency': 'monthly', 'plan_type': 'individual', 'generate_schedule': True},
 }
 
 # Campos que la herramienta pide por id: nadie se sabe los ids, así que se eligen por nombre en una lista con
@@ -185,7 +254,11 @@ ROLE_OPTIONS = [
 
 def _people(roles, user):
     """Personas para un campo de id, «Nombre · código»; el supervisor solo ve las de su sede."""
-    q = User.query.filter(User.is_active.isnot(False))
+    # Un paciente sin correo es una cuenta «presencial» (is_active=False) pero es paciente igual: cuenta el estado.
+    q = User.query.filter(
+        db.or_(User.account_status.is_(None), User.account_status != 'retired'),
+        db.or_(User.role == 'jugador', User.is_active.isnot(False)),
+    )
     if roles:
         q = q.filter(User.role.in_(roles))
     if user is not None and user.role == 'supervisor':
@@ -212,7 +285,8 @@ def _short_title(text):
 def _field(key, spec, required, user=None):
     """Campo del formulario de una acción, a partir del esquema JSON de la herramienta."""
     kind = spec.get('type') or 'string'
-    default_label = (spec.get('description') or key.replace('_', ' ')).split('(')[0].split(':')[0].split('.')[0]
+    desc = spec.get('description') or ''
+    default_label = (desc or key.replace('_', ' ')).split('(')[0].split(':')[0].split('.')[0]
     default_label = re.sub(r'\s*(YYYY-MM-DD|HH:MM)\b.*', '', default_label)
     out = {
         'key': key,
@@ -222,15 +296,26 @@ def _field(key, spec, required, user=None):
     }
     if spec.get('enum'):
         out['options'] = [{'value': o, 'label': str(o)} for o in spec['enum']]
+    if key in FIELD_OPTIONS:
+        out['options'] = FIELD_OPTIONS[key]
     if kind == 'array':
         out['type'] = 'list'
+    # Qué control de fecha/hora usar (el esquema lo dice en la descripción).
+    if 'YYYY-MM-DD HH:MM' in desc:
+        out['input'] = 'datetime'
+    elif 'YYYY-MM-DD' in desc or key.endswith('_date') or key == 'date':
+        out['input'] = 'date'
+    elif 'HH:MM' in desc or key.endswith('_time'):
+        out['input'] = 'time'
     if key == 'role':
         out.update(type='enum', options=ROLE_OPTIONS)
-    if key == 'sede_id':
+    if key in ('sede_id', 'sede_ids'):
         from app.models import Sede
 
         sedes = Sede.query.filter(db.or_(Sede.is_active.is_(True), Sede.is_active.is_(None))).order_by(Sede.name).all()
-        out.update(type='enum', options=[{'value': x.id, 'label': x.name} for x in sedes])
+        out.update(options=[{'value': x.id, 'label': x.name} for x in sedes])
+        if key == 'sede_id':
+            out['type'] = 'enum'
     if key in PERSON_FIELDS and kind == 'integer':
         out.update(type='enum', options=_people(PERSON_FIELDS[key], user), searchable=True)
     if out['type'] == 'enum' and len(out.get('options') or []) > 8:
@@ -246,8 +331,18 @@ def action_block(name, args, user=None):
     params = (spec.get('parameters') or {}).get('properties') or {}
     required = set((spec.get('parameters') or {}).get('required') or [])
     fields = [_field(k, v, required, user) for k, v in params.items()]
+    layout = FORM_LAYOUT.get(name)
+    if layout:
+        fields = [f for f in fields if f['key'] in layout]
+        fields.sort(key=lambda f: list(layout).index(f['key']))
+        for f in fields:
+            section, show_if = layout[f['key']]
+            f['section'] = section
+            if show_if:
+                f['show_if'] = show_if
+    args = {**FORM_DEFAULTS.get(name, {}), **(args or {})}
     title = _short_title(spec.get('description') or name)
-    return {'type': 'action', 'tool': name, 'title': title, 'args': args or {}, 'fields': fields, 'status': 'pending'}
+    return {'type': 'action', 'tool': name, 'title': title, 'args': args, 'fields': fields, 'status': 'pending'}
 
 
 def _noop(*_a, **_k):
@@ -356,7 +451,7 @@ _DO = re.compile(
 _ASKING = re.compile(r'\b(cuant[oa]s?|cuales|quienes|lista|listar|muestra|mostrar|ver|saber|como (se|hago|puedo))\b')
 QUICK = [
     # (patrón del objeto, herramienta del admin/supervisor, herramienta del terapeuta, args)
-    (r'\b(paciente|alumno|nino|nina|jugador)\b', 'create_full_patient', 'request_patient_signup', {}),
+    (r'\b(paciente|alumno|nino|nina|jugador)\b', 'create_user', 'request_patient_signup', {'role': 'jugador'}),
     (r'\b(terapeuta|terapista)\b', 'create_user', None, {'role': 'terapista'}),
     (r'\bsupervisor\b', 'create_user', None, {'role': 'supervisor'}),
     (r'\badministrador\b', 'create_user', None, {'role': 'admin'}),
@@ -492,7 +587,7 @@ def refresh(user, message_id):
     return m
 
 
-def run_action(user, message_id, args):
+def run_action(user, message_id, args, block_index=None):
     """El usuario revisó el formulario y confirmó: se ejecuta con sus permisos y queda en la conversación."""
     from app.services.tools_registry import TOOL_REGISTRY, execute_tool
 
@@ -501,7 +596,8 @@ def run_action(user, message_id, args):
         raise AssistantError('Respuesta no encontrada', 404)
     thread = get_thread(m.thread_id, user, write=True)
     blocks = list(m.blocks or [])
-    idx = next((i for i, b in enumerate(blocks) if b.get('type') == 'action'), None)
+    pending = [i for i, b in enumerate(blocks) if b.get('type') == 'action']
+    idx = block_index if block_index in pending else next(iter(pending), None)
     if idx is None:
         raise AssistantError('Esta respuesta no tiene una acción por confirmar')
     block = dict(blocks[idx])
@@ -514,17 +610,19 @@ def run_action(user, message_id, args):
     result = execute_tool(name, clean, user_id=user.id, role=user.role)
     ok = isinstance(result, dict) and not result.get('error') and result.get('success', True) is not False
     message = (result or {}).get('message') if isinstance(result, dict) else None
+    message = re.sub(r'\s*\(ID:? ?\d+\)', '', message or '') or None
     text = (
         f'Listo: {message}' if ok and message else 'Listo, quedó hecho.' if ok else f'No se pudo: {result.get("error")}'
     )
     block.update(status='done' if ok else 'error', args=clean, result_text=text)
     blocks[idx] = block
     m.blocks = blocks
+    follow = _next_steps(name, clean, result, user) if ok else []
     reply = AssistantMessage(
         thread_id=thread.id,
         role='assistant',
         text=text,
-        blocks=[{'type': 'text', 'md': text}],
+        blocks=[{'type': 'text', 'md': text}, *follow],
         sources=[{'tool': name, 'scope': 'acción confirmada'}],
         model='acción confirmada',
         question=None,
@@ -533,6 +631,51 @@ def run_action(user, message_id, args):
     thread.updated_at = datetime.utcnow()
     db.session.commit()
     return m, reply
+
+
+def _next_steps(tool, args, result, user):
+    """Después de dar de alta a un paciente (o su contrato), lo que falta del flujo: contrato y sesiones.
+
+    El panel de Usuarios lo hace todo en un paso; si en el formulario se dejó el plan o el horario en blanco, aquí se
+    proponen con el paciente ya elegido para que no quede a medias."""
+    from app.models import Appointment, User
+    from app.models.contract import Contract
+
+    patient_id = None
+    if tool == 'create_user' and (result or {}).get('role') == 'jugador':
+        patient_id = result.get('user_id')
+    elif tool in ('create_service_contract', 'create_full_patient'):
+        patient_id = args.get('patient_id') or (result or {}).get('patient_id') or (result or {}).get('user_id')
+    patient = db.session.get(User, int(patient_id)) if patient_id else None
+    if not patient or patient.role != 'jugador':
+        return []
+    out, notes = [], []
+    has_contract = Contract.query.filter(Contract.patient_id == patient.id, Contract.is_active.isnot(False)).count()
+    sessions = Appointment.query.filter_by(patient_id=patient.id).count()
+    if has_contract and tool == 'create_user':
+        notes.append('ya tiene su contrato con las cuotas')
+    if sessions and tool == 'create_user':
+        notes.append(f'ya tiene {sessions} sesiones programadas')
+    if not has_contract:
+        c_args = {'patient_id': patient.id}
+        if args.get('payment_amount'):
+            c_args['total_amount'] = args['payment_amount']
+        if args.get('start_date'):
+            c_args['start_date'] = args['start_date']
+        out += [{'type': 'text', 'md': f'**Siguiente paso:** el contrato de {patient.username}.'}]
+        out.append(action_block('create_service_contract', c_args, user))
+    if not sessions:
+        s_args = {'patient_id': patient.id}
+        for key in ('therapist_id', 'modality', 'start_date', 'start_time', 'days_of_week', 'evaluation_date'):
+            if args.get(key) not in (None, '', []):
+                s_args[key] = args[key]
+        if not s_args.get('therapist_id') and patient.assigned_therapist_id:
+            s_args['therapist_id'] = patient.assigned_therapist_id
+        out += [{'type': 'text', 'md': f'**Y sus sesiones:** programa el horario de {patient.username}.'}]
+        out.append(action_block('schedule_patient_plan', s_args, user))
+    if notes:
+        out.insert(0, {'type': 'text', 'md': f'{patient.username} ' + ' y '.join(notes) + '.'})
+    return out
 
 
 def set_feedback(user, message_id, value):

@@ -329,3 +329,48 @@ def test_slow_reply_pauses_briefly_not_fifteen_minutes(env, monkeypatch):
         opencode_client.send('ses_1', 'hola')
     assert 0 < opencode_client.state()['blocked_for'] <= opencode_client.SLOW_COOLDOWN
     opencode_client.unblock()
+
+
+def test_quota_retry_loop_is_cut_in_seconds(env, monkeypatch):
+    """Con la cuota gratis agotada OpenCode reintenta y no responde: se detecta y se pasa al respaldo."""
+    import threading
+    import time
+
+    import requests
+
+    release = threading.Event()
+
+    class R:
+        def __init__(self, body, status=200):
+            self._body, self.status_code = body, status
+            self.content = b'x'
+
+        def json(self):
+            return self._body
+
+    def fake(method, url, **kw):
+        if url.endswith('/message') and method == 'POST':
+            release.wait(30)  # colgado como OpenCode reintentando
+            return R({'info': {}, 'parts': []})
+        if url.endswith('/session/status'):
+            return R(
+                {
+                    'ses_q': {
+                        'type': 'retry',
+                        'attempt': 3,
+                        'message': 'Free usage limit reached. Subscribe to OpenCode Go',
+                    }
+                }
+            )
+        return R([])
+
+    monkeypatch.setattr(opencode_client.requests, 'request', fake)
+    opencode_client.unblock()
+    t0 = time.time()
+    with pytest.raises(OpencodeUnavailableError, match='Free usage'):
+        opencode_client.send('ses_q', 'hola')
+    release.set()
+    assert time.time() - t0 < 10
+    assert opencode_client.state()['blocked_for'] > opencode_client.SLOW_COOLDOWN  # pausa larga: es la cuota
+    opencode_client.unblock()
+    del requests

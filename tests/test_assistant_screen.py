@@ -322,3 +322,112 @@ def test_create_user_from_form_without_email(app):
     )
     assert 'error' not in res, res
     assert User.query.filter_by(username=name).first() is not None
+
+
+def _action_message(admin, blocks):
+    thread = AssistantThread(user_id=admin.id, title='Alta')
+    db.session.add(thread)
+    db.session.flush()
+    from app.models.assistant_thread import AssistantMessage
+
+    m = AssistantMessage(thread_id=thread.id, role='assistant', text='', blocks=blocks, model='formulario')
+    db.session.add(m)
+    db.session.commit()
+    return m
+
+
+def test_create_patient_form_matches_users_panel(app):
+    admin = _user('admin')
+    block = svc.action_block('create_user', {'role': 'jugador'}, admin)
+    keys = [f['key'] for f in block['fields']]
+    for k in ('modality', 'payment_amount', 'generate_schedule', 'start_date', 'start_time', 'therapist_id',
+              'days_of_week', 'guardian_type', 'guardian_dni', 'salary_base'):  # fmt: skip
+        assert k in keys, k
+    sections = {f['key']: f['section'] for f in block['fields']}
+    assert sections['modality'] == 'Plan y horario' and sections['guardian_dni'] == 'Apoderado'
+    salary = next(f for f in block['fields'] if f['key'] == 'salary_base')
+    assert salary['show_if'] == {'role': ['terapista']}
+    modality = next(f for f in block['fields'] if f['key'] == 'modality')
+    assert modality['options'][1]['label'].startswith('2x')
+    assert block['args']['generate_schedule'] is True  # como el panel
+
+
+def test_patient_without_plan_proposes_contract_and_sessions(app):
+    admin = _user('admin')
+    ther = _user('terapista')
+    m = _action_message(admin, [svc.action_block('create_user', {'role': 'jugador'}, admin)])
+    name = f'Paciente Flujo {uuid.uuid4().hex[:5]}'
+    _, reply = svc.run_action(admin, m.id, {'username': name, 'role': 'jugador', 'therapist_id': ther.id})
+    tools = [b['tool'] for b in reply.blocks if b['type'] == 'action']
+    assert tools == ['create_service_contract', 'schedule_patient_plan']
+    pat = User.query.filter_by(username=name).first()
+    sched = reply.blocks[-1]
+    assert sched['args']['patient_id'] == pat.id and sched['args']['therapist_id'] == ther.id
+
+    # Confirmar el segundo formulario (las sesiones) de esa misma respuesta.
+    from app.models import Appointment
+
+    idx = len(reply.blocks) - 1
+    _, done = svc.run_action(
+        admin,
+        reply.id,
+        {
+            'patient_id': pat.id,
+            'therapist_id': ther.id,
+            'modality': 2,
+            'start_date': '2027-03-01',
+            'start_time': '09:00',
+            'days_of_week': [0, 3],
+        },  # fmt: skip
+        idx,
+    )
+    assert Appointment.query.filter_by(patient_id=pat.id).count() == 8
+    db.session.refresh(reply)
+    assert reply.blocks[idx]['status'] == 'done' and reply.blocks[1 if reply.blocks[0]['type'] == 'text' else 0]
+    assert next(b for b in reply.blocks if b['type'] == 'action')['status'] == 'pending'  # el contrato sigue ahí
+    # Ya tiene sesiones: después del contrato no vuelve a proponerlas.
+    assert not [b for b in done.blocks if b['type'] == 'action' and b['tool'] == 'schedule_patient_plan']
+
+
+def test_patient_with_plan_gets_contract_and_sessions_at_once(app):
+    from app.models import Appointment
+    from app.models.contract import Contract
+
+    admin = _user('admin')
+    ther = _user('terapista')
+    m = _action_message(admin, [svc.action_block('create_user', {'role': 'jugador'}, admin)])
+    name = f'Paciente Plan {uuid.uuid4().hex[:5]}'
+    _, reply = svc.run_action(
+        admin,
+        m.id,
+        {
+            'username': name,
+            'role': 'jugador',
+            'modality': 1,
+            'payment_amount': 400,
+            'payment_frequency': 'monthly',
+            'plan_type': 'individual',
+            'generate_schedule': True,
+            'start_date': '2027-03-02',
+            'start_time': '10:00',
+            'therapist_id': ther.id,
+            'days_of_week': [1],
+        },  # fmt: skip
+    )
+    pat = User.query.filter_by(username=name).first()
+    assert Contract.query.filter_by(patient_id=pat.id).count() == 1
+    assert Appointment.query.filter_by(patient_id=pat.id).count() == 4
+    assert not [b for b in reply.blocks if b['type'] == 'action']
+    assert 'ya tiene su contrato' in ' '.join(b.get('md', '') for b in reply.blocks)
+
+
+def test_walk_in_patient_appears_by_name_in_follow_up(app):
+    admin = _user('admin')
+    m = _action_message(admin, [svc.action_block('create_user', {'role': 'jugador'}, admin)])
+    name = f'Presencial Uno {uuid.uuid4().hex[:4]}'
+    _, reply = svc.run_action(admin, m.id, {'username': name, 'role': 'jugador'})
+    assert '(ID' not in reply.text
+    contract = next(b for b in reply.blocks if b['type'] == 'action')
+    field = next(f for f in contract['fields'] if f['key'] == 'patient_id')
+    pid = contract['args']['patient_id']
+    assert any(o['value'] == pid and o['label'].startswith(name) for o in field['options'])

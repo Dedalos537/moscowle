@@ -45,12 +45,18 @@ export class MessageBlocks {
   }
 
   argsPreview(b: ActionBlock): { label: string; value: string }[] {
+    const shown = (f: ActionBlock['fields'][number]) => !f.show_if || Object.entries(f.show_if).every(([k, vals]) => vals.includes(b.args[k]));
+    const label = (f: ActionBlock['fields'][number], v: unknown) => f.options?.find((o) => String(o.value) === String(v))?.label ?? String(v);
     return b.fields
-      .filter((f) => b.args[f.key] !== undefined && b.args[f.key] !== null && b.args[f.key] !== '')
+      .filter((f) => shown(f))
+      .filter((f) => {
+        const v = b.args[f.key];
+        return v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && !v.length);
+      })
       .map((f) => {
         const v = b.args[f.key];
-        const opt = f.options?.find((o) => String(o.value) === String(v));
-        return { label: f.label, value: opt ? opt.label : Array.isArray(v) ? v.join(', ') : String(v) };
+        const value = typeof v === 'boolean' ? (v ? 'Sí' : 'No') : Array.isArray(v) ? v.map((x) => label(f, x)).join(', ') : label(f, v);
+        return { label: f.label, value };
       });
   }
 

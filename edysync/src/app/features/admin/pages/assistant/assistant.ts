@@ -365,7 +365,9 @@ export class Assistant implements OnInit, OnDestroy {
     this.actionForm = {};
     for (const f of block.fields) {
       const v = block.args[f.key];
-      this.actionForm[f.key] = Array.isArray(v) ? v.join(', ') : (v ?? (f.type === 'boolean' ? null : ''));
+      if (f.type === 'list' && f.options) this.actionForm[f.key] = Array.isArray(v) ? v : v != null ? [v] : [];
+      else if (f.input === 'datetime' && typeof v === 'string') this.actionForm[f.key] = v.replace(' ', 'T').slice(0, 16);
+      else this.actionForm[f.key] = Array.isArray(v) ? v.join(', ') : (v ?? (f.type === 'boolean' ? null : ''));
     }
     this.actionError.set(null);
     this.action.set({ message, block });
@@ -375,28 +377,43 @@ export class Assistant implements OnInit, OnDestroy {
     return (f.options ?? []).map((o) => ({ value: o.value, label: o.label }));
   }
 
-  actionReady(): boolean {
+  /** Campos que aplican con lo elegido (p. ej. el plan solo si es paciente), como en el panel de Usuarios. */
+  visibleFields(): ActionField[] {
     const a = this.action();
-    if (!a) return false;
-    return a.block.fields.every((f) => !f.required || (this.actionForm[f.key] !== '' && this.actionForm[f.key] !== null && this.actionForm[f.key] !== undefined));
+    if (!a) return [];
+    return a.block.fields.filter((f) => !f.show_if || Object.entries(f.show_if).every(([k, vals]) => vals.includes(this.actionForm[k])));
+  }
+
+  /** ¿Este campo abre un grupo nuevo del formulario? */
+  startsSection(f: ActionField, i: number): boolean {
+    const list = this.visibleFields();
+    return !!f.section && (i === 0 || list[i - 1].section !== f.section);
+  }
+
+  actionReady(): boolean {
+    if (!this.action()) return false;
+    const empty = (v: unknown) => v === '' || v === null || v === undefined || (Array.isArray(v) && !v.length);
+    return this.visibleFields().every((f) => !f.required || !empty(this.actionForm[f.key]));
   }
 
   confirmAction(): void {
     const a = this.action();
     if (!a || !this.actionReady() || this.runningAction()) return;
     const args: Record<string, unknown> = {};
-    for (const f of a.block.fields) {
+    for (const f of this.visibleFields()) {
       const raw = this.actionForm[f.key];
-      if (raw === '' || raw === null || raw === undefined) continue;
+      if (raw === '' || raw === null || raw === undefined || (Array.isArray(raw) && !raw.length)) continue;
       if (f.type === 'integer') args[f.key] = parseInt(String(raw), 10);
       else if (f.type === 'number') args[f.key] = Number(raw);
-      else if (f.type === 'list') args[f.key] = String(raw).split(',').map((x) => x.trim()).filter(Boolean);
+      else if (f.type === 'list') args[f.key] = Array.isArray(raw) ? raw : String(raw).split(',').map((x) => x.trim()).filter(Boolean);
+      else if (f.input === 'datetime') args[f.key] = String(raw).replace('T', ' ');
       else args[f.key] = raw;
     }
+    const index = a.message.blocks.indexOf(a.block);
     this.runningAction.set(true);
     this.actionError.set(null);
     this.subs.add(
-      this.api.runAction(a.message.id, args).subscribe({
+      this.api.runAction(a.message.id, args, index >= 0 ? index : undefined).subscribe({
         next: ({ message, reply }) => {
           this.runningAction.set(false);
           this.action.set(null);

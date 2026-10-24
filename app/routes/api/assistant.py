@@ -224,10 +224,12 @@ def assistant_run_action(message_id):
     """Confirmar la acción propuesta (con los datos completados en el formulario)."""
     from app.services import assistant_service as svc
 
-    args = (request.get_json(silent=True) or {}).get('args') or {}
+    body = request.get_json(silent=True) or {}
+    args = body.get('args') or {}
+    block = body.get('block') if isinstance(body.get('block'), int) else None
 
     def run():
-        updated, reply = svc.run_action(current_user, message_id, args)
+        updated, reply = svc.run_action(current_user, message_id, args, block)
         return {'message': svc.message_dict(updated), 'reply': svc.message_dict(reply)}
 
     return _call(run)

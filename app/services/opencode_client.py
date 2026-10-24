@@ -31,7 +31,41 @@ PROVIDER_ID = 'opencode'
 MODEL_ID = 'mimo-v2.6-flash-free'
 COOLDOWN = 15 * 60
 QUOTA_COOLDOWN = 60 * 60
-SLOW_COOLDOWN = 60
+SLOW_COOLDOWN = 5 * 60
+QUOTA_WORDS = (
+    'free tier',
+    'free usage',
+    'usage limit',
+    'quota',
+    'rate limit',
+    'limit reached',
+    'too many',
+    'subscribe',
+)
+
+
+def _is_quota(text):
+    low = (text or '').lower()
+    return any(k in low for k in QUOTA_WORDS)
+
+
+def _stuck_reason(session_id, inst):
+    """Si OpenCode se quedó reintentando (p. ej. «Free usage limit reached»), el motivo; si no, ''.
+
+    Con la cuota gratis agotada OpenCode no devuelve el error: reintenta y deja la petición colgada hasta el
+    timeout. Mirando el estado de la sesión se sabe en segundos y se pasa al respaldo sin hacer esperar a nadie."""
+    with contextlib.suppress(OpencodeUnavailableError, OpencodeForbiddenError, ValueError, AttributeError):
+        status = (_request('GET', '/session/status', timeout=5, inst=inst, check_block=False) or {}).get(session_id)
+        if isinstance(status, dict) and status.get('type') == 'retry' and _is_quota(status.get('message')):
+            return status.get('message')
+    with contextlib.suppress(OpencodeUnavailableError, OpencodeForbiddenError, ValueError, AttributeError, TypeError):
+        msgs = _request('GET', f'/session/{session_id}/message', timeout=5, inst=inst, check_block=False) or []
+        last = (msgs[-1] or {}).get('info') if msgs else None
+        err = _model_error(last)
+        if err and _is_quota(err):
+            return err
+    return ''
+
 
 _ENV = {'chat': ('OPENCODE_URL', 'OPENCODE_PASSWORD'), 'dev': ('OPENCODE_DEV_URL', 'OPENCODE_DEV_PASSWORD')}
 
@@ -41,6 +75,9 @@ _ALLOWED = (
     ('POST', re.compile(r'^/session/ses_[\w-]+/abort$')),
     ('DELETE', re.compile(r'^/session/ses_[\w-]+$')),
     ('GET', re.compile(r'^/permission$')),
+    # Solo lectura: ver si el modelo está reintentando por cuota agotada mientras esperamos la respuesta.
+    ('GET', re.compile(r'^/session/status$')),
+    ('GET', re.compile(r'^/session/ses_[\w-]+/message$')),
     ('POST', re.compile(r'^/permission/per_[\w-]+/reply$')),
     ('GET', re.compile(r'^/doc$')),
 )
@@ -197,26 +234,39 @@ def send(session_id, text, images=(), timeout=90, inst='chat'):
         )
     body = {'model': {'providerID': PROVIDER_ID, 'modelID': MODEL_ID}, 'parts': parts}
 
-    # Si OpenCode pide permiso para una herramienta, el mensaje se queda esperando: un vigilante responde
-    # mientras tanto (con eventlet es un greenlet).
-    done = threading.Event()
+    # El mensaje va en un hilo (con eventlet, un greenlet). Mientras tanto se responden los permisos que pida
+    # OpenCode y, cada pocos segundos, se mira si quedó reintentando por cuota: entonces se corta ya.
+    finished = threading.Event()
     perms: list = []
+    box: dict = {}
 
-    def _watch():
-        while not done.wait(1.0):
-            _answer_permissions(inst, perms)
+    def _post():
+        try:
+            box['data'] = _request('POST', f'/session/{session_id}/message', json_body=body, timeout=timeout, inst=inst)
+        except Exception as exc:  # noqa: BLE001 - se relanza en el hilo que espera
+            box['exc'] = exc
+        finally:
+            finished.set()
 
-    threading.Thread(target=_watch, daemon=True).start()
-    try:
-        data = _request('POST', f'/session/{session_id}/message', json_body=body, timeout=timeout, inst=inst)
-    finally:
-        done.set()
+    threading.Thread(target=_post, daemon=True).start()
+    waited = 0
+    while not finished.wait(1.0):
+        waited += 1
+        _answer_permissions(inst, perms)
+        if waited >= 4 and waited % 3 == 1:
+            reason = _stuck_reason(session_id, inst)
+            if reason:
+                with contextlib.suppress(OpencodeUnavailableError, OpencodeForbiddenError):
+                    _request('POST', f'/session/{session_id}/abort', timeout=5, inst=inst, check_block=False)
+                block(reason, QUOTA_COOLDOWN, inst=inst)
+                raise OpencodeUnavailableError(reason)
+    if 'exc' in box:
+        raise box['exc']
+    data = box.get('data') or {}
     info = data.get('info') or {}
     err = _model_error(info)
     if err:
-        low = err.lower()
-        quota = any(k in low for k in ('free tier', 'quota', 'rate limit', 'limit reached', 'too many'))
-        block(err, QUOTA_COOLDOWN if quota else COOLDOWN, inst=inst)
+        block(err, QUOTA_COOLDOWN if _is_quota(err) else COOLDOWN, inst=inst)
         raise OpencodeUnavailableError(err)
     out = data.get('parts') or []
     text_out = '\n'.join(p.get('text', '') for p in out if p.get('type') == 'text').strip()

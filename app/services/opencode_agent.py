@@ -332,7 +332,7 @@ def _run(user, message, *, history=None, mode='grande', confirmed_tool=None):
     def ask(text):
         t0 = time.time()
         try:
-            res = oc.send(s['sid'], text, timeout=150)
+            res = oc.send(s['sid'], text, timeout=90)
         except OpencodeUnavailableError as exc:
             _log(user.id, 'chat', t0, error=exc, tools=used)
             _sessions.pop((user.id, f'chat:{mode}'), None)
