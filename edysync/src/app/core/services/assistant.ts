@@ -4,6 +4,21 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { McpChatService } from './mcp-chat.service';
 
+/** Estado de MiMo (cuota) y modelos que se pueden elegir para responder. */
+export interface AssistantModels {
+  mimo: { enabled: boolean; available: boolean; blocked_for: number; quota: boolean; reason: string };
+  models: { key: string; label: string; blocked: boolean }[];
+}
+
+/** Archivo subido al chat (foto o documento), listo para mandarlo con la pregunta. */
+export interface AssistantUpload {
+  token: string;
+  name: string;
+  kind: 'image' | 'document';
+  size: number;
+  url: string;
+}
+
 /** Eventos de `/assistant/ask/stream`: pasos de MiMo y las herramientas MCP en vivo, y al final la respuesta. */
 export type AssistantStreamEvent =
   | { type: 'step'; text: string; tool?: string | null }
@@ -39,7 +54,16 @@ export type AssistantBlock =
   | { type: 'chart'; kind: 'line' | 'bar' | 'doughnut'; title: string; x: string[]; series: { name: string; data: (number | null)[] }[]; format: ValueFormat }
   | { type: 'table'; title: string; columns: TableColumn[]; rows: Record<string, unknown>[]; totals?: boolean }
   | { type: 'people'; title: string; items: { id: number; name: string; code: string; detail: string; amount: number | null; link: string }[] }
-  | ActionBlock;
+  | ActionBlock
+  | FileBlock;
+
+/** Archivo que dejó el asistente en el Drive (informe, documento guardado): se descarga desde el chat. */
+export interface FileBlock {
+  type: 'file';
+  name: string;
+  path: string;
+  size?: number;
+}
 
 /** Campo del formulario de una acción (sale del esquema de la herramienta). */
 export interface ActionField {
@@ -147,14 +171,34 @@ export class AssistantService {
   }
 
   /** Pregunta en vivo (SSE con fetch: renueva la sesión si venció). Cancelar la suscripción corta la petición. */
-  askStream(question: string, threadId: number | null): Observable<AssistantStreamEvent> {
+  models(): Observable<AssistantModels> {
+    return this.http.get<AssistantModels>(`${this.base}/models`);
+  }
+
+  upload(file: File): Observable<AssistantUpload> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.post<AssistantUpload>(`${this.base}/upload`, form);
+  }
+
+  /** Descarga un archivo que generó el asistente (informe, archivo guardado en el Drive). */
+  download(path: string): Observable<Blob> {
+    return this.http.get(`${this.base}/files`, { params: { path }, responseType: 'blob' });
+  }
+
+  askStream(question: string, threadId: number | null, opts: { model?: string; attachment?: AssistantUpload | null } = {}): Observable<AssistantStreamEvent> {
     return new Observable<AssistantStreamEvent>((sub) => {
       const ctrl = new AbortController();
       this.mcp
         .authFetch(`${environment.apiBaseUrl}${this.base}/ask/stream`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question, thread_id: threadId }),
+          body: JSON.stringify({
+            question,
+            thread_id: threadId,
+            model: opts.model && opts.model !== 'auto' ? opts.model : undefined,
+            attachment: opts.attachment ? { token: opts.attachment.token, name: opts.attachment.name, url: opts.attachment.url } : undefined,
+          }),
           signal: ctrl.signal,
         })
         .then(async (resp) => {

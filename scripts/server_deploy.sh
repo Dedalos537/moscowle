@@ -53,8 +53,20 @@ FAILED=0
 
 if [ "$BACKEND" = "1" ]; then
   log "Pulling origin/main..."
+  OLD_HEAD="$(cd "$DEPLOY_ROOT" && git rev-parse HEAD 2>/dev/null || echo none)"
   if cd "$DEPLOY_ROOT" && git fetch origin main 2>>"$LOG_FILE" && git reset --hard origin/main 2>>"$LOG_FILE"; then
     log "git reset to $(git rev-parse --short HEAD)"
+    # Dependencias nuevas (p. ej. pypdf): si cambió requirements.txt, se instalan antes de reiniciar.
+    if [ "$OLD_HEAD" = "none" ] || ! git diff --quiet "$OLD_HEAD" HEAD -- requirements.txt 2>/dev/null; then
+      PIP="$DEPLOY_ROOT/venv/bin/pip"
+      if [ -x "$PIP" ]; then
+        log "requirements.txt cambió: pip install..."
+        "$PIP" install -q -r requirements.txt >>"$LOG_FILE" 2>&1 && log "dependencias al día" \
+          || log "WARN: pip install falló (sigo con el reinicio)"
+      else
+        log "WARN: no encontré $PIP para instalar dependencias"
+      fi
+    fi
     log "Scheduling moscowle restart (detached systemd-run)..."
     # The deploy script runs inside the moscowle service cgroup; a direct
     # restart would kill this script mid-run. systemd-run spawns a transient

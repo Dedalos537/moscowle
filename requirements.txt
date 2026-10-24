@@ -32,6 +32,7 @@ APScheduler>=3.10.0
 Pillow>=9.0.0
 reportlab>=3.6.12
 python-docx>=0.8.11
+pypdf>=4.2.0
 twilio
 openpyxl>=3.0.0
 plotly

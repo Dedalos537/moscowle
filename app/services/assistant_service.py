@@ -174,6 +174,10 @@ FIELD_LABELS = {
     'days_of_week': 'Días de sesión',
     'salary_base': 'Base salarial (S/)',
     'contract_hours': 'Horas contratadas',
+    'folder': 'Carpeta del Drive',
+    'copies': 'Copias',
+    'color': 'A color',
+    'with_ai': 'Incluir informe terapéutico (IA)',
 }
 
 # Opciones con nombre (el esquema de la herramienta trae valores sueltos: 1, 'monthly', 0…).
@@ -230,9 +234,16 @@ FORM_LAYOUT = {
         'contract_hours': ('Contrato', {'role': ['terapista']}),
     },
 }
+FORM_LAYOUT['drive_save_upload'] = {'folder': ('Guardar en el Drive', None), 'name': ('Guardar en el Drive', None)}
+FORM_LAYOUT['print_drive_file'] = {
+    'copies': ('Impresión', None),
+    'color': ('Impresión', None),
+}
 # Valores por defecto del formulario (los mismos del panel).
 FORM_DEFAULTS = {
     'create_user': {'payment_frequency': 'monthly', 'plan_type': 'individual', 'generate_schedule': True},
+    'patient_report': {'with_ai': True},
+    'print_drive_file': {'copies': 1, 'color': True},
 }
 
 # Campos que la herramienta pide por id: nadie se sabe los ids, así que se eligen por nombre en una lista con
@@ -373,14 +384,17 @@ def _from_agent(events, step):
     return {'response': text, 'tool_calls': calls, 'provider': 'opencode', 'pending': pending}
 
 
-def _general_ai(question, user, history, step=_noop):
+def _general_ai(question, user, history, step=_noop, model=None):
     """Lo que no es una cifra ni un formulario conocido: MiMo con todas las herramientas MCP del rol (las mismas del
-    chat flotante), con el avance en vivo. Si MiMo no está, la cadena de respaldo."""
-    from app.services import opencode_agent
+    chat flotante), con el avance en vivo. Si MiMo no está, la cadena de respaldo.
+
+    model: None/'auto'/'mimo' = MiMo primero; otro (p. ej. 'groq') = ese modelo de la cadena, sin pasar por MiMo."""
+    from app.services import llm_client, opencode_agent
     from app.services.opencode_client import OpencodeUnavailableError
 
     result = None
-    if opencode_agent.enabled_for(user):
+    use_mimo = model in (None, '', 'auto', 'mimo')
+    if use_mimo and opencode_agent.enabled_for(user):
         step('Pensando con MiMo…')
         try:
             result = _from_agent(opencode_agent.run(user, SCREEN_HINT + question, history=history, mode='grande'), step)
@@ -392,13 +406,23 @@ def _general_ai(question, user, history, step=_noop):
     if result is None:
         from app.routes.mcp_routes import mcp_service
 
+        if not use_mimo:
+            step(f'Respondiendo con {model}…')
+        token = llm_client.PREFERRED_PROVIDER.set(None if use_mimo else model)
         try:
             raw = mcp_service.process_message(
-                message=SCREEN_HINT + question, user_role=user.role, user_id=user.id, mode='grande', history=history
+                message=SCREEN_HINT + question,
+                user_role=user.role,
+                user_id=user.id,
+                mode='grande',
+                history=history,
+                skip_opencode=True,
             )
         except Exception as exc:  # noqa: BLE001 - la IA puede caerse: se responde algo útil igual
             current_app.logger.warning(f'asistente: IA general no respondió: {exc}')
             raw = None
+        finally:
+            llm_client.PREFERRED_PROVIDER.reset(token)
         raw = raw or {}
         result = {
             'response': raw.get('response'),
@@ -470,6 +494,13 @@ def quick_action(question, user):
     from app.services.tools_registry import TOOL_REGISTRY
 
     q = analytics._norm(question)
+    if re.search(r'\b(informe|reporte|evolucion|historial clinico)\b', q) and user.role in ('admin', 'supervisor'):
+        # «informe de Liam», «evolución de Liam»: el informe del alumno (con el paciente ya elegido si se nombra).
+        args = {'with_ai': True}
+        _prefill_people('patient_report', q, args, user)
+        about_patient = re.search(r'\b(terapeutic[oa]|alumno|paciente|nino|nina|sesiones)\b', q)
+        if args.get('patient_id') or (about_patient and _DO.search(q)):
+            return 'patient_report', args
     if not _DO.search(q) or _ASKING.search(q):
         return None
     for pattern, staff_tool, therapist_tool, base_args in QUICK:
@@ -510,7 +541,7 @@ def _model_label(result):
     return f'{provider} (respaldo)' if provider else 'IA del centro'
 
 
-def compute(question, user, history=None, follow_ai=False, step=_noop):
+def compute(question, user, history=None, follow_ai=False, step=_noop, model=None):
     """La respuesta (sin guardar): datos del centro si se reconoce la pregunta; si no, la IA general.
 
     follow_ai: el hilo viene de una conversación con la IA (p. ej. creando un usuario). Un seguimiento como
@@ -525,7 +556,7 @@ def compute(question, user, history=None, follow_ai=False, step=_noop):
     quick = quick_action(question, user)
     if quick:
         return _action_answer(quick[0], quick[1], user, 'formulario del sistema')
-    return _general_ai(question, user, history or [], step)
+    return _general_ai(question, user, history or [], step, model)
 
 
 def _follows_ai(thread):
@@ -539,15 +570,25 @@ def _plain(blocks):
     return '\n\n'.join(b['md'] for b in blocks if b.get('type') == 'text')
 
 
-def ask(user, question, thread_id=None, step=_noop):
+def ask(user, question, thread_id=None, step=_noop, model=None, attachment=None):
     question = (question or '').strip()
-    if not question:
+    if not question and not attachment:
         raise AssistantError('Escribe una pregunta')
     if len(question) > 2000:
         raise AssistantError('La pregunta es muy larga (máx. 2000 caracteres)')
     thread = get_thread(thread_id, user, write=True) if thread_id else None
     history = _history(thread) if thread else []
-    res = compute(question, user, history, follow_ai=_follows_ai(thread), step=step)
+    if attachment:
+        from app.services import assistant_files
+
+        try:
+            res = assistant_files.analyze(attachment, question, user, step=step, model=model)
+        except assistant_files.FileError as exc:
+            raise AssistantError(str(exc)) from exc
+        label = f'📎 {attachment.get("name") or "archivo"}'
+        question = f'{label} — {question}' if question else label
+    else:
+        res = compute(question, user, history, follow_ai=_follows_ai(thread), step=step, model=model)
     now = datetime.utcnow()
     if thread is None:
         thread = AssistantThread(user_id=user.id, title=(res.get('title') or question)[:160], created_at=now)
@@ -561,13 +602,33 @@ def ask(user, question, thread_id=None, step=_noop):
         blocks=res['blocks'],
         sources=res.get('sources') or [],
         model=res.get('model'),
-        question=question,
+        question=None if attachment else question,  # un archivo no se «actualiza» volviendo a preguntar
         created_at=now,
     )
     db.session.add(answer)
     thread.updated_at = now
     db.session.commit()
     return thread, answer
+
+
+def models_status(user):
+    """Para la barra de modelo: estado de MiMo (cuota) y los modelos de respaldo que se pueden elegir."""
+    from app.services import llm_client, opencode_agent, opencode_client
+
+    mimo = opencode_client.state()
+    enabled = opencode_agent.assigned_to(user)
+    reason = mimo.get('last_error') or ''
+    return {
+        'mimo': {
+            'enabled': enabled,
+            'available': enabled and mimo['configured'] and not mimo['blocked'],
+            'blocked_for': mimo['blocked_for'],
+            'quota': opencode_client._is_quota(reason),
+            'reason': reason[:160] if mimo['blocked'] else '',
+        },
+        'models': [{'key': 'auto', 'label': 'MiMo (automático)', 'blocked': not enabled or mimo['blocked']}]
+        + llm_client.available_providers(),
+    }
 
 
 def refresh(user, message_id):
@@ -607,6 +668,9 @@ def run_action(user, message_id, args, block_index=None):
     if name not in TOOL_REGISTRY:
         raise AssistantError('Esa acción ya no existe', 404)
     clean = {k: v for k, v in (args or {}).items() if v not in (None, '', [])}
+    # Lo que no se muestra en el formulario (p. ej. el archivo subido) viaja tal cual se propuso.
+    shown = {f['key'] for f in block.get('fields') or []}
+    clean = {**{k: v for k, v in (block.get('args') or {}).items() if k not in shown}, **clean}
     result = execute_tool(name, clean, user_id=user.id, role=user.role)
     ok = isinstance(result, dict) and not result.get('error') and result.get('success', True) is not False
     message = (result or {}).get('message') if isinstance(result, dict) else None
@@ -640,6 +704,16 @@ def _next_steps(tool, args, result, user):
     proponen con el paciente ya elegido para que no quede a medias."""
     from app.models import Appointment, User
     from app.models.contract import Contract
+
+    file = (result or {}).get('file') if isinstance(result, dict) else None
+    if file and file.get('path'):
+        out = [{'type': 'file', 'name': file.get('name'), 'path': file['path'], 'size': file.get('size')}]
+        if user.role == 'admin':
+            out += [
+                {'type': 'text', 'md': '¿Lo imprimo?'},
+                action_block('print_drive_file', {'path': file['path']}, user),
+            ]
+        return out
 
     patient_id = None
     if tool == 'create_user' and (result or {}).get('role') == 'jugador':

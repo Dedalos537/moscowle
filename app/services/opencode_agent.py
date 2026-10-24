@@ -78,6 +78,13 @@ def save_settings(values, user_id=None):
 def enabled_for(user):
     if not user or not oc.configured('chat') or oc.blocked('chat'):
         return False
+    return assigned_to(user)
+
+
+def assigned_to(user):
+    """¿Este usuario usa MiMo cuando hay cuota? (aunque ahora esté en pausa: para avisarle y ofrecer otro modelo)."""
+    if not user or not oc.configured('chat'):
+        return False
     conf = settings()
     if not conf['enabled']:
         return False

@@ -252,8 +252,35 @@ def _host_of(uri):
     return m.group(1) if m else None
 
 
+def _usb_epson():
+    """URI de la Epson si está conectada por cable USB al host (CUPS la lista como usb://EPSON/...), o None."""
+    try:
+        out = subprocess.run(['lpinfo', '-v'], capture_output=True, text=True, timeout=30, check=False).stdout  # noqa: S603, S607
+    except (OSError, subprocess.SubprocessError):
+        return None
+    for line in out.splitlines():
+        parts = line.split(None, 1)
+        if len(parts) == 2 and parts[1].lower().startswith('usb://epson'):
+            return parts[1].strip()
+    return None
+
+
 def printer_info():
     uri = printer_uri()
+    if (uri or '').startswith('usb://'):
+        # Por cable: está si CUPS la sigue viendo en el puerto USB.
+        return {
+            'name': PRINTER,
+            'uri': uri,
+            'ip': None,
+            'host': None,
+            'by_name': False,
+            'usb': True,
+            'reachable': _usb_epson() == uri,
+            'mac': None,
+            'mdns': None,
+            'last_change': _load_identity().get('last_change'),
+        }
     host = _host_of(uri)
     ident = _load_identity()
     return {
@@ -303,6 +330,19 @@ def repair_printer(wait=0):
         if before['reachable']:
             found = {'ip': before['ip'], 'mac': _mac_of(before['ip']) or ident.get('mac'), 'mdns': ident.get('mdns')}
         if not found:
+            usb = _usb_epson()
+            if usb:
+                # No está en el WiFi pero sí por cable: se imprime por USB hasta que vuelva a la red.
+                if usb != before['uri']:
+                    _point_cups(usb)
+                print(f'impresora {PRINTER}: {before["uri"]} → {usb} (USB)', flush=True)
+                return {
+                    **printer_info(),
+                    'changed': usb != before['uri'],
+                    'old_uri': before['uri'],
+                    'message': 'La Epson no está en el WiFi, pero está conectada por USB: imprimo por el cable. '
+                    'El escáner por USB necesita el WiFi (o el driver de Epson en el host).',
+                }
             net = _lan_network()
             raise RuntimeError(
                 f'La Epson no está en la red del centro ({net or "LAN"}): se desconectó del WiFi. En la impresora '

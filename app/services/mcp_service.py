@@ -1032,7 +1032,15 @@ class MCPService:
     """MCP service with GLM-5.2 as primary LLM and multi-provider fallback."""
 
     def process_message(
-        self, message, user_role, user_id, mode='grande', history=None, confirmed_tool=None, telegram_mode=False
+        self,
+        message,
+        user_role,
+        user_id,
+        mode='grande',
+        history=None,
+        confirmed_tool=None,
+        telegram_mode=False,
+        skip_opencode=False,
     ):
         # PRP 009: para los roles habilitados todo pasa por opencode; si no está, sigue la cadena actual.
         try:
@@ -1042,7 +1050,7 @@ class MCPService:
             from app.services.opencode_client import OpencodeUnavailableError
 
             oc_user = db.session.get(User, int(user_id)) if user_id else None
-            if oc_user and opencode_agent.enabled_for(oc_user):
+            if oc_user and not skip_opencode and opencode_agent.enabled_for(oc_user):
                 try:
                     return opencode_agent.run_dict(
                         oc_user, message, history=history, mode=mode, confirmed_tool=confirmed_tool

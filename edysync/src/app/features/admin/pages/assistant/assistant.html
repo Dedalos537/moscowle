@@ -108,7 +108,7 @@
             <div class="as-q"><p>{{ m.text }}</p></div>
           } @else {
             <article class="as-a">
-              <app-message-blocks [blocks]="m.blocks" (review)="openAction(m, $event)" />
+              <app-message-blocks [blocks]="m.blocks" (review)="openAction(m, $event)" (download)="downloadFile($event)" />
               <footer class="as-a__foot">
                 @if (m.sources.length || m.model) {
                   <details class="as-sources">
@@ -153,6 +153,14 @@
     </div>
 
     <div class="as-dock">
+    @if (mimoDown()) {
+      <!-- Como la barra de Gemini: MiMo sin cuota → elegir otro modelo sin salir del chat -->
+      <div class="as-modelbar" role="status">
+        <fa-icon [icon]="['fas', 'circle-exclamation']" aria-hidden="true" />
+        <p><strong>MiMo {{ models()?.mimo?.quota ? 'se quedó sin cuota' : 'no responde' }}</strong> ({{ mimoBack() }}). Mientras tanto responde el modelo de respaldo.</p>
+        <app-select class="as-modelbar__pick" [ngModel]="model()" (ngModelChange)="setModel($event)" name="mb" [options]="modelOptions()" ariaLabel="Responder con" placeholder="Responder con…" />
+      </div>
+    }
     <form class="as-composer" (submit)="$event.preventDefault(); send()">
       @if (commands().length) {
         <ul class="as-cmds" role="listbox" aria-label="Comandos">
@@ -161,13 +169,30 @@
           }
         </ul>
       }
+      @if (attachment() || uploading()) {
+        <div class="as-attach">
+          <fa-icon [icon]="['fas', attachment()?.kind === 'image' ? 'image' : 'file-lines']" aria-hidden="true" />
+          <span>{{ uploading() ? 'Subiendo ' + uploading() + '…' : attachment()?.name }}</span>
+          @if (attachment()) {
+            <button type="button" (click)="attachment.set(null)" aria-label="Quitar el archivo"><fa-icon [icon]="['fas', 'xmark']" /></button>
+          }
+        </div>
+      }
       <label for="as-input" class="sr-only">Pregunta</label>
       <textarea id="as-input" #composer rows="1" [ngModel]="draft" (ngModelChange)="onDraft($event)" name="q" (keydown)="onKey($event)"
-        placeholder="Pregunta… (escribe / para ver atajos)" [disabled]="!!asking()"></textarea>
+        [placeholder]="attachment() ? '¿Qué quieres que haga con el archivo? (opcional)' : 'Pregunta… (escribe / para ver atajos)'" [disabled]="!!asking()"></textarea>
+      <div class="as-tools">
+        <input #fileInput type="file" class="sr-only" [accept]="accept" (change)="pickFile(fileInput)" tabindex="-1" aria-hidden="true" />
+        <button type="button" class="as-tool" (click)="fileInput.click()" [disabled]="!!asking() || !!uploading()"
+          aria-label="Adjuntar foto o documento" title="Adjuntar foto o documento (comprobante, boleta, PDF, Word…)">
+          <fa-icon [icon]="['fas', 'paperclip']" />
+        </button>
+        <app-select class="as-model" [ngModel]="model()" (ngModelChange)="setModel($event)" name="model" [options]="modelOptions()" ariaLabel="Modelo que responde" />
+      </div>
       @if (asking()) {
         <button type="button" class="as-send as-send--stop" (click)="stop()" aria-label="Detener" title="Detener"><fa-icon [icon]="['fas', 'stop']" /></button>
       } @else {
-        <button type="submit" class="as-send" [disabled]="!draft.trim()" aria-label="Enviar"><fa-icon [icon]="['fas', 'arrow-up']" /></button>
+        <button type="submit" class="as-send" [disabled]="(!draft.trim() && !attachment()) || !!uploading()" aria-label="Enviar"><fa-icon [icon]="['fas', 'arrow-up']" /></button>
       }
     </form>
     <p class="as-dock__note">Los números salen de los datos del centro. Revisa lo importante antes de decidir.</p>

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, input, output, signal } from '@angu
 import { RouterLink } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import DOMPurify from 'dompurify';
-import { ActionBlock, AssistantBlock, KpiItem, TableColumn, ValueFormat } from '../../../../../../core/services/assistant';
+import { ActionBlock, AssistantBlock, FileBlock, KpiItem, TableColumn, ValueFormat } from '../../../../../../core/services/assistant';
 import { PersonLabelPipe } from '../../../../../../shared/pipes/person-label.pipe';
 import { BlockChart } from '../block-chart/block-chart';
 import { formatValue } from './format';
@@ -22,6 +22,11 @@ export class MessageBlocks {
   readonly blocks = input.required<AssistantBlock[]>();
   /** «Revisar y confirmar»: la página abre el formulario de la acción. */
   readonly review = output<ActionBlock>();
+  readonly download = output<FileBlock>();
+
+  kb(bytes: number): string {
+    return bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  }
   /** Orden elegido por tabla (índice del bloque → columna y sentido). */
   readonly sort = signal<Record<number, { key: string; dir: 1 | -1 }>>({});
 

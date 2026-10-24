@@ -140,11 +140,14 @@ def assistant_ask_stream():
         with app.app_context():
             try:
                 user = db.session.get(User, user_id)
+                attachment = data.get('attachment') if isinstance(data.get('attachment'), dict) else None
                 thread, answer = svc.ask(
                     user,
                     data.get('question'),
                     data.get('thread_id'),
                     step=lambda text, tool=None: events.put({'type': 'step', 'text': text, 'tool': tool}),
+                    model=(str(data.get('model') or '').strip() or None),
+                    attachment=attachment,
                 )
                 events.put(
                     {'type': 'done', 'thread': svc.thread_dict(thread, user), 'message': svc.message_dict(answer, user)}
@@ -173,6 +176,56 @@ def assistant_ask_stream():
 
     headers = {'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'}
     return Response(stream_with_context(generate()), mimetype='text/event-stream', headers=headers)
+
+
+@api_bp.route('/assistant/models', methods=['GET'])
+@login_required
+def assistant_models():
+    """Estado de MiMo (cuota) y los modelos que se pueden elegir para responder (barra de modelo del chat)."""
+    from app.services import assistant_service as svc
+
+    return _call(lambda: svc.models_status(current_user))
+
+
+@api_bp.route('/assistant/upload', methods=['POST'])
+@login_required
+def assistant_upload():
+    """Sube una foto o documento al chat; después se manda con `ask/stream` ({attachment: {token, name}})."""
+    from app.services import assistant_files
+
+    denied = _staff_only()
+    if denied:
+        return denied
+    file = request.files.get('file')
+    if not file:
+        return jsonify({'success': False, 'message': 'Falta el archivo'}), 400
+    try:
+        return jsonify(assistant_files.save_upload(file, current_user)), 201
+    except assistant_files.FileError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+
+
+@api_bp.route('/assistant/files', methods=['GET'])
+@login_required
+def assistant_file_download():
+    """Descarga un archivo del Drive que generó el asistente (informes). El supervisor solo ve los informes."""
+    from flask import send_file
+
+    from app.services import drive_service as drive
+
+    denied = _staff_only()
+    if denied:
+        return denied
+    rel = request.args.get('path', '')
+    if current_user.role != 'admin' and not rel.startswith('Informes/'):
+        return jsonify({'success': False, 'message': 'Solo puedes descargar informes'}), 403
+    try:
+        path = drive.resolve(rel)
+    except drive.DriveError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), exc.status
+    if path.is_dir():
+        return jsonify({'success': False, 'message': 'Es una carpeta'}), 400
+    return send_file(path, as_attachment=True, download_name=path.name, max_age=0)
 
 
 @api_bp.route('/assistant/messages/<int:message_id>/refresh', methods=['POST'])
