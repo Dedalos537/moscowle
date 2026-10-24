@@ -1,4 +1,4 @@
-<!-- Acciones en la barra superior (así el chat usa toda la altura) -->
+<!-- Barra superior: solo mostrar/ocultar la lista (lo demás vive en la lista, sin ruido visual) -->
 <ng-template #headerActions>
   <div class="as-hdr">
     <button type="button" class="as-hdr__btn as-hdr__btn--list" (click)="listOpen.set(true)" aria-label="Ver conversaciones" title="Conversaciones">
@@ -9,53 +9,33 @@
       <fa-icon [icon]="['fas', collapsed() ? 'angles-right' : 'angles-left']" aria-hidden="true" />
     </button>
     @if (current(); as t) {
-      <span class="as-hdr__thread">
-      @if (t.mine) {
-        <button type="button" class="as-hdr__btn" [class.is-on]="t.pinned" (click)="toggle('pinned')" [attr.aria-pressed]="t.pinned" [attr.aria-label]="t.pinned ? 'Quitar de fijadas' : 'Fijar'" title="Fijar"><fa-icon [icon]="['fas', 'thumbtack']" /></button>
-        <button type="button" class="as-hdr__btn" [class.is-on]="t.shared" (click)="toggle('shared')" [attr.aria-pressed]="t.shared" aria-label="Compartir con el equipo" title="Compartir con el equipo"><fa-icon [icon]="['fas', 'share-nodes']" /></button>
-        <button type="button" class="as-hdr__btn" (click)="openSchedule()" aria-label="Programar reporte" title="Recibir esto cada día o semana"><fa-icon [icon]="['fas', 'clock']" /></button>
-        <button type="button" class="as-hdr__btn" (click)="rename()" aria-label="Cambiar nombre" title="Cambiar nombre"><fa-icon [icon]="['fas', 'pen']" /></button>
-        <button type="button" class="as-hdr__btn" (click)="remove()" aria-label="Borrar conversación" title="Borrar"><fa-icon [icon]="['fas', 'trash']" /></button>
-      } @else {
-        <span class="as-hdr__chip">De {{ t.author }} · solo lectura</span>
-      }
-      </span>
+      @if (!t.mine) { <span class="as-hdr__chip">De {{ t.author }} · solo lectura</span> }
     }
-    <button type="button" class="as-hdr__new" (click)="select(null)" aria-label="Nueva conversación" title="Nueva conversación">
-      <fa-icon [icon]="['fas', 'pen-to-square']" aria-hidden="true" /><span>Nueva conversación</span>
-    </button>
   </div>
 </ng-template>
 
 <div class="as" [class.as--list-open]="listOpen()" [class.as--collapsed]="collapsed()">
   <!-- Conversaciones -->
   <aside class="as-list" aria-label="Conversaciones">
-    <div class="as-list__top">
-      <button type="button" class="as-new" (click)="select(null)">
-        <fa-icon [icon]="['fas', 'pen-to-square']" aria-hidden="true" /> Nueva conversación
-      </button>
-    </div>
-    @if (current()?.mine) {
-      <div class="as-list__thread" role="group" aria-label="Esta conversación">
-        <button type="button" class="as-icon" [class.is-on]="current()!.pinned" (click)="toggle('pinned')" aria-label="Fijar"><fa-icon [icon]="['fas', 'thumbtack']" /></button>
-        <button type="button" class="as-icon" [class.is-on]="current()!.shared" (click)="toggle('shared')" aria-label="Compartir"><fa-icon [icon]="['fas', 'share-nodes']" /></button>
-        <button type="button" class="as-icon" (click)="listOpen.set(false); openSchedule()" aria-label="Programar reporte"><fa-icon [icon]="['fas', 'clock']" /></button>
-        <button type="button" class="as-icon" (click)="listOpen.set(false); rename()" aria-label="Cambiar nombre"><fa-icon [icon]="['fas', 'pen']" /></button>
-        <button type="button" class="as-icon" (click)="listOpen.set(false); remove()" aria-label="Borrar"><fa-icon [icon]="['fas', 'trash']" /></button>
-      </div>
-    }
     <label class="as-search">
       <fa-icon [icon]="['fas', 'magnifying-glass']" aria-hidden="true" />
       <input type="search" placeholder="Buscar…" aria-label="Buscar conversaciones" [ngModel]="search()" (ngModelChange)="search.set($event)" />
     </label>
     <nav class="as-groups">
-      @for (g of [{ label: 'Fijadas', items: pinned() }, { label: 'Mías', items: mine() }, { label: 'Compartidas conmigo', items: shared() }]; track g.label) {
-        @if (g.items.length) {
-          <p class="as-group">{{ g.label }}</p>
+      @for (g of [{ key: 'pinned', label: 'Fijadas', items: pinned() }, { key: 'mine', label: 'Mías', items: mine() }, { key: 'shared', label: 'Compartidas conmigo', items: shared() }]; track g.key) {
+        @if (g.items.length || g.key === 'mine') {
+          <div class="as-group">
+            <span>{{ g.label }}</span>
+            @if (g.key === 'mine') {
+              <button type="button" class="as-group__new" (click)="select(null)" aria-label="Nueva conversación" title="Nueva conversación">
+                <fa-icon [icon]="['fas', 'pen-to-square']" aria-hidden="true" />
+              </button>
+            }
+          </div>
           <ul role="list">
             @for (t of g.items; track t.id) {
-              <li>
-                <button type="button" class="as-item" [class.is-on]="current()?.id === t.id" (click)="select(t)" [attr.aria-current]="current()?.id === t.id ? 'true' : null">
+              <li class="as-row" [class.is-on]="current()?.id === t.id" [class.is-menu]="menu()?.thread?.id === t.id">
+                <button type="button" class="as-item" (click)="select(t)" [attr.aria-current]="current()?.id === t.id ? 'true' : null">
                   <span class="as-item__title">{{ t.title }}</span>
                   <span class="as-item__meta">
                     @if (t.shared) { <fa-icon [icon]="['fas', 'share-nodes']" aria-label="Compartida" /> }
@@ -63,6 +43,12 @@
                     {{ t.updated_at | date: 'd MMM, HH:mm' }}
                   </span>
                 </button>
+                @if (t.mine) {
+                  <button type="button" class="as-row__more" (click)="openMenu($event, t)" aria-haspopup="menu"
+                    [attr.aria-expanded]="menu()?.thread?.id === t.id" [attr.aria-label]="'Acciones de ' + t.title">
+                    <fa-icon [icon]="['fas', 'ellipsis-vertical']" aria-hidden="true" />
+                  </button>
+                }
               </li>
             }
           </ul>
@@ -71,6 +57,19 @@
       @if (!threads().length) { <p class="as-empty-list">Tus conversaciones aparecerán aquí.</p> }
     </nav>
   </aside>
+
+  <!-- Acciones de una conversación: tarjeta al costado del botón ⋯ -->
+  @if (menu(); as mn) {
+    <div class="as-menu-scrim" (click)="menu.set(null)"></div>
+    <div class="as-menu" role="menu" [style.top.px]="mn.top" [style.left.px]="mn.left" (keydown.escape)="menu.set(null)">
+      <button type="button" role="menuitem" (click)="menuAct('pinned')"><fa-icon [icon]="['fas', 'thumbtack']" aria-hidden="true" />{{ mn.thread.pinned ? 'Quitar de fijadas' : 'Fijar' }}</button>
+      <button type="button" role="menuitem" (click)="menuAct('shared')"><fa-icon [icon]="['fas', 'share-nodes']" aria-hidden="true" />{{ mn.thread.shared ? 'Dejar de compartir' : 'Compartir' }}</button>
+      <button type="button" role="menuitem" (click)="menuAct('schedule')"><fa-icon [icon]="['fas', 'clock']" aria-hidden="true" />Programar reporte</button>
+      <button type="button" role="menuitem" (click)="menuAct('rename')"><fa-icon [icon]="['fas', 'pen']" aria-hidden="true" />Cambiar nombre</button>
+      <hr />
+      <button type="button" role="menuitem" class="is-danger" (click)="menuAct('remove')"><fa-icon [icon]="['fas', 'trash']" aria-hidden="true" />Borrar</button>
+    </div>
+  }
   <button type="button" class="as-scrim" aria-label="Cerrar conversaciones" (click)="listOpen.set(false)"></button>
 
   <!-- Conversación -->
