@@ -60,6 +60,9 @@ export class Assistant implements OnInit, OnDestroy {
   readonly suggestions = signal<string[]>([]);
   readonly loadingThread = signal(false);
   readonly asking = signal<string | null>(null);
+  /** Lo que va haciendo MiMo mientras responde (pasos y herramientas MCP), en vivo. */
+  readonly steps = signal<string[]>([]);
+  private askSub: Subscription | null = null;
   readonly listOpen = signal(false);
   /** Lista de conversaciones oculta (en PC); se recuerda en este navegador. */
   readonly collapsed = signal(this.readCollapsed());
@@ -226,12 +229,24 @@ export class Assistant implements OnInit, OnDestroy {
     const question = (text ?? this.draft).trim();
     if (!question || this.asking()) return;
     this.asking.set(question);
+    this.steps.set([]);
     this.onDraft('');
     const threadId = this.current()?.mine === false ? null : (this.current()?.id ?? null);
     this.scrollDown();
-    this.subs.add(
-      this.api.ask(question, threadId).subscribe({
-        next: ({ thread, message }) => {
+    this.askSub = this.api.askStream(question, threadId).subscribe({
+      next: (ev) => {
+        if (ev.type === 'step') {
+          this.steps.update((l) => (l[l.length - 1] === ev.text ? l : [...l, ev.text].slice(-6)));
+          this.scrollDown();
+          return;
+        }
+        if (ev.type === 'error') {
+          this.asking.set(null);
+          this.onDraft(question);
+          this.toast.show(ev.message || 'No pude responder ahora. Intenta de nuevo.', 'error');
+          return;
+        }
+        const { thread, message } = ev;
           const user: AssistantMessage = { id: -Date.now(), role: 'user', text: question, blocks: [], sources: [], model: null, question: null, feedback: null, created_at: new Date().toISOString() };
           if (this.current()?.id === thread.id) {
             this.messages.update((m) => [...m, user, message]);
@@ -244,14 +259,23 @@ export class Assistant implements OnInit, OnDestroy {
           this.asking.set(null);
           this.loadThreads();
           this.scrollDown();
-        },
-        error: (err) => {
-          this.asking.set(null);
-          this.onDraft(question);
-          this.toast.show(err?.error?.message || 'No pude responder ahora. Intenta de nuevo.', 'error');
-        },
-      }),
-    );
+      },
+      error: (err) => {
+        this.asking.set(null);
+        this.onDraft(question);
+        this.toast.show(err?.message || 'No pude responder ahora. Intenta de nuevo.', 'error');
+      },
+    });
+    this.subs.add(this.askSub);
+  }
+
+  /** Deja de esperar la respuesta (lo que MiMo ya hizo queda hecho). */
+  stop(): void {
+    this.askSub?.unsubscribe();
+    this.askSub = null;
+    const q = this.asking();
+    this.asking.set(null);
+    if (q) this.onDraft(q);
   }
 
   refresh(m: AssistantMessage): void {

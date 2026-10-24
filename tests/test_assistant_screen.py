@@ -12,9 +12,9 @@ from app.services import assistant_analytics as analytics
 from app.services import assistant_service as svc
 
 
-def _user(role, **kw):
+def _user(role, name=None, **kw):
     tag = uuid.uuid4().hex[:8]
-    u = User(username=f'{role[:3]}{tag}', email=f'{tag}@gmail.com', password='x', role=role, **kw)
+    u = User(username=name or f'{role[:3]}{tag}', email=f'{tag}@gmail.com', password='x', role=role, **kw)
     db.session.add(u)
     db.session.commit()
     return u
@@ -203,7 +203,7 @@ def test_follow_up_stays_with_the_ai_conversation(app, monkeypatch):
             {'response': 'Falta el correo.', 'provider': 'opencode'},
         ],
     )
-    thread, _ = svc.ask(admin, 'puedes crear un usuario?')
+    thread, _ = svc.ask(admin, 'tengo una duda con los permisos de un usuario')
     _, follow = svc.ask(admin, '¿qué falta?', thread.id)
     assert follow.blocks[0]['md'] == 'Falta el correo.'  # antes se iba al análisis de «asistencia»
     assert len(calls) == 2 and calls[1]['history']  # con el historial de la conversación
@@ -245,3 +245,68 @@ def test_pending_action_saved_before_gets_todays_form(app):
     [fresh] = svc._fresh_blocks([old], admin)
     patient = next(f for f in fresh['fields'] if f['key'] == 'patient_id')
     assert patient['type'] == 'enum' and patient['options'] and fresh['args'] == old['args']
+
+
+def _sse(resp):
+    import json
+
+    return [json.loads(line[6:]) for line in resp.get_data(as_text=True).splitlines() if line.startswith('data: ')]
+
+
+def test_stream_quick_form_without_waiting_for_the_model(client, app, monkeypatch):
+    admin = _user('admin')
+    pat = _user(
+        'jugador', name=f'Liam Gonzales {uuid.uuid4().hex[:4].translate(str.maketrans("0123456789", "ghijklmnop"))}'
+    )
+    db.session.commit()
+
+    def boom(*a, **k):
+        raise AssertionError('no debe llamar a la IA para abrir un formulario conocido')
+
+    monkeypatch.setattr(svc, '_general_ai', boom)
+    r = client.post('/api/assistant/ask/stream', json={'question': 'quisiera crear un usuario'}, headers=_h(admin))
+    assert r.status_code == 200 and r.mimetype == 'text/event-stream'
+    done = _sse(r)[-1]
+    assert done['type'] == 'done'
+    block = done['message']['blocks'][1]
+    assert block['type'] == 'action' and block['tool'] == 'create_user'
+
+    r = client.post(
+        '/api/assistant/ask/stream',
+        json={'question': f'hazme un contrato para {pat.username}'},
+        headers=_h(admin),
+    )
+    block = _sse(r)[-1]['message']['blocks'][1]
+    assert block['tool'] == 'create_service_contract' and block['args']['patient_id'] == pat.id
+
+
+def test_stream_shows_mimo_steps_and_confirm_form(client, app, monkeypatch):
+    from app.services import opencode_agent
+
+    admin = _user('admin')
+    db.session.commit()
+
+    def fake_run(user, message, **kw):
+        yield {'type': 'thinking', 'content': 'Buscando al paciente'}
+        yield {'type': 'tool_call', 'name': 'list_patients', 'args': {}}
+        yield {'type': 'tool_result', 'name': 'list_patients', 'result': {}, 'success': True}
+        yield {'type': 'confirm', 'name': 'create_user', 'args': {'username': 'Jorge Manuel Gregorio'}}
+        yield {'type': 'done', 'tool_calls': []}
+
+    monkeypatch.setattr(opencode_agent, 'enabled_for', lambda u: True)
+    monkeypatch.setattr(opencode_agent, 'run', fake_run)
+    r = client.post('/api/assistant/ask/stream', json={'question': 'el de Jorge, por favor'}, headers=_h(admin))
+    evs = _sse(r)
+    steps = [e['text'] for e in evs if e['type'] == 'step']
+    assert 'Buscando al paciente' in steps and any(s.startswith('Consultando') for s in steps)
+    msg = evs[-1]['message']
+    assert msg['model'] == 'MiMo (opencode)'
+    assert msg['blocks'][1]['tool'] == 'create_user' and msg['blocks'][1]['args']['username'] == 'Jorge Manuel Gregorio'
+
+
+def test_quick_action_skips_questions():
+    class U:
+        role = 'admin'
+
+    assert svc.quick_action('¿cuántos pacientes nuevos hubo?', U()) is None
+    assert svc.quick_action('cómo se crea un contrato', U()) is None

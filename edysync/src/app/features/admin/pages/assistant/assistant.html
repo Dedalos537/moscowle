@@ -136,7 +136,17 @@
         }
         @if (asking(); as q) {
           <div class="as-q"><p>{{ q }}</p></div>
-          <div class="as-thinking" role="status"><span></span><span></span><span></span> Consultando los datos del centro…</div>
+          <div class="as-work" role="status" aria-live="polite">
+            @for (st of steps(); track $index; let last = $last) {
+              <p class="as-work__step" [class.is-now]="last">
+                @if (last) { <span class="as-work__dots"><span></span><span></span><span></span></span> }
+                @else { <fa-icon [icon]="['fas', 'check']" aria-hidden="true" /> }
+                {{ st }}
+              </p>
+            } @empty {
+              <p class="as-work__step is-now"><span class="as-work__dots"><span></span><span></span><span></span></span> Pensando…</p>
+            }
+          </div>
         }
       }
       </div>
@@ -154,7 +164,11 @@
       <label for="as-input" class="sr-only">Pregunta</label>
       <textarea id="as-input" #composer rows="1" [ngModel]="draft" (ngModelChange)="onDraft($event)" name="q" (keydown)="onKey($event)"
         placeholder="Pregunta… (escribe / para ver atajos)" [disabled]="!!asking()"></textarea>
-      <button type="submit" class="as-send" [disabled]="!draft.trim() || !!asking()" aria-label="Enviar"><fa-icon [icon]="['fas', 'arrow-up']" /></button>
+      @if (asking()) {
+        <button type="button" class="as-send as-send--stop" (click)="stop()" aria-label="Detener" title="Detener"><fa-icon [icon]="['fas', 'stop']" /></button>
+      } @else {
+        <button type="submit" class="as-send" [disabled]="!draft.trim()" aria-label="Enviar"><fa-icon [icon]="['fas', 'arrow-up']" /></button>
+      }
     </form>
     <p class="as-dock__note">Los números salen de los datos del centro. Revisa lo importante antes de decidir.</p>
     </div>
