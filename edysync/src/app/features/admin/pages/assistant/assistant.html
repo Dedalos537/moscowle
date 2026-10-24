@@ -110,7 +110,7 @@
             <article class="as-a">
               <app-message-blocks [blocks]="m.blocks" (review)="openAction(m, $event)" />
               <footer class="as-a__foot">
-                @if (m.sources.length) {
+                @if (m.sources.length || m.model) {
                   <details class="as-sources">
                     <summary><fa-icon [icon]="['fas', 'circle-info']" aria-hidden="true" /> De dónde sale</summary>
                     <ul>

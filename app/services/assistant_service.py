@@ -76,19 +76,35 @@ def thread_dict(thread, user, with_messages=False):
         'updated_at': (thread.updated_at or thread.created_at).isoformat() + 'Z',
     }
     if with_messages:
-        out['messages'] = [message_dict(m) for m in thread.messages.all()]
+        out['messages'] = [message_dict(m, user) for m in thread.messages.all()]
         out['schedules'] = [
             schedule_dict(s) for s in AssistantSchedule.query.filter_by(thread_id=thread.id, user_id=user.id).all()
         ]
     return out
 
 
-def message_dict(m):
+def _fresh_blocks(blocks, user):
+    """Una acción aún sin confirmar se muestra con el formulario de hoy (p. ej. paciente por nombre, no por id),
+    aunque se haya propuesto antes de un cambio; lo ya escrito por el usuario se conserva."""
+    out = []
+    for b in blocks or []:
+        item = b
+        if b.get('type') == 'action' and b.get('status') == 'pending' and b.get('tool'):
+            try:
+                fresh = action_block(b['tool'], b.get('args'), user)
+                item = {**b, 'fields': fresh['fields'], 'title': fresh['title']}
+            except Exception:  # noqa: BLE001 - herramienta retirada: queda como se guardó
+                pass
+        out.append(item)
+    return out
+
+
+def message_dict(m, user=None):
     return {
         'id': m.id,
         'role': m.role,
         'text': m.text,
-        'blocks': m.blocks or [],
+        'blocks': _fresh_blocks(m.blocks, user) if user is not None else m.blocks or [],
         'sources': m.sources or [],
         'model': m.model,
         'question': m.question,
@@ -266,8 +282,16 @@ def _general_ai(question, user, history):
         'sources': [
             {'tool': t.get('name') or t.get('tool'), 'scope': 'IA'} for t in (result or {}).get('tool_calls') or []
         ],
-        'model': (result or {}).get('provider') or 'IA del centro',
+        'model': _model_label(result),
     }
+
+
+def _model_label(result):
+    """Quién respondió, en palabras: «MiMo» o el respaldo (Ollama, Groq…) cuando MiMo no estuvo disponible."""
+    provider = (result or {}).get('provider') or ''
+    if provider == 'opencode':
+        return 'MiMo (opencode)'
+    return f'{provider} (respaldo)' if provider else 'IA del centro'
 
 
 def compute(question, user, history=None, follow_ai=False):
