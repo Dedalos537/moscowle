@@ -97,7 +97,7 @@ class AdminService:
         return True, 'Asignación exitosa'
 
     def create_user(self, data):
-        email = data.get('email', '').strip().lower()
+        email = (data.get('email') or '').strip().lower()
         role = data.get('role')
         username = data.get('username')
 
