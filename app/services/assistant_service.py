@@ -6,6 +6,7 @@
   las compartidas por supervisores de su misma sede (nunca datos de todo el centro).
 """
 
+import re
 from datetime import datetime, timedelta
 
 from flask import current_app
@@ -129,6 +130,33 @@ FIELD_LABELS = {
     'notes': 'Notas',
     'description': 'Descripción',
     'reason': 'Motivo',
+    'password': 'Contraseña temporal',
+    'document_number': 'DNI del paciente',
+    'date_of_birth': 'Fecha de nacimiento',
+    'sex': 'Sexo',
+    'guardian_type': 'Tipo de apoderado',
+    'guardian_dni': 'DNI del apoderado',
+    'preliminary_diagnosis': 'Diagnóstico preliminar',
+    'therapy_goals': 'Objetivos de terapia',
+    'start_date': 'Fecha de inicio',
+    'end_date': 'Fecha de fin',
+    'total_amount': 'Monto total (S/)',
+    'installments': 'Número de cuotas',
+    'patient_id': 'Paciente',
+    'therapist_id': 'Terapeuta',
+    'assigned_therapist_id': 'Terapeuta asignado',
+    'user_id': 'Usuario',
+    'assignee_id': 'Responsable',
+}
+
+# Campos que la herramienta pide por id: nadie se sabe los ids, así que se eligen por nombre en una lista con
+# búsqueda y se manda el id. (roles que entran en la lista)
+PERSON_FIELDS = {
+    'patient_id': ('jugador',),
+    'therapist_id': ('terapista',),
+    'assigned_therapist_id': ('terapista',),
+    'user_id': None,
+    'assignee_id': ('admin', 'supervisor', 'terapista'),
 }
 ROLE_OPTIONS = [
     {'value': 'jugador', 'label': 'Paciente'},
@@ -138,10 +166,37 @@ ROLE_OPTIONS = [
 ]
 
 
-def _field(key, spec, required):
+def _people(roles, user):
+    """Personas para un campo de id, «Nombre · código»; el supervisor solo ve las de su sede."""
+    q = User.query.filter(User.is_active.isnot(False))
+    if roles:
+        q = q.filter(User.role.in_(roles))
+    if user is not None and user.role == 'supervisor':
+        from app.services.assistant_analytics import scope_for
+
+        try:
+            q = q.filter(User.sede_id == scope_for(user))
+        except Exception:  # noqa: BLE001 - sin sede asignada: lista vacía, el backend igual valida
+            return []
+    rows = q.order_by(User.username).limit(1000).all()
+    return [{'value': u.id, 'label': f'{u.username} · {u.login_code}' if u.login_code else u.username} for u in rows]
+
+
+def _short_title(text):
+    """«Crea un contrato de servicio para un paciente con…» → «Crea un contrato de servicio»."""
+    t = re.split(r'[:.(]', text)[0].strip()
+    if len(t) > 44:
+        cuts = [i for i in (t.find(w, 12) for w in (' con ', ' para ', ' y ', ' de un ', ' a un ')) if i > 0]
+        if cuts:
+            t = t[: min(cuts)]
+    return t[:80]
+
+
+def _field(key, spec, required, user=None):
     """Campo del formulario de una acción, a partir del esquema JSON de la herramienta."""
     kind = spec.get('type') or 'string'
     default_label = (spec.get('description') or key.replace('_', ' ')).split('(')[0].split(':')[0].split('.')[0]
+    default_label = re.sub(r'\s*(YYYY-MM-DD|HH:MM)\b.*', '', default_label)
     out = {
         'key': key,
         'label': FIELD_LABELS.get(key) or default_label.strip()[:60] or key,
@@ -159,18 +214,22 @@ def _field(key, spec, required):
 
         sedes = Sede.query.filter(db.or_(Sede.is_active.is_(True), Sede.is_active.is_(None))).order_by(Sede.name).all()
         out.update(type='enum', options=[{'value': x.id, 'label': x.name} for x in sedes])
+    if key in PERSON_FIELDS and kind == 'integer':
+        out.update(type='enum', options=_people(PERSON_FIELDS[key], user), searchable=True)
+    if out['type'] == 'enum' and len(out.get('options') or []) > 8:
+        out['searchable'] = True
     return out
 
 
-def action_block(name, args):
+def action_block(name, args, user=None):
     """Bloque de acción por confirmar: los campos salen del esquema de la herramienta, con lo que ya dijo el usuario."""
     from app.services.tools_registry import TOOL_REGISTRY
 
     spec = TOOL_REGISTRY.get(name) or {}
     params = (spec.get('parameters') or {}).get('properties') or {}
     required = set((spec.get('parameters') or {}).get('required') or [])
-    fields = [_field(k, v, required) for k, v in params.items()]
-    title = (spec.get('description') or name).split('.')[0][:120]
+    fields = [_field(k, v, required, user) for k, v in params.items()]
+    title = _short_title(spec.get('description') or name)
     return {'type': 'action', 'tool': name, 'title': title, 'args': args or {}, 'fields': fields, 'status': 'pending'}
 
 
@@ -191,7 +250,7 @@ def _general_ai(question, user, history):
     )
     pending = (result or {}).get('pending_tool') if (result or {}).get('requires_confirmation') else None
     if pending and pending.get('name'):
-        block = action_block(pending['name'], pending.get('args'))
+        block = action_block(pending['name'], pending.get('args'), user)
         return {
             'title': block['title'][:80],
             'blocks': [

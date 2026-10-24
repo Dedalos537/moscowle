@@ -40,6 +40,8 @@ export interface ActionField {
   type: 'string' | 'integer' | 'number' | 'boolean' | 'enum' | 'list' | 'object';
   required: boolean;
   options?: { value: string | number; label: string }[];
+  /** Lista larga (personas, sedes): se busca por nombre y se manda el id. */
+  searchable?: boolean;
 }
 
 /** Acción que propuso la IA (crear usuario, registrar pago…): se revisa en un formulario y se confirma. */
