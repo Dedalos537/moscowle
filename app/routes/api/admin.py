@@ -7,9 +7,7 @@ from app.routes.api import api_bp
 from app.routes.api._shared import (
     AssignTherapistSchema,
     EmailService,
-    Message,
     Sede,
-    SessionMetrics,
     UpdateUserSchema,
     admin_service,
     api_response,
@@ -370,17 +368,20 @@ def api_admin_delete_user():
     if u.email == (os.getenv('ADMIN_EMAIL') or 'diegocenteno537@gmail.com'):
         return jsonify({'success': False, 'message': 'No puedes borrar al admin principal'}), 400
     try:
-        Message.query.filter((Message.sender_id == u.id) | (Message.receiver_id == u.id)).delete()
-        Appointment.query.filter((Appointment.therapist_id == u.id) | (Appointment.patient_id == u.id)).delete()
-        SessionMetrics.query.filter(SessionMetrics.user_id == u.id).delete()
-        Payment.query.filter(Payment.patient_id == u.id).delete()
+        from app.services.user_purge import purge_user
 
-        db.session.delete(u)
+        purge_user(u)
         db.session.commit()
         return jsonify({'success': True})
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 500
+        current_app.logger.exception('delete-user %s falló', user_id)
+        return jsonify(
+            {
+                'success': False,
+                'message': 'No se pudo eliminar: tiene datos que lo impiden. Cámbialo a Retirado y avísanos.',
+            }
+        ), 500
 
 
 @api_bp.route('/admin/profile', methods=['POST'])
