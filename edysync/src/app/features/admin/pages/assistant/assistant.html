@@ -200,7 +200,8 @@
 <app-modal [isOpen]="!!action()" [title]="action()?.block?.title || 'Confirmar'" (close)="action.set(null)" size="lg">
   @if (action(); as a) {
     <form class="as-form" (submit)="$event.preventDefault(); confirmAction()">
-      @for (f of a.block.fields; track f.key) {
+      @for (f of visibleFields(); track f.key; let i = $index) {
+        @if (startsSection(f, i)) { <h4 class="as-form__section">{{ f.section }}</h4> }
         <label class="as-field" [class.as-field--wide]="f.type === 'list' || f.key === 'notes' || f.key === 'therapy_goals' || f.key === 'description'">
           <span>{{ f.label }} @if (f.required) { <em class="as-req" aria-label="obligatorio">*</em> }</span>
           @switch (f.type) {
@@ -212,11 +213,15 @@
               <app-select [(ngModel)]="actionForm[f.key]" [name]="f.key" [options]="yesNo" [ariaLabel]="f.label" placeholder="Elegir…" />
             }
             @case ('list') {
-              <input class="input-field" [name]="f.key" [(ngModel)]="actionForm[f.key]" placeholder="Separa con comas" />
+              @if (f.options) {
+                <app-select [(ngModel)]="actionForm[f.key]" [name]="f.key" [options]="enumOptions(f)" [ariaLabel]="f.label" [multiple]="true" placeholder="Elegir…" />
+              } @else {
+                <input class="input-field" [name]="f.key" [(ngModel)]="actionForm[f.key]" placeholder="Separa con comas" />
+              }
             }
             @default {
               <input class="input-field" [name]="f.key" [(ngModel)]="actionForm[f.key]"
-                [type]="f.type === 'integer' || f.type === 'number' ? 'number' : f.key.includes('email') ? 'email' : f.key.includes('date') ? 'date' : 'text'" />
+                [type]="f.input === 'datetime' ? 'datetime-local' : f.input === 'date' ? 'date' : f.input === 'time' ? 'time' : f.type === 'integer' || f.type === 'number' ? 'number' : f.key.includes('email') ? 'email' : 'text'" />
             }
           }
         </label>

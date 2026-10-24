@@ -1365,8 +1365,35 @@ def handle_create_full_patient(username, sede_id, assigned_therapist_id, **kwarg
                 'description': "Rol: admin, supervisor, terapista o jugador (si dicen 'paciente' usar jugador)",
             },
             'phone': {'type': 'string', 'description': 'Telefono (opcional)'},
-            'sede_id': {'type': 'integer', 'description': 'ID de la sede (opcional)'},
+            'sede_id': {'type': 'integer', 'description': 'ID de la sede del paciente (opcional)'},
+            'sede_ids': {
+                'type': 'array',
+                'items': {'type': 'integer'},
+                'description': 'Sedes del terapeuta o supervisor',
+            },
+            # Plan y horario del paciente (lo mismo que el panel «Crear usuario»): con modalidad y monto se crea el
+            # contrato con sus cuotas; con generate_schedule, las sesiones del primer mes.
+            'modality': {'type': 'integer', 'enum': [1, 2, 3], 'description': 'Sesiones por semana: 1, 2 o 3'},
+            'payment_frequency': {'type': 'string', 'enum': ['monthly', 'biweekly', 'weekly']},
+            'plan_type': {'type': 'string', 'enum': ['individual', 'group']},
+            'payment_amount': {'type': 'number', 'description': 'Monto a pagar en soles'},
+            'generate_schedule': {'type': 'boolean', 'description': 'Generar el horario de sesiones automáticamente'},
+            'evaluation_date': {'type': 'string', 'description': 'Fecha de la sesión de evaluación YYYY-MM-DD'},
+            'start_date': {'type': 'string', 'description': 'Fecha de inicio de las sesiones YYYY-MM-DD'},
+            'start_time': {'type': 'string', 'description': 'Hora de las sesiones HH:MM'},
+            'therapist_id': {'type': 'integer', 'description': 'Terapeuta de las sesiones'},
+            'days_of_week': {
+                'type': 'array',
+                'items': {'type': 'integer'},
+                'description': 'Días de sesión: 0=lunes … 5=sábado',
+            },
             'guardian': {'type': 'string', 'description': 'Nombre del apoderado (si es menor, opcional)'},
+            'guardian_type': {'type': 'string', 'enum': ['padre', 'madre', 'tutor', 'otro']},
+            'guardian_dni': {'type': 'string', 'description': 'DNI del apoderado'},
+            'guardian_contact': {'type': 'string', 'description': 'Teléfono o correo del apoderado'},
+            # Contrato del terapeuta
+            'salary_base': {'type': 'number', 'description': 'Base salarial del terapeuta en soles'},
+            'contract_hours': {'type': 'integer', 'description': 'Horas contratadas del terapeuta'},
         },
         'required': ['username', 'role'],
     },
@@ -1385,24 +1412,42 @@ def handle_create_user(username, role, email=None, **kwargs):
     if not username or not str(username).strip():
         return {'error': 'El nombre (username) es obligatorio para crear el usuario.'}
 
+    def _text(key):
+        return (str(kwargs.get(key) or '')).strip() or None
+
+    data = {
+        'username': str(username).strip(),
+        'email': (email or '').strip() or None,
+        'role': role,
+        'phone': _text('phone'),
+        'guardian': _text('guardian'),
+        'sede_id': kwargs.get('sede_id'),
+    }
+    # El resto de campos del panel «Crear usuario» pasan tal cual (AdminService ya sabe qué hacer con cada uno).
+    for key in (
+        'sede_ids', 'modality', 'payment_frequency', 'plan_type', 'payment_amount', 'generate_schedule',
+        'evaluation_date', 'start_date', 'start_time', 'therapist_id', 'days_of_week',
+        'guardian_type', 'guardian_dni', 'guardian_contact', 'salary_base', 'contract_hours',
+    ):  # fmt: skip
+        if kwargs.get(key) not in (None, '', []):
+            data[key] = kwargs[key]
+    if role == 'jugador' and 'modality' in data:
+        data.setdefault('payment_frequency', 'monthly')
+        data.setdefault('plan_type', 'individual')
+
     svc = AdminService()
-    ok, result = svc.create_user(
-        {
-            'username': str(username).strip(),
-            'email': (email or '').strip() or None,
-            'role': role,
-            'phone': (kwargs.get('phone') or '').strip() or None,
-            'guardian': (kwargs.get('guardian') or '').strip() or None,
-            'sede_id': kwargs.get('sede_id'),
-        }
-    )
+    ok, result = svc.create_user(data)
     if not ok:
         return {'error': str(result)}
 
     user = result['user']
+    from app.models import Appointment
+
+    sessions = Appointment.query.filter_by(patient_id=user.id).count() if role == 'jugador' else 0
     return {
         'success': True,
         'user_id': user.id,
+        'sessions_created': sessions,
         'username': user.username,
         'email': user.email,
         'role': user.role,
@@ -3984,4 +4029,5 @@ def handle_get_message_history(**kwargs):
 
 
 # Herramientas de terapeuta y paciente (se registran al importar; ver tools_role.py).
+from app.services import tools_onboarding as _tools_onboarding  # noqa: E402, F401
 from app.services import tools_role as _tools_role  # noqa: E402, F401

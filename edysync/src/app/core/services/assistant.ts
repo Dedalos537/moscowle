@@ -50,6 +50,12 @@ export interface ActionField {
   options?: { value: string | number; label: string }[];
   /** Lista larga (personas, sedes): se busca por nombre y se manda el id. */
   searchable?: boolean;
+  /** Grupo del formulario (como los pasos del panel de Usuarios: Datos, Plan y horario, Apoderado…). */
+  section?: string;
+  /** Solo se muestra si otro campo tiene uno de estos valores (p. ej. el plan, solo para pacientes). */
+  show_if?: Record<string, unknown[]>;
+  /** Control de fecha/hora. */
+  input?: 'date' | 'time' | 'datetime';
 }
 
 /** Acción que propuso la IA (crear usuario, registrar pago…): se revisa en un formulario y se confirma. */
@@ -182,8 +188,8 @@ export class AssistantService {
     });
   }
 
-    runAction(messageId: number, args: Record<string, unknown>): Observable<{ message: AssistantMessage; reply: AssistantMessage }> {
-    return this.http.post<{ message: AssistantMessage; reply: AssistantMessage }>(`${this.base}/messages/${messageId}/action`, { args });
+    runAction(messageId: number, args: Record<string, unknown>, block?: number): Observable<{ message: AssistantMessage; reply: AssistantMessage }> {
+    return this.http.post<{ message: AssistantMessage; reply: AssistantMessage }>(`${this.base}/messages/${messageId}/action`, { args, block });
   }
 
   refresh(messageId: number): Observable<AssistantMessage> {
