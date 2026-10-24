@@ -458,6 +458,16 @@ EXPLICIT = re.compile(
 )
 
 
+# Pedidos de HACER algo (crear, registrar, agendar…) o de qué puede hacer el asistente: van a la IA con herramientas,
+# aunque nombren una métrica («crear un usuario y guardar sus sesiones» no es un resumen de sesiones).
+ACTION = re.compile(
+    r'\b(crea|crear|creame|creale|registra|registrar|registrame|agenda|agendar|agendale|guarda|guardar|anota|anotar|'
+    r'edita|editar|modifica|modificar|elimina|eliminar|borra|borrar|asigna|asignar|cambia|cambiar|actualiza|'
+    r'dar de alta|da de alta|inscribe|inscribir|envia|enviar|manda|mandar)\b|'
+    r'que (puedes|sabes|podes) hacer|que haces|como funcionas|puedes (hacer|crear|registrar|agendar|guardar)'
+)
+
+
 def answer(question, user, today=None, strict=False):
     """Bloques para una pregunta de datos del centro, o None si no es una pregunta de datos conocida.
 
@@ -465,7 +475,7 @@ def answer(question, user, today=None, strict=False):
     """
     q = _norm(question)
     intent = _intent(q)
-    if not intent or (strict and not EXPLICIT.search(q)):
+    if not intent or ACTION.search(q) or (strict and not EXPLICIT.search(q)):
         return None
     sede_id = scope_for(user)
     period = _period(q)
