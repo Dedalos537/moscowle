@@ -13,6 +13,7 @@ import { Modal } from '../../../../shared/components/modal/modal';
 import { Select, SelectOption } from '../../../../shared/components/select/select';
 import { MessageBlocks } from './components/message-blocks/message-blocks';
 
+const LAST_KEY = 'moscowle_assistant_last';
 const SUBTITLE = 'Pregunta por el centro: cifras, comparativos y tendencias';
 
 /** Comandos rápidos del cuadro de texto («/» y elegir). */
@@ -66,6 +67,10 @@ export class Assistant implements OnInit, OnDestroy {
   draft = '';
 
   /** El nombre de la conversación abierta va como subtítulo de la barra superior. */
+  private readonly remember = effect(() => {
+    const id = this.current()?.id;
+    if (id) this.store('set', id);
+  });
   private readonly headerTitle = effect(() => this.header.setConfig({ subtitle: this.current()?.title || SUBTITLE }));
 
   readonly pinned = computed(() => this.filtered().filter((t) => t.pinned));
@@ -135,10 +140,13 @@ export class Assistant implements OnInit, OnDestroy {
     this.header.setConfig({ title: 'Asistente', subtitle: SUBTITLE, icon: ['fas', 'brain'], actionTemplate: this.headerActions });
     this.subs.add(this.api.home().subscribe({ next: (r) => this.suggestions.set(r.suggestions), error: () => {} }));
     this.loadThreads();
+    // Al volver de otra pantalla (p. ej. Sedes) sin ?t=, se retoma la última conversación abierta.
+    const last = this.route.snapshot.queryParamMap.get('t') ? null : this.store('get');
+    if (last) void this.router.navigate([], { relativeTo: this.route, queryParams: { t: last }, replaceUrl: true });
     this.subs.add(
       this.route.queryParamMap.subscribe((p) => {
         const id = Number(p.get('t'));
-        if (id) this.open(id);
+        if (id) this.open(id, String(id) === last);
         else {
           this.current.set(null);
           this.messages.set([]);
@@ -157,12 +165,25 @@ export class Assistant implements OnInit, OnDestroy {
     this.subs.add(this.api.threads().subscribe({ next: (r) => this.threads.set(r.threads), error: () => {} }));
   }
 
+  /** Última conversación abierta en este navegador. */
+  private store(op: 'get' | 'set' | 'clear', id?: number): string | null {
+    try {
+      if (op === 'get') return localStorage.getItem(LAST_KEY);
+      if (op === 'set') localStorage.setItem(LAST_KEY, String(id));
+      else localStorage.removeItem(LAST_KEY);
+    } catch {
+      /* sin almacenamiento: no se recuerda */
+    }
+    return null;
+  }
+
   select(t: AssistantThread | null): void {
     this.listOpen.set(false);
+    if (!t) this.store('clear');
     void this.router.navigate([], { relativeTo: this.route, queryParams: { t: t?.id ?? null } });
   }
 
-  private open(id: number): void {
+  private open(id: number, restoring = false): void {
     if (this.current()?.id === id && this.messages().length) return;
     this.loadingThread.set(true);
     this.subs.add(
@@ -175,7 +196,7 @@ export class Assistant implements OnInit, OnDestroy {
         },
         error: () => {
           this.loadingThread.set(false);
-          this.toast.show('No se encontró esa conversación.', 'error');
+          if (!restoring) this.toast.show('No se encontró esa conversación.', 'error');
           this.select(null);
         },
       }),

@@ -221,3 +221,12 @@ def test_action_and_capability_questions_go_to_ai(app):
     ):
         assert analytics.answer(q, admin) is None, q
     assert analytics.answer('¿Cómo vamos este mes con las sesiones?', admin) is not None
+
+
+def test_action_fields_pick_people_by_name(app):
+    pat = _user('jugador')
+    block = svc.action_block('create_service_contract', {}, _user('admin'))
+    field = next(f for f in block['fields'] if f['key'] == 'patient_id')
+    assert field['type'] == 'enum' and field['searchable'] and field['label'] == 'Paciente'
+    assert any(o['value'] == pat.id and o['label'].startswith(pat.username) for o in field['options'])
+    assert len(block['title']) <= 44 and 'con' not in block['title'].split()
