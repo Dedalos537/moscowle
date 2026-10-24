@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
-import { ActionBlock, ActionField, AssistantMessage, AssistantSchedule, AssistantService, AssistantThread } from '../../../../core/services/assistant';
+import { ActionBlock, ActionField, AssistantMessage, AssistantModels, AssistantSchedule, AssistantService, AssistantThread, AssistantUpload, FileBlock } from '../../../../core/services/assistant';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AssistantVisibilityService } from '../../../../core/services/assistant-visibility';
 import { ToastService } from '../../../../core/services/toast.service';
@@ -14,6 +14,8 @@ import { Select, SelectOption } from '../../../../shared/components/select/selec
 import { MessageBlocks } from './components/message-blocks/message-blocks';
 
 const LAST_KEY = 'moscowle_assistant_last';
+const MODEL_KEY = 'moscowle_assistant_model';
+const ACCEPT = '.jpg,.jpeg,.png,.webp,.pdf,.docx,.xlsx,.txt,.csv,.md';
 const SUBTITLE = 'Pregunta por el centro: cifras, comparativos y tendencias';
 
 /** Comandos rápidos del cuadro de texto («/» y elegir). */
@@ -62,6 +64,31 @@ export class Assistant implements OnInit, OnDestroy {
   readonly asking = signal<string | null>(null);
   /** Lo que va haciendo MiMo mientras responde (pasos y herramientas MCP), en vivo. */
   readonly steps = signal<string[]>([]);
+
+  // Modelo que responde: «auto» = MiMo y su respaldo; o uno de la cadena (Groq, Gemini…) si MiMo no tiene cuota.
+  readonly models = signal<AssistantModels | null>(null);
+  readonly model = signal<string>(this.readModel());
+  readonly modelOptions = computed<SelectOption[]>(() =>
+    (this.models()?.models ?? [{ key: 'auto', label: 'MiMo (automático)', blocked: false }]).map((m) => ({
+      value: m.key,
+      label: m.blocked && m.key !== 'auto' ? `${m.label} (en pausa)` : m.label,
+    })),
+  );
+  /** MiMo no está (sin cuota o caído) y se está usando «automático»: se ofrece cambiar de modelo, como Gemini. */
+  readonly mimoDown = computed(() => {
+    const m = this.models()?.mimo;
+    return !!m && m.enabled && !m.available && this.model() === 'auto';
+  });
+  readonly mimoBack = computed(() => {
+    const secs = this.models()?.mimo.blocked_for ?? 0;
+    return secs > 0 ? `vuelve en ~${Math.max(1, Math.round(secs / 60))} min` : 'se reintenta en la próxima pregunta';
+  });
+
+  // Adjunto (foto o documento) que va con la próxima pregunta.
+  readonly accept = ACCEPT;
+  readonly attachment = signal<AssistantUpload | null>(null);
+  readonly uploading = signal<string | null>(null);
+  private modelsTimer: ReturnType<typeof setInterval> | null = null;
   private askSub: Subscription | null = null;
   readonly listOpen = signal(false);
   /** Lista de conversaciones oculta (en PC); se recuerda en este navegador. */
@@ -143,6 +170,8 @@ export class Assistant implements OnInit, OnDestroy {
     this.header.setConfig({ title: 'Asistente', subtitle: SUBTITLE, icon: ['fas', 'brain'], actionTemplate: this.headerActions });
     this.subs.add(this.api.home().subscribe({ next: (r) => this.suggestions.set(r.suggestions), error: () => {} }));
     this.loadThreads();
+    this.loadModels();
+    this.modelsTimer = setInterval(() => this.loadModels(), 60_000);
     // Al volver de otra pantalla (p. ej. Sedes) sin ?t=, se retoma la última conversación abierta.
     const last = this.route.snapshot.queryParamMap.get('t') ? null : this.store('get');
     if (last) void this.router.navigate([], { relativeTo: this.route, queryParams: { t: last }, replaceUrl: true });
@@ -159,6 +188,7 @@ export class Assistant implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.modelsTimer) clearInterval(this.modelsTimer);
     this.floating.suppressed.set(false);
     this.subs.unsubscribe();
     this.header.reset();
@@ -166,6 +196,63 @@ export class Assistant implements OnInit, OnDestroy {
 
   loadThreads(): void {
     this.subs.add(this.api.threads().subscribe({ next: (r) => this.threads.set(r.threads), error: () => {} }));
+  }
+
+  loadModels(): void {
+    this.subs.add(this.api.models().subscribe({ next: (m) => this.models.set(m), error: () => {} }));
+  }
+
+  private readModel(): string {
+    try {
+      return localStorage.getItem(MODEL_KEY) || 'auto';
+    } catch {
+      return 'auto';
+    }
+  }
+
+  setModel(key: string): void {
+    this.model.set(key || 'auto');
+    try {
+      localStorage.setItem(MODEL_KEY, this.model());
+    } catch {
+      /* solo esta visita */
+    }
+  }
+
+  pickFile(input: HTMLInputElement): void {
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    this.uploading.set(file.name);
+    this.subs.add(
+      this.api.upload(file).subscribe({
+        next: (up) => {
+          this.uploading.set(null);
+          this.attachment.set(up);
+          this.composerEl?.nativeElement.focus();
+        },
+        error: (err) => {
+          this.uploading.set(null);
+          this.toast.show(err?.error?.message || 'No se pudo subir el archivo.', 'error');
+        },
+      }),
+    );
+  }
+
+  downloadFile(f: FileBlock): void {
+    this.subs.add(
+      this.api.download(f.path).subscribe({
+        next: (blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = f.name;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 2000);
+        },
+        error: () => this.toast.show('No se pudo descargar el archivo.', 'error'),
+      }),
+    );
   }
 
   /** Última conversación abierta en este navegador. */
@@ -227,13 +314,16 @@ export class Assistant implements OnInit, OnDestroy {
 
   send(text?: string): void {
     const question = (text ?? this.draft).trim();
-    if (!question || this.asking()) return;
-    this.asking.set(question);
+    const attachment = this.attachment();
+    if ((!question && !attachment) || this.asking() || this.uploading()) return;
+    const shown = attachment ? `📎 ${attachment.name}${question ? ' — ' + question : ''}` : question;
+    this.asking.set(shown);
+    this.attachment.set(null);
     this.steps.set([]);
     this.onDraft('');
     const threadId = this.current()?.mine === false ? null : (this.current()?.id ?? null);
     this.scrollDown();
-    this.askSub = this.api.askStream(question, threadId).subscribe({
+    this.askSub = this.api.askStream(question, threadId, { model: this.model(), attachment }).subscribe({
       next: (ev) => {
         if (ev.type === 'step') {
           this.steps.update((l) => (l[l.length - 1] === ev.text ? l : [...l, ev.text].slice(-6)));
@@ -247,7 +337,8 @@ export class Assistant implements OnInit, OnDestroy {
           return;
         }
         const { thread, message } = ev;
-          const user: AssistantMessage = { id: -Date.now(), role: 'user', text: question, blocks: [], sources: [], model: null, question: null, feedback: null, created_at: new Date().toISOString() };
+        this.loadModels();
+          const user: AssistantMessage = { id: -Date.now(), role: 'user', text: shown, blocks: [], sources: [], model: null, question: null, feedback: null, created_at: new Date().toISOString() };
           if (this.current()?.id === thread.id) {
             this.messages.update((m) => [...m, user, message]);
             this.current.set({ ...this.current()!, ...thread });

@@ -4029,5 +4029,6 @@ def handle_get_message_history(**kwargs):
 
 
 # Herramientas de terapeuta y paciente (se registran al importar; ver tools_role.py).
+from app.services import tools_files as _tools_files  # noqa: E402, F401
 from app.services import tools_onboarding as _tools_onboarding  # noqa: E402, F401
 from app.services import tools_role as _tools_role  # noqa: E402, F401

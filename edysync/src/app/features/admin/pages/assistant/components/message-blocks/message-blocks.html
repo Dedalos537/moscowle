@@ -63,6 +63,16 @@
           </div>
         </section>
       }
+      @case ('file') {
+        <div class="mb-file">
+          <span class="mb-file__icon" aria-hidden="true"><fa-icon [icon]="['fas', 'file-lines']" /></span>
+          <span class="mb-file__text">
+            <strong>{{ b.name }}</strong>
+            <small>{{ b.path }} @if (b.size) { · {{ kb(b.size) }} }</small>
+          </span>
+          <button type="button" class="mb-file__btn" (click)="download.emit(b)"><fa-icon [icon]="['fas', 'download']" aria-hidden="true" /> Descargar</button>
+        </div>
+      }
       @case ('action') {
         <section class="mb-action" [attr.data-status]="b.status">
           <header class="mb-action__head">

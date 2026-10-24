@@ -106,3 +106,16 @@ def test_printer_notices_go_out_once(app, monkeypatch):
     scan_service.check_printer()
     scan_service.check_printer()
     assert sent.count('La impresora no está en la red') == 1
+
+
+def test_repair_uses_usb_when_epson_left_the_wifi(scand, monkeypatch):
+    usb = 'usb://EPSON/L4150%20Series?serial=X123'
+    pointed = []
+    monkeypatch.setattr(scand, 'printer_uri', lambda: pointed[-1] if pointed else 'socket://192.168.1.50:9100')
+    monkeypatch.setattr(scand, '_reachable', lambda *a, **k: False)
+    monkeypatch.setattr(scand, 'discover', lambda: None)
+    monkeypatch.setattr(scand, '_mdns_epsons', lambda: [])
+    monkeypatch.setattr(scand, '_usb_epson', lambda: usb)
+    monkeypatch.setattr(scand, '_point_cups', pointed.append)
+    res = scand.repair_printer()
+    assert pointed == [usb] and res['usb'] and res['reachable'] and 'USB' in res['message']

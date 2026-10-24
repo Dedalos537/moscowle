@@ -1,3 +1,4 @@
+import contextvars
 import json
 import logging
 import os
@@ -165,15 +166,35 @@ def _load_db_providers():
         return None
 
 
+# Modelo que eligió la persona para ESTA petición (p. ej. «responder con Groq» mientras MiMo no tiene cuota).
+# Es un contextvar: no cambia la cadena de nadie más.
+PREFERRED_PROVIDER: contextvars.ContextVar[str | None] = contextvars.ContextVar('preferred_provider', default=None)
+
+
 def _configured_providers():
-    """Cadena efectiva de providers (dicts). OFF de fallback => solo el primario."""
+    """Cadena efectiva de providers (dicts). OFF de fallback => solo el primario. El elegido va primero."""
     db = _load_db_providers()
     if db is not None:
         providers, fallback = db
         if not fallback:
             providers = providers[:1]
-        return providers
-    return _env_providers()
+    else:
+        providers = _env_providers()
+    pref = PREFERRED_PROVIDER.get()
+    if pref:
+        chosen = [p for p in providers if pref in (p.get('slug'), p.get('provider_type'))]
+        if chosen:
+            providers = chosen + [p for p in providers if p not in chosen]
+    return providers
+
+
+def available_providers():
+    """Para el selector de modelo: [{'key', 'label', 'blocked'}] de la cadena activa."""
+    out = []
+    for p in _configured_providers():
+        name = p.get('slug')
+        out.append({'key': name, 'label': _provider_display(name), 'blocked': bool(_provider_blocked(name))})
+    return out
 
 
 def _env_providers():
