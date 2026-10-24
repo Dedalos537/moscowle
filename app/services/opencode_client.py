@@ -31,6 +31,7 @@ PROVIDER_ID = 'opencode'
 MODEL_ID = 'mimo-v2.6-flash-free'
 COOLDOWN = 15 * 60
 QUOTA_COOLDOWN = 60 * 60
+SLOW_COOLDOWN = 60
 
 _ENV = {'chat': ('OPENCODE_URL', 'OPENCODE_PASSWORD'), 'dev': ('OPENCODE_DEV_URL', 'OPENCODE_DEV_PASSWORD')}
 
@@ -114,6 +115,11 @@ def _request(method, path, *, json_body=None, timeout=60, inst='chat', check_blo
             auth=('opencode', os.environ[_ENV[inst][1]]),
             timeout=(1.5, timeout),
         )
+    except requests.ReadTimeout as exc:
+        # Contestó tarde, pero está vivo: una pausa corta, no los 15 min de cuando no está (antes un mensaje lento
+        # dejaba todo el asistente en la cadena de respaldo).
+        block(f'tardó más de {timeout}s en responder', SLOW_COOLDOWN, inst=inst)
+        raise OpencodeUnavailableError(str(exc)) from exc
     except requests.RequestException as exc:
         block(exc, inst=inst)
         raise OpencodeUnavailableError(str(exc)) from exc

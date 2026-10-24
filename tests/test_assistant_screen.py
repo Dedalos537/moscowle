@@ -230,3 +230,18 @@ def test_action_fields_pick_people_by_name(app):
     assert field['type'] == 'enum' and field['searchable'] and field['label'] == 'Paciente'
     assert any(o['value'] == pat.id and o['label'].startswith(pat.username) for o in field['options'])
     assert len(block['title']) <= 44 and 'con' not in block['title'].split()
+
+
+def test_pending_action_saved_before_gets_todays_form(app):
+    admin = _user('admin')
+    _user('jugador')
+    old = {
+        'type': 'action',
+        'tool': 'create_service_contract',
+        'status': 'pending',
+        'args': {'start_date': '2026-10-23'},
+        'fields': [{'key': 'patient_id', 'label': 'ID del paciente', 'type': 'integer', 'required': True}],
+    }
+    [fresh] = svc._fresh_blocks([old], admin)
+    patient = next(f for f in fresh['fields'] if f['key'] == 'patient_id')
+    assert patient['type'] == 'enum' and patient['options'] and fresh['args'] == old['args']

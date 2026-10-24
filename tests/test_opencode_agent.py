@@ -315,3 +315,17 @@ def test_parse_step_tolerates_an_extra_closing_brace():
     )
     step = parse_step(text)
     assert step['kind'] == 'tool' and step['tool'] == 'list_expenses' and step['args'] == {'month': '2026-09'}
+
+
+def test_slow_reply_pauses_briefly_not_fifteen_minutes(env, monkeypatch):
+    import requests
+
+    def slow(*a, **kw):
+        raise requests.ReadTimeout('read timeout=90')
+
+    monkeypatch.setattr(opencode_client.requests, 'request', slow)
+    opencode_client.unblock()
+    with pytest.raises(OpencodeUnavailableError):
+        opencode_client.send('ses_1', 'hola')
+    assert 0 < opencode_client.state()['blocked_for'] <= opencode_client.SLOW_COOLDOWN
+    opencode_client.unblock()
