@@ -310,3 +310,15 @@ def test_quick_action_skips_questions():
 
     assert svc.quick_action('¿cuántos pacientes nuevos hubo?', U()) is None
     assert svc.quick_action('cómo se crea un contrato', U()) is None
+
+
+def test_create_user_from_form_without_email(app):
+    from app.services.tools_registry import execute_tool
+
+    admin = _user('admin')
+    name = f'Jorge Prueba {uuid.uuid4().hex[:6]}'
+    res = execute_tool(
+        'create_user', {'username': name, 'role': 'jugador', 'email': None}, user_id=admin.id, role='admin'
+    )
+    assert 'error' not in res, res
+    assert User.query.filter_by(username=name).first() is not None
