@@ -22,14 +22,6 @@ $col: 56rem;
   transition: opacity 200ms $ease, transform 280ms $ease;
 }
 .as--collapsed .as-list { opacity: 0; transform: translateX(-0.75rem); pointer-events: none; }
-.as-list__top { display: flex; gap: 0.375rem; }
-.as-new {
-  flex: 1; display: flex; align-items: center; gap: 0.625rem; min-height: 2.75rem; padding: 0 0.875rem; border: 0; border-radius: 0.875rem;
-  background: transparent; color: var(--color-on-surface); font: inherit; font-size: 0.875rem; font-weight: 600; cursor: pointer;
-  transition: background-color 160ms $ease;
-  &:hover { background: var(--color-surface-container-high); }
-  fa-icon { color: var(--color-primary-text, var(--color-primary)); }
-}
 .as-search {
   display: flex; align-items: center; gap: 0.5rem; min-height: 2.5rem; padding: 0 0.75rem; border-radius: 0.875rem;
   background: var(--color-surface-container); color: var(--color-on-surface-variant);
@@ -38,12 +30,48 @@ $col: 56rem;
   &:focus-within { box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 35%, transparent); }
 }
 .as-groups { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; ul { display: grid; gap: 0.0625rem; margin: 0; padding: 0; list-style: none; } }
-.as-group { margin: 1rem 0.75rem 0.25rem; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-on-surface-variant); }
-.as-item {
-  display: grid; gap: 0.0625rem; width: 100%; padding: 0.5rem 0.75rem; border: 0; border-radius: 0.75rem; background: transparent; text-align: left; cursor: pointer; font: inherit;
-  transition: background-color 160ms $ease;
-  &:hover { background: var(--color-surface-container-high); }
+.as-group {
+  display: flex; align-items: center; justify-content: space-between; min-height: 2rem; margin: 0.75rem 0.25rem 0.125rem 0.75rem;
+  font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-on-surface-variant);
+}
+.as-group__new {
+  display: grid; place-items: center; width: 2rem; height: 2rem; border: 0; border-radius: 0.625rem; background: transparent; cursor: pointer;
+  color: var(--color-primary-text, var(--color-primary)); font-size: 0.875rem; transition: background-color 160ms $ease;
+  &:hover, &:focus-visible { background: var(--color-surface-container-high); }
+}
+.as-row {
+  position: relative; display: flex; align-items: center; border-radius: 0.75rem; transition: background-color 160ms $ease;
+  &:hover, &.is-menu { background: var(--color-surface-container-high); }
   &.is-on { background: var(--color-nav-active-bg, color-mix(in srgb, var(--color-primary) 12%, transparent)); }
+}
+.as-item {
+  flex: 1; min-width: 0; display: grid; gap: 0.0625rem; padding: 0.5rem 0.25rem 0.5rem 0.75rem; border: 0; border-radius: 0.75rem;
+  background: transparent; text-align: left; cursor: pointer; font: inherit;
+}
+.as-row__more {
+  flex: none; display: grid; place-items: center; width: 2rem; height: 2rem; margin-right: 0.25rem; border: 0; border-radius: 0.625rem;
+  background: transparent; color: var(--color-on-surface-variant); cursor: pointer; opacity: 0; transition: opacity 140ms $ease, background-color 140ms $ease;
+  &:hover { background: color-mix(in srgb, var(--color-on-surface) 8%, transparent); color: var(--color-on-surface); }
+}
+.as-row:hover .as-row__more, .as-row.is-menu .as-row__more, .as-row.is-on .as-row__more, .as-row__more:focus-visible { opacity: 1; }
+@media (hover: none) { .as-row__more { opacity: 1; } }
+
+// Tarjeta de acciones de una conversación
+.as-menu-scrim { position: fixed; inset: 0; z-index: 60; }
+.as-menu {
+  position: fixed; z-index: 61; display: grid; width: 13.5rem; padding: 0.375rem; border-radius: 1rem;
+  background: var(--color-surface-container-lowest, var(--color-surface)); border: 1px solid color-mix(in srgb, var(--color-outline-variant) 70%, transparent);
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.22), 0 2px 6px rgb(0 0 0 / 0.08);
+  animation: as-pop 160ms $ease both; transform-origin: top left;
+  button {
+    display: flex; align-items: center; gap: 0.75rem; min-height: 2.5rem; padding: 0 0.75rem; border: 0; border-radius: 0.625rem;
+    background: transparent; color: var(--color-on-surface); font: inherit; font-size: 0.875rem; text-align: left; cursor: pointer;
+    transition: background-color 120ms $ease;
+    fa-icon { width: 1rem; color: var(--color-on-surface-variant); }
+    &:hover, &:focus-visible { background: var(--color-surface-container-high); }
+    &.is-danger, &.is-danger fa-icon { color: var(--color-error-text, var(--color-error)); }
+  }
+  hr { margin: 0.25rem 0.5rem; border: 0; border-top: 1px solid color-mix(in srgb, var(--color-outline-variant) 70%, transparent); }
 }
 .as-item__title { font-size: 0.8125rem; font-weight: 600; color: var(--color-on-surface); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .as-item__meta { font-size: 0.6875rem; color: var(--color-on-surface-variant); }
@@ -226,25 +254,7 @@ $col: 56rem;
 }
 .as-hdr__btn--list { display: none; }
 .as-hdr__chip { padding: 0.25rem 0.625rem; border-radius: 999px; font-size: 0.75rem; background: var(--color-surface-container); color: var(--color-on-surface-variant); white-space: nowrap; }
-.as-hdr__new {
-  display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.5rem; margin-left: 0.375rem; padding: 0 1rem; border: 0; border-radius: 999px; cursor: pointer;
-  background: var(--color-primary); color: var(--color-on-primary); font: inherit; font-size: 0.875rem; font-weight: 700; white-space: nowrap;
-  transition: background-color 160ms $ease, transform 160ms $ease;
-  &:hover { background: var(--color-primary-hover); transform: translateY(-1px); }
-}
 @media (max-width: 899px) {
   .as-hdr__btn--list { display: grid; }
   .as-hdr__btn--collapse { display: none; }
-}
-
-.as-hdr__thread { display: contents; }
-.as-list__thread { display: none; }
-@media (min-width: 900px) {
-  // En PC «Nueva conversación» ya está en la barra superior.
-  .as-list__top { display: none; }
-}
-@media (max-width: 899px) {
-  // En el celular la barra superior solo lleva ☰ y ✎; las acciones de la conversación van en el panel.
-  .as-hdr__thread { display: none; }
-  .as-list__thread { display: flex; justify-content: space-between; padding: 0.25rem; border-radius: 0.875rem; background: var(--color-surface-container); }
 }

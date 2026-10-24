@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, OnInit, TemplateRef, ViewChild, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, OnDestroy, OnInit, TemplateRef, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -90,9 +90,11 @@ export class Assistant implements OnInit, OnDestroy {
   // Renombrar (modal del sistema, no el prompt del navegador)
   readonly renameOpen = signal(false);
   renameValue = '';
+  private renameTarget: AssistantThread | null = null;
 
   // Programar reporte
   readonly scheduleOpen = signal(false);
+  private scheduleTarget: AssistantThread | null = null;
   scheduleForm = { question: '', cadence: 'weekly', weekday: 0, hour: 8, channel: 'email' };
   readonly cadenceOptions: SelectOption[] = [
     { value: 'weekly', label: 'Cada semana' },
@@ -252,13 +254,46 @@ export class Assistant implements OnInit, OnDestroy {
     void navigator.clipboard?.writeText((m.text || '').replace(/\*\*/g, '')).then(() => this.toast.show('Copiado.', 'success'));
   }
 
-  toggle(key: 'pinned' | 'shared'): void {
-    const t = this.current();
+  // Menú ⋯ de cada conversación: tarjeta flotante al costado (la lista recorta lo que se sale de ella)
+  readonly menu = signal<{ thread: AssistantThread; top: number; left: number } | null>(null);
+
+  openMenu(ev: MouseEvent, t: AssistantThread): void {
+    ev.stopPropagation();
+    if (this.menu()?.thread.id === t.id) return this.menu.set(null);
+    const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+    const w = 216, h = 236;
+    const left = window.innerWidth - r.right > w + 12 ? r.right + 6 : Math.max(8, r.right - w);
+    const top = Math.min(r.top - 4, window.innerHeight - h - 8);
+    this.menu.set({ thread: t, top: Math.max(8, top), left });
+  }
+
+  menuAct(act: 'pinned' | 'shared' | 'schedule' | 'rename' | 'remove'): void {
+    const t = this.menu()?.thread;
+    this.menu.set(null);
+    if (!t) return;
+    if (act === 'pinned' || act === 'shared') this.toggle(act, t);
+    else if (act === 'rename') this.rename(t);
+    else if (act === 'remove') this.remove(t);
+    else this.openSchedule(undefined, t);
+  }
+
+  @HostListener('document:keydown.escape')
+  closeMenu(): void {
+    this.menu.set(null);
+  }
+
+  /** Si la conversación tocada es la abierta, refleja el cambio arriba. */
+  private patchCurrent(t: AssistantThread, fresh: Partial<AssistantThread>): void {
+    const c = this.current();
+    if (c?.id === t.id) this.current.set({ ...c, ...fresh });
+  }
+
+  toggle(key: 'pinned' | 'shared', t: AssistantThread | null = this.current()): void {
     if (!t?.mine) return;
     this.subs.add(
       this.api.updateThread(t.id, { [key]: !t[key] }).subscribe({
         next: (fresh) => {
-          this.current.set({ ...t, ...fresh });
+          this.patchCurrent(t, fresh);
           this.loadThreads();
           if (key === 'shared') this.toast.show(fresh.shared ? 'Compartida con el equipo de administración.' : 'Ahora es solo tuya.', 'success');
         },
@@ -266,19 +301,19 @@ export class Assistant implements OnInit, OnDestroy {
     );
   }
 
-  rename(): void {
-    const t = this.current();
+  rename(t: AssistantThread | null = this.current()): void {
     if (!t?.mine) return;
+    this.renameTarget = t;
     this.renameValue = t.title;
     this.renameOpen.set(true);
   }
 
   saveRename(): void {
-    const t = this.current();
+    const t = this.renameTarget;
     const title = this.renameValue.trim();
     if (!t || !title) return;
     this.renameOpen.set(false);
-    this.subs.add(this.api.updateThread(t.id, { title }).subscribe({ next: (fresh) => { this.current.set({ ...t, ...fresh }); this.loadThreads(); } }));
+    this.subs.add(this.api.updateThread(t.id, { title }).subscribe({ next: (fresh) => { this.patchCurrent(t, fresh); this.loadThreads(); } }));
   }
 
   openAction(message: AssistantMessage, block: ActionBlock): void {
@@ -331,31 +366,33 @@ export class Assistant implements OnInit, OnDestroy {
     );
   }
 
-  remove(): void {
-    const t = this.current();
+  remove(t: AssistantThread | null = this.current()): void {
     if (!t?.mine) return;
     this.subs.add(
       this.confirm.confirm({ title: 'Borrar conversación', message: `«${t.title}» se borrará para todos.`, confirmText: 'Borrar', variant: 'danger' }).subscribe((ok) => {
         if (!ok) return;
-        this.api.deleteThread(t.id).subscribe({ next: () => { this.select(null); this.loadThreads(); } });
+        this.api.deleteThread(t.id).subscribe({ next: () => { if (this.current()?.id === t.id) this.select(null); this.loadThreads(); } });
       }),
     );
   }
 
-  openSchedule(m?: AssistantMessage): void {
-    const last = m?.question || [...this.messages()].reverse().find((x) => x.role === 'assistant')?.question || '';
+  openSchedule(m?: AssistantMessage, t: AssistantThread | null = this.current()): void {
+    this.scheduleTarget = t;
+    const here = t?.id === this.current()?.id;
+    const last = m?.question || (here ? [...this.messages()].reverse().find((x) => x.role === 'assistant')?.question : t?.title) || '';
     this.scheduleForm = { question: last, cadence: 'weekly', weekday: 0, hour: 8, channel: 'email' };
     this.scheduleOpen.set(true);
   }
 
   saveSchedule(): void {
-    const t = this.current();
+    const t = this.scheduleTarget;
     this.subs.add(
       this.api.schedule({ ...(this.scheduleForm as Partial<AssistantSchedule> & { question: string }), thread_id: t?.mine ? t.id : null }).subscribe({
         next: (s) => {
           this.scheduleOpen.set(false);
           this.toast.show(`Listo: te llegará ${s.label}.`, 'success');
-          if (t) this.current.set({ ...t, schedules: [...(t.schedules ?? []), s] });
+          const c = this.current();
+          if (t && c?.id === t.id) this.current.set({ ...c, schedules: [...(c.schedules ?? []), s] });
         },
         error: (err) => this.toast.show(err?.error?.message || 'No se pudo programar.', 'error'),
       }),
