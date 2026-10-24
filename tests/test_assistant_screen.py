@@ -210,3 +210,14 @@ def test_follow_up_stays_with_the_ai_conversation(app, monkeypatch):
     # un pedido de datos explícito sí pasa al análisis aunque venga de la IA
     _, data = svc.ask(admin, 'compara las sedes este mes', thread.id)
     assert data.model == analytics.MODEL_NAME
+
+
+def test_action_and_capability_questions_go_to_ai(app):
+    admin = _user('admin')
+    for q in (
+        'Realmente, qué puedes hacer? puedes crear un usuario, su contrato, y guardar las sesiones?',
+        'registra un pago de 50 soles',
+        'agenda sesiones para Liam',
+    ):
+        assert analytics.answer(q, admin) is None, q
+    assert analytics.answer('¿Cómo vamos este mes con las sesiones?', admin) is not None
